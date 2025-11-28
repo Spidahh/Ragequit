@@ -1,179 +1,8 @@
-// world.js - Sistema di mappe per FFA e SQUADRE
+// world.js - Sistema mappa SQUADRE
 
 function setupWorld() {
-    // Determina quale mappa creare in base alla modalità
-    const gameMode = window.myGameMode || 'ffa';
-    
-    if (gameMode === 'team') {
-        createTeamMap();
-    } else {
-        createFFAMap();
-    }
-}
-
-// MAPPA FFA - Arena circolare con ostacoli sparsi
-function createFFAMap() {
-    console.log('[WORLD] Creating FFA Map');
-    
-    // Griglia
-    const gridHelper = new THREE.GridHelper(2000, 100, 0x440000, 0x220000);
-    scene.add(gridHelper);
-    
-    // Pavimento con texture gore rossa
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-    
-    // Crea pattern gore rosso sangue
-    for (let i = 0; i < 512; i += 16) {
-        for (let j = 0; j < 512; j += 16) {
-            const rand = Math.random();
-            if (rand < 0.3) {
-                // Sangue rosso vivo
-                const gradient = ctx.createRadialGradient(i + 8, j + 8, 2, i + 8, j + 8, 10);
-                gradient.addColorStop(0, '#ff0000');
-                gradient.addColorStop(0.5, '#cc0000');
-                gradient.addColorStop(1, '#880000');
-                ctx.fillStyle = gradient;
-            } else if (rand < 0.6) {
-                // Sangue coagulato scuro
-                ctx.fillStyle = `rgb(${80 + Math.random() * 40}, ${10 + Math.random() * 20}, ${10 + Math.random() * 20})`;
-            } else if (rand < 0.8) {
-                // Carne putrefatta
-                ctx.fillStyle = `rgb(${100 + Math.random() * 50}, ${20 + Math.random() * 30}, ${20 + Math.random() * 30})`;
-            } else {
-                // Roccia insanguinata
-                const red = 60 + Math.random() * 40;
-                ctx.fillStyle = `rgb(${red}, ${red * 0.2}, ${red * 0.2})`;
-            }
-            ctx.fillRect(i, j, 16, 16);
-            
-            // Aggiungi schizzi di sangue
-            if (Math.random() < 0.4) {
-                ctx.strokeStyle = 'rgba(139,0,0,0.7)';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(i + Math.random() * 16, j + Math.random() * 16);
-                ctx.lineTo(i + Math.random() * 16, j + Math.random() * 16);
-                ctx.stroke();
-            }
-            // Gocce di sangue
-            if (Math.random() < 0.2) {
-                ctx.fillStyle = '#990000';
-                ctx.beginPath();
-                ctx.arc(i + Math.random() * 16, j + Math.random() * 16, 1 + Math.random() * 2, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-    }
-    
-    const floorTexture = new THREE.CanvasTexture(canvas);
-    floorTexture.wrapS = THREE.RepeatWrapping;
-    floorTexture.wrapT = THREE.RepeatWrapping;
-    floorTexture.repeat.set(10, 10);
-    
-    const floor = new THREE.Mesh(
-        new THREE.PlaneGeometry(2000, 2000),
-        new THREE.MeshStandardMaterial({ 
-            map: floorTexture,
-            roughness: 0.9,
-            metalness: 0.1,
-            emissive: 0x220000,
-            emissiveIntensity: 0.1
-        })
-    );
-    floor.rotation.x = -Math.PI / 2;
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -0.1;
-    floor.receiveShadow = true;
-    scene.add(floor);
-    
-    // Muri perimetrali per delimitare la mappa
-    const mapSize = 800;
-    const wallHeight = 30;
-    const wallThickness = 10;
-    
-    // Muro Nord
-    const wallN = new THREE.Mesh(
-        new THREE.BoxGeometry(mapSize, wallHeight, wallThickness),
-        new THREE.MeshStandardMaterial({ color: 0x440000, roughness: 0.8 })
-    );
-    wallN.position.set(0, wallHeight/2, -mapSize/2);
-    wallN.castShadow = true;
-    wallN.receiveShadow = true;
-    scene.add(wallN);
-    obstacles.push(wallN);
-    
-    // Muro Sud
-    const wallS = wallN.clone();
-    wallS.position.set(0, wallHeight/2, mapSize/2);
-    scene.add(wallS);
-    obstacles.push(wallS);
-    
-    // Muro Est
-    const wallE = new THREE.Mesh(
-        new THREE.BoxGeometry(wallThickness, wallHeight, mapSize),
-        new THREE.MeshStandardMaterial({ color: 0x440000, roughness: 0.8 })
-    );
-    wallE.position.set(mapSize/2, wallHeight/2, 0);
-    wallE.castShadow = true;
-    wallE.receiveShadow = true;
-    scene.add(wallE);
-    obstacles.push(wallE);
-    
-    // Muro Ovest
-    const wallW = wallE.clone();
-    wallW.position.set(-mapSize/2, wallHeight/2, 0);
-    scene.add(wallW);
-    obstacles.push(wallW);
-    
-    // Muri interni sparsi per creare labirinto parziale
-    for(let i = 0; i < 20; i++) {
-        const wallLength = 40 + Math.random() * 80;
-        const isVertical = Math.random() > 0.5;
-        const wall = new THREE.Mesh(
-            isVertical ? new THREE.BoxGeometry(8, 20, wallLength) : new THREE.BoxGeometry(wallLength, 20, 8),
-            new THREE.MeshStandardMaterial({ color: 0x660000, roughness: 0.7 })
-        );
-        wall.position.set(
-            (Math.random() - 0.5) * (mapSize - 100),
-            10,
-            (Math.random() - 0.5) * (mapSize - 100)
-        );
-        wall.castShadow = true;
-        wall.receiveShadow = true;
-        scene.add(wall);
-        obstacles.push(wall);
-    }
-    
-    // Pilastri sparsi ovunque
-    for(let i = 0; i < 30; i++) {
-        const x = (Math.random() - 0.5) * (mapSize - 100);
-        const z = (Math.random() - 0.5) * (mapSize - 100);
-        createPillar(x, z, 15 + Math.random() * 20);
-    }
-    
-    // Rocce sparse come copertura
-    for(let i = 0; i < 40; i++) {
-        const x = (Math.random() - 0.5) * (mapSize - 100);
-        const z = (Math.random() - 0.5) * (mapSize - 100);
-        createRock(x, z, random());
-    }
-    
-    // Alberi decorativi (passthrough)
-    for(let i = 0; i < 25; i++) { 
-        const x = (Math.random() - 0.5) * (mapSize - 100);
-        const z = (Math.random() - 0.5) * (mapSize - 100);
-        createPineTree(x, z, random()); 
-    }
-    
-    // Case sparse (passthrough)
-    for(let i = 0; i < 10; i++) { 
-        const x = (Math.random() - 0.5) * (mapSize - 150);
-        const z = (Math.random() - 0.5) * (mapSize - 150);
-        createFantasyHouse(x, z, random()); 
-    }
+    // Crea solo mappa team
+    createTeamMap();
 }
 
 // MAPPA SQUADRE - 4 zone colorate per ogni team
@@ -190,44 +19,44 @@ function createTeamMap() {
     canvas.height = 512;
     const ctx = canvas.getContext('2d');
     
-    // Crea pattern gore rosso sangue
+    // Crea pattern terreno molto scuro quasi nero
     for (let i = 0; i < 512; i += 16) {
         for (let j = 0; j < 512; j += 16) {
             const rand = Math.random();
-            if (rand < 0.3) {
-                // Sangue rosso vivo
+            if (rand < 0.15) {
+                // Macchie di sangue scuro
                 const gradient = ctx.createRadialGradient(i + 8, j + 8, 2, i + 8, j + 8, 10);
-                gradient.addColorStop(0, '#ff0000');
-                gradient.addColorStop(0.5, '#cc0000');
-                gradient.addColorStop(1, '#880000');
+                gradient.addColorStop(0, '#1a0000');
+                gradient.addColorStop(0.5, '#100000');
+                gradient.addColorStop(1, '#0a0000');
                 ctx.fillStyle = gradient;
-            } else if (rand < 0.6) {
-                // Sangue coagulato scuro
-                ctx.fillStyle = `rgb(${80 + Math.random() * 40}, ${10 + Math.random() * 20}, ${10 + Math.random() * 20})`;
-            } else if (rand < 0.8) {
-                // Carne putrefatta
-                ctx.fillStyle = `rgb(${100 + Math.random() * 50}, ${20 + Math.random() * 30}, ${20 + Math.random() * 30})`;
+            } else if (rand < 0.3) {
+                // Sangue coagulato nero
+                ctx.fillStyle = `rgb(${10 + Math.random() * 15}, ${2 + Math.random() * 8}, ${2 + Math.random() * 8})`;
+            } else if (rand < 0.5) {
+                // Terreno nero con hint rosso
+                ctx.fillStyle = `rgb(${8 + Math.random() * 12}, ${5 + Math.random() * 10}, ${5 + Math.random() * 10})`;
             } else {
-                // Roccia insanguinata
-                const red = 60 + Math.random() * 40;
-                ctx.fillStyle = `rgb(${red}, ${red * 0.2}, ${red * 0.2})`;
+                // Terreno nero base
+                const base = 5 + Math.random() * 10;
+                ctx.fillStyle = `rgb(${base}, ${base * 0.5}, ${base * 0.5})`;
             }
             ctx.fillRect(i, j, 16, 16);
             
-            // Aggiungi schizzi di sangue
-            if (Math.random() < 0.4) {
-                ctx.strokeStyle = 'rgba(139,0,0,0.7)';
-                ctx.lineWidth = 2;
+            // Aggiungi schizzi di sangue scuro
+            if (Math.random() < 0.2) {
+                ctx.strokeStyle = 'rgba(30,0,0,0.5)';
+                ctx.lineWidth = 1;
                 ctx.beginPath();
                 ctx.moveTo(i + Math.random() * 16, j + Math.random() * 16);
                 ctx.lineTo(i + Math.random() * 16, j + Math.random() * 16);
                 ctx.stroke();
             }
-            // Gocce di sangue
-            if (Math.random() < 0.2) {
-                ctx.fillStyle = '#990000';
+            // Gocce di sangue molto scure
+            if (Math.random() < 0.1) {
+                ctx.fillStyle = '#220000';
                 ctx.beginPath();
-                ctx.arc(i + Math.random() * 16, j + Math.random() * 16, 1 + Math.random() * 2, 0, Math.PI * 2);
+                ctx.arc(i + Math.random() * 16, j + Math.random() * 16, 1 + Math.random() * 1.5, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
@@ -242,10 +71,10 @@ function createTeamMap() {
         new THREE.PlaneGeometry(2000, 2000),
         new THREE.MeshStandardMaterial({ 
             map: floorTexture,
-            roughness: 0.9,
-            metalness: 0.1,
-            emissive: 0x220000,
-            emissiveIntensity: 0.1
+            roughness: 0.95,
+            metalness: 0.05,
+            emissive: 0x050000,
+            emissiveIntensity: 0.05
         })
     );
     floor.rotation.x = -Math.PI / 2;

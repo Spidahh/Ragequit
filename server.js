@@ -54,7 +54,7 @@ io.on('connection', (socket) => {
             isBlocking: false,
             isDead: false,
             teamColor: userData.teamColor || 0x2c3e50,
-            gameMode: userData.gameMode || 'ffa',
+            gameMode: 'team',
             team: userData.team || null
         };
 

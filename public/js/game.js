@@ -3,7 +3,7 @@ let socket = null;
         let myId = null;
         let myUsername = "Player";
         let myTeamColor = 0x2c3e50; // Colore dell'armatura del giocatore
-        let myGameMode = 'ffa'; // 'ffa' o 'team' o 'pve'
+        let myGameMode = 'team'; // Solo modalità team
         let myTeam = null; // 'red', 'black', 'green', 'purple'
         let isPvEMode = false; // Flag per modalità PvE
         let aiMonster = null; // Riferimento al mostro IA
@@ -103,8 +103,8 @@ let socket = null;
             blockMitigation: 0.7 
         };
         
+        
         const loginModal = document.getElementById('login-modal');
-        const changeNameBtn = document.getElementById('change-name-btn');
         const obstacleRaycaster = new THREE.Raycaster();
 
         // Draggable UI Container
@@ -228,16 +228,6 @@ let socket = null;
         document.addEventListener('contextmenu', event => event.preventDefault());
 
         // Il login è gestito da menu.js
-        // changeNameBtn permette di cambiare nome durante il gioco
-        changeNameBtn.addEventListener('click', () => {
-             document.exitPointerLock(); document.getElementById('login-modal').style.display = 'flex';
-             document.getElementById('login-input').value = myUsername;
-             document.getElementById('btn-login').onclick = () => {
-                const inputName = document.getElementById('login-input').value.trim();
-                if(inputName.length > 0) { myUsername = inputName; localStorage.setItem('ragequit_username', myUsername); if(socket) socket.emit('updateUsername', myUsername); document.getElementById('connection-status').innerText = "CONNESSO: " + myUsername; }
-                document.getElementById('login-modal').style.display = 'none';
-             };
-        });
 
         // Pulsante Torna al Menu Principale
         document.getElementById('menu-btn').addEventListener('click', () => {
@@ -248,7 +238,7 @@ let socket = null;
             myId = null;
             myUsername = "Player";
             myTeamColor = 0x2c3e50;
-            myGameMode = 'ffa';
+            myGameMode = 'team';
             myTeam = null;
             playerStats.hp = 100;
             playerStats.mana = 100;
@@ -460,34 +450,18 @@ let socket = null;
         
         // === KILL COUNTER SYSTEM ===
         function updateKillCounter() {
-            const ffaContainer = document.getElementById('kill-counter-ffa');
             const teamContainer = document.getElementById('kill-counter-team');
             
-            if (myGameMode === 'ffa') {
-                ffaContainer.style.display = 'block';
-                teamContainer.style.display = 'none';
-                
-                // Crea lista ordinata per kill
-                const sortedPlayers = Object.entries(playerKills).sort((a, b) => b[1] - a[1]);
-                ffaContainer.innerHTML = sortedPlayers.map(([id, kills]) => {
-                    const playerName = id === myId ? myUsername : (otherPlayers[id]?.username || 'Unknown');
-                    return `<div class="player-kill-row">
-                        <span class="player-kill-name">${playerName}</span>
-                        <span class="player-kill-count">${kills} ☠️</span>
-                    </div>`;
-                }).join('');
-            } else if (myGameMode === 'team') {
-                ffaContainer.style.display = 'none';
-                teamContainer.style.display = 'flex';
-                
-                const teamNames = {red: 'ROSIKONI', black: 'NIGHTCRAWLERS', green: 'TRIMONI', purple: 'VOID LORDS'};
-                teamContainer.innerHTML = ['red', 'black', 'green', 'purple'].map(team => 
-                    `<div class="team-kill-box ${team}">
-                        <div class="team-name">${teamNames[team]}</div>
-                        <div class="team-kills">${teamKills[team]} ☠️</div>
-                    </div>`
-                ).join('');
-            }
+            // Mostra sempre il contatore squadre
+            teamContainer.style.display = 'flex';
+            
+            const teamNames = {red: 'ROSIKONI', black: 'NABBI', green: 'TRIMONI', purple: 'INFAMI'};
+            teamContainer.innerHTML = ['red', 'black', 'green', 'purple'].map(team => 
+                `<div class="team-kill-box ${team}">
+                    <div class="team-name">${teamNames[team]}</div>
+                    <div class="team-kills">${teamKills[team]} ☠️</div>
+                </div>`
+            ).join('');
         }
         
         function incrementKill(playerId, team) {
@@ -559,15 +533,9 @@ let socket = null;
         function init() {
             scene = new THREE.Scene(); 
             
-            // Colore di sfondo più chiaro per migliore visibilità
-            const gameMode = window.myGameMode || 'ffa';
-            if (gameMode === 'team') {
-                scene.background = new THREE.Color(0x2a2a3a);
-                scene.fog = new THREE.Fog(0x2a2a3a, 200, 900);
-            } else {
-                scene.background = new THREE.Color(0x3a1a1a);
-                scene.fog = new THREE.Fog(0x3a1a1a, 180, 850);
-            }
+            // Colore di sfondo per modalità team
+            scene.background = new THREE.Color(0x2a2a3a);
+            scene.fog = new THREE.Fog(0x2a2a3a, 200, 900);
             
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.5, 1000);
             createPlayer(); createSword(); createStaff(); createShield(); createBow();
@@ -778,12 +746,11 @@ let socket = null;
             }, 100);
         }
         
-        // Ottieni la posizione di spawn in base alla modalità di gioco
+        // Ottieni la posizione di spawn per la squadra
         function getSpawnPosition() {
-            const gameMode = window.myGameMode || 'ffa';
             const team = window.myTeam;
             
-            if (gameMode === 'team' && team) {
+            if (team) {
                 // Spawn nelle zone colorate per le squadre
                 const teamSpawns = {
                     red: { x: -300, z: -300 },
@@ -797,15 +764,12 @@ let socket = null;
                     // Aggiungi variazione casuale entro 30 unità dal centro
                     const offsetX = (Math.random() - 0.5) * 60;
                     const offsetZ = (Math.random() - 0.5) * 60;
-                    return new THREE.Vector3(spawn.x + offsetX, 6, spawn.z + offsetZ);
+                    return new THREE.Vector3(spawn.x + offsetX, 10, spawn.z + offsetZ);
                 }
             }
             
-            // Spawn FFA - posizione completamente casuale in tutta la mappa
-            const mapSize = 750; // Leggermente più piccolo dei muri (800)
-            const x = (Math.random() - 0.5) * mapSize;
-            const z = (Math.random() - 0.5) * mapSize;
-            return new THREE.Vector3(x, 6, z);
+            // Fallback: spawn al centro se squadra non definita
+            return new THREE.Vector3(0, 10, 0);
         }
         
         function setupUIEvents() {
@@ -867,6 +831,17 @@ let socket = null;
                 // Enter per aprire la chat
                 if (e.code === 'Enter') {
                     chatInput.focus();
+                    return;
+                }
+                
+                // Previeni chiusura browser con Ctrl+W
+                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w') {
+                    e.preventDefault();
+                }
+                
+                // Blocca Alt sinistro e destro dal far uscire il cursore
+                if (e.code === 'AltLeft' || e.code === 'AltRight') {
+                    e.preventDefault();
                     return;
                 }
                 

@@ -1,6 +1,6 @@
 // menu.js - Nuovo sistema di menu completamente rifatto
 
-let currentGameMode = null; // 'ffa' o 'team'
+let currentGameMode = 'team'; // Solo modalità squadre
 let selectedTeam = null; // 'red', 'black', 'green', 'purple'
 let playerUsername = '';
 
@@ -15,7 +15,6 @@ function initMenu() {
     const mainMenu = document.getElementById('main-menu');
     const teamSelectionScreen = document.getElementById('team-selection-screen');
     const usernameInput = document.getElementById('username-input');
-    const ffaBtn = document.getElementById('ffa-btn');
     const teamBtn = document.getElementById('team-btn');
     const teamOptions = document.querySelectorAll('.team-option');
     const menuKeybindsBtn = document.getElementById('menu-keybinds-btn');
@@ -68,31 +67,6 @@ function initMenu() {
         if (playerUsername) {
             localStorage.setItem('ragequit_username', playerUsername);
         }
-    });
-
-    // Click su FFA -> Entra direttamente nel gioco
-    ffaBtn.addEventListener('click', () => {
-        if (!playerUsername) {
-            usernameInput.focus();
-            usernameInput.style.borderColor = '#ff0000';
-            usernameInput.style.boxShadow = '0 0 30px rgba(255,0,0,0.8)';
-            setTimeout(() => {
-                usernameInput.style.borderColor = '#666';
-                usernameInput.style.boxShadow = 'none';
-            }, 1000);
-            return;
-        }
-
-        currentGameMode = 'ffa';
-        selectedTeam = null;
-        
-        // Salva username
-        window.myUsername = playerUsername;
-        localStorage.setItem('ragequit_username', playerUsername);
-        
-        // Nascondi menu e avvia gioco
-        mainMenu.style.display = 'none';
-        startGame('ffa');
     });
 
     // Click su SQUADRE -> Mostra selezione squadre
@@ -148,13 +122,10 @@ function initMenu() {
 function startGame(mode) {
     console.log(`[MENU] Starting game - Mode: ${mode}, Team: ${selectedTeam || 'none'}`);
     
-    // Imposta variabili globali
-    window.myGameMode = mode;
+    // Imposta variabili globali (solo team mode)
+    window.myGameMode = 'team';
     
-    if (mode === 'ffa') {
-        window.myTeamColor = 0x2c3e50; // Colore default FFA
-        window.myTeam = null;
-    } else if (mode === 'team' && selectedTeam) {
+    if (selectedTeam) {
         window.myTeamColor = TEAM_COLORS[selectedTeam];
         window.myTeam = selectedTeam;
     }

@@ -14,15 +14,13 @@
     
     <!-- Kill Counter -->
     <div id="kill-counter-container">
-        <div id="kill-counter-ffa" style="display:none;"></div>
-        <div id="kill-counter-team" style="display:none;"></div>
+        <div id="kill-counter-team" style="display:flex;flex-wrap:wrap;gap:10px"></div>
     </div>
 
     <div class="top-controls">
         <button id="reset-btn" class="btn">RESPAWN</button>
         <button id="keybinds-btn" class="btn">COMANDI</button>
         <button id="audio-btn" class="btn">AUDIO: OFF</button>
-        <button id="change-name-btn" class="btn">CAMBIA NOME</button>
         <button id="menu-btn" class="btn" style="border-bottom: 2px solid #e91e63;">MENU</button>
     </div>
 
@@ -71,11 +69,6 @@
             <img id="game-logo" src="./IMG/logo.png" alt="RageQuit" class="logo">
             
             <div class="mode-buttons">
-                <button id="ffa-btn" class="mode-btn ffa-btn">
-                    <div class="mode-icon">⚔️</div>
-                    <div class="mode-name">FREE FOR ALL</div>
-                    <div class="mode-desc">Tutti contro tutti</div>
-                </button>
                 <button id="team-btn" class="mode-btn team-btn">
                     <div class="mode-icon">🛡️</div>
                     <div class="mode-name">SQUADRE</div>

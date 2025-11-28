@@ -2,7 +2,7 @@
 
 function startCasting(spellId, type, key) {
             if (castingState.active) return;
-            let castTime = 0.5; if (spellId === 1 || spellId === 4) castTime = 0.0;
+            let castTime = 0.5; if (spellId === 1) castTime = 0.2; if (spellId === 4) castTime = 0.0;
             
             if (type === 'bow_shot') {
                 castTime = SETTINGS.bowCastTime;
