@@ -51,7 +51,7 @@ let socket = null;
             // JUMP SETTINGS
             jumpForce: 200.0, 
             jumpCooldown: 300,
-            jumpCost: 15, 
+            jumpCost: 5, 
             gravity: 800.0, 
             
             // Missile (Dardo)
@@ -82,13 +82,14 @@ let socket = null;
             // Bow (Arco)
             bowCastTime:0.3, 
             arrowSpeed: 1000.0, 
-            arrowDmg: 25, 
-            arrowCost: 0, 
+            arrowDmg: 15, 
+            arrowCost: 5, 
             arrowGravity: 5, // GRAVITÀ FRECCIA RIDOTTA
             
             fireRate: 400, meleeRate: 500, 
             meleeRange: 32, 
-            meleeDmg: 15, 
+            meleeDmg: 15,
+            meleeStaminaCost: 5, 
             meleeKnockbackForce: 100, 
             
             manaRegen: 2.0, 
@@ -764,12 +765,12 @@ let socket = null;
                     // Aggiungi variazione casuale entro 30 unità dal centro
                     const offsetX = (Math.random() - 0.5) * 60;
                     const offsetZ = (Math.random() - 0.5) * 60;
-                    return new THREE.Vector3(spawn.x + offsetX, 10, spawn.z + offsetZ);
+                    return new THREE.Vector3(spawn.x + offsetX, 6, spawn.z + offsetZ);
                 }
             }
             
             // Fallback: spawn al centro se squadra non definita
-            return new THREE.Vector3(0, 10, 0);
+            return new THREE.Vector3(0, 6, 0);
         }
         
         function setupUIEvents() {

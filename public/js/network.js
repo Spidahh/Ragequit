@@ -135,6 +135,15 @@ function initMultiplayer() {
                     if (diff < 0) {
                         flashScreen('red'); 
                     }
+                    // Controlla se il player è morto
+                    if (playerStats.hp <= 0 && !playerStats.isDead) {
+                        playerStats.isDead = true;
+                        document.getElementById('message').innerHTML = "SEI STATO SCONFITTO<br><span style='font-size:16px'>Premi RESPAWN</span>"; 
+                        document.getElementById('message').style.display = "block";
+                        document.exitPointerLock();
+                        spawnParticles(playerMesh.position, 0xff0000, 50, 50, 1.0, true);
+                        playSound('death');
+                    }
                 });
 
                 socket.on('enemyAttacked', (data) => { 

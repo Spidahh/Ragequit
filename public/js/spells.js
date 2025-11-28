@@ -157,6 +157,8 @@ function performWhirlwind() {
                     if(e.mesh.userData.isBlocking) {
                         dmg *= (1.0 - SETTINGS.blockMitigation); 
                         createFloatingText(e.mesh.position.clone().add(new THREE.Vector3(0,10,0)), "BLOCK", "#aaa");
+                    } else {
+                        createFloatingText(e.mesh.position.clone().add(new THREE.Vector3(0,10,0)), `-${Math.round(dmg)}`, "#ff3333");
                     }
                     if (socket) socket.emit('playerHit', { damage: dmg, targetId: Object.keys(otherPlayers).find(key => otherPlayers[key] === e) });
                 }
@@ -208,6 +210,16 @@ function fireHitscan() {
         }
 
 function spawnProjectile(type) {
+            // Controllo stamina per arco
+            if (type === 5 && playerStats.stamina < SETTINGS.arrowCost) {
+                addToLog("Stamina insufficiente!", "#555");
+                return;
+            }
+            
+            if (type === 5) {
+                playerStats.stamina -= SETTINGS.arrowCost;
+            }
+            
             let geo, speed, color, radius;
             if (type === 1) { geo = new THREE.SphereGeometry(1.0); color = 0x00ffff; speed = SETTINGS.missileSpeed; radius = 1.0; } 
             else if (type === 2) { geo = new THREE.SphereGeometry(1.8); color = 0xffffff; speed = SETTINGS.pushSpeed; radius = 1.8; } 
@@ -428,9 +440,9 @@ function checkSplashDamage(origin, radius, damage, pushBack) {
                     let finalDmg = damage;
                     if(op.mesh.userData.isBlocking) {
                         finalDmg *= (1.0 - SETTINGS.blockMitigation); 
-                        createFloatingText(op.mesh.position.clone().add(new THREE.Vector3(0,10,0)), "BLOCK", "#aaa");
+                        createFloatingText(op.mesh.position.clone().add(new THREE.Vector3(3,5,0)), "BLOCK", "#aaa");
                     } else {
-                        createFloatingText(op.mesh.position.clone().add(new THREE.Vector3(0,10,0)), `-${Math.round(finalDmg)}`, "#ff3333");
+                        createFloatingText(op.mesh.position.clone().add(new THREE.Vector3(3,5,0)), `-${Math.round(finalDmg)}`, "#ff3333");
                     }
                     if (pushBack) {
                          const dir = new THREE.Vector3().subVectors(op.mesh.position, origin).normalize();
@@ -445,6 +457,12 @@ function checkSplashDamage(origin, radius, damage, pushBack) {
         }
 
 function swingSword() {
+            if (playerStats.stamina < SETTINGS.meleeStaminaCost) {
+                addToLog("Stamina insufficiente!", "#555");
+                return;
+            }
+            
+            playerStats.stamina -= SETTINGS.meleeStaminaCost;
             isAttacking = true; attackTimer = 0;
             if(swordContainer.userData.trail) { swordContainer.userData.trail.material.opacity = 0.8; setTimeout(() => swordContainer.userData.trail.material.opacity = 0, 200); }
             playSound('swing_heavy');

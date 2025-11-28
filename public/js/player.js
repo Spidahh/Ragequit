@@ -435,10 +435,27 @@ function updatePhysics(delta) {
             
             obstacles.forEach(o => { 
                 const box = new THREE.Box3().setFromObject(o);
-                const playerPos = playerMesh.position.clone(); playerPos.y = box.min.y + 1; 
-                if (box.containsPoint(playerPos)) {
-                   const dir = new THREE.Vector3().subVectors(playerMesh.position, o.position).normalize().setY(0);
-                   playerMesh.position.addScaledVector(dir, 10 * delta * 60);
+                // Check collision at player's feet level (y + 2) and head level (y + 10)
+                const playerFeetPos = playerMesh.position.clone(); 
+                playerFeetPos.y += 2;
+                const playerHeadPos = playerMesh.position.clone();
+                playerHeadPos.y += 10;
+                
+                // Only collide if obstacle is tall enough (above feet but below head)
+                const obstacleHeight = box.max.y - box.min.y;
+                const playerBaseY = playerMesh.position.y;
+                
+                // Check if player horizontally overlaps with obstacle
+                const tempBox = box.clone();
+                tempBox.min.y = playerBaseY;
+                tempBox.max.y = playerBaseY + 12; // Player height
+                
+                if (tempBox.containsPoint(playerFeetPos) || tempBox.containsPoint(playerHeadPos)) {
+                   // Only push back if obstacle is taller than jump height (>8 units)
+                   if (obstacleHeight > 8 || box.max.y > playerBaseY + 5) {
+                       const dir = new THREE.Vector3().subVectors(playerMesh.position, o.position).normalize().setY(0);
+                       playerMesh.position.addScaledVector(dir, 10 * delta * 60);
+                   }
                 }
             });
             if (socket && myId) {

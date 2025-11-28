@@ -255,7 +255,7 @@ function createArenaWalls(centerX, centerZ, radius, height, color) {
 
 // Crea rocce
 function createRock(x, z, seedOffset) {
-    const size = 8 + seedOffset * 8;
+    const size = 4 + seedOffset * 3; // Smaller rocks (4-7 units instead of 8-16)
     const rock = new THREE.Mesh(
         new THREE.DodecahedronGeometry(size, 0),
         new THREE.MeshStandardMaterial({ 
