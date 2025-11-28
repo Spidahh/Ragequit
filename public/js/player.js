@@ -29,7 +29,13 @@ function createPlayer() {
             }
 
             playerMesh = new THREE.Group();
-            const armorMat = new THREE.MeshStandardMaterial({ color: typeof myTeamColor !== 'undefined' ? myTeamColor : 0x2c3e50, metalness: 0.7 }); const metalMat = new THREE.MeshStandardMaterial({ color: 0x95a5a6, metalness: 0.9 });
+            const armorMat = new THREE.MeshStandardMaterial({ 
+                color: typeof myTeamColor !== 'undefined' ? myTeamColor : 0x2c3e50, 
+                metalness: 0.7,
+                emissive: typeof myTeamColor !== 'undefined' ? myTeamColor : 0x2c3e50,
+                emissiveIntensity: 0.2
+            }); 
+            const metalMat = new THREE.MeshStandardMaterial({ color: 0x95a5a6, metalness: 0.9 });
             const torso = new THREE.Mesh(new THREE.BoxGeometry(4.5, 6.5, 3), armorMat); torso.position.y = 3.5; playerMesh.add(torso); playerLimbs.torso = torso;
             const chest = new THREE.Mesh(new THREE.BoxGeometry(4.7, 3.5, 3.2), metalMat); chest.position.y = 5.0; playerMesh.add(chest); chest.userData.isTorsoPart = true; 
             
@@ -403,6 +409,21 @@ function updatePhysics(delta) {
             playerMesh.position.addScaledVector(velocity, delta);
             if(playerMesh.position.y < 6) { if (velocity.y <= 0) { playerMesh.position.y = 6; velocity.y = 0; canJump = true; playerStats.isFalling = false; } }
             playerStats.stamina = Math.max(0, Math.min(playerStats.maxStamina, playerStats.stamina));
+            
+            // Check healing temple proximity
+            if (window.healingTotemPos) {
+                const dist = playerMesh.position.distanceTo(window.healingTotemPos);
+                if (dist < 40) {
+                    playerStats.hp = playerStats.maxHp;
+                    playerStats.mana = playerStats.maxMana;
+                    playerStats.stamina = playerStats.maxStamina;
+                    if (!window.lastHealMessage || Date.now() - window.lastHealMessage > 2000) {
+                        addFloatingText(playerMesh.position.clone().add(new THREE.Vector3(0, 12, 0)), '✨ COMPLETAMENTE GUARITO ✨', 0x00ffff, 2.0);
+                        window.lastHealMessage = Date.now();
+                    }
+                }
+            }
+            
             obstacles.forEach(o => { 
                 const box = new THREE.Box3().setFromObject(o);
                 const playerPos = playerMesh.position.clone(); playerPos.y = box.min.y + 1; 

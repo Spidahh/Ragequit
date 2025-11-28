@@ -7,6 +7,9 @@ let socket = null;
         let myTeam = null; // 'red', 'black', 'green', 'purple'
         let isPvEMode = false; // Flag per modalità PvE
         let aiMonster = null; // Riferimento al mostro IA
+        let myKills = parseInt(localStorage.getItem('ragequit_kills')) || 0; // Contatore kill persistente
+        const playerKills = {}; // Kill di tutti i player {playerId: kills}
+        const teamKills = {red: 0, black: 0, green: 0, purple: 0}; // Kill per squadra
         
         const WORLD_SEED = 123456;
         let seed = WORLD_SEED;
@@ -30,6 +33,8 @@ let socket = null;
         let castingState = { active: false, currentSpell: 0, timer: 0, maxTime: 0, ready: false, keyHeld: null };
         let lastAttackTime = 0; let lastHealTime = -10000; let lastConversionTime = 0; let lastWhirlwindTime = 0; let lastSpikesTime = 0;
         let keyToRebind = null; // Variabile per gestire il rebinding dei tasti 
+        const savedSens = localStorage.getItem('ragequit_mouse_sensitivity');
+        let mouseSensitivity = (savedSens && !isNaN(parseFloat(savedSens))) ? parseFloat(savedSens) : 1.0;
         
         // Jump Vars
         let lastJumpTime = 0;
@@ -45,7 +50,7 @@ let socket = null;
             
             // JUMP SETTINGS
             jumpForce: 250.0, 
-            jumpCooldown: 1000,
+            jumpCooldown: 300,
             jumpCost: 15, 
             gravity: 800.0, 
             
@@ -121,6 +126,12 @@ let socket = null;
                 uiContainer.style.bottom = 'auto';
                 uiContainer.style.top = (e.clientY - dragOffsetY) + 'px';
             }
+            if (isChatDragging) {
+                chatContainer.style.right = 'auto';
+                chatContainer.style.left = (e.clientX - chatDragOffsetX) + 'px';
+                chatContainer.style.bottom = 'auto';
+                chatContainer.style.top = (e.clientY - chatDragOffsetY) + 'px';
+            }
         });
 
         document.addEventListener('mouseup', () => {
@@ -128,7 +139,64 @@ let socket = null;
                 isDragging = false;
                 uiContainer.classList.remove('dragging');
             }
+            if (isChatDragging) {
+                isChatDragging = false;
+                chatContainer.classList.remove('dragging');
+            }
         });
+        
+        // Draggable Chat Container
+        const chatContainer = document.getElementById('chat-container');
+        const chatHeader = document.getElementById('chat-header');
+        const chatInput = document.getElementById('chat-input');
+        const chatMessages = document.getElementById('chat-messages');
+        let isChatDragging = false;
+        let chatDragOffsetX = 0;
+        let chatDragOffsetY = 0;
+
+        chatHeader.addEventListener('mousedown', (e) => {
+            isChatDragging = true;
+            const rect = chatContainer.getBoundingClientRect();
+            chatDragOffsetX = e.clientX - rect.left;
+            chatDragOffsetY = e.clientY - rect.top;
+            chatContainer.classList.add('dragging');
+        });
+        
+        // Chat input handling
+        let isChatFocused = false;
+        chatInput.addEventListener('focus', () => {
+            isChatFocused = true;
+        });
+        chatInput.addEventListener('blur', () => {
+            isChatFocused = false;
+        });
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && chatInput.value.trim()) {
+                sendChatMessage(chatInput.value.trim());
+                chatInput.value = '';
+                chatInput.blur();
+            }
+            e.stopPropagation();
+        });
+        
+        function sendChatMessage(message) {
+            if (socket && socket.connected) {
+                socket.emit('chatMessage', { username: myUsername, text: message });
+            }
+        }
+        
+        function addChatMessage(username, text, isSystem = false) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'chat-message' + (isSystem ? ' system' : '');
+            msgDiv.innerHTML = `<span class="chat-username">${username}:</span><span class="chat-text">${text}</span>`;
+            chatMessages.appendChild(msgDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Limita messaggi a 50
+            while (chatMessages.children.length > 50) {
+                chatMessages.removeChild(chatMessages.firstChild);
+            }
+        }
 
         document.addEventListener('contextmenu', event => event.preventDefault());
 
@@ -254,6 +322,35 @@ let socket = null;
             
             content.innerHTML = '';
             
+            // Aggiungi slider sensibilità mouse
+            const sensRow = document.createElement('div');
+            sensRow.className = 'sensitivity-row';
+            sensRow.style.gridColumn = '1 / -1';
+            sensRow.style.marginBottom = '20px';
+            
+            const sensLabel = document.createElement('div');
+            sensLabel.style.display = 'flex';
+            sensLabel.style.justifyContent = 'space-between';
+            sensLabel.style.marginBottom = '10px';
+            sensLabel.innerHTML = `<span class="keybind-label">🎯 SENSIBILITÀ MOUSE</span><span class="keybind-label" id="sens-value">${(mouseSensitivity * 100).toFixed(0)}%</span>`;
+            
+            const sensSlider = document.createElement('input');
+            sensSlider.type = 'range';
+            sensSlider.min = '0.1';
+            sensSlider.max = '3.0';
+            sensSlider.step = '0.1';
+            sensSlider.value = mouseSensitivity;
+            sensSlider.className = 'sensitivity-slider';
+            sensSlider.oninput = (e) => {
+                mouseSensitivity = parseFloat(e.target.value);
+                document.getElementById('sens-value').textContent = `${(mouseSensitivity * 100).toFixed(0)}%`;
+                localStorage.setItem('ragequit_mouse_sensitivity', mouseSensitivity);
+            };
+            
+            sensRow.appendChild(sensLabel);
+            sensRow.appendChild(sensSlider);
+            content.appendChild(sensRow);
+            
             for (const [action, keyCode] of Object.entries(KEYBINDS)) {
                 const row = document.createElement('div');
                 row.className = 'keybind-row';
@@ -275,6 +372,9 @@ let socket = null;
             console.log('Created', Object.keys(KEYBINDS).length, 'keybind rows');
             updateActionBarLabels();
         }
+        
+        // Esponi la funzione globalmente per il menu
+        window.initKeybindsUI = initKeybindsUI;
 
         // Inizia il rebinding di un tasto
         function startRebind(action, btnElement) {
@@ -330,6 +430,54 @@ let socket = null;
 
         // Carica i keybinds all'avvio
         loadKeybinds();
+        
+        // === KILL COUNTER SYSTEM ===
+        function updateKillCounter() {
+            const ffaContainer = document.getElementById('kill-counter-ffa');
+            const teamContainer = document.getElementById('kill-counter-team');
+            
+            if (myGameMode === 'ffa') {
+                ffaContainer.style.display = 'block';
+                teamContainer.style.display = 'none';
+                
+                // Crea lista ordinata per kill
+                const sortedPlayers = Object.entries(playerKills).sort((a, b) => b[1] - a[1]);
+                ffaContainer.innerHTML = sortedPlayers.map(([id, kills]) => {
+                    const playerName = id === myId ? myUsername : (otherPlayers[id]?.username || 'Unknown');
+                    return `<div class="player-kill-row">
+                        <span class="player-kill-name">${playerName}</span>
+                        <span class="player-kill-count">${kills} ☠️</span>
+                    </div>`;
+                }).join('');
+            } else if (myGameMode === 'team') {
+                ffaContainer.style.display = 'none';
+                teamContainer.style.display = 'flex';
+                
+                const teamNames = {red: 'ROSIKONI', black: 'NIGHTCRAWLERS', green: 'TRIMONI', purple: 'VOID LORDS'};
+                teamContainer.innerHTML = ['red', 'black', 'green', 'purple'].map(team => 
+                    `<div class="team-kill-box ${team}">
+                        <div class="team-name">${teamNames[team]}</div>
+                        <div class="team-kills">${teamKills[team]} ☠️</div>
+                    </div>`
+                ).join('');
+            }
+        }
+        
+        function incrementKill(playerId, team) {
+            if (!playerKills[playerId]) playerKills[playerId] = 0;
+            playerKills[playerId]++;
+            
+            if (playerId === myId) {
+                myKills++;
+                localStorage.setItem('ragequit_kills', myKills);
+            }
+            
+            if (team && teamKills[team] !== undefined) {
+                teamKills[team]++;
+            }
+            
+            updateKillCounter();
+        }
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         let audioEnabled = false;
@@ -384,24 +532,24 @@ let socket = null;
         function init() {
             scene = new THREE.Scene(); 
             
-            // Colore di sfondo più scuro e atmosferico
+            // Colore di sfondo più chiaro per migliore visibilità
             const gameMode = window.myGameMode || 'ffa';
             if (gameMode === 'team') {
-                scene.background = new THREE.Color(0x0a0a1a);
-                scene.fog = new THREE.Fog(0x0a0a1a, 100, 700);
+                scene.background = new THREE.Color(0x2a2a3a);
+                scene.fog = new THREE.Fog(0x2a2a3a, 200, 900);
             } else {
-                scene.background = new THREE.Color(0x1a0000);
-                scene.fog = new THREE.Fog(0x1a0000, 80, 650);
+                scene.background = new THREE.Color(0x3a1a1a);
+                scene.fog = new THREE.Fog(0x3a1a1a, 180, 850);
             }
             
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.5, 1000);
             createPlayer(); createSword(); createStaff(); createShield(); createBow();
             
-            // Luci più drammatiche
-            const ambientLight = new THREE.AmbientLight(0x330000, 0.4);
+            // Luci più chiare per migliore visibilità
+            const ambientLight = new THREE.AmbientLight(0x666688, 0.8);
             scene.add(ambientLight);
             
-            const dirLight = new THREE.DirectionalLight(0xff4444, 1.2);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
             dirLight.position.set(150, 250, 100);
             dirLight.castShadow = true;
             dirLight.shadow.mapSize.width = 2048;
@@ -414,10 +562,10 @@ let socket = null;
             dirLight.shadow.camera.bottom = -300;
             scene.add(dirLight);
             
-            // Luce rossa puntiforme per atmosfera gore
-            const redLight = new THREE.PointLight(0xff0000, 0.6, 400);
-            redLight.position.set(0, 50, 0);
-            scene.add(redLight);
+            // Luce puntiforme per illuminare meglio
+            const pointLight = new THREE.PointLight(0xffffff, 0.4, 500);
+            pointLight.position.set(0, 100, 0);
+            scene.add(pointLight);
             
             seed = WORLD_SEED; setupWorld(); setupControls(); setupUIEvents();
             renderer = new THREE.WebGLRenderer({ antialias: true }); 
@@ -614,11 +762,10 @@ let socket = null;
                 }
             }
             
-            // Spawn FFA - posizione casuale vicino al centro
-            const angle = Math.random() * Math.PI * 2;
-            const radius = 50 + Math.random() * 100;
-            const x = Math.cos(angle) * radius;
-            const z = Math.sin(angle) * radius;
+            // Spawn FFA - posizione completamente casuale in tutta la mappa
+            const mapSize = 750; // Leggermente più piccolo dei muri (800)
+            const x = (Math.random() - 0.5) * mapSize;
+            const z = (Math.random() - 0.5) * mapSize;
             return new THREE.Vector3(x, 6, z);
         }
         
@@ -647,18 +794,27 @@ let socket = null;
             document.getElementById('audio-btn').addEventListener('click', (e) => { e.stopPropagation(); toggleAudio(); });
             document.getElementById('close-keybinds').addEventListener('click', (e) => { 
                 e.stopPropagation(); 
-                document.getElementById('keybinds-panel').style.display='none';
-                // Riattiva il pointer lock dopo aver chiuso il modale
-                setTimeout(() => {
-                    try {
-                        const promise = document.body.requestPointerLock();
-                        if (promise && typeof promise.catch === 'function') {
-                            promise.catch(err => console.log('Pointer lock non attivato'));
+                const keybindsPanel = document.getElementById('keybinds-panel');
+                if (keybindsPanel) {
+                    keybindsPanel.style.display = 'none';
+                }
+                
+                // Riattiva il pointer lock solo se il menu principale è nascosto (gioco attivo)
+                const mainMenu = document.getElementById('main-menu');
+                const isInMenu = mainMenu && mainMenu.style.display !== 'none';
+                
+                if (!isInMenu) {
+                    setTimeout(() => {
+                        try {
+                            const promise = document.body.requestPointerLock();
+                            if (promise && typeof promise.catch === 'function') {
+                                promise.catch(err => console.log('Pointer lock non attivato'));
+                            }
+                        } catch(e) {
+                            console.log('Errore pointer lock:', e);
                         }
-                    } catch(e) {
-                        console.log('Errore pointer lock:', e);
-                    }
-                }, 100);
+                    }, 100);
+                }
             });
         }
         function setupControls() {
@@ -666,12 +822,23 @@ let socket = null;
                 // Non fare nulla quando perdi il pointer lock - mantieni il gioco attivo
             });
             document.addEventListener('keydown', (e) => {
-                // Gestione Ctrl per free mouse
+                // Se la chat è attiva, ignora tutti i comandi tranne Enter per aprire la chat
+                if (isChatFocused) return;
+                
+                // Enter per aprire la chat
+                if (e.code === 'Enter') {
+                    chatInput.focus();
+                    return;
+                }
+                
+                // Gestione Ctrl per free mouse (ALT rimosso)
                 if (e.code === 'ControlLeft' || e.code === 'ControlRight') {
-                    isCtrlPressed = true;
-                    // Esci dal pointer lock per permettere il movimento del mouse
-                    if (document.pointerLockElement === document.body) {
-                        document.exitPointerLock();
+                    if (!isCtrlPressed) { // Previeni attivazione multipla
+                        isCtrlPressed = true;
+                        // Esci dal pointer lock per permettere il movimento del mouse
+                        if (document.pointerLockElement === document.body) {
+                            document.exitPointerLock();
+                        }
                     }
                     return;
                 }
@@ -707,12 +874,19 @@ let socket = null;
                 }
             });
             document.addEventListener('keyup', (e) => {
-                // Gestione rilascio Ctrl
+                // Gestione rilascio Ctrl (ALT rimosso)
                 if (e.code === 'ControlLeft' || e.code === 'ControlRight') {
-                    isCtrlPressed = false;
-                    // Rientra nel pointer lock se il giocatore non è morto
-                    if (!playerStats.isDead && document.pointerLockElement !== document.body) {
-                        document.body.requestPointerLock();
+                    if (isCtrlPressed) { // Solo se era effettivamente premuto
+                        isCtrlPressed = false;
+                        // Rientra nel pointer lock se il giocatore non è morto e non è già bloccato
+                        if (!playerStats.isDead && document.pointerLockElement !== document.body && !document.getElementById('main-menu').style.display) {
+                            // Piccolo delay per evitare conflitti
+                            setTimeout(() => {
+                                if (!isCtrlPressed && !playerStats.isDead) {
+                                    document.body.requestPointerLock();
+                                }
+                            }, 100);
+                        }
                     }
                     return;
                 }
@@ -723,7 +897,7 @@ let socket = null;
                     case KEYBINDS.SPELL_1: stopCasting('Digit1'); break; case KEYBINDS.SPELL_2: stopCasting('Digit2'); break; case KEYBINDS.SPELL_3: stopCasting('Digit3'); break; case KEYBINDS.SPELL_4: stopCasting('Digit4'); break;
                 }
             });
-            document.body.addEventListener('mousemove', (e) => { if(document.pointerLockElement===document.body && !playerStats.isDead) { euler.y-=e.movementX*0.002; euler.x-=e.movementY*0.002; euler.x=Math.max(-Math.PI/2, Math.min(Math.PI/2, euler.x)); playerMesh.rotation.y=euler.y; } });
+            document.body.addEventListener('mousemove', (e) => { if(document.pointerLockElement===document.body && !playerStats.isDead) { euler.y-=e.movementX*0.002*mouseSensitivity; euler.x-=e.movementY*0.002*mouseSensitivity; euler.x=Math.max(-Math.PI/2, Math.min(Math.PI/2, euler.x)); playerMesh.rotation.y=euler.y; } });
             
             document.addEventListener('mousedown', (e) => { 
                 if(document.pointerLockElement===document.body && !playerStats.isDead) {

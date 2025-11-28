@@ -18,6 +18,42 @@ function initMenu() {
     const ffaBtn = document.getElementById('ffa-btn');
     const teamBtn = document.getElementById('team-btn');
     const teamOptions = document.querySelectorAll('.team-option');
+    const menuKeybindsBtn = document.getElementById('menu-keybinds-btn');
+    const menuAudioBtn = document.getElementById('menu-audio-btn');
+    
+    // Bottone Comandi nel menu - apre il pannello keybinds
+    if (menuKeybindsBtn) {
+        menuKeybindsBtn.addEventListener('click', () => {
+            const keybindsPanel = document.getElementById('keybinds-panel');
+            if (keybindsPanel) {
+                keybindsPanel.style.display = 'block';
+                // Chiama la funzione per popolare il pannello
+                if (typeof window.initKeybindsUI === 'function') {
+                    window.initKeybindsUI();
+                }
+            }
+        });
+    }
+    
+    // Bottone Chiudi nel pannello keybinds
+    const closeKeybindsBtn = document.getElementById('close-keybinds');
+    if (closeKeybindsBtn) {
+        closeKeybindsBtn.addEventListener('click', () => {
+            const keybindsPanel = document.getElementById('keybinds-panel');
+            if (keybindsPanel) {
+                keybindsPanel.style.display = 'none';
+            }
+        });
+    }
+    
+    // Bottone Audio nel menu
+    if (menuAudioBtn) {
+        menuAudioBtn.addEventListener('click', () => {
+            // Toggle audio (verrà implementato quando ci sarà il sistema audio)
+            const isOn = menuAudioBtn.textContent.includes('OFF');
+            menuAudioBtn.textContent = isOn ? '🔊 AUDIO: ON' : '🔊 AUDIO: OFF';
+        });
+    }
 
     // Carica username salvato
     const savedUsername = localStorage.getItem('ragequit_username');
@@ -81,6 +117,15 @@ function initMenu() {
         // Nascondi menu principale e mostra selezione squadre
         mainMenu.style.display = 'none';
         teamSelectionScreen.style.display = 'flex';
+        
+        // Richiedi conteggio squadre se socket disponibile
+        if (typeof io !== 'undefined') {
+            const tempSocket = io();
+            tempSocket.on('teamCounts', (counts) => {
+                updateTeamCounts(counts);
+            });
+            tempSocket.emit('requestTeamCounts');
+        }
     });
 
     // Click su una squadra -> Entra nel gioco con quella squadra
@@ -153,6 +198,16 @@ function startGame(mode) {
 function returnToMenu() {
     // Ricarica la pagina per tornare al menu
     location.reload();
+}
+
+function updateTeamCounts(counts) {
+    Object.keys(counts).forEach(team => {
+        const countEl = document.getElementById(`team-count-${team}`);
+        if (countEl) {
+            const count = counts[team];
+            countEl.textContent = count === 1 ? '1 giocatore' : `${count} giocatori`;
+        }
+    });
 }
 
 // Inizializza il menu quando il DOM è pronto

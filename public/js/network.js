@@ -20,9 +20,23 @@ function initMultiplayer() {
                     console.log('TRACE: myId set to', myId);
                     socket.emit('joinGame', { username: myUsername, teamColor: myTeamColor, gameMode: myGameMode, team: myTeam });
                     socket.emit('requestPosition');
+                    
+                    // Inizializza kill counter
+                    playerKills[myId] = myKills;
+                    updateKillCounter();
                 });
                 socket.on('disconnect', () => { document.getElementById('connection-status').innerText = "DISCONNESSO"; document.getElementById('connection-status').style.color = "red"; });
                 socket.on('serverMsg', (msg) => { addToLog(msg, 'server-msg'); });
+                socket.on('chatMessage', (data) => {
+                    if (typeof addChatMessage === 'function') {
+                        addChatMessage(data.username, data.text, false);
+                    }
+                });
+                socket.on('teamCounts', (counts) => {
+                    if (typeof updateTeamCounts === 'function') {
+                        updateTeamCounts(counts);
+                    }
+                });
                 socket.on('forcePositionUpdate', () => { if (myId && !playerStats.isDead) { const animState = isSprinting ? 'run' : (moveForward || moveBackward) ? 'walk' : 'idle'; socket.emit('playerMovement', { position: playerMesh.position, rotation: { x: playerMesh.rotation.x, y: playerMesh.rotation.y, z: playerMesh.rotation.z }, animState: animState, weaponMode: weaponMode }); } });
                 socket.on('currentPlayers', (players) => {
                     console.log('TRACE: received currentPlayers', Object.keys(players), 'myId=', myId, 'socket.id=', socket.id);
@@ -154,7 +168,17 @@ function initMultiplayer() {
                                 removeOtherPlayer(data.id); 
                             } 
                         }, 500); 
-                    } 
+                    }
+                    
+                    // Incrementa kill counter per il killer
+                    if (data.killerId && data.killerId === myId) {
+                        const victimTeam = otherPlayers[data.id]?.team || null;
+                        incrementKill(myId, myTeam);
+                        addFloatingText(playerMesh.position.clone().add(new THREE.Vector3(0, 12, 0)), '☠️ KILL!', 0xff0000, 1.5);
+                    } else if (data.killerId && otherPlayers[data.killerId]) {
+                        const killerTeam = otherPlayers[data.killerId].team || null;
+                        incrementKill(data.killerId, killerTeam);
+                    }
                 });
             } else { console.warn("Modalità Offline"); document.getElementById('connection-status').innerText = "OFFLINE"; }
         }
@@ -172,7 +196,12 @@ function addOtherPlayer(info) {
             }
             const mesh = new THREE.Group();
             const playerTeamColor = info.teamColor || 0x2c3e50;
-            const armorMat = new THREE.MeshStandardMaterial({ color: playerTeamColor, metalness: 0.7 }); 
+            const armorMat = new THREE.MeshStandardMaterial({ 
+                color: playerTeamColor, 
+                metalness: 0.7,
+                emissive: playerTeamColor,
+                emissiveIntensity: 0.3
+            }); 
             const metalMat = new THREE.MeshStandardMaterial({ color: 0x95a5a6, metalness: 0.9 });
             const torso = new THREE.Mesh(new THREE.BoxGeometry(4.5, 6.5, 3), armorMat); torso.position.y = 3.5; mesh.add(torso);
             const chest = new THREE.Mesh(new THREE.BoxGeometry(4.7, 3.5, 3.2), metalMat); chest.position.y = 5.0; mesh.add(chest);
@@ -242,7 +271,8 @@ function addOtherPlayer(info) {
             const label = createPlayerLabel(info.username); label.position.y = 14; label.userData.isLabel = true; mesh.add(label); mesh.userData.hpBar = label.userData.hpBar; 
             scene.add(mesh);
             otherPlayers[info.id] = { 
-                username: info.username, 
+                username: info.username,
+                team: info.team || null,
                 mesh: mesh, 
                 limbs: { 
                     armL, armR, 

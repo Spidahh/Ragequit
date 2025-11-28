@@ -63,7 +63,30 @@ io.on('connection', (socket) => {
         socket.emit('currentPlayers', players);
         console.log(`TRACE: broadcasting newPlayer from ${socket.id} -> id=${players[socket.id].id}`);
         socket.broadcast.emit('newPlayer', players[socket.id]);
+        
+        // Broadcast team counts
+        broadcastTeamCounts();
     });
+    
+    socket.on('requestTeamCounts', () => {
+        const counts = getTeamCounts();
+        socket.emit('teamCounts', counts);
+    });
+    
+    function getTeamCounts() {
+        const counts = {red: 0, black: 0, green: 0, purple: 0};
+        Object.values(players).forEach(p => {
+            if (p.team && counts[p.team] !== undefined) {
+                counts[p.team]++;
+            }
+        });
+        return counts;
+    }
+    
+    function broadcastTeamCounts() {
+        const counts = getTeamCounts();
+        io.emit('teamCounts', counts);
+    }
     
     socket.on('requestPosition', () => {
         socket.broadcast.emit('forcePositionUpdate');
@@ -73,6 +96,17 @@ io.on('connection', (socket) => {
         if(players[socket.id]) {
             players[socket.id].username = username;
             io.emit('updateUsername', { id: socket.id, username: username });
+        }
+    });
+    
+    socket.on('chatMessage', (data) => {
+        if (players[socket.id]) {
+            // Broadcast messaggio a tutti
+            io.emit('chatMessage', {
+                id: socket.id,
+                username: data.username || players[socket.id].username,
+                text: data.text
+            });
         }
     });
 
@@ -180,6 +214,8 @@ io.on('connection', (socket) => {
         if (players[socket.id]) {
             delete players[socket.id];
             io.emit('playerDisconnected', socket.id);
+            // Broadcast aggiornamento conteggio squadre
+            broadcastTeamCounts();
         }
         delete lastSeen[socket.id];
     });
