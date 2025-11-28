@@ -346,6 +346,11 @@ body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Seg
             flex-direction: column;
             box-shadow: 0 0 30px rgba(0,191,255,0.4);
             backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+        }
+        #chat-container.minimized {
+            height: 38px;
+            overflow: hidden;
         }
         #chat-container.dragging {
             background: linear-gradient(135deg, rgba(0,20,40,0.95), rgba(0,10,20,0.95));
@@ -419,7 +424,7 @@ body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Seg
             border-radius: 0 0 6px 6px;
         }
         #chat-input {
-            width: 100%;
+            width: calc(100% - 20px);
             padding: 8px 10px;
             background: rgba(0,20,40,0.8);
             border: 1px solid #00bfff;
@@ -570,36 +575,34 @@ body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Seg
             flex-wrap: wrap;
         }
         .team-kill-box {
-            background: rgba(20,20,20,0.95);
-            border: 2px solid;
-            border-radius: 6px;
-            padding: 8px 12px;
-            min-width: 120px;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 4px;
+            padding: 8px 16px;
+            min-width: auto;
             text-align: center;
-            box-shadow: 0 0 15px;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(5px);
+            transition: all 0.2s;
         }
-        .team-kill-box.red { border-color: #ff0000; box-shadow: 0 0 20px rgba(255,0,0,0.4); }
-        .team-kill-box.black { border-color: #666666; box-shadow: 0 0 20px rgba(102,102,102,0.4); }
-        .team-kill-box.green { border-color: #00ff00; box-shadow: 0 0 20px rgba(0,255,0,0.4); }
-        .team-kill-box.purple { border-color: #ff00ff; box-shadow: 0 0 20px rgba(255,0,255,0.4); }
+        .team-kill-box.red { border-bottom: 2px solid #ff0000; }
+        .team-kill-box.black { border-bottom: 2px solid #666666; }
+        .team-kill-box.green { border-bottom: 2px solid #00ff00; }
+        .team-kill-box.purple { border-bottom: 2px solid #ff00ff; }
         .team-name {
-            font-size: 14px;
-            font-weight: 900;
+            font-size: 12px;
+            font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 4px;
-            text-shadow: 0 0 8px currentColor;
+            margin-bottom: 2px;
         }
         .team-kill-box.red .team-name { color: #ff0000; }
         .team-kill-box.black .team-name { color: #999999; }
         .team-kill-box.green .team-name { color: #00ff00; }
         .team-kill-box.purple .team-name { color: #ff00ff; }
         .team-kills {
-            font-size: 22px;
-            font-weight: 900;
+            font-size: 18px;
+            font-weight: bold;
             color: #fff;
-            text-shadow: 0 0 10px currentColor;
         }
         .player-kill-row {
             display: flex;

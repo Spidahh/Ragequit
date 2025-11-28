@@ -150,16 +150,33 @@ let socket = null;
         const chatHeader = document.getElementById('chat-header');
         const chatInput = document.getElementById('chat-input');
         const chatMessages = document.getElementById('chat-messages');
+        const chatCloseBtn = document.getElementById('chat-close-btn');
         let isChatDragging = false;
         let chatDragOffsetX = 0;
         let chatDragOffsetY = 0;
+        let isChatMinimized = false;
 
         chatHeader.addEventListener('mousedown', (e) => {
+            // Non iniziare drag se click sul bottone close
+            if (e.target === chatCloseBtn) return;
             isChatDragging = true;
             const rect = chatContainer.getBoundingClientRect();
             chatDragOffsetX = e.clientX - rect.left;
             chatDragOffsetY = e.clientY - rect.top;
             chatContainer.classList.add('dragging');
+        });
+        
+        // Bottone chiudi/minimizza chat
+        chatCloseBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            isChatMinimized = !isChatMinimized;
+            if (isChatMinimized) {
+                chatContainer.classList.add('minimized');
+                chatCloseBtn.textContent = '+';
+            } else {
+                chatContainer.classList.remove('minimized');
+                chatCloseBtn.textContent = '×';
+            }
         });
         
         // Chat input handling
@@ -713,6 +730,13 @@ let socket = null;
             playerMesh.position.copy(spawnPos);
             velocity.set(0, 0, 0);
             
+            // Resetta tutti i flag di movimento
+            moveForward = false;
+            moveBackward = false;
+            moveLeft = false;
+            moveRight = false;
+            isSprinting = false;
+            
             // Resetta lo stato di combattimento
             isAttacking = false;
             attackTimer = 0;
@@ -878,14 +902,22 @@ let socket = null;
                 if (e.code === 'ControlLeft' || e.code === 'ControlRight') {
                     if (isCtrlPressed) { // Solo se era effettivamente premuto
                         isCtrlPressed = false;
-                        // Rientra nel pointer lock se il giocatore non è morto e non è già bloccato
-                        if (!playerStats.isDead && document.pointerLockElement !== document.body && !document.getElementById('main-menu').style.display) {
-                            // Piccolo delay per evitare conflitti
+                        // Rientra nel pointer lock se il giocatore non è morto
+                        const mainMenu = document.getElementById('main-menu');
+                        const keybindsPanel = document.getElementById('keybinds-panel');
+                        const isMenuVisible = mainMenu && mainMenu.style.display !== 'none';
+                        const isPanelVisible = keybindsPanel && keybindsPanel.style.display === 'block';
+                        
+                        if (!playerStats.isDead && document.pointerLockElement !== document.body && !isMenuVisible && !isPanelVisible) {
                             setTimeout(() => {
-                                if (!isCtrlPressed && !playerStats.isDead) {
-                                    document.body.requestPointerLock();
+                                if (!isCtrlPressed && !playerStats.isDead && document.pointerLockElement !== document.body) {
+                                    try {
+                                        document.body.requestPointerLock();
+                                    } catch(err) {
+                                        console.log('Pointer lock error:', err);
+                                    }
                                 }
-                            }, 100);
+                            }, 150);
                         }
                     }
                     return;

@@ -210,6 +210,9 @@ function updateTeamCounts(counts) {
     });
 }
 
+// Esponi la funzione globalmente per aggiornamenti in tempo reale
+window.updateTeamCounts = updateTeamCounts;
+
 // Inizializza il menu quando il DOM è pronto
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initMenu);

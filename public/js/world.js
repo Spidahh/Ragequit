@@ -276,8 +276,8 @@ function createTeamMap() {
         base.position.set(zone.x, 0.1, zone.z);
         scene.add(base);
         
-        // Mura protettive per ogni base
-        createArenaWalls(zone.x, zone.z, 90, 15, zone.color);
+        // Mura protettive rimosse (causavano collisioni invisibili)
+        // createArenaWalls(zone.x, zone.z, 90, 15, zone.color);
         
         // Alberi attorno alla base
         for(let i=0; i<8; i++) {
@@ -303,17 +303,17 @@ function createTeamMap() {
     scene.add(centralPlatform);
     // Non aggiungiamo agli obstacles per renderla calpestabile
     
-    // Pilastri centrali
-    for(let i=0; i<4; i++) {
-        let angle = (i / 4) * Math.PI * 2 + Math.PI / 4;
-        let x = Math.cos(angle) * 40;
-        let z = Math.sin(angle) * 40;
-        createPillar(x, z, 30);
-    }
+    // Pilastri centrali rimossi (causavano blocchi)
+    // for(let i=0; i<4; i++) {
+    //     let angle = (i / 4) * Math.PI * 2 + Math.PI / 4;
+    //     let x = Math.cos(angle) * 40;
+    //     let z = Math.sin(angle) * 40;
+    //     createPillar(x, z, 30);
+    // }
     
-    // Ostacoli tra le zone
-    for(let i=0; i<16; i++) {
-        let angle = (i / 16) * Math.PI * 2;
+    // Ostacoli tra le zone (ridotti) (ridotti)
+    for(let i=0; i<8; i++) {
+        let angle = (i / 8) * Math.PI * 2;
         let radius = 150 + random() * 50;
         let x = Math.cos(angle) * radius;
         let z = Math.sin(angle) * radius;
@@ -419,7 +419,8 @@ function createArenaWalls(centerX, centerZ, radius, height, color) {
         wall.castShadow = true;
         wall.receiveShadow = true;
         scene.add(wall);
-        obstacles.push(wall);
+        // Non aggiungiamo alle collisioni - solo decorative
+        // obstacles.push(wall);
     }
 }
 
@@ -456,7 +457,8 @@ function createPillar(x, z, height) {
     pillar.castShadow = true;
     pillar.receiveShadow = true;
     scene.add(pillar);
-    obstacles.push(pillar);
+    // Non aggiungiamo collisioni - solo decorativi
+    // obstacles.push(pillar);
 }
 
 function createPineTree(x, z, seedOffset) {
