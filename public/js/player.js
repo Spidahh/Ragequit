@@ -152,7 +152,9 @@ function spawnParticles(pos, color, count, speedBase, size, isGibs) {
                 const mesh = new THREE.Mesh(new THREE.BoxGeometry(particleSize,particleSize,particleSize), mat);
                 mesh.position.copy(pos); mesh.position.add(new THREE.Vector3(random()-0.5, random()-0.5, random()-0.5).multiplyScalar(2));
                 scene.add(mesh);
-                particles.push({ mesh: mesh, velocity: new THREE.Vector3(random()-0.5, random()*0.5+0.2, random()-0.5).normalize().multiplyScalar(speedBase*(random()+0.5)), life: 1.0, maxLife: 1.0, isGib: isGibs });
+                // Ridotto tempo di vita: gibs 2 secondi, particelle normali 0.5 secondi
+                const lifeTime = isGibs ? 2.0 : 0.5;
+                particles.push({ mesh: mesh, velocity: new THREE.Vector3(random()-0.5, random()*0.5+0.2, random()-0.5).normalize().multiplyScalar(speedBase*(random()+0.5)), life: lifeTime, maxLife: lifeTime, isGib: isGibs });
             }
         }
 
@@ -162,7 +164,19 @@ function updateParticles(delta) {
                 p.mesh.position.addScaledVector(p.velocity, delta); p.mesh.rotation.x+=delta*5;
                 const scale = p.life / p.maxLife;
                 p.mesh.scale.setScalar(scale);
-                if (p.mesh.position.y < 0.5) { p.mesh.position.y = 0.5; if(p.isGib) { p.velocity.y*=-0.5; p.velocity.x*=0.8; p.velocity.z*=0.8; } else p.velocity.set(0,0,0); }
+                // Le gibs a terra spariscono gradualmente tramite fade
+                if (p.mesh.position.y < 0.5) { 
+                    p.mesh.position.y = 0.5; 
+                    if(p.isGib) { 
+                        p.velocity.y*=-0.5; 
+                        p.velocity.x*=0.8; 
+                        p.velocity.z*=0.8;
+                        // Fade out più rapido quando sono a terra
+                        p.life -= delta * 2;
+                    } else {
+                        p.velocity.set(0,0,0);
+                    }
+                }
                 if (p.life <= 0) { scene.remove(p.mesh); particles.splice(i, 1); }
             }
         }
