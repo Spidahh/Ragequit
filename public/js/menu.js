@@ -1,0 +1,163 @@
+// menu.js - Nuovo sistema di menu completamente rifatto
+
+let currentGameMode = null; // 'ffa' o 'team'
+let selectedTeam = null; // 'red', 'black', 'green', 'purple'
+let playerUsername = '';
+
+const TEAM_COLORS = {
+    red: 0xff0000,
+    black: 0x666666,
+    green: 0x00ff00,
+    purple: 0xff00ff
+};
+
+function initMenu() {
+    const mainMenu = document.getElementById('main-menu');
+    const teamSelectionScreen = document.getElementById('team-selection-screen');
+    const usernameInput = document.getElementById('username-input');
+    const ffaBtn = document.getElementById('ffa-btn');
+    const teamBtn = document.getElementById('team-btn');
+    const teamOptions = document.querySelectorAll('.team-option');
+
+    // Carica username salvato
+    const savedUsername = localStorage.getItem('ragequit_username');
+    if (savedUsername) {
+        usernameInput.value = savedUsername;
+        playerUsername = savedUsername;
+    }
+
+    // Aggiorna username quando cambia
+    usernameInput.addEventListener('input', (e) => {
+        playerUsername = e.target.value.trim();
+        if (playerUsername) {
+            localStorage.setItem('ragequit_username', playerUsername);
+        }
+    });
+
+    // Click su FFA -> Entra direttamente nel gioco
+    ffaBtn.addEventListener('click', () => {
+        if (!playerUsername) {
+            usernameInput.focus();
+            usernameInput.style.borderColor = '#ff0000';
+            usernameInput.style.boxShadow = '0 0 30px rgba(255,0,0,0.8)';
+            setTimeout(() => {
+                usernameInput.style.borderColor = '#666';
+                usernameInput.style.boxShadow = 'none';
+            }, 1000);
+            return;
+        }
+
+        currentGameMode = 'ffa';
+        selectedTeam = null;
+        
+        // Salva username
+        window.myUsername = playerUsername;
+        localStorage.setItem('ragequit_username', playerUsername);
+        
+        // Nascondi menu e avvia gioco
+        mainMenu.style.display = 'none';
+        startGame('ffa');
+    });
+
+    // Click su SQUADRE -> Mostra selezione squadre
+    teamBtn.addEventListener('click', () => {
+        if (!playerUsername) {
+            usernameInput.focus();
+            usernameInput.style.borderColor = '#ff0000';
+            usernameInput.style.boxShadow = '0 0 30px rgba(255,0,0,0.8)';
+            setTimeout(() => {
+                usernameInput.style.borderColor = '#666';
+                usernameInput.style.boxShadow = 'none';
+            }, 1000);
+            return;
+        }
+
+        currentGameMode = 'team';
+        
+        // Salva username
+        window.myUsername = playerUsername;
+        localStorage.setItem('ragequit_username', playerUsername);
+        
+        // Nascondi menu principale e mostra selezione squadre
+        mainMenu.style.display = 'none';
+        teamSelectionScreen.style.display = 'flex';
+    });
+
+    // Click su una squadra -> Entra nel gioco con quella squadra
+    teamOptions.forEach(option => {
+        option.addEventListener('click', () => {
+            const team = option.dataset.team;
+            selectedTeam = team;
+            
+            // Imposta colore squadra
+            window.myTeam = team;
+            window.myTeamColor = TEAM_COLORS[team];
+            
+            // Nascondi selezione squadre e avvia gioco
+            teamSelectionScreen.style.display = 'none';
+            startGame('team');
+        });
+    });
+}
+
+function startGame(mode) {
+    console.log(`[MENU] Starting game - Mode: ${mode}, Team: ${selectedTeam || 'none'}`);
+    
+    // Imposta variabili globali
+    window.myGameMode = mode;
+    
+    if (mode === 'ffa') {
+        window.myTeamColor = 0x2c3e50; // Colore default FFA
+        window.myTeam = null;
+    } else if (mode === 'team' && selectedTeam) {
+        window.myTeamColor = TEAM_COLORS[selectedTeam];
+        window.myTeam = selectedTeam;
+    }
+
+    // INIZIALIZZA IL GIOCO - Chiamata fondamentale!
+    if (typeof init === 'function') {
+        console.log('[MENU] Calling init() to start Three.js');
+        init();
+    } else {
+        console.error('[MENU] Function init() not found!');
+    }
+
+    // Inizializza multiplayer se disponibile
+    if (typeof initMultiplayer === 'function' && mode !== 'pve') {
+        initMultiplayer();
+    }
+
+    // Attiva audio se disponibile
+    if (typeof toggleAudio === 'function') {
+        const audioBtn = document.getElementById('audio-btn');
+        if (audioBtn && audioBtn.textContent.includes('OFF')) {
+            toggleAudio();
+        }
+    }
+
+    // Richiedi pointer lock dopo breve delay
+    setTimeout(() => {
+        try {
+            const promise = document.body.requestPointerLock();
+            if (promise && typeof promise.catch === 'function') {
+                promise.catch(e => console.log('[MENU] Pointer lock non attivato:', e));
+            }
+        } catch(e) {
+            console.log('[MENU] Errore pointer lock:', e);
+        }
+    }, 100);
+
+    console.log('[MENU] Game started successfully');
+}
+
+function returnToMenu() {
+    // Ricarica la pagina per tornare al menu
+    location.reload();
+}
+
+// Inizializza il menu quando il DOM è pronto
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMenu);
+} else {
+    initMenu();
+}

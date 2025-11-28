@@ -1,0 +1,14 @@
+ragequit-arena/
+  package.json
+  server.js
+  README.txt
+  public/
+    index.html
+    css/
+      styles.css
+    js/
+      game.js        ← core + variabili globali + init, loop, input, UI, audio...
+      spells.js      ← tutte le spell & proiettili
+      world.js       ← mondo, terreno, alberi, case
+      player.js      ← player model, animazioni, camera, particelle, ecc.
+      network.js     ← socket.io, multiplayer, gestione altri player
