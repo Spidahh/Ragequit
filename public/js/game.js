@@ -49,7 +49,7 @@ let socket = null;
             sprintStaminaCostPerSec: 1.0, 
             
             // JUMP SETTINGS
-            jumpForce: 250.0, 
+            jumpForce: 200.0, 
             jumpCooldown: 300,
             jumpCost: 15, 
             gravity: 800.0, 
@@ -186,6 +186,16 @@ let socket = null;
         });
         chatInput.addEventListener('blur', () => {
             isChatFocused = false;
+            // Riattiva pointer lock quando si esce dalla chat
+            if (!playerStats.isDead && document.pointerLockElement !== document.body) {
+                setTimeout(() => {
+                    try {
+                        document.body.requestPointerLock();
+                    } catch(e) {
+                        console.log('Pointer lock error:', e);
+                    }
+                }, 100);
+            }
         });
         chatInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && chatInput.value.trim()) {
@@ -724,6 +734,7 @@ let socket = null;
             playerStats.mana = playerStats.maxMana;
             playerStats.stamina = playerStats.maxStamina;
             playerStats.isDead = false;
+            playerStats.isFalling = false;
             
             // Determina la posizione di respawn in base alla modalità
             let spawnPos = getSpawnPosition();
@@ -736,6 +747,7 @@ let socket = null;
             moveLeft = false;
             moveRight = false;
             isSprinting = false;
+            canJump = true;
             
             // Resetta lo stato di combattimento
             isAttacking = false;
@@ -744,6 +756,9 @@ let socket = null;
             
             // Mostra il messaggio
             document.getElementById('message').style.display = 'none';
+            
+            // Rendi visibile il player
+            playerMesh.visible = true;
             
             // Aggiorna l'UI
             updateUI();

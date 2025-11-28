@@ -60,7 +60,25 @@ function initMultiplayer() {
                 });
                 socket.on('playerDisconnected', (id) => { if (otherPlayers[id]) addToLog(otherPlayers[id].username + " è uscito.", "kill"); removeOtherPlayer(id); });
                 socket.on('updateUsername', (data) => { if (otherPlayers[data.id]) { otherPlayers[data.id].username = data.username; const oldLabel = otherPlayers[data.id].mesh.children.find(c => c.userData.isLabel); if (oldLabel) otherPlayers[data.id].mesh.remove(oldLabel); const newLabel = createPlayerLabel(data.username); newLabel.position.y = 14; newLabel.userData.isLabel = true; otherPlayers[data.id].mesh.add(newLabel); otherPlayers[data.id].mesh.userData.hpBar = newLabel.userData.hpBar; } });
-                socket.on('playerMoved', (playerInfo) => { if (otherPlayers[playerInfo.id]) { const p = otherPlayers[playerInfo.id]; p.mesh.userData.targetPos = playerInfo.position; p.mesh.userData.targetRot = playerInfo.rotation; p.mesh.userData.animState = playerInfo.animState; if(p.mesh.userData.weaponMode !== playerInfo.weaponMode) { p.mesh.userData.weaponMode = playerInfo.weaponMode; updateOpponentWeaponVisuals(otherPlayers[playerInfo.id], playerInfo.weaponMode); } } });
+                socket.on('playerMoved', (playerInfo) => { 
+                    if (otherPlayers[playerInfo.id]) { 
+                        const p = otherPlayers[playerInfo.id]; 
+                        
+                        // Se il giocatore era morto e si muove, significa che è respawnato
+                        if (p.mesh.userData.isDead) {
+                            p.mesh.userData.isDead = false;
+                            p.mesh.visible = true;
+                        }
+                        
+                        p.mesh.userData.targetPos = playerInfo.position; 
+                        p.mesh.userData.targetRot = playerInfo.rotation; 
+                        p.mesh.userData.animState = playerInfo.animState; 
+                        if(p.mesh.userData.weaponMode !== playerInfo.weaponMode) { 
+                            p.mesh.userData.weaponMode = playerInfo.weaponMode; 
+                            updateOpponentWeaponVisuals(otherPlayers[playerInfo.id], playerInfo.weaponMode); 
+                        } 
+                    } 
+                });
                 
                 socket.on('updateTeamColor', (data) => {
                     if (otherPlayers[data.id]) {
@@ -160,14 +178,11 @@ function initMultiplayer() {
                         spawnParticles(playerMesh.position, 0xff0000, 50, 50, 1.0, true);
                         playerMesh.visible = false;
                     } else if(otherPlayers[data.id]) { 
-                        otherPlayers[data.id].mesh.userData.isDead = true; 
+                        otherPlayers[data.id].mesh.userData.isDead = true;
+                        otherPlayers[data.id].mesh.visible = false; // Nascondi invece di rimuovere
                         addToLog(otherPlayers[data.id].username + " eliminato!", "kill"); 
-                        spawnParticles(otherPlayers[data.id].mesh.position, 0xff0000, 50, 50, 1.0, true); 
-                        setTimeout(() => { 
-                            if(otherPlayers[data.id] && otherPlayers[data.id].mesh.userData.isDead) { 
-                                removeOtherPlayer(data.id); 
-                            } 
-                        }, 500); 
+                        spawnParticles(otherPlayers[data.id].mesh.position, 0xff0000, 50, 50, 1.0, true);
+                        // Non rimuovere il giocatore - sar\u00e0 rimostrato quando respawna
                     }
                     
                     // Incrementa kill counter per il killer

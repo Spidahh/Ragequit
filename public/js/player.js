@@ -407,7 +407,16 @@ function updatePhysics(delta) {
                 if(!playerStats.isFalling) { distanceSinceStep += speed * delta; if(distanceSinceStep > 400.0) { playSound('step'); distanceSinceStep = 0; } }
             }
             playerMesh.position.addScaledVector(velocity, delta);
-            if(playerMesh.position.y < 6) { if (velocity.y <= 0) { playerMesh.position.y = 6; velocity.y = 0; canJump = true; playerStats.isFalling = false; } }
+            if(playerMesh.position.y <= 6) { 
+                if (velocity.y <= 0) { 
+                    playerMesh.position.y = 6; 
+                    velocity.y = 0; 
+                    canJump = true; 
+                    playerStats.isFalling = false; 
+                } 
+            } else {
+                canJump = false;
+            }
             playerStats.stamina = Math.max(0, Math.min(playerStats.maxStamina, playerStats.stamina));
             
             // Check healing temple proximity
