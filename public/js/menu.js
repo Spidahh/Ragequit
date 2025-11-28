@@ -6,9 +6,9 @@ let playerUsername = '';
 
 const TEAM_COLORS = {
     red: 0xff0000,
-    black: 0x666666,
-    green: 0x00ff00,
-    purple: 0xff00ff
+    black: 0x00ffff,
+    green: 0xccff00,
+    purple: 0x8800ff
 };
 
 function initMenu() {

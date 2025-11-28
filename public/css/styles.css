@@ -221,9 +221,9 @@ body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Seg
             opacity: 0.4;
         }
         .red-bg { background: radial-gradient(circle, #ff0000 0%, #000 100%); }
-        .black-bg { background: radial-gradient(circle, #666 0%, #000 100%); }
-        .green-bg { background: radial-gradient(circle, #00ff00 0%, #000 100%); }
-        .purple-bg { background: radial-gradient(circle, #ff00ff 0%, #000 100%); }
+        .black-bg { background: radial-gradient(circle, #00ffff 0%, #000 100%); }
+        .green-bg { background: radial-gradient(circle, #ccff00 0%, #000 100%); }
+        .purple-bg { background: radial-gradient(circle, #8800ff 0%, #000 100%); }
         .team-option[data-team="red"] {
             border-color: #ff0000;
             box-shadow: 0 0 30px rgba(255,0,0,0.4);
@@ -566,9 +566,9 @@ body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Seg
             transition: all 0.2s;
         }
         .team-kill-box.red { border-bottom: 2px solid #ff0000; }
-        .team-kill-box.black { border-bottom: 2px solid #666666; }
-        .team-kill-box.green { border-bottom: 2px solid #00ff00; }
-        .team-kill-box.purple { border-bottom: 2px solid #ff00ff; }
+        .team-kill-box.black { border-bottom: 2px solid #00ffff; }
+        .team-kill-box.green { border-bottom: 2px solid #ccff00; }
+        .team-kill-box.purple { border-bottom: 2px solid #8800ff; }
         .team-name {
             font-size: 10px;
             font-weight: bold;
@@ -577,9 +577,9 @@ body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Seg
             margin-bottom: 2px;
         }
         .team-kill-box.red .team-name { color: #ff0000; }
-        .team-kill-box.black .team-name { color: #999999; }
-        .team-kill-box.green .team-name { color: #00ff00; }
-        .team-kill-box.purple .team-name { color: #ff00ff; }
+        .team-kill-box.black .team-name { color: #00ffff; }
+        .team-kill-box.green .team-name { color: #ccff00; }
+        .team-kill-box.purple .team-name { color: #8800ff; }
         .team-kills {
             font-size: 14px;
             font-weight: bold;

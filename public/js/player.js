@@ -71,7 +71,29 @@ function createPlayer() {
             const spawnPos = getSpawnPosition ? getSpawnPosition() : new THREE.Vector3(0, 6, 0);
             playerMesh.position.copy(spawnPos);
             
+            // Aggiorna il colore dell'armatura con il colore della squadra
+            updatePlayerColor();
+            
             scene.add(playerMesh);
+        }
+
+function updatePlayerColor() {
+            if (!playerMesh) return;
+            
+            // Aggiorna il colore di tutti i pezzi dell'armatura
+            const currentColor = typeof myTeamColor !== 'undefined' ? myTeamColor : 0x2c3e50;
+            
+            playerMesh.traverse((child) => {
+                if (child.isMesh && child.material) {
+                    // Aggiorna solo i materiali dell'armatura (non metallo o altri)
+                    if (child.material.color && child.material.metalness < 0.8) {
+                        child.material.color.setHex(currentColor);
+                        if (child.material.emissive) {
+                            child.material.emissive.setHex(currentColor);
+                        }
+                    }
+                }
+            });
         }
 
 function createSword() {

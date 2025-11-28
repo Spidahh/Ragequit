@@ -456,7 +456,7 @@ let socket = null;
             // Mostra sempre il contatore squadre
             teamContainer.style.display = 'flex';
             
-            const teamNames = {red: 'ROSIKONI', black: 'NABBI', green: 'TRIMONI', purple: 'INFAMI'};
+            const teamNames = {red: 'ROSIKONI', black: 'TRIMONI', green: 'FATTONI', purple: 'INFAMI'};
             teamContainer.innerHTML = ['red', 'black', 'green', 'purple'].map(team => 
                 `<div class="team-kill-box ${team}">
                     <div class="team-name">${teamNames[team]}</div>
