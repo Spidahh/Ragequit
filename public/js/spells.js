@@ -411,7 +411,9 @@ function updateProjectiles(delta) {
                 } else { 
                     p.position.add(move); p.userData.life -= delta; 
                     
-                    let gravity = (p.userData.type === 5) ? SETTINGS.arrowGravity : SETTINGS.gravity;
+                    let gravity = SETTINGS.gravity;
+                    if (p.userData.type === 5) gravity = SETTINGS.arrowGravity; // Freccia
+                    else if (p.userData.type === 1) gravity = SETTINGS.missileGravity; // Dardo
                     p.userData.velocity.y -= gravity * delta;
                     
                     if (p.userData.type === 5) p.lookAt(p.position.clone().add(p.userData.velocity)); 

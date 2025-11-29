@@ -97,13 +97,14 @@ let socket = null;
             
             // Missile (Dardo)
             missileSpeed: 900.0, 
-            missileDmg: 10, 
+            missileDmg: 10,
+            missileGravity: 300, // GRAVITÀ DARDO RIDOTTA - traiettoria quasi dritta 
             missileCost: 5,
             
             // ONDA (Shockwave)
             pushSpeed: 700.0, 
             pushForce: 900.0, 
-            pushUpForce: 500.0, 
+            pushUpForce: 300.0, 
             pushCost: 15, 
             pushRadius: 45, 
             pushVisualRadius: 20, 
