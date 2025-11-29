@@ -103,10 +103,14 @@ function updateConversions(delta) {
         }
 
 function applyConversionTick(type) {
-             const cost = 5; const gain = 5;
+            // Non applicare conversione se morto
+            if (playerStats.isDead) return;
+            
+            const cost = 5; const gain = 5;
             if (type === 1) { 
                 if (playerStats.stamina >= cost && playerStats.hp < playerStats.maxHp) { 
-                    playerStats.stamina -= cost; playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + gain); 
+                    playerStats.stamina -= cost; 
+                    playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + gain); 
                     if(socket) socket.emit('playerHealed', { amount: gain });
                 } 
             } 

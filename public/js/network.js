@@ -184,6 +184,11 @@ function initMultiplayer() {
                     // Controlla se il player è morto
                     if (playerStats.hp <= 0 && !playerStats.isDead) {
                         playerStats.isDead = true;
+                        playerStats.hp = 0; // Forza HP a 0
+                        // Ferma tutte le conversioni attive
+                        if (typeof activeConversions !== 'undefined') {
+                            activeConversions.length = 0;
+                        }
                         document.getElementById('message').innerHTML = "SEI STATO SCONFITTO<br><span style='font-size:16px'>Premi RESPAWN</span>"; 
                         document.getElementById('message').style.display = "block";
                         document.exitPointerLock();

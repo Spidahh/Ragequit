@@ -56,6 +56,7 @@ io.on('connection', (socket) => {
     lastSeen[socket.id] = Date.now();
 
     socket.on('joinGame', (userData) => {
+        // Reset completo del player (rimuove flag isDead)
         if (players[socket.id]) delete players[socket.id];
         
         if (Object.keys(players).length >= 10) {
@@ -188,6 +189,8 @@ io.on('connection', (socket) => {
             if (pushData.damage) {
                 actualDamage = pushData.damage;
                 players[targetId].hp -= actualDamage;
+                // Clamp HP a 0 per evitare valori negativi
+                players[targetId].hp = Math.max(0, players[targetId].hp);
             }
             // Emit to the target player so they can execute the push effect
             io.to(targetId).emit('playerPushed', {
@@ -224,7 +227,10 @@ io.on('connection', (socket) => {
             const actualDamage = dmgData.damage;
             players[targetId].hp -= actualDamage;
             
-            console.log(`[HIT VALIDATED] ${socket.id} -> ${targetId} (${actualDamage} dmg, pos: ${JSON.stringify(players[targetId].position)})`);
+            // Clamp HP a 0 per evitare valori negativi
+            players[targetId].hp = Math.max(0, players[targetId].hp);
+            
+            console.log(`[HIT VALIDATED] ${socket.id} -> ${targetId} (${actualDamage} dmg, hp: ${players[targetId].hp})`);
             
             // Send health update to all
             io.emit('updateHealth', { id: targetId, hp: players[targetId].hp });
