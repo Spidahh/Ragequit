@@ -29,13 +29,16 @@ function createPlayer() {
             }
 
             playerMesh = new THREE.Group();
-            const armorMat = new THREE.MeshStandardMaterial({ 
+            const armorMat = new THREE.MeshLambertMaterial({ // Lambert invece di Standard per FPS
                 color: typeof myTeamColor !== 'undefined' ? myTeamColor : 0x2c3e50, 
-                metalness: 0.7,
                 emissive: typeof myTeamColor !== 'undefined' ? myTeamColor : 0x2c3e50,
-                emissiveIntensity: 0.2
+                emissiveIntensity: 0.3,
+                flatShading: true // Flat shading per FPS
             }); 
-            const metalMat = new THREE.MeshStandardMaterial({ color: 0x95a5a6, metalness: 0.9 });
+            const metalMat = new THREE.MeshLambertMaterial({ // Lambert per performance
+                color: 0x95a5a6,
+                flatShading: true
+            });
             const torso = new THREE.Mesh(new THREE.BoxGeometry(4.5, 6.5, 3), armorMat); torso.position.y = 3.5; playerMesh.add(torso); playerLimbs.torso = torso;
             const chest = new THREE.Mesh(new THREE.BoxGeometry(4.7, 3.5, 3.2), metalMat); chest.position.y = 5.0; playerMesh.add(chest); chest.userData.isTorsoPart = true; 
             

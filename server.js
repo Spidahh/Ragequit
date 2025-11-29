@@ -13,6 +13,29 @@ const path = require('path');
 // Variabili globali
 let players = {};
 let lastSeen = {};
+let serverStartTime = Date.now();
+
+// Helper per calcolare distanza 3D
+function distance3D(pos1, pos2) {
+    const dx = pos1.x - pos2.x;
+    const dy = pos1.y - pos2.y;
+    const dz = pos1.z - pos2.z;
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
+}
+
+// Server-side hit detection autoritativo
+function validateHit(shooterId, targetId, hitPosition) {
+    const shooter = players[shooterId];
+    const target = players[targetId];
+    
+    if (!shooter || !target || target.isDead) return false;
+    
+    // Verifica che il target sia abbastanza vicino alla posizione dell'hit
+    const dist = distance3D(target.position, hitPosition);
+    const maxHitDistance = 10; // Tolleranza massima per lag
+    
+    return dist <= maxHitDistance;
+}
 
 // Serviamo i file statici dalla cartella "public"
 app.use(express.static(path.join(__dirname, 'public')));
@@ -73,6 +96,11 @@ io.on('connection', (socket) => {
         socket.emit('teamCounts', counts);
     });
     
+    // Ping handler
+    socket.on('ping', (timestamp) => {
+        socket.emit('pong', timestamp);
+    });
+    
     function getTeamCounts() {
         const counts = {red: 0, black: 0, green: 0, purple: 0};
         Object.values(players).forEach(p => {
@@ -118,15 +146,18 @@ io.on('connection', (socket) => {
     });
 
     socket.on('playerMovement', (data) => {
-        lastSeen[socket.id] = Date.now();
+        const now = Date.now();
+        lastSeen[socket.id] = now;
         if (players[socket.id]) {
             players[socket.id].position = data.position;
             players[socket.id].rotation = data.rotation;
             players[socket.id].animState = data.animState;
             players[socket.id].weaponMode = data.weaponMode;
+            players[socket.id].lastUpdate = now; // Timestamp per lag compensation
             
             socket.broadcast.emit('playerMoved', {
                 id: socket.id,
+                timestamp: now, // Invia timestamp server
                 ...data
             });
         }
@@ -180,9 +211,20 @@ io.on('connection', (socket) => {
 
     socket.on('playerHit', (dmgData) => {
         const targetId = dmgData.targetId;
+        
+        // VALIDAZIONE SERVER-SIDE DELL'HIT
+        if (!validateHit(socket.id, targetId, dmgData.hitPosition || players[targetId]?.position)) {
+            console.log(`[HIT REJECTED] ${socket.id} -> ${targetId} (posizione non valida)`);
+            // Informa il shooter che l'hit è stato respinto
+            socket.emit('hitRejected', { targetId: targetId });
+            return;
+        }
+        
         if (players[targetId]) {
             const actualDamage = dmgData.damage;
             players[targetId].hp -= actualDamage;
+            
+            console.log(`[HIT VALIDATED] ${socket.id} -> ${targetId} (${actualDamage} dmg, pos: ${JSON.stringify(players[targetId].position)})`);
             
             // Send health update to all
             io.emit('updateHealth', { id: targetId, hp: players[targetId].hp });

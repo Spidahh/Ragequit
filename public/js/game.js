@@ -28,6 +28,41 @@ let socket = null;
         let isAttacking = false; let attackTimer = 0; let isWhirlwinding = false; 
         const playerStats = { hp: 100, maxHp: 100, mana: 100, maxMana: 100, stamina: 100, maxStamina: 100, isDead: false, isFalling: false };
         const projectiles = [], obstacles = [], particles = [];
+        let frameCount = 0; // Per throttling UI
+        const particlePool = []; // Object pooling per particelle
+        const maxParticles = 100; // Limita particelle attive
+        
+        // Networking avanzato - Lag compensation
+        const positionBuffer = {}; // Buffer posizioni per interpolazione
+        const INTERPOLATION_DELAY = 100; // ms di delay per smooth interpolation
+        let serverTime = 0;
+        let clientTimeOffset = 0;
+        
+        // LOD System
+        const LOD_DISTANCES = { HIGH: 50, MEDIUM: 150, LOW: 300 };
+        let lodObjects = [];
+        
+        // Spectator mode
+        let isSpectating = false;
+        let spectateTarget = null;
+        let spectateIndex = 0;
+        
+        // Match statistics
+        const matchStats = {
+            kills: 0, deaths: 0, damage: 0, healing: 0,
+            accuracy: { shots: 0, hits: 0 },
+            startTime: Date.now(),
+            matchHistory: JSON.parse(localStorage.getItem('ragequit_match_history') || '[]')
+        };
+        
+        // FPS Counter
+        let fpsFrames = 0;
+        let fpsLastTime = performance.now();
+        let currentFPS = 0;
+        
+        // Ping Counter
+        let lastPingTime = 0;
+        let currentPing = 0;
         let floatingTexts = [];
         const activeConversions = []; 
         let castingState = { active: false, currentSpell: 0, timer: 0, maxTime: 0, ready: false, keyHeld: null };
@@ -534,41 +569,45 @@ let socket = null;
         function init() {
             scene = new THREE.Scene(); 
             
-            // Colore di sfondo per modalità team
+            // Background semplice per performance
             scene.background = new THREE.Color(0x2a2a3a);
-            scene.fog = new THREE.Fog(0x2a2a3a, 200, 900);
+            scene.fog = new THREE.Fog(0x2a2a3a, 150, 600); // Fog più aggressiva per nascondere pop-in
             
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.5, 1000);
             createPlayer(); createSword(); createStaff(); createShield(); createBow();
             
-            // Luci più chiare per migliore visibilità
-            const ambientLight = new THREE.AmbientLight(0x666688, 0.8);
+            // Luci ottimizzate per FPS - ridotte al minimo
+            const ambientLight = new THREE.AmbientLight(0x888899, 1.2); // Solo ambient per performance
             scene.add(ambientLight);
             
             const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
             dirLight.position.set(150, 250, 100);
-            dirLight.castShadow = true;
-            dirLight.shadow.mapSize.width = 2048;
-            dirLight.shadow.mapSize.height = 2048;
-            dirLight.shadow.camera.near = 0.5;
-            dirLight.shadow.camera.far = 800;
-            dirLight.shadow.camera.left = -300;
-            dirLight.shadow.camera.right = 300;
-            dirLight.shadow.camera.top = 300;
-            dirLight.shadow.camera.bottom = -300;
+            dirLight.castShadow = false; // Ombre disabilitate per FPS
             scene.add(dirLight);
             
-            // Luce puntiforme per illuminare meglio
-            const pointLight = new THREE.PointLight(0xffffff, 0.4, 500);
-            pointLight.position.set(0, 100, 0);
-            scene.add(pointLight);
-            
             seed = WORLD_SEED; setupWorld(); setupControls(); setupUIEvents();
-            renderer = new THREE.WebGLRenderer({ antialias: true }); 
-            renderer.setPixelRatio(window.devicePixelRatio); 
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: false,
+                powerPreference: 'high-performance',
+                precision: 'mediump',
+                alpha: false,
+                stencil: false
+            }); 
+            renderer.setPixelRatio(1);
             renderer.setSize(window.innerWidth, window.innerHeight); 
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.shadowMap.enabled = false;
+            renderer.sortObjects = false;
+            
+            // Compatibilità con versioni diverse di THREE.js
+            if (THREE.REVISION >= 150) {
+                renderer.outputColorSpace = THREE.SRGBColorSpace;
+                renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                renderer.toneMappingExposure = 1.0;
+            } else {
+                renderer.gammaOutput = true;
+                renderer.gammaFactor = 2.2;
+            }
+            console.log('[RENDERER] THREE.js r' + THREE.REVISION + ' inizializzato');
             renderer.domElement.style.position = 'fixed';
             renderer.domElement.style.top = '0';
             renderer.domElement.style.left = '0';
@@ -590,6 +629,7 @@ let socket = null;
             }
             if (typeof window.myTeamColor !== 'undefined') {
                 myTeamColor = window.myTeamColor;
+                updatePlayerColor(); // Aggiorna il colore del player dopo la sincronizzazione
             }
             if (typeof window.myTeam !== 'undefined') {
                 myTeam = window.myTeam;
@@ -698,6 +738,11 @@ let socket = null;
         function addToLog(msg, typeClass) { const log = document.getElementById('log'); const entry = document.createElement('div'); entry.className = 'log-entry ' + (typeClass || ''); entry.innerText = msg; log.prepend(entry); if(log.children.length > 8) log.lastChild.remove(); }
         
         function respawnPlayer() {
+            // Track death for statistics
+            matchStats.deaths++;
+            isSpectating = false;
+            spectateTarget = null;
+            
             // Resetta le statistiche del giocatore
             playerStats.hp = playerStats.maxHp;
             playerStats.mana = playerStats.maxMana;
@@ -774,7 +819,11 @@ let socket = null;
         }
         
         function setupUIEvents() {
-            document.getElementById('reset-btn').addEventListener('click', (e) => { e.stopPropagation(); respawnPlayer(); });
+            document.getElementById('reset-btn').addEventListener('click', (e) => { 
+                e.stopPropagation(); 
+                e.target.blur(); // Rimuovi focus dal pulsante
+                respawnPlayer(); 
+            });
             document.getElementById('keybinds-btn').addEventListener('click', (e) => { 
                 e.stopPropagation(); 
                 e.preventDefault();
@@ -883,6 +932,18 @@ let socket = null;
                         if (weaponMode !== 'bow') { weaponMode = 'bow'; toggleWeapon(true); }
                         break;
                     case KEYBINDS.HEAL: performHeal(); break;
+                    case 84: // T key - Toggle spectator (when dead)
+                        if (playerStats.isDead) toggleSpectator();
+                        break;
+                    case 188: // < key - Previous spectate target
+                        if (isSpectating) cycleSpectate(-1);
+                        break;
+                    case 190: // > key - Next spectate target
+                        if (isSpectating) cycleSpectate(1);
+                        break;
+                    case 72: // H key - Show match history
+                        showMatchStats();
+                        break;
                     case KEYBINDS.SPELL_1: selectSpell(1); startCasting(1, 'attack', 'Digit1'); break; case KEYBINDS.SPELL_2: selectSpell(2); startCasting(2, 'attack', 'Digit2'); break; 
                     case KEYBINDS.SPELL_3: selectSpell(3); startCasting(3, 'attack', 'Digit3'); break; case KEYBINDS.SPELL_4: selectSpell(4); startCasting(4, 'attack', 'Digit4'); break;
                     case KEYBINDS.CONVERT_1: performConversion(1); break; case KEYBINDS.CONVERT_2: performConversion(2); break; case KEYBINDS.CONVERT_3: performConversion(3); break;
@@ -946,7 +1007,110 @@ let socket = null;
                 }
             });
         }
-        function resetGame() { location.reload(); }
+        function resetGame() { 
+            saveMatchStats();
+            location.reload(); 
+        }
+        
+        // Lag Compensation - Client-side prediction
+        function updatePositionBuffer(playerId, position, timestamp) {
+            if (!positionBuffer[playerId]) positionBuffer[playerId] = [];
+            positionBuffer[playerId].push({ pos: position.clone(), time: timestamp });
+            // Keep only last 500ms of positions
+            const cutoff = Date.now() - 500;
+            positionBuffer[playerId] = positionBuffer[playerId].filter(p => p.time > cutoff);
+        }
+        
+        function interpolatePosition(playerId) {
+            const buffer = positionBuffer[playerId];
+            if (!buffer || buffer.length < 2) return null;
+            
+            const renderTime = Date.now() - INTERPOLATION_DELAY;
+            let i = 0;
+            while (i < buffer.length - 1 && buffer[i + 1].time <= renderTime) i++;
+            
+            if (i >= buffer.length - 1) return buffer[buffer.length - 1].pos;
+            
+            const p1 = buffer[i], p2 = buffer[i + 1];
+            const t = (renderTime - p1.time) / (p2.time - p1.time);
+            return p1.pos.clone().lerp(p2.pos, t);
+        }
+        
+        // LOD System
+        function updateLOD() {
+            if (!playerMesh || !camera) return;
+            lodObjects.forEach(obj => {
+                const dist = obj.position.distanceTo(camera.position);
+                if (dist < LOD_DISTANCES.HIGH) {
+                    if (obj.userData.highDetail) obj.userData.highDetail.visible = true;
+                    if (obj.userData.lowDetail) obj.userData.lowDetail.visible = false;
+                } else if (dist < LOD_DISTANCES.MEDIUM) {
+                    if (obj.userData.highDetail) obj.userData.highDetail.visible = false;
+                    if (obj.userData.lowDetail) obj.userData.lowDetail.visible = true;
+                } else {
+                    if (obj.userData.highDetail) obj.userData.highDetail.visible = false;
+                    if (obj.userData.lowDetail) obj.userData.lowDetail.visible = false;
+                }
+            });
+        }
+        
+        // Spectator Mode
+        function toggleSpectator() {
+            if (!playerStats.isDead) return;
+            isSpectating = !isSpectating;
+            if (isSpectating) {
+                const players = Object.values(otherPlayers);
+                if (players.length > 0) {
+                    spectateIndex = 0;
+                    spectateTarget = players[0];
+                    showFloatingText('SPECTATING: ' + spectateTarget.mesh.userData.username, camera.position, 0xffffff, 2000);
+                }
+            }
+        }
+        
+        function cycleSpectate(direction) {
+            if (!isSpectating) return;
+            const players = Object.values(otherPlayers).filter(p => !p.isDead);
+            if (players.length === 0) return;
+            spectateIndex = (spectateIndex + direction + players.length) % players.length;
+            spectateTarget = players[spectateIndex];
+            showFloatingText('SPECTATING: ' + spectateTarget.mesh.userData.username, camera.position, 0xffffff, 1500);
+        }
+        
+        // Match Statistics
+        function saveMatchStats() {
+            const duration = Math.floor((Date.now() - matchStats.startTime) / 1000);
+            const kd = matchStats.deaths > 0 ? (matchStats.kills / matchStats.deaths).toFixed(2) : matchStats.kills;
+            const acc = matchStats.accuracy.shots > 0 ? ((matchStats.accuracy.hits / matchStats.accuracy.shots) * 100).toFixed(1) : 0;
+            
+            const match = {
+                date: new Date().toISOString(),
+                duration: duration,
+                kills: matchStats.kills,
+                deaths: matchStats.deaths,
+                kd: kd,
+                damage: matchStats.damage,
+                healing: matchStats.healing,
+                accuracy: acc + '%',
+                team: myTeam
+            };
+            
+            matchStats.matchHistory.unshift(match);
+            if (matchStats.matchHistory.length > 50) matchStats.matchHistory.pop();
+            localStorage.setItem('ragequit_match_history', JSON.stringify(matchStats.matchHistory));
+        }
+        
+        function showMatchStats() {
+            console.log('=== MATCH STATISTICS ===');
+            console.log('K/D:', matchStats.kills + '/' + matchStats.deaths);
+            console.log('Damage:', matchStats.damage);
+            console.log('Healing:', matchStats.healing);
+            console.log('Accuracy:', matchStats.accuracy.shots > 0 ? ((matchStats.accuracy.hits / matchStats.accuracy.shots) * 100).toFixed(1) + '%' : '0%');
+            console.log('Match History (last 10):');
+            matchStats.matchHistory.slice(0, 10).forEach((m, i) => {
+                console.log(`${i+1}. ${m.date} | K/D: ${m.kd} | Acc: ${m.accuracy} | Duration: ${m.duration}s`);
+            });
+        }
         function updateUI() {
             document.getElementById('hp-bar').style.width = `${playerStats.hp}%`; document.getElementById('mana-bar').style.width = `${playerStats.mana}%`; document.getElementById('stamina-bar').style.width = `${playerStats.stamina}%`;
             const now = performance.now();
@@ -964,11 +1128,29 @@ let socket = null;
         function animate() {
             requestAnimationFrame(animate);
             const time = performance.now(); const delta = (time - prevTime) / 1000; prevTime = time;
-            if (!playerStats.isDead) { 
+            
+            // FPS Counter
+            fpsFrames++;
+            if (time - fpsLastTime >= 1000) {
+                currentFPS = fpsFrames;
+                fpsFrames = 0;
+                fpsLastTime = time;
+                document.getElementById('fps-counter').innerText = 'FPS: ' + currentFPS;
+            }
+            
+            // Spectator camera
+            if (isSpectating && spectateTarget && spectateTarget.mesh) {
+                camera.position.copy(spectateTarget.mesh.position).add(new THREE.Vector3(0, 10, 15));
+                camera.lookAt(spectateTarget.mesh.position);
+            }
+            
+            if (!playerStats.isDead && !isSpectating) { 
                 try {
                     updatePhysics(delta); 
                     updateCamera(); // Moved here to fix lag
+                    sendPositionUpdate(); // Invia posizione ad alta frequenza
                     updateProjectiles(delta); updateCasting(delta);
+                    updateParticles(delta); // Aggiorna particelle (sangue, gibs, ecc)
                     updateConversions(delta); updateFloatingTexts(delta);
                     updateSwordAnimation(delta);
                     
@@ -979,8 +1161,14 @@ let socket = null;
                 } catch(e) { console.error(e); }
                 // updateCamera(); // Previously here
             }
+            
+            // Update LOD every 5 frames for performance
+            if (frameCount % 5 === 0) updateLOD();
+            
             updateAnimations(delta); 
-            updateUI(); renderer.render(scene, camera);
+            frameCount++;
+            if (frameCount % 2 === 0) updateUI(); // Aggiorna UI ogni 2 frame per performance
+            renderer.render(scene, camera);
         }
         
         // Non inizializzare subito - aspetta che menu.js chiami startGame()

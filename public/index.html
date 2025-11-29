@@ -11,6 +11,8 @@
     <div id="screen-flash"></div>
     <div id="floating-text-container"></div>
     <div id="connection-status">DISCONNESSO</div>
+    <div id="fps-counter" style="position:fixed;top:50px;right:10px;color:#00ff00;font-size:14px;font-family:monospace;z-index:1000;text-align:right;">FPS: 0</div>
+    <div id="ping-counter" style="position:fixed;top:70px;right:10px;color:#ffff00;font-size:14px;font-family:monospace;z-index:1000;text-align:right;">PING: 0ms</div>
     
     <!-- Kill Counter -->
     <div id="kill-counter-container">
@@ -125,10 +127,21 @@
         <button id="close-keybinds">CHIUDI</button>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.170.0/build/three.min.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
+    <script>
+        // Verifica che THREE sia caricato prima di procedere
+        if (typeof THREE === 'undefined') {
+            console.error('THREE.js non caricato, provo fallback r128');
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+        } else {
+            console.log('[THREE] Versione caricata:', THREE.REVISION);
+        }
+    </script>
+
     <script src="./js/menu.js"></script>
+    <script src="./js/instancing.js"></script>
     <script src="./js/spells.js"></script>
     <script src="./js/world.js"></script>
     <script src="./js/player.js"></script>

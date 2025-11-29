@@ -4,6 +4,32 @@
 const recentlyRemoved = {};
 const DEDUPE_WINDOW_MS = 500; // 500ms window to ignore duplicate adds
 
+// Position update optimization
+let lastPositionSent = Date.now();
+const POSITION_UPDATE_RATE = 50; // Invia posizione ogni 50ms (20 volte al secondo)
+
+// Auto-send position updates
+function sendPositionUpdate() {
+    const now = Date.now();
+    if (socket && socket.connected && playerMesh && !playerStats.isDead) {
+        if (now - lastPositionSent >= POSITION_UPDATE_RATE) {
+            const animState = isSprinting ? 'run' : (moveForward || moveBackward || moveLeft || moveRight) ? 'walk' : 'idle';
+            socket.emit('playerMovement', { 
+                position: playerMesh.position, 
+                rotation: { 
+                    x: playerMesh.rotation.x, 
+                    y: playerMesh.rotation.y, 
+                    z: playerMesh.rotation.z 
+                }, 
+                animState: animState, 
+                weaponMode: weaponMode,
+                velocity: velocity // Invia anche velocità per predizione
+            });
+            lastPositionSent = now;
+        }
+    }
+}
+
 function initMultiplayer() {
             if (typeof io !== 'undefined') {
                 // Prevent multiple initializations (double connections / duplicated handlers)
@@ -24,9 +50,29 @@ function initMultiplayer() {
                     // Inizializza kill counter
                     playerKills[myId] = myKills;
                     updateKillCounter();
+                    
+                    // Start ping measurement
+                    setInterval(() => {
+                        const start = Date.now();
+                        socket.emit('ping', start);
+                    }, 2000); // Ogni 2 secondi
+                });
+                socket.on('pong', (timestamp) => {
+                    currentPing = Date.now() - timestamp;
+                    const pingEl = document.getElementById('ping-counter');
+                    if (pingEl) {
+                        pingEl.innerText = 'PING: ' + currentPing + 'ms';
+                        pingEl.style.color = currentPing < 50 ? '#00ff00' : currentPing < 100 ? '#ffff00' : '#ff0000';
+                    }
                 });
                 socket.on('disconnect', () => { document.getElementById('connection-status').innerText = "DISCONNESSO"; document.getElementById('connection-status').style.color = "red"; });
                 socket.on('serverMsg', (msg) => { addToLog(msg, 'server-msg'); });
+                socket.on('hitRejected', (data) => {
+                    // Il server ha respinto l'hit per posizione non valida
+                    console.warn('[HIT REJECTED] Target:', data.targetId, '- desync rilevato');
+                    // Opzionale: mostra messaggio al player
+                    // showFloatingText('MISS', camera.position, 0xff0000, 1000);
+                });
                 socket.on('chatMessage', (data) => {
                     if (typeof addChatMessage === 'function') {
                         addChatMessage(data.username, data.text, false);

@@ -160,7 +160,11 @@ function performWhirlwind() {
                     } else {
                         createFloatingText(e.mesh.position.clone().add(new THREE.Vector3(0,10,0)), `-${Math.round(dmg)}`, "#ff3333");
                     }
-                    if (socket) socket.emit('playerHit', { damage: dmg, targetId: Object.keys(otherPlayers).find(key => otherPlayers[key] === e) });
+                    if (socket) socket.emit('playerHit', { 
+                        damage: dmg, 
+                        targetId: Object.keys(otherPlayers).find(key => otherPlayers[key] === e),
+                        hitPosition: e.mesh.position.clone() // Posizione del target al momento dell'hit
+                    });
                 }
             });
 
@@ -197,7 +201,11 @@ function fireHitscan() {
                         } else {
                             createFloatingText(enemyFound.position.clone().add(new THREE.Vector3(0,10,0)), `-${Math.round(dmg)}`, "#ff3333");
                         }
-                        socket.emit('playerHit', { damage: dmg, targetId: hitId }); 
+                        socket.emit('playerHit', { 
+                            damage: dmg, 
+                            targetId: hitId,
+                            hitPosition: otherPlayers[hitId].mesh.position.clone()
+                        }); 
                         socket.emit('playerAttack', { type: 'spikes', origin: new THREE.Vector3(), direction: new THREE.Vector3(), targetId: hitId });
                     }
                     addToLog("Spuntoni di Pietra colpiti!", "spell-cast"); playSound('hit');
@@ -363,7 +371,11 @@ function updateProjectiles(delta) {
                                     checkSplashDamage(hitPoint, SETTINGS.fireballRadius, 5, false);
                                     addToLog(`Colpito ${otherPlayers[targetId].username} con Palla di Fuoco!`, "dmg-dealt");
                                 } else { 
-                                    socket.emit('playerHit', { damage: mitigatedDmg, targetId: targetId });
+                                    socket.emit('playerHit', { 
+                                        damage: mitigatedDmg, 
+                                        targetId: targetId,
+                                        hitPosition: otherPlayers[targetId].mesh.position.clone()
+                                    });
                                 }
                             }
                         }
@@ -450,7 +462,11 @@ function checkSplashDamage(origin, radius, damage, pushBack) {
                          forceVec.y = 100;
                          socket.emit('playerPushed', { targetId: targetId, forceVec: forceVec, damage: finalDmg });
                     } else {
-                         socket.emit('playerHit', { damage: finalDmg, targetId: targetId });
+                         socket.emit('playerHit', { 
+                             damage: finalDmg, 
+                             targetId: targetId,
+                             hitPosition: otherPlayers[targetId].mesh.position.clone()
+                         });
                     }
                 }
             });
