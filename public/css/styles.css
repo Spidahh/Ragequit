@@ -310,7 +310,7 @@ body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Seg
         #cast-bar-fill { width: 0%; height: 100%; background: #ffd700; box-shadow: 0 0 10px #ffd700; transition: width 0.05s linear; }
         #cast-bar-fill.ready { background: #00ff00; box-shadow: 0 0 15px #00ff00; }
         #cast-text { position: absolute; top: -22px; width: 100%; text-align: center; color: #ffd700; font-size: 13px; font-weight: bold; text-shadow: 1px 1px 0 #000; }
-        #ui-container { position: absolute; bottom: 150px; left: 50%; transform: translateX(-50%); width: 280px; color: white; z-index: 10; background: rgba(0,0,0,0.4); padding: 16px; border: none; pointer-events: auto; border-radius: 12px; cursor: move; user-select: none; box-shadow: 0 4px 20px rgba(0,0,0,0.4); backdrop-filter: blur(10px); }
+        #ui-container { position: absolute; bottom: 150px; left: 50%; transform: translateX(-50%); width: 280px; color: white; z-index: 10; background: rgba(0,0,0,0.4); padding: 8px 10px; border: none; pointer-events: auto; border-radius: 8px; cursor: move; user-select: none; box-shadow: 0 4px 20px rgba(0,0,0,0.4); backdrop-filter: blur(10px); }
         #ui-container.dragging { background: rgba(0,0,0,0.6); box-shadow: 0 8px 30px rgba(0,0,0,0.6); }
         
         /* CHAT MOVIBILE */
@@ -422,13 +422,13 @@ body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Seg
             color: #666;
         }
         
-        .bar-container { width: 100%; height: 8px; background: rgba(0,0,0,0.3); margin-bottom: 10px; position: relative; border-radius: 10px; overflow: hidden; border: none; }
-        .bar { height: 100%; transition: width 0.3s ease; border-radius: 10px; }
+        .bar-container { width: 100%; height: 18px; background: rgba(0,0,0,0.3); margin-bottom: 8px; position: relative; border-radius: 10px; overflow: visible; border: none; padding-top: 0px; }
+        .bar { height: 100%; transition: width 0.3s ease; border-radius: 10px; position: absolute; top: 0; left: 0; }
         #hp-bar { background: linear-gradient(90deg, #ff3333, #ff6666); box-shadow: 0 0 10px rgba(255,50,50,0.5); } 
         #mana-bar { background: linear-gradient(90deg, #3366ff, #6699ff); box-shadow: 0 0 10px rgba(50,100,255,0.5); } 
         #stamina-bar { background: linear-gradient(90deg, #ffaa33, #ffcc66); box-shadow: 0 0 10px rgba(255,170,50,0.5); } 
-        .label { position: absolute; left: 8px; top: -18px; font-size: 10px; text-shadow: 1px 1px 2px #000; z-index: 2; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; opacity: 0.8; }
-        .stat-value { position: absolute; right: 8px; top: -18px; font-size: 10px; text-shadow: 1px 1px 2px #000; z-index: 2; font-weight: 700; color: #fff; }
+        .label { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; text-shadow: 1px 1px 2px #000; z-index: 2; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+        .stat-value { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; text-shadow: 1px 1px 2px #000; z-index: 2; font-weight: 700; color: #fff; }
         #crosshair { 
             position: absolute; 
             top: 50%; 
