@@ -43,9 +43,9 @@ body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Seg
             to { opacity: 1; transform: translateY(0); }
         }
         .logo {
-            width: 500px;
+            width: 650px;
             height: auto;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             filter: drop-shadow(0 0 40px rgba(255,0,0,1)) drop-shadow(0 0 80px rgba(255,0,0,0.6));
             animation: logoFloat 3s ease-in-out infinite;
         }
@@ -53,11 +53,12 @@ body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Seg
             0%, 100% { transform: translateY(0px); }
             50% { transform: translateY(-10px); }
         }
-        .mode-buttons {
+        .menu-buttons-container {
             display: flex;
-            gap: 20px;
-            margin-bottom: 10px;
-            justify-content: center;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+            align-items: center;
         }
         .extra-buttons {
             display: flex;
@@ -70,12 +71,9 @@ body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Seg
             position: relative;
             display: inline-block;
         }
-        .extra-btn-wrapper:nth-child(2) {
-            margin-top: -5px;
-        }
         .btn-metal-bg {
-            width: 450px;
-            height: 60px;
+            width: 550px;
+            height: 75px;
             display: block;
             filter: drop-shadow(0 0 15px rgba(255,0,0,0.3));
             object-fit: cover;
@@ -83,21 +81,30 @@ body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Seg
         .extra-btn {
             position: absolute;
             top: 50%;
-            left: 50%;
+            left: 45%;
             transform: translate(-50%, -50%);
             width: 100%;
-            padding: 12px;
+            padding: 15px;
             background: transparent;
             border: none;
-            color: #1a0a00;
-            font-size: 20px;
+            color: #f5f5dc;
+            font-size: 24px;
             font-weight: 900;
             text-transform: uppercase;
             cursor: pointer;
             transition: all 0.3s ease;
             font-family: inherit;
             letter-spacing: 2px;
-            text-shadow: 1px 1px 0px rgba(255,255,255,0.3), -1px -1px 0px rgba(255,255,255,0.3);
+            text-shadow: 
+                -2px -2px 0 #000,
+                2px -2px 0 #000,
+                -2px 2px 0 #000,
+                2px 2px 0 #000,
+                -2px 0 0 #000,
+                2px 0 0 #000,
+                0 -2px 0 #000,
+                0 2px 0 #000,
+                3px 3px 6px rgba(0,0,0,0.8);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -107,8 +114,8 @@ body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Seg
             text-shadow: 2px 2px 0px rgba(255,255,255,0.5), -1px -1px 0px rgba(255,255,255,0.5);
         }
         .username-input {
-            margin-top: 40px;
-            margin-bottom: 60px;
+            margin-top: 20px;
+            margin-bottom: 40px;
         }
         .mode-btn {
             width: 280px;
