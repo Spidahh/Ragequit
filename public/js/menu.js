@@ -111,6 +111,7 @@ function initMenu() {
             // Imposta colore squadra
             window.myTeam = team;
             window.myTeamColor = TEAM_COLORS[team];
+            console.log('[MENU] Team selected:', team, 'Color:', window.myTeamColor.toString(16));
             
             // Nascondi selezione squadre e avvia gioco
             teamSelectionScreen.style.display = 'none';

@@ -1,3 +1,17 @@
+// Verifica che THREE.js sia caricato
+if (typeof THREE === 'undefined') {
+    console.error('[GAME] THREE.js not loaded! Waiting...');
+    // Attendi che THREE sia disponibile
+    const checkTHREE = setInterval(() => {
+        if (typeof THREE !== 'undefined') {
+            console.log('[GAME] THREE.js loaded, version r' + THREE.REVISION);
+            clearInterval(checkTHREE);
+        }
+    }, 100);
+} else {
+    console.log('[GAME] THREE.js ready, version r' + THREE.REVISION);
+}
+
 let socket = null;
         const otherPlayers = {}; 
         let myId = null;
@@ -629,10 +643,12 @@ let socket = null;
             }
             if (typeof window.myTeamColor !== 'undefined') {
                 myTeamColor = window.myTeamColor;
+                console.log('[INIT] Synced myTeamColor:', myTeamColor.toString(16));
                 updatePlayerColor(); // Aggiorna il colore del player dopo la sincronizzazione
             }
             if (typeof window.myTeam !== 'undefined') {
                 myTeam = window.myTeam;
+                console.log('[INIT] Synced myTeam:', myTeam);
             }
             if (typeof window.isPvEMode !== 'undefined') {
                 isPvEMode = window.isPvEMode;

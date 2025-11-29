@@ -28,10 +28,14 @@ function createPlayer() {
                 playerMesh = null;
             }
 
+            // Usa il colore di squadra corrente (già impostato dal menu o default)
+            const teamColor = typeof myTeamColor !== 'undefined' ? myTeamColor : 0x2c3e50;
+            console.log('[CREATE PLAYER] Using team color:', teamColor.toString(16));
+
             playerMesh = new THREE.Group();
             const armorMat = new THREE.MeshLambertMaterial({ // Lambert invece di Standard per FPS
-                color: typeof myTeamColor !== 'undefined' ? myTeamColor : 0x2c3e50, 
-                emissive: typeof myTeamColor !== 'undefined' ? myTeamColor : 0x2c3e50,
+                color: teamColor, 
+                emissive: teamColor,
                 emissiveIntensity: 0.3,
                 flatShading: true // Flat shading per FPS
             }); 
@@ -86,14 +90,21 @@ function updatePlayerColor() {
             // Aggiorna il colore di tutti i pezzi dell'armatura
             const currentColor = typeof myTeamColor !== 'undefined' ? myTeamColor : 0x2c3e50;
             
+            console.log('[PLAYER COLOR] Updating player color to:', currentColor.toString(16));
+            
             playerMesh.traverse((child) => {
                 if (child.isMesh && child.material) {
-                    // Aggiorna solo i materiali dell'armatura (non metallo o altri)
-                    if (child.material.color && child.material.metalness < 0.8) {
+                    // Salta solo il metallo grigio del petto (chest) e il visore/elmo
+                    const isMetalPiece = (child.material.color && child.material.color.getHex() === 0x95a5a6) || 
+                                        (child.material.color && child.material.color.getHex() === 0x555555) ||
+                                        (child.material.color && child.material.color.getHex() === 0x111111);
+                    
+                    if (!isMetalPiece && child.material.color) {
                         child.material.color.setHex(currentColor);
                         if (child.material.emissive) {
                             child.material.emissive.setHex(currentColor);
                         }
+                        child.material.needsUpdate = true; // Forza aggiornamento materiale
                     }
                 }
             });
