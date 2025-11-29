@@ -1112,7 +1112,14 @@ let socket = null;
             });
         }
         function updateUI() {
-            document.getElementById('hp-bar').style.width = `${playerStats.hp}%`; document.getElementById('mana-bar').style.width = `${playerStats.mana}%`; document.getElementById('stamina-bar').style.width = `${playerStats.stamina}%`;
+            document.getElementById('hp-bar').style.width = `${playerStats.hp}%`; 
+            document.getElementById('mana-bar').style.width = `${playerStats.mana}%`; 
+            document.getElementById('stamina-bar').style.width = `${playerStats.stamina}%`;
+            
+            document.getElementById('hp-value').textContent = `${Math.round(playerStats.hp)}/${playerStats.maxHp}`;
+            document.getElementById('mana-value').textContent = `${Math.round(playerStats.mana)}/${playerStats.maxMana}`;
+            document.getElementById('stamina-value').textContent = `${Math.round(playerStats.stamina)}/${playerStats.maxStamina}`;
+            
             const now = performance.now();
             const gcdProgress = Math.max(0, (SETTINGS.fireRate - (now - lastAttackTime)) / SETTINGS.fireRate);
             if (weaponMode === 'ranged') { for(let i=1; i<=4; i++) { const el = document.querySelector(`#slot-${i} .cooldown-overlay`); if(el) el.style.height = (gcdProgress * 100) + '%'; } }
