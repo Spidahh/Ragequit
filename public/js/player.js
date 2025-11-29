@@ -371,6 +371,9 @@ function toggleWeapon(force) {
                 playerMesh.visible = true; 
                 stopBlocking();
                 euler.x = 0; 
+            } else if (isMelee) {
+                // Reset camera pitch per allineamento orizzonte in melee
+                euler.x = 0.43;
             }
             
             if(playerLimbs.helmet) playerLimbs.helmet.visible = isMelee;
