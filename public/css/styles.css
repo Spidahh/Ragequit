@@ -43,7 +43,7 @@ body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Seg
             to { opacity: 1; transform: translateY(0); }
         }
         .logo {
-            width: 650px;
+            width: 750px;
             height: auto;
             margin-bottom: 20px;
             filter: drop-shadow(0 0 40px rgba(255,0,0,1)) drop-shadow(0 0 80px rgba(255,0,0,0.6));
@@ -195,16 +195,34 @@ body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Seg
             font-size: 24px;
             background: transparent;
             border: none;
-            color: #1a0a00;
+            color: #f5f5dc;
             text-align: center;
             text-transform: uppercase;
             letter-spacing: 2px;
             font-weight: 900;
-            text-shadow: 1px 1px 0px rgba(255,255,255,0.3), -1px -1px 0px rgba(255,255,255,0.3);
+            text-shadow: 
+                -2px -2px 0 #000,
+                2px -2px 0 #000,
+                -2px 2px 0 #000,
+                2px 2px 0 #000,
+                -2px 0 0 #000,
+                2px 0 0 #000,
+                0 -2px 0 #000,
+                0 2px 0 #000,
+                3px 3px 6px rgba(0,0,0,0.8);
         }
         .username-input input::placeholder {
-            color: rgba(26,10,0,0.9);
-            text-shadow: 1px 1px 0px rgba(255,255,255,0.5), -1px -1px 0px rgba(255,255,255,0.5);
+            color: #f5f5dc;
+            text-shadow: 
+                -2px -2px 0 #000,
+                2px -2px 0 #000,
+                -2px 2px 0 #000,
+                2px 2px 0 #000,
+                -2px 0 0 #000,
+                2px 0 0 #000,
+                0 -2px 0 #000,
+                0 2px 0 #000,
+                3px 3px 6px rgba(0,0,0,0.8);
         }
         .username-input input:focus {
             outline: none;
