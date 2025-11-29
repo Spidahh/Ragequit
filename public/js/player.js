@@ -525,8 +525,6 @@ function updateCamera() {
                 camera.position.copy(headPos).add(offset); 
                 const lookAtPoint = playerMesh.position.clone().add(new THREE.Vector3(0, 12, 0)); 
                 camera.lookAt(lookAtPoint); 
-                    // Ensure horizon-aligned crosshair in melee third person by zeroing camera roll
-                    if (weaponMode === 'melee') { camera.rotation.z = 0; camera.up.set(0,1,0); }
-                }
+            }
         }
 

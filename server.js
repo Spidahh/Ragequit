@@ -10,12 +10,12 @@ const io = new Server(server, {
 });
 const path = require('path');
 
-// Global variables
+// Variabili globali
 let players = {};
 let lastSeen = {};
 let serverStartTime = Date.now();
 
-// Helper: 3D distance
+// Helper per calcolare distanza 3D
 function distance3D(pos1, pos2) {
     const dx = pos1.x - pos2.x;
     const dy = pos1.y - pos2.y;
@@ -23,7 +23,7 @@ function distance3D(pos1, pos2) {
     return Math.sqrt(dx * dx + dy * dy + dz * dz);
 }
 
-// Authoritative server-side hit detection
+// Server-side hit detection autoritativo
 function validateHit(shooterId, targetId, hitPosition) {
     const shooter = players[shooterId];
     const target = players[targetId];
@@ -32,38 +32,38 @@ function validateHit(shooterId, targetId, hitPosition) {
     
     // Verifica che il target sia abbastanza vicino alla posizione dell'hit
     const dist = distance3D(target.position, hitPosition);
-    const maxHitDistance = 10; // Max tolerance for lag
+    const maxHitDistance = 10; // Tolleranza massima per lag
     
     return dist <= maxHitDistance;
 }
 
-// Serve static files from "public"
+// Serviamo i file statici dalla cartella "public"
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Gestisci favicon e altri asset mancanti
 app.get('/favicon.ico', (req, res) => {
-    res.status(204).send(); // No Content
+  res.status(204).send(); // No Content
 });
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// --- Multiplayer logic ---
+// --- LOGICA MULTIPLAYER ORIGINALE ---
 
 io.on('connection', (socket) => {
-    console.log('New connection: ' + socket.id);
+    console.log('Nuova connessione: ' + socket.id);
     lastSeen[socket.id] = Date.now();
 
     socket.on('joinGame', (userData) => {
         if (players[socket.id]) delete players[socket.id];
         
         if (Object.keys(players).length >= 10) {
-            socket.emit('serverMsg', 'Server full!');
+            socket.emit('serverMsg', 'Server pieno!');
             return;
         }
 
-        console.log(`Player ${userData.username} (ID: ${socket.id}) joined.`);
+        console.log(`Giocatore ${userData.username} (ID: ${socket.id}) entrato.`);
 
         players[socket.id] = {
             id: socket.id,
@@ -129,7 +129,7 @@ io.on('connection', (socket) => {
     
     socket.on('chatMessage', (data) => {
         if (players[socket.id]) {
-            // Broadcast message to all
+            // Broadcast messaggio a tutti
             io.emit('chatMessage', {
                 id: socket.id,
                 username: data.username || players[socket.id].username,
@@ -188,8 +188,6 @@ io.on('connection', (socket) => {
             if (pushData.damage) {
                 actualDamage = pushData.damage;
                 players[targetId].hp -= actualDamage;
-                // Clamp to valid range
-                players[targetId].hp = Math.max(0, Math.min(players[targetId].maxHp, players[targetId].hp));
             }
             // Emit to the target player so they can execute the push effect
             io.to(targetId).emit('playerPushed', {
@@ -214,19 +212,17 @@ io.on('connection', (socket) => {
     socket.on('playerHit', (dmgData) => {
         const targetId = dmgData.targetId;
         
-        // Server-side hit validation
+        // VALIDAZIONE SERVER-SIDE DELL'HIT
         if (!validateHit(socket.id, targetId, dmgData.hitPosition || players[targetId]?.position)) {
-            console.log(`[HIT REJECTED] ${socket.id} -> ${targetId} (invalid position)`);
-            // Inform shooter that the hit was rejected
+            console.log(`[HIT REJECTED] ${socket.id} -> ${targetId} (posizione non valida)`);
+            // Informa il shooter che l'hit è stato respinto
             socket.emit('hitRejected', { targetId: targetId });
             return;
         }
         
         if (players[targetId]) {
             const actualDamage = dmgData.damage;
-            players[targetId].hp -= actualDamage; // negative damage heals
-            // Clamp HP
-            players[targetId].hp = Math.max(0, Math.min(players[targetId].maxHp, players[targetId].hp));
+            players[targetId].hp -= actualDamage;
             
             console.log(`[HIT VALIDATED] ${socket.id} -> ${targetId} (${actualDamage} dmg, pos: ${JSON.stringify(players[targetId].position)})`);
             
@@ -256,11 +252,11 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-        console.log('Disconnected: ' + socket.id);
+        console.log('Disconnesso: ' + socket.id);
         if (players[socket.id]) {
             delete players[socket.id];
             io.emit('playerDisconnected', socket.id);
-            // Broadcast team counts update
+            // Broadcast aggiornamento conteggio squadre
             broadcastTeamCounts();
         }
         delete lastSeen[socket.id];
@@ -280,5 +276,5 @@ setInterval(() => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`RageQuit server listening on port ${PORT}`);
+    console.log(`Server RageQuit attivo su porta ${PORT}`);
 });

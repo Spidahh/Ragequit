@@ -72,7 +72,7 @@ let socket = null;
         let floatingTexts = [];
         const activeConversions = []; 
         let castingState = { active: false, currentSpell: 0, timer: 0, maxTime: 0, ready: false, keyHeld: null };
-        let lastAttackTime = 0; let lastHealTime = -10000; let lastHealOtherTime = -10000; let lastConversionTime = 0; let lastWhirlwindTime = 0; let lastSpikesTime = 0;
+        let lastAttackTime = 0; let lastHealTime = -10000; let lastConversionTime = 0; let lastWhirlwindTime = 0; let lastSpikesTime = 0;
         let keyToRebind = null; // Variabile per gestire il rebinding dei tasti 
         const savedSens = localStorage.getItem('ragequit_mouse_sensitivity');
         let mouseSensitivity = (savedSens && !isNaN(parseFloat(savedSens))) ? parseFloat(savedSens) : 1.0;
@@ -139,7 +139,6 @@ let socket = null;
             staminaRegen: 3.0, 
             
             healAmount: 20, healCost: 10, healCooldown: 10000, 
-            healOtherCooldown: 5000,
             conversionCost: 5, conversionGain: 5, conversionCooldown: 1000, 
             whirlwindDmg: 30, whirlwindRadius: 25, whirlwindCost: 10, whirlwindCooldown: 2000, 
             spikesCooldown: 3000,
@@ -301,8 +300,6 @@ let socket = null;
             SPELL_2: 'Digit2', 
             SPELL_3: 'Digit3',
             SPELL_4: 'Digit4',
-            HEAL_OTHER: 'Digit5',
-            FREE_LOOK: 'ControlLeft',
             WEAPON_SWITCH: 'KeyQ',
             BOW_EQUIP: 'KeyE',
             HEAL: 'KeyR',
@@ -318,21 +315,19 @@ let socket = null;
         };
         
         const KEY_NAMES = {
-            SPELL_1: '🔹 Bolt',
-            SPELL_2: '💨 Begone',
-            SPELL_3: '🔥 Fireball',
-            SPELL_4: '⛰️ Impale',
-            HEAL_OTHER: '💚 Heal Other',
-            FREE_LOOK: '🖱️ Free Look (Ctrl)',
-            WEAPON_SWITCH: '⚔️ Switch Weapon/Melee',
-            BOW_EQUIP: '🏹 Bow',
-            HEAL: '💚 Heal',
-            MOVE_FORWARD: '⬆️ Forward',
-            MOVE_LEFT: '⬅️ Left',
-            MOVE_BACKWARD: '⬇️ Backward',
-            MOVE_RIGHT: '➡️ Right',
-            JUMP: '🔼 Jump',
-            SPRINT: '⚡ Sprint',
+            SPELL_1: '🔹 Dardo Magico',
+            SPELL_2: '💨 Onda Gelo',
+            SPELL_3: '🔥 Palla di Fuoco',
+            SPELL_4: '⛰️ Spuntoni',
+            WEAPON_SWITCH: '⚔️ Cambia Arma/Melee',
+            BOW_EQUIP: '🏹 Arco',
+            HEAL: '💚 Cura',
+            MOVE_FORWARD: '⬆️ Avanti',
+            MOVE_LEFT: '⬅️ Sinistra',
+            MOVE_BACKWARD: '⬇️ Indietro',
+            MOVE_RIGHT: '➡️ Destra',
+            JUMP: '🔼 Salto',
+            SPRINT: '⚡ Scatto',
             CONVERT_1: '♥ Stamina → HP',
             CONVERT_2: '💧 HP → Mana',
             CONVERT_3: '⚡ Mana → Stamina'
@@ -488,7 +483,6 @@ let socket = null;
             set('lbl-spell3', 'SPELL_3');
             set('lbl-spell4', 'SPELL_4');
             set('lbl-heal', 'HEAL');
-            set('lbl-healother', 'HEAL_OTHER');
             set('lbl-conv1', 'CONVERT_1');
             set('lbl-conv2', 'CONVERT_2');
             set('lbl-conv3', 'CONVERT_3');
@@ -910,16 +904,14 @@ let socket = null;
                     return;
                 }
                 
-                // Free look: hold Ctrl to release pointer lock
-                if (e.code === KEYBINDS.FREE_LOOK || e.code === 'ControlRight') {
+                // Gestione Ctrl per free mouse (ALT rimosso)
+                if (e.code === 'ControlLeft' || e.code === 'ControlRight') {
                     if (!isCtrlPressed) { // Previeni attivazione multipla
                         isCtrlPressed = true;
                         // Esci dal pointer lock per permettere il movimento del mouse
                         if (document.pointerLockElement === document.body) {
                             document.exitPointerLock();
                         }
-                        const badge = document.getElementById('free-look-badge');
-                        if (badge) badge.style.display = 'block';
                     }
                     return;
                 }
@@ -949,7 +941,6 @@ let socket = null;
                         if (weaponMode !== 'bow') { weaponMode = 'bow'; toggleWeapon(true); }
                         break;
                     case KEYBINDS.HEAL: performHeal(); break;
-                    case KEYBINDS.HEAL_OTHER: performHealOther(); break;
                     case 84: // T key - Toggle spectator (when dead)
                         if (playerStats.isDead) toggleSpectator();
                         break;
@@ -968,8 +959,8 @@ let socket = null;
                 }
             });
             document.addEventListener('keyup', (e) => {
-                // Free look release
-                if (e.code === KEYBINDS.FREE_LOOK || e.code === 'ControlRight') {
+                // Gestione rilascio Ctrl (ALT rimosso)
+                if (e.code === 'ControlLeft' || e.code === 'ControlRight') {
                     if (isCtrlPressed) { // Solo se era effettivamente premuto
                         isCtrlPressed = false;
                         // Rientra nel pointer lock se il giocatore non è morto
@@ -989,8 +980,6 @@ let socket = null;
                                 }
                             }, 150);
                         }
-                        const badge = document.getElementById('free-look-badge');
-                        if (badge) badge.style.display = 'none';
                     }
                     return;
                 }
@@ -1149,8 +1138,6 @@ let socket = null;
             const spikesOverlay = document.getElementById('spikes-cd'); if(spikesOverlay) spikesOverlay.style.height = (spikesProgress * 100) + '%';
             const healProgress = Math.max(0, (SETTINGS.healCooldown - (now - lastHealTime)) / SETTINGS.healCooldown);
             const healOverlay = document.getElementById('heal-cd'); if(healOverlay) healOverlay.style.height = (healProgress * 100) + '%';
-            const healOtherProgress = Math.max(0, (SETTINGS.healOtherCooldown - (now - lastHealOtherTime)) / SETTINGS.healOtherCooldown);
-            const healOtherOverlay = document.getElementById('healother-cd'); if(healOtherOverlay) healOtherOverlay.style.height = (healOtherProgress * 100) + '%';
             const convProgress = Math.max(0, (SETTINGS.conversionCooldown - (now - lastConversionTime)) / SETTINGS.conversionCooldown);
             ['conv1-cd', 'conv2-cd', 'conv3-cd'].forEach(id => { const el = document.getElementById(id); if(el) el.style.height = (convProgress * 100) + '%'; });
         }

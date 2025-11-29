@@ -177,7 +177,7 @@ function updateTeamCounts(counts) {
         const countEl = document.getElementById(`team-count-${team}`);
         if (countEl) {
             const count = counts[team];
-            countEl.textContent = count === 1 ? '1 player' : `${count} players`;
+            countEl.textContent = count === 1 ? '1 giocatore' : `${count} giocatori`;
         }
     });
 }
