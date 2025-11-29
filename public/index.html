@@ -125,9 +125,20 @@
         <button id="close-keybinds">CHIUDI</button>
     </div>
 
-    <script src="https://unpkg.com/three@0.170.0/build/three.min.js" onerror="console.error('[THREE] r170 failed, loading r128 fallback'); var s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'; document.head.appendChild(s);"></script>
+    <!-- Carica THREE.js e Socket.IO in modo sincrono -->
+    <script src="https://unpkg.com/three@0.170.0/build/three.min.js"></script>
+    <script>
+        // Verifica caricamento THREE.js
+        if (typeof THREE === 'undefined') {
+            console.error('[THREE] r170 failed, loading r128 fallback');
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+        } else {
+            console.log('[THREE] Version r' + THREE.REVISION + ' loaded successfully');
+        }
+    </script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
+    <!-- Carica moduli del gioco DOPO THREE.js -->
     <script src="./js/menu.js"></script>
     <script src="./js/instancing.js"></script>
     <script src="./js/spells.js"></script>

@@ -1,16 +1,8 @@
 // Verifica che THREE.js sia caricato
 if (typeof THREE === 'undefined') {
-    console.error('[GAME] THREE.js not loaded! Waiting...');
-    // Attendi che THREE sia disponibile
-    const checkTHREE = setInterval(() => {
-        if (typeof THREE !== 'undefined') {
-            console.log('[GAME] THREE.js loaded, version r' + THREE.REVISION);
-            clearInterval(checkTHREE);
-        }
-    }, 100);
-} else {
-    console.log('[GAME] THREE.js ready, version r' + THREE.REVISION);
+    throw new Error('[GAME] THREE.js not loaded! Check script loading order.');
 }
+console.log('[GAME] THREE.js ready, version r' + THREE.REVISION);
 
 let socket = null;
         const otherPlayers = {}; 
