@@ -72,7 +72,7 @@ let socket = null;
         let floatingTexts = [];
         const activeConversions = []; 
         let castingState = { active: false, currentSpell: 0, timer: 0, maxTime: 0, ready: false, keyHeld: null };
-        let lastAttackTime = 0; let lastHealTime = -10000; let lastConversionTime = 0; let lastWhirlwindTime = 0; let lastSpikesTime = 0;
+        let lastAttackTime = 0; let lastHealTime = -10000; let lastHealOtherTime = -10000; let lastConversionTime = 0; let lastWhirlwindTime = 0; let lastSpikesTime = 0;
         let keyToRebind = null; // Variabile per gestire il rebinding dei tasti 
         const savedSens = localStorage.getItem('ragequit_mouse_sensitivity');
         let mouseSensitivity = (savedSens && !isNaN(parseFloat(savedSens))) ? parseFloat(savedSens) : 1.0;
@@ -139,6 +139,7 @@ let socket = null;
             staminaRegen: 3.0, 
             
             healAmount: 20, healCost: 10, healCooldown: 10000, 
+            healOtherCooldown: 5000,
             conversionCost: 5, conversionGain: 5, conversionCooldown: 1000, 
             whirlwindDmg: 30, whirlwindRadius: 25, whirlwindCost: 10, whirlwindCooldown: 2000, 
             spikesCooldown: 3000,
@@ -487,6 +488,7 @@ let socket = null;
             set('lbl-spell3', 'SPELL_3');
             set('lbl-spell4', 'SPELL_4');
             set('lbl-heal', 'HEAL');
+            set('lbl-healother', 'HEAL_OTHER');
             set('lbl-conv1', 'CONVERT_1');
             set('lbl-conv2', 'CONVERT_2');
             set('lbl-conv3', 'CONVERT_3');
@@ -1147,6 +1149,8 @@ let socket = null;
             const spikesOverlay = document.getElementById('spikes-cd'); if(spikesOverlay) spikesOverlay.style.height = (spikesProgress * 100) + '%';
             const healProgress = Math.max(0, (SETTINGS.healCooldown - (now - lastHealTime)) / SETTINGS.healCooldown);
             const healOverlay = document.getElementById('heal-cd'); if(healOverlay) healOverlay.style.height = (healProgress * 100) + '%';
+            const healOtherProgress = Math.max(0, (SETTINGS.healOtherCooldown - (now - lastHealOtherTime)) / SETTINGS.healOtherCooldown);
+            const healOtherOverlay = document.getElementById('healother-cd'); if(healOtherOverlay) healOtherOverlay.style.height = (healOtherProgress * 100) + '%';
             const convProgress = Math.max(0, (SETTINGS.conversionCooldown - (now - lastConversionTime)) / SETTINGS.conversionCooldown);
             ['conv1-cd', 'conv2-cd', 'conv3-cd'].forEach(id => { const el = document.getElementById(id); if(el) el.style.height = (convProgress * 100) + '%'; });
         }

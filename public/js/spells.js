@@ -146,23 +146,38 @@ function performHealOther() {
             if (playerStats.isDead) return;
             const cost = 10; const amount = 20;
             if (playerStats.mana < cost) { addToLog("Insufficient mana", "#555"); return; }
+            const now = performance.now();
+            if (now - (window.lastHealOtherTime || -10000) < SETTINGS.healOtherCooldown) { addToLog("Heal Other on cooldown", "#aaa"); return; }
+            const entries = Object.entries(otherPlayers);
+            if (entries.length === 0) { addToLog("No target in sight", "#aaa"); return; }
             // Raycast center
             const raycaster = new THREE.Raycaster(); raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-            const hits = raycaster.intersectObjects(Object.values(otherPlayers).map(p => p.mesh), true);
-            if (hits.length === 0) { addToLog("No target", "#aaa"); return; }
-            // Find owning player id
-            let targetMesh = hits[0].object; while (targetMesh && !targetMesh.userData?.isPlayer) { targetMesh = targetMesh.parent; }
-            const targetEntry = Object.entries(otherPlayers).find(([id, p]) => p.mesh === targetMesh);
-            if (!targetEntry) { addToLog("Invalid target", "#aaa"); return; }
-            const targetId = targetEntry[0];
-            playerStats.mana -= cost;
-            // Use negative damage to heal server-side (then clamped)
+            const roots = entries.map(([, p]) => p.mesh);
+            const hits = raycaster.intersectObjects(roots, true);
+            if (hits.length === 0) { addToLog("No target in sight", "#aaa"); return; }
+            // Resolve hit to a player root by ancestor walk
+            const hitObj = hits[0].object;
+            const findOwner = () => {
+                let node = hitObj;
+                while (node) {
+                    const found = entries.find(([, p]) => p.mesh === node);
+                    if (found) return found;
+                    node = node.parent;
+                }
+                return null;
+            };
+            const owner = findOwner();
+            if (!owner) { addToLog("Invalid target", "#aaa"); return; }
+            const [targetId, target] = owner;
+            if (!target || !target.mesh) { addToLog("Invalid target", "#aaa"); return; }
+            playerStats.mana = Math.max(0, playerStats.mana - cost);
             if (socket) {
-                socket.emit('playerHit', { damage: -amount, targetId: targetId, hitPosition: otherPlayers[targetId].mesh.position.clone() });
+                socket.emit('playerHit', { damage: -amount, targetId: targetId, hitPosition: target.mesh.position.clone() });
                 socket.emit('remoteEffect', { id: targetId, type: 'healOther' });
             }
-            addToLog(`Healed ${otherPlayers[targetId].username} for ${amount} HP`, 'heal');
+            addToLog(`Healed ${target.username || 'ally'} for ${amount} HP`, 'heal');
             playSound('heal');
+            window.lastHealOtherTime = now; if (typeof updateUI === 'function') updateUI();
 }
 
 function performWhirlwind() {
