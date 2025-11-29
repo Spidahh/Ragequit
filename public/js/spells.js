@@ -68,12 +68,13 @@ function executeAttack(id) {
             
             let cost = (id===1)?SETTINGS.missileCost:(id===2)?SETTINGS.pushCost:(id===3)?SETTINGS.fireballCost:SETTINGS.beamCost;
             if (playerStats.mana < cost) { addToLog("Mana insufficiente!", "#555"); return; }
-            if (id === 4 && (now - lastSpikesTime < SETTINGS.spikesCooldown)) { addToLog("Spuntoni in ricarica...", "#aaa"); return; }
+            if (id === 4 && (now - lastSpikesTime < SETTINGS.spikesCooldown)) { addToLog("Impale on cooldown...", "#aaa"); return; }
             playerStats.mana -= cost; lastAttackTime = now; isAttacking = true; attackTimer = 0;
             
             let camDir = new THREE.Vector3(); camera.getWorldDirection(camDir); let spawnPos = getStaffTip();
             if (id === 4) { lastSpikesTime = now; fireHitscan(); } else { spawnProjectile(id); if (socket) socket.emit('playerAttack', { type: id, origin: spawnPos, direction: camDir }); }
             if(id === 1) playSound('shoot_bolt'); if(id === 3) playSound('shoot_fire'); if(id === 2) playSound('shoot_bolt');
+            // Heal Other (id === 6): handled in ranged flow similar to spikes
         }
 
 function performConversion(type) {
@@ -106,18 +107,20 @@ function applyConversionTick(type) {
              const cost = 5; const gain = 5;
             if (type === 1) { 
                 if (playerStats.stamina >= cost && playerStats.hp < playerStats.maxHp) { 
-                    playerStats.stamina -= cost; playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + gain); 
+                    // Apply per-tick conversion safely
+                    playerStats.stamina = Math.max(0, playerStats.stamina - cost);
+                    playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + gain); 
                     if(socket) socket.emit('playerHealed', { amount: gain });
                 } 
             } 
             else if (type === 2) { 
                 if (playerStats.hp > cost && playerStats.mana < playerStats.maxMana) { 
-                    playerStats.hp -= cost; playerStats.mana = Math.min(playerStats.maxMana, playerStats.mana + gain); 
+                    playerStats.hp = Math.max(0, playerStats.hp - cost); playerStats.mana = Math.min(playerStats.maxMana, playerStats.mana + gain); 
                 } 
             } 
             else if (type === 3) { 
                 if (playerStats.mana >= cost && playerStats.stamina < playerStats.maxStamina) { 
-                    playerStats.mana -= cost; playerStats.stamina = Math.min(playerStats.maxStamina, playerStats.stamina + gain); 
+                    playerStats.mana = Math.max(0, playerStats.mana - cost); playerStats.stamina = Math.min(playerStats.maxStamina, playerStats.stamina + gain); 
                 } 
             }
             updateUI(); 
@@ -125,8 +128,8 @@ function applyConversionTick(type) {
 
 function performHeal() {
             if (playerStats.isDead) return; const now = performance.now();
-            if (now - lastHealTime < SETTINGS.healCooldown) { addToLog("Cura in cooldown", "#aaa"); return; }
-            if (playerStats.mana < SETTINGS.healCost) { addToLog("Mana insufficiente", "#555"); return; }
+            if (now - lastHealTime < SETTINGS.healCooldown) { addToLog("Heal on cooldown", "#aaa"); return; }
+            if (playerStats.mana < SETTINGS.healCost) { addToLog("Insufficient mana", "#555"); return; }
             if (playerStats.hp >= playerStats.maxHp) return;
             playerStats.mana -= SETTINGS.healCost; 
             playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + SETTINGS.healAmount);
@@ -134,9 +137,33 @@ function performHeal() {
                 socket.emit('playerHealed', { amount: SETTINGS.healAmount });
                 socket.emit('playerEffect', { type: 'heal' });
             }
-            lastHealTime = now; addToLog(`Curato di ${SETTINGS.healAmount} HP`, "heal"); createFloatingText(playerMesh.position.clone().add(new THREE.Vector3(0,5,0)), `+${SETTINGS.healAmount}`, '#00ff00');
+            lastHealTime = now; addToLog(`Healed ${SETTINGS.healAmount} HP`, "heal"); createFloatingText(playerMesh.position.clone().add(new THREE.Vector3(0,5,0)), `+${SETTINGS.healAmount}`, '#00ff00');
             spawnGlowEffect(0x00ff00); flashScreen('green'); playSound('heal'); updateUI(); 
         }
+
+// Heal Other: raycast target and heal for 20 HP with visuals
+function performHealOther() {
+            if (playerStats.isDead) return;
+            const cost = 10; const amount = 20;
+            if (playerStats.mana < cost) { addToLog("Insufficient mana", "#555"); return; }
+            // Raycast center
+            const raycaster = new THREE.Raycaster(); raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+            const hits = raycaster.intersectObjects(Object.values(otherPlayers).map(p => p.mesh), true);
+            if (hits.length === 0) { addToLog("No target", "#aaa"); return; }
+            // Find owning player id
+            let targetMesh = hits[0].object; while (targetMesh && !targetMesh.userData?.isPlayer) { targetMesh = targetMesh.parent; }
+            const targetEntry = Object.entries(otherPlayers).find(([id, p]) => p.mesh === targetMesh);
+            if (!targetEntry) { addToLog("Invalid target", "#aaa"); return; }
+            const targetId = targetEntry[0];
+            playerStats.mana -= cost;
+            // Use negative damage to heal server-side (then clamped)
+            if (socket) {
+                socket.emit('playerHit', { damage: -amount, targetId: targetId, hitPosition: otherPlayers[targetId].mesh.position.clone() });
+                socket.emit('remoteEffect', { id: targetId, type: 'healOther' });
+            }
+            addToLog(`Healed ${otherPlayers[targetId].username} for ${amount} HP`, 'heal');
+            playSound('heal');
+}
 
 function performWhirlwind() {
             if (playerStats.isDead || isBlocking) return;

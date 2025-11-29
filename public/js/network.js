@@ -94,7 +94,7 @@ function initMultiplayer() {
                 });
                 socket.on('newPlayer', (playerInfo) => { 
                     console.log('TRACE: newPlayer received id=', playerInfo && playerInfo.id, 'username=', playerInfo && playerInfo.username, 'myId=', myId);
-                    addToLog(playerInfo.username + " è entrato!", "heal"); 
+                    addToLog(playerInfo.username + " joined!", "heal"); 
                     // Defensive: ignore if server accidentally broadcasts the joining player's own data
                     if (playerInfo.id === myId || playerInfo.id === socket.id) return;
                     // Skip if recently removed (dedupe window)
@@ -150,12 +150,19 @@ function initMultiplayer() {
 
                 socket.on('remoteEffect', (data) => {
                     if (otherPlayers[data.id]) {
-                        let color = 0xffffff;
+                        let color = 0x00ffff; 
                         if(data.type === 'heal') color = 0x00ff00;
                         else if(data.type === 'mana') color = 0x0000ff;
                         else if(data.type === 'stamina') color = 0xffff00;
                         
-                        spawnParticles(otherPlayers[data.id].mesh.position, color, 15, 15, 0.4, false);
+                        if(data.type === 'heal') playSound('heal', otherPlayers[data.id].mesh.position);
+                        if(data.type === 'healOther') {
+                            // Green rings and light around target
+                            const pos = otherPlayers[data.id].mesh.position.clone();
+                            spawnRings(pos, 0x00ff00);
+                            spawnGreenAura(pos);
+                            playSound('heal', pos);
+                        }
                         const light = new THREE.PointLight(color, 5, 20);
                         light.position.copy(otherPlayers[data.id].mesh.position).add(new THREE.Vector3(0,5,0));
                         scene.add(light);
@@ -375,6 +382,28 @@ function updateEnemyHealthBar(playerObj, hp) {
                 playerObj.mesh.userData.hpBar.material.color.setHex(scale > 0.5 ? 0x00ff00 : (scale > 0.2 ? 0xffa500 : 0xff0000)); 
             } 
         }
+
+// Simple ring/aura helpers
+function spawnRings(center, colorHex) {
+    const group = new THREE.Group();
+    for (let i=0;i<3;i++) {
+        const ringGeom = new THREE.TorusGeometry(3 + i*0.5, 0.1, 8, 32);
+        const ringMat = new THREE.MeshBasicMaterial({ color: colorHex });
+        const ring = new THREE.Mesh(ringGeom, ringMat);
+        ring.rotation.x = Math.PI/2;
+        group.add(ring);
+    }
+    group.position.copy(center);
+    scene.add(group);
+    setTimeout(() => { scene.remove(group); }, 800);
+}
+
+function spawnGreenAura(center) {
+    const light = new THREE.PointLight(0x00ff00, 1.2, 20);
+    light.position.copy(center).add(new THREE.Vector3(0, 5, 0));
+    scene.add(light);
+    setTimeout(() => { scene.remove(light); }, 800);
+}
 
 function removeOtherPlayer(id) { 
             if (otherPlayers[id]) { 

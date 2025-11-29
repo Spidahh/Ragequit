@@ -300,6 +300,8 @@ let socket = null;
             SPELL_2: 'Digit2', 
             SPELL_3: 'Digit3',
             SPELL_4: 'Digit4',
+            HEAL_OTHER: 'Digit5',
+            FREE_LOOK: 'ControlLeft',
             WEAPON_SWITCH: 'KeyQ',
             BOW_EQUIP: 'KeyE',
             HEAL: 'KeyR',
@@ -315,19 +317,21 @@ let socket = null;
         };
         
         const KEY_NAMES = {
-            SPELL_1: '🔹 Dardo Magico',
-            SPELL_2: '💨 Onda Gelo',
-            SPELL_3: '🔥 Palla di Fuoco',
-            SPELL_4: '⛰️ Spuntoni',
-            WEAPON_SWITCH: '⚔️ Cambia Arma/Melee',
-            BOW_EQUIP: '🏹 Arco',
-            HEAL: '💚 Cura',
-            MOVE_FORWARD: '⬆️ Avanti',
-            MOVE_LEFT: '⬅️ Sinistra',
-            MOVE_BACKWARD: '⬇️ Indietro',
-            MOVE_RIGHT: '➡️ Destra',
-            JUMP: '🔼 Salto',
-            SPRINT: '⚡ Scatto',
+            SPELL_1: '🔹 Bolt',
+            SPELL_2: '💨 Begone',
+            SPELL_3: '🔥 Fireball',
+            SPELL_4: '⛰️ Impale',
+            HEAL_OTHER: '💚 Heal Other',
+            FREE_LOOK: '🖱️ Free Look (Ctrl)',
+            WEAPON_SWITCH: '⚔️ Switch Weapon/Melee',
+            BOW_EQUIP: '🏹 Bow',
+            HEAL: '💚 Heal',
+            MOVE_FORWARD: '⬆️ Forward',
+            MOVE_LEFT: '⬅️ Left',
+            MOVE_BACKWARD: '⬇️ Backward',
+            MOVE_RIGHT: '➡️ Right',
+            JUMP: '🔼 Jump',
+            SPRINT: '⚡ Sprint',
             CONVERT_1: '♥ Stamina → HP',
             CONVERT_2: '💧 HP → Mana',
             CONVERT_3: '⚡ Mana → Stamina'
@@ -904,14 +908,16 @@ let socket = null;
                     return;
                 }
                 
-                // Gestione Ctrl per free mouse (ALT rimosso)
-                if (e.code === 'ControlLeft' || e.code === 'ControlRight') {
+                // Free look: hold Ctrl to release pointer lock
+                if (e.code === KEYBINDS.FREE_LOOK || e.code === 'ControlRight') {
                     if (!isCtrlPressed) { // Previeni attivazione multipla
                         isCtrlPressed = true;
                         // Esci dal pointer lock per permettere il movimento del mouse
                         if (document.pointerLockElement === document.body) {
                             document.exitPointerLock();
                         }
+                        const badge = document.getElementById('free-look-badge');
+                        if (badge) badge.style.display = 'block';
                     }
                     return;
                 }
@@ -941,6 +947,7 @@ let socket = null;
                         if (weaponMode !== 'bow') { weaponMode = 'bow'; toggleWeapon(true); }
                         break;
                     case KEYBINDS.HEAL: performHeal(); break;
+                    case KEYBINDS.HEAL_OTHER: performHealOther(); break;
                     case 84: // T key - Toggle spectator (when dead)
                         if (playerStats.isDead) toggleSpectator();
                         break;
@@ -959,8 +966,8 @@ let socket = null;
                 }
             });
             document.addEventListener('keyup', (e) => {
-                // Gestione rilascio Ctrl (ALT rimosso)
-                if (e.code === 'ControlLeft' || e.code === 'ControlRight') {
+                // Free look release
+                if (e.code === KEYBINDS.FREE_LOOK || e.code === 'ControlRight') {
                     if (isCtrlPressed) { // Solo se era effettivamente premuto
                         isCtrlPressed = false;
                         // Rientra nel pointer lock se il giocatore non è morto
@@ -980,6 +987,8 @@ let socket = null;
                                 }
                             }, 150);
                         }
+                        const badge = document.getElementById('free-look-badge');
+                        if (badge) badge.style.display = 'none';
                     }
                     return;
                 }

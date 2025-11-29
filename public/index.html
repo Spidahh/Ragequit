@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RageQuit: Arena Modulare</title>
+    <title>RageQuit: Modular Arena</title>
         <link rel="stylesheet" href="./css/styles.css">
 
 </head>
 <body>
     <div id="screen-flash"></div>
     <div id="floating-text-container"></div>
-    <div id="connection-status">DISCONNESSO</div>
+    <div id="connection-status">DISCONNECTED</div>
     <div id="fps-counter" style="position:fixed;top:50px;right:10px;color:#00ff00;font-size:14px;font-family:monospace;z-index:1000;text-align:right;">FPS: 0</div>
     <div id="ping-counter" style="position:fixed;top:70px;right:10px;color:#ffff00;font-size:14px;font-family:monospace;z-index:1000;text-align:right;">PING: 0ms</div>
     
@@ -21,13 +21,14 @@
 
     <div class="top-controls">
         <button id="reset-btn" class="btn">RESPAWN</button>
-        <button id="keybinds-btn" class="btn">COMANDI</button>
+        <button id="keybinds-btn" class="btn">KEYBINDS</button>
         <button id="audio-btn" class="btn">AUDIO: OFF</button>
         <button id="menu-btn" class="btn" style="border-bottom: 2px solid #e91e63;">MENU</button>
     </div>
 
     <div id="crosshair"></div>
-    <div id="cast-bar-container"><div id="cast-text">CARICAMENTO...</div><div id="cast-bar-fill"></div></div>
+    <div id="free-look-badge" style="position:fixed;bottom:12px;left:12px;padding:4px 8px;border-radius:6px;background:rgba(255,255,255,0.08);color:#ffffffcc;font-family:monospace;font-size:12px;letter-spacing:0.5px;z-index:1000;display:none;">FREE LOOK</div>
+    <div id="cast-bar-container"><div id="cast-text">CASTING...</div><div id="cast-bar-fill"></div></div>
     
     <div id="action-bar">
         <div id="slot-q" class="action-slot slot-q"><div class="key-label" id="lbl-switch">Q</div><div class="spell-icon">⚔️</div><div class="cooldown-overlay" id="whirlwind-cd"></div></div>
@@ -36,6 +37,7 @@
         <div id="slot-2" class="action-slot slot-2"><div class="key-label" id="lbl-spell2">2</div><div class="spell-icon">💨</div><div class="cooldown-overlay"></div></div>
         <div id="slot-3" class="action-slot slot-3"><div class="key-label" id="lbl-spell3">3</div><div class="spell-icon">🔥</div><div class="cooldown-overlay"></div></div>
         <div id="slot-4" class="action-slot slot-4"><div class="key-label" id="lbl-spell4">4</div><div class="spell-icon">⛰️</div><div class="cooldown-overlay" id="spikes-cd"></div></div>
+        <div id="slot-8" class="action-slot"><div class="key-label" id="lbl-healother">5</div><div class="spell-icon">💚</div><div class="cooldown-overlay" id="healother-cd"></div></div>
         <div id="slot-r" class="action-slot slot-r"><div class="key-label" id="lbl-heal">R</div><div class="spell-icon">💚</div><div class="cooldown-overlay" id="heal-cd"></div></div>
         <div class="separator"></div>
         <div id="slot-5" class="action-slot" onclick="window.performConversion(1)"><div class="key-label" id="lbl-conv1">5</div><div class="spell-icon"><span class="conv-icon plus-red">+♥</span><span class="conv-icon minus-yellow">-⚡</span></div><div class="cooldown-overlay" id="conv1-cd"></div></div>
@@ -44,12 +46,12 @@
     </div>
 
     <div id="ui-container">
-        <div class="bar-container"><div id="hp-bar" class="bar"></div><span class="label">SALUTE</span><span class="stat-value" id="hp-value">100/100</span></div>
+        <div class="bar-container"><div id="hp-bar" class="bar"></div><span class="label">HEALTH</span><span class="stat-value" id="hp-value">100/100</span></div>
         <div class="bar-container"><div id="mana-bar" class="bar"></div><span class="label">MANA</span><span class="stat-value" id="mana-value">100/100</span></div>
         <div class="bar-container"><div id="stamina-bar" class="bar"></div><span class="label" style="color:#ffffaa">STAMINA</span><span class="stat-value" id="stamina-value">100/100</span></div>
         <div style="margin-top:5px; font-size:12px; color:#aaa; text-align:center;">
             <span id="weapon-mode-text" style="color:cyan">RANGED</span>
-            <span id="block-text" style="color:#ffd700; display:none; margin-left:10px;">🛡️ PARATA</span>
+            <span id="block-text" style="color:#ffd700; display:none; margin-left:10px;">🛡️ BLOCK</span>
         </div>
     </div>
     
@@ -58,7 +60,7 @@
         <div id="chat-header">💬 CHAT <button id="chat-close-btn" style="float:right;background:transparent;border:none;color:#ff0000;font-weight:900;cursor:pointer;font-size:16px;">×</button></div>
         <div id="chat-messages"></div>
         <div id="chat-input-container">
-            <input type="text" id="chat-input" placeholder="Premi INVIO per chattare..." maxlength="100">
+            <input type="text" id="chat-input" placeholder="Press ENTER to chat..." maxlength="100">
         </div>
     </div>
 
@@ -73,11 +75,11 @@
             <div class="menu-buttons-container">
                 <div class="extra-btn-wrapper">
                     <img src="./IMG/tasto.png" alt="" class="btn-metal-bg">
-                    <button id="team-btn" class="extra-btn">GIOCA</button>
+                    <button id="team-btn" class="extra-btn">PLAY</button>
                 </div>
                 <div class="extra-btn-wrapper">
                     <img src="./IMG/tasto.png" alt="" class="btn-metal-bg">
-                    <button id="menu-keybinds-btn" class="extra-btn">COMANDI</button>
+                    <button id="menu-keybinds-btn" class="extra-btn">KEYBINDS</button>
                 </div>
                 <div class="extra-btn-wrapper">
                     <img src="./IMG/tasto.png" alt="" class="btn-metal-bg">
@@ -85,13 +87,13 @@
                 </div>
                 <div class="extra-btn-wrapper">
                     <img src="./IMG/tasto.png" alt="" class="btn-metal-bg">
-                    <button id="menu-exit-btn" class="extra-btn">ESCI</button>
+                    <button id="menu-exit-btn" class="extra-btn">EXIT</button>
                 </div>
             </div>
             
             <div class="username-input">
                 <img src="./IMG/osso.png" alt="" class="name-bone-bg">
-                <input type="text" id="username-input" placeholder="NOME GUERRIERO" maxlength="12">
+                <input type="text" id="username-input" placeholder="WARRIOR NAME" maxlength="12">
             </div>
         </div>
     </div>
@@ -103,33 +105,33 @@
                 <div class="team-bg red-bg"></div>
                 <h2>ROSIKONI</h2>
                 <div class="team-icon">🔴</div>
-                <div class="team-player-count" id="team-count-red">0 giocatori</div>
+                <div class="team-player-count" id="team-count-red">0 players</div>
             </div>
             <div class="team-option" data-team="black">
                 <div class="team-bg black-bg"></div>
                 <h2>TRIMONI</h2>
                 <div class="team-icon">🔵</div>
-                <div class="team-player-count" id="team-count-black">0 giocatori</div>
+                <div class="team-player-count" id="team-count-black">0 players</div>
             </div>
             <div class="team-option" data-team="green">
                 <div class="team-bg green-bg"></div>
                 <h2>FATTONI</h2>
                 <div class="team-icon">🟢</div>
-                <div class="team-player-count" id="team-count-green">0 giocatori</div>
+                <div class="team-player-count" id="team-count-green">0 players</div>
             </div>
             <div class="team-option" data-team="purple">
                 <div class="team-bg purple-bg"></div>
                 <h2>INFAMI</h2>
                 <div class="team-icon">🟣</div>
-                <div class="team-player-count" id="team-count-purple">0 giocatori</div>
+                <div class="team-player-count" id="team-count-purple">0 players</div>
             </div>
         </div>
     </div>
 
     <div id="keybinds-panel">
-        <h2>⌨️ CONFIGURAZIONE TASTI</h2>
+        <h2>⌨️ KEYBIND CONFIG</h2>
         <div id="keybinds-content"></div>
-        <button id="close-keybinds">CHIUDI</button>
+        <button id="close-keybinds">CLOSE</button>
     </div>
 
     <!-- Carica THREE.js e Socket.IO in modo sincrono -->
