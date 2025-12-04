@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' ws: wss: http: https:; img-src 'self' data:; font-src 'self';">
+    <title>RAGEQUIT: PHOENIX</title>
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/vfx.css">
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/login.css">
+    <link rel="stylesheet" href="css/lobby.css">
+    <link rel="stylesheet" href="css/build.css">
+    <link rel="stylesheet" href="css/settings.css">
+    <link rel="stylesheet" href="css/hud.css">
+</head>
+
+<body>
+    <canvas id="game-canvas"></canvas>
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="menu-overlay">
+        <img src="./assets/ui/logo_main.png" alt="RAGEQUIT" class="logo-img">
+        <div class="input-group">
+            <input type="text" id="player-name-input" placeholder="ENTER IDENTITY..." maxlength="12" autocomplete="off">
+        </div>
+        <button id="btn-login" class="menu-btn">PLAY</button>
+        <div class="version">v1.0.0 PHOENIX</div>
+    </div>
+
+    <!-- LOBBY SCREEN -->
+    <div id="lobby-screen" class="menu-overlay" style="display:none;">
+        <div class="lobby-header">
+            <h2>OPERATOR: <span id="display-name">UNKNOWN</span></h2>
+            <button id="btn-open-build" class="menu-btn">SELEZIONE SKILL/SPELL</button>
+        </div>
+
+        <div class="mode-selection">
+            <div class="mode-tile selected" id="mode-pve">
+                <h3>MONSTERS SLAYER</h3>
+                <p>Wave Defense</p>
+            </div>
+            <div class="mode-tile" id="mode-pvp">
+                <h3>TEAM CARNAGE</h3>
+                <p>Team Deathmatch</p>
+            </div>
+            <div class="mode-tile" id="mode-test">
+                <h3>TEST</h3>
+                <p>Combat Lab</p>
+            </div>
+        </div>
+
+        <div class="lobby-content">
+            <!-- Content area -->
+        </div>
+
+        <div class="lobby-footer">
+            <button id="btn-options" class="menu-btn secondary">OPTIONS</button>
+        </div>
+    </div>
+
+    <!-- TEAM SELECTION SCREEN -->
+    <div id="team-selection-screen" class="menu-overlay" style="display:none;">
+        <div class="lobby-header">
+            <h2>SELECT FACTION</h2>
+        </div>
+        <div class="team-grid">
+            <!-- RED -->
+            <div class="team-card" data-team="red" style="border-color: #ff3333;">
+                <div class="team-icon" style="background: #ff3333;">R</div>
+                <h3>RED LEGION</h3>
+                <p class="player-count">0 PLAYERS</p>
+            </div>
+            <!-- BLUE -->
+            <div class="team-card" data-team="blue" style="border-color: #3333ff;">
+                <div class="team-icon" style="background: #3333ff;">B</div>
+                <h3>BLUE VANGUARD</h3>
+                <p class="player-count">0 PLAYERS</p>
+            </div>
+            <!-- GREEN -->
+            <div class="team-card" data-team="green" style="border-color: #33ff33;">
+                <div class="team-icon" style="background: #33ff33;">G</div>
+                <h3>GREEN STALKERS</h3>
+                <p class="player-count">0 PLAYERS</p>
+            </div>
+            <!-- YELLOW -->
+            <div class="team-card" data-team="yellow" style="border-color: #ffff33;">
+                <div class="team-icon" style="background: #ffff33;">Y</div>
+                <h3>GOLDEN SUNS</h3>
+                <p class="player-count">0 PLAYERS</p>
+            </div>
+        </div>
+        <button id="btn-back-lobby" class="menu-btn secondary">BACK</button>
+    </div>
+
+    <!-- OPTIONS SCREEN -->
+    <div id="options-screen" class="menu-overlay" style="display:none;">
+        <div class="options-container">
+            <div class="options-header">
+                <h2>SYSTEM CONFIGURATION</h2>
+                <button id="btn-close-options" class="btn-close">X</button>
+            </div>
+
+            <div class="options-tabs">
+                <button class="options-tab-btn active" data-tab="gameplay">GAMEPLAY</button>
+                <button class="options-tab-btn" data-tab="controls">CONTROLS</button>
+                <button class="options-tab-btn" data-tab="audio">AUDIO</button>
+            </div>
+
+            <div class="options-content">
+                <!-- GAMEPLAY TAB -->
+                <div id="tab-gameplay" class="options-tab-content">
+                    <div class="option-row">
+                        <label>SCREEN SHAKE</label>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-shake">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- CONTROLS TAB -->
+                <div id="tab-controls" class="options-tab-content" style="display:none;">
+                    <div class="keybind-grid" id="options-keybind-list">
+                        <!-- Injected by JS -->
+                    </div>
+                </div>
+
+                <!-- AUDIO TAB -->
+                <div id="tab-audio" class="options-tab-content" style="display:none;">
+                    <div class="option-row">
+                        <label>MASTER VOLUME</label>
+                        <input type="range" min="0" max="100" value="100" class="slider-range">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BUILD SCREEN -->
+    <div id="build-screen" style="display:none;">
+        <div class="build-container">
+            <div class="build-header">
+                <h2>SKILL BUILD</h2>
+                <button id="btn-close-build" class="btn-close">X</button>
+            </div>
+
+            <div class="build-content">
+                <!-- Left: Skill Library -->
+                <div class="skill-library">
+                    <div class="library-tabs">
+                        <button class="tab-btn active" data-tab="melee">MELEE</button>
+                        <button class="tab-btn" data-tab="bow">BOW</button>
+                        <button class="tab-btn" data-tab="staff">STAFF</button>
+                    </div>
+                    <div class="library-grid" id="library-grid">
+                        <!-- Skills injected by JS -->
+                    </div>
+                    <div class="skill-description" id="skill-description">
+                        <p>Select a skill to see details.</p>
+                    </div>
+                </div>
+
+                <!-- Right: Current Loadout -->
+                <div class="current-loadout">
+                    <h3>EQUIPPED SKILLS</h3>
+                    <div class="loadout-slots" id="loadout-slots">
+                        <!-- Slots injected by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAUSE MENU -->
+    <div id="pause-menu" class="menu-overlay" style="display:none;">
+        <div class="modal-content">
+            <h2>PAUSED</h2>
+            <button id="btn-resume" class="menu-btn">RESUME</button>
+            <button id="btn-return-lobby" class="menu-btn secondary">RETURN TO LOBBY</button>
+        </div>
+    </div>
+
+    <!-- HUD LAYER -->
+    <div id="ui-layer" style="display:none;">
+        <!-- Top Left: Stats -->
+        <div class="hud-stats">
+            <div class="stat-bar hp-bar">
+                <div class="bar-fill" id="hp-fill"></div>
+                <span class="bar-label">HP</span>
+            </div>
+            <div class="stat-bar mana-bar">
+                <div class="bar-fill" id="mana-fill"></div>
+                <span class="bar-label">MANA</span>
+            </div>
+            <div class="stat-bar stamina-bar">
+                <div class="bar-fill" id="stamina-fill"></div>
+                <span class="bar-label">STAMINA</span>
+            </div>
+        </div>
+
+        <!-- Bottom Center: Skill Bar -->
+        <div id="skill-bar">
+            <!-- Melee (Q) -->
+            <div class="skill-slot" id="slot-1">
+                <span class="key-hint">Q</span>
+            </div>
+            <!-- Bow (C) -->
+            <div class="skill-slot" id="slot-2">
+                <span class="key-hint">C</span>
+            </div>
+
+            <div class="slot-separator"></div>
+
+            <!-- Magic Slots (1, E, F, X) -->
+            <div class="skill-slot" id="slot-3">
+                <span class="key-hint">1</span>
+            </div>
+            <div class="skill-slot" id="slot-4">
+                <span class="key-hint">E</span>
+            </div>
+            <div class="skill-slot" id="slot-5">
+                <span class="key-hint">F</span>
+            </div>
+            <div class="skill-slot" id="slot-6">
+                <span class="key-hint">X</span>
+            </div>
+
+            <div class="slot-separator"></div>
+
+            <!-- Utility / Transfers (R, 2, 3, 4) -->
+            <div class="skill-slot skill-heal" id="slot-7">
+                <span class="key-hint">R</span>
+            </div>
+            <div class="skill-slot skill-transfer-hp" id="slot-8">
+                <span class="key-hint">2</span>
+            </div>
+            <div class="skill-slot skill-transfer-mana" id="slot-9">
+                <span class="key-hint">3</span>
+            </div>
+            <div class="skill-slot skill-transfer-stm" id="slot-10">
+                <span class="key-hint">4</span>
+            </div>
+        </div>
+
+        <!-- Crosshair -->
+        <div id="crosshair"></div>
+
+        <!-- Scoreboard (Hidden by default) -->
+        <div id="scoreboard" style="display:none;">
+            <div class="scoreboard-header">
+                <div class="sb-col name">PLAYER</div>
+                <div class="sb-col kills">KILLS</div>
+                <div class="sb-col deaths">DEATHS</div>
+                <div class="sb-col ping">PING</div>
+            </div>
+            <div id="scoreboard-body">
+                <!-- Injected by JS -->
+            </div>
+        </div>
+
+        <!-- Kill Feed -->
+        <div id="kill-feed"></div>
+
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>

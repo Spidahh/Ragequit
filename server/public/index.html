@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RageQuit Arena - Team Mode</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Team Selection Modal -->
+    <div id="teamModal" class="modal">
+        <div class="modal-content">
+            <h1>⚔️ Choose Your Team</h1>
+            <p>Select a team to join the battle!</p>
+            <div class="team-buttons">
+                <button class="team-btn red-team" data-team="Red">
+                    <span class="team-icon">🔴</span>
+                    <span class="team-name">Red Team</span>
+                </button>
+                <button class="team-btn blue-team" data-team="Blue">
+                    <span class="team-icon">🔵</span>
+                    <span class="team-name">Blue Team</span>
+                </button>
+                <button class="team-btn green-team" data-team="Green">
+                    <span class="team-icon">🟢</span>
+                    <span class="team-name">Green Team</span>
+                </button>
+                <button class="team-btn yellow-team" data-team="Yellow">
+                    <span class="team-icon">🟡</span>
+                    <span class="team-name">Yellow Team</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scoreboard -->
+    <div id="scoreboard" class="scoreboard hidden">
+        <h2>🏆 SCOREBOARD</h2>
+        <div id="scoreboardContent"></div>
+    </div>
+
+    <!-- Game Container -->
+    <div id="game-container">
+        <canvas id="canvas" width="800" height="600"></canvas>
+    </div>
+    
+    <div id="status">
+        <h2>SERVER STATUS</h2>
+        <div class="status-item">
+            <span class="status-label">Connection:</span>
+            <span id="connection-status" class="disconnected">DISCONNECTED</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Socket ID:</span>
+            <span id="socket-id">N/A</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Team:</span>
+            <span id="player-team">None</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Kills:</span>
+            <span id="player-kills">0</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Deaths:</span>
+            <span id="player-deaths">0</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Players Online:</span>
+            <span id="player-count">0</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Ping:</span>
+            <span id="ping">-</span>
+        </div>
+    </div>
+    
+    <div id="player-list">
+        <h2>ACTIVE PLAYERS</h2>
+        <div id="players"></div>
+    </div>
+    
+    <div id="console">
+        <div class="log-entry log-info">🎮 RageQuit Arena - Team Mode</div>
+        <div class="log-entry log-info">📡 Connecting to server...</div>
+    </div>
+    
+    <!-- Socket.io client library -->
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <!-- Game client script -->
+    <script type="module" src="/game.js"></script>
+</body>
+</html>
+            color: #00ff00;
+        }
+        
+        .disconnected {
+            color: #ff0000;
+        }
+        
+        #player-list {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border: 2px solid #00ff00;
+            min-width: 250px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .player-item {
+            margin: 8px 0;
+            padding: 8px;
+            background: rgba(255, 170, 0, 0.1);
+            border-left: 3px solid #ffaa00;
+            font-size: 12px;
+        }
+        
+        #console {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #00ff00;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 11px;
+        }
+        
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 5px;
+        }
+        
+        .log-info {
+            color: #00ff00;
+        }
+        
+        .log-warn {
+            color: #ffaa00;
+        }
+        
+        .log-error {
+            color: #ff0000;
+        }
+        
+        #canvas {
+            border: 2px solid #333;
+            background: #111;
+        }
+        
+        h2 {
+            color: #ffaa00;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #ffaa00;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="canvas" width="800" height="600"></canvas>
+    </div>
+    
+    <div id="status">
+        <h2>SERVER STATUS</h2>
+        <div class="status-item">
+            <span class="status-label">Connection:</span>
+            <span id="connection-status" class="disconnected">DISCONNECTED</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Socket ID:</span>
+            <span id="socket-id">N/A</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Players Online:</span>
+            <span id="player-count">0</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Ping:</span>
+            <span id="ping">-</span>
+        </div>
+    </div>
+    
+    <div id="player-list">
+        <h2>ACTIVE PLAYERS</h2>
+        <div id="players"></div>
+    </div>
+    
+    <div id="console">
+        <div class="log-entry log-info">🎮 RageQuit Multiplayer Test Client</div>
+        <div class="log-entry log-info">📡 Connecting to server...</div>
+    </div>
+    
+    <!-- Socket.io client library -->
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <!-- Game client script -->
+    <script type="module" src="/game.js"></script>
+</body>
+</html>

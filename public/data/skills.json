@@ -1,0 +1,116 @@
+﻿{
+    "magic_bolt": {
+        "id": "magic_bolt",
+        "type": "PROJECTILE",
+        "damage": 10,
+        "cost": 5,
+        "costType": "mana",
+        "cooldown": 0.2,
+        "speed": 60.0,
+        "gravity": 0.0,
+        "color": 65535,
+        "size": 0.2,
+        "lifetime": 2.0
+    },
+    "shockwave": {
+        "id": "shockwave",
+        "type": "AOE_SELF",
+        "damage": 10,
+        "cost": 15,
+        "costType": "mana",
+        "cooldown": 0.5,
+        "range": 45.0,
+        "knockback": 25.0,
+        "color": 16777215
+    },
+    "fireball": {
+        "id": "fireball",
+        "type": "PROJECTILE",
+        "damage": 30,
+        "splashDamage": 5,
+        "cost": 20,
+        "costType": "mana",
+        "cooldown": 0.5,
+        "speed": 40.0,
+        "gravity": 5.0,
+        "color": 16744192,
+        "size": 0.5,
+        "aoeRadius": 5.0,
+        "knockback": 15.0
+    },
+    "stone_spikes": {
+        "id": "stone_spikes",
+        "type": "HITSCAN",
+        "damage": 25,
+        "cost": 5,
+        "costType": "mana",
+        "cooldown": 3.0,
+        "range": 20.0,
+        "color": 8947848
+    },
+    "arrow": {
+        "id": "arrow",
+        "type": "PROJECTILE",
+        "damage": 15,
+        "cost": 5,
+        "costType": "stamina",
+        "cooldown": 0.3,
+        "speed": 50.0,
+        "gravity": 9.8,
+        "geometry": "cylinder",
+        "scale": 0.5,
+        "color": 10053171
+    },
+    "greatsword": {
+        "id": "greatsword",
+        "type": "MELEE",
+        "damage": 15,
+        "cost": 5,
+        "costType": "stamina",
+        "cooldown": 0.5,
+        "range": 3.0,
+        "arc": 1.5
+    },
+    "whirlwind": {
+        "id": "whirlwind",
+        "type": "AOE_SELF",
+        "damage": 30,
+        "cost": 10,
+        "costType": "stamina",
+        "cooldown": 2.0,
+        "range": 5.0,
+        "color": 16776960
+    },
+    "heal": {
+        "id": "heal",
+        "type": "SELF",
+        "healAmount": 20,
+        "cost": 10,
+        "costType": "mana",
+        "cooldown": 10.0
+    },
+    "transfer_hp": {
+        "id": "transfer_hp",
+        "type": "CHANNEL",
+        "source": "stamina",
+        "target": "hp",
+        "rate": 5,
+        "cooldown": 0.1
+    },
+    "transfer_mana": {
+        "id": "transfer_mana",
+        "type": "CHANNEL",
+        "source": "hp",
+        "target": "mana",
+        "rate": 5,
+        "cooldown": 0.1
+    },
+    "transfer_stm": {
+        "id": "transfer_stm",
+        "type": "CHANNEL",
+        "source": "mana",
+        "target": "stamina",
+        "rate": 5,
+        "cooldown": 0.1
+    }
+}

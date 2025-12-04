@@ -1,0 +1,193 @@
+/* --- LOBBY CSS --- */
+
+#lobby-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, rgba(30, 10, 10, 0.95), #000);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.lobby-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.lobby-header h2 {
+    font-size: 2.5em;
+    text-transform: uppercase;
+    letter-spacing: 5px;
+    margin: 0;
+    text-shadow: 0 0 10px var(--accent-color);
+}
+
+#announcement-container {
+    position: absolute;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.announcement-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 4rem;
+    font-weight: 900;
+    color: #fff;
+    text-transform: uppercase;
+    text-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000;
+    animation: pop-in-out 2s forwards;
+    letter-spacing: 5px;
+}
+
+.announcement-text.kill {
+    color: #ff3333;
+    font-size: 3rem;
+}
+
+.announcement-text.win {
+    color: #ffd700;
+    text-shadow: 0 0 10px #ffd700;
+}
+
+@keyframes pop-in-out {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+
+    10% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+
+    20% {
+        transform: scale(1);
+    }
+
+    80% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+}
+
+.mode-selection {
+    display: flex;
+    gap: 30px;
+    margin-bottom: 50px;
+}
+
+.mode-tile {
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 30px;
+    width: 200px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 10px;
+}
+
+.mode-tile:hover {
+    background: rgba(50, 0, 0, 0.6);
+    border-color: var(--accent-color);
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
+}
+
+.mode-tile.selected {
+    background: rgba(100, 0, 0, 0.6);
+    border-color: var(--accent-color);
+    box-shadow: 0 0 30px rgba(255, 0, 0, 0.4);
+}
+
+.mode-tile h3 {
+    color: var(--accent-color);
+    margin-bottom: 10px;
+    font-size: 1.5em;
+}
+
+.mode-tile p {
+    color: #ccc;
+    font-size: 0.9em;
+}
+
+.lobby-content {
+    margin-bottom: 30px;
+    display: flex;
+    gap: 20px;
+}
+
+.lobby-footer {
+    margin-top: 20px;
+}
+
+/* Team Selection */
+.team-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.team-card {
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid #444;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.team-card:hover {
+    transform: scale(1.05);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.team-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: bold;
+    color: #000;
+    margin-bottom: 10px;
+    box-shadow: 0 0 15px currentColor;
+}
+
+.team-card h3 {
+    margin: 10px 0;
+    font-family: 'Orbitron', sans-serif;
+    color: #fff;
+}
+
+.player-count {
+    color: #aaa;
+    font-size: 0.9rem;
+}
