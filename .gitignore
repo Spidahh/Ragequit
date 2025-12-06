@@ -1,0 +1,38 @@
+# Dipendenze
+node_modules/
+*.lock
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Build
+dist/
+build/
+out/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Vite
+.vite/
+
+# ============================================
+# 🔒 PROTECTED FILES (NEVER DELETE)
+# ============================================
+# These are the core design documents
+# If these files go missing, the project is broken
+!_BIBLE.md
+!_TECH_SPEC.md
+!_GAME_DATA_SPECS.md
+!.github/
+!.github/copilot-instructions.md
