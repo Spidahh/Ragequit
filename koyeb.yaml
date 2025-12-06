@@ -1,0 +1,28 @@
+app: ragequit-reborn
+services:
+  - name: ragequit-game
+    git:
+      repository: github.com/Spidahh/RageQuit
+      branch: main
+      build_command: npm install --legacy-peer-deps && npm run build
+      run_command: npm start
+    docker:
+      dockerfile: Dockerfile
+    instance_type: free
+    regions:
+      - fra
+    ports:
+      - port: 3000
+        protocol: http
+    env:
+      - key: NODE_ENV
+        value: production
+      - key: CLIENT_URL
+        # ⚠️ IMPORTANT: Set this to your production frontend URL, e.g., https://ragequit-frontend.koyeb.app
+        value: https://your-frontend-url.koyeb.app
+      - key: ADDITIONAL_ORIGINS
+        # Optional: comma-separated list of additional allowed origins
+        value: ""
+    routes:
+      - path: /
+        port: 3000

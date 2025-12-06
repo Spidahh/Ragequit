@@ -1,0 +1,20 @@
+name: Render Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  trigger-render-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render Deploy Hook
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+            echo "RENDER_DEPLOY_HOOK secret is not set. Skipping.";
+            exit 0;
+          fi
+          curl -s -X POST "$RENDER_DEPLOY_HOOK"

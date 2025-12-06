@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: ragequit
+    env: node
+    buildCommand: npm install --legacy-peer-deps && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20.11.0
+      - key: NODE_ENV
+        value: production
+      - key: CLIENT_URL
+        # ⚠️ IMPORTANT: Set this to your production frontend URL, e.g., https://ragequit-frontend.onrender.com
+        value: https://your-frontend-url.onrender.com
+      - key: ADDITIONAL_ORIGINS
+        # Optional: comma-separated list of additional allowed origins
+        value: ""

@@ -1,0 +1,83 @@
+/* --- LOGIN CSS --- */
+
+#login-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.8)), url('../assets/ui/login.png') no-repeat center center fixed;
+    background-size: cover;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.logo-img {
+    max-width: 600px;
+    width: 60%;
+    margin-bottom: 40px;
+    filter: drop-shadow(0 0 20px rgba(255, 50, 50, 0.5));
+    animation: pulse-logo 3s infinite ease-in-out;
+}
+
+@keyframes pulse-logo {
+
+    0%,
+    100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 20px rgba(255, 50, 50, 0.5));
+    }
+
+    50% {
+        transform: scale(1.05);
+        filter: drop-shadow(0 0 40px rgba(255, 50, 50, 0.8));
+    }
+}
+
+.input-group {
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.input-group input {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--accent-color);
+    color: white;
+    padding: 15px 30px;
+    font-size: 1.2em;
+    text-align: center;
+    border-radius: 5px;
+    outline: none;
+    width: 300px;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 10px rgba(255, 51, 51, 0.2);
+}
+
+.input-group input:focus {
+    box-shadow: 0 0 20px rgba(255, 51, 51, 0.6);
+    background: rgba(20, 0, 0, 0.8);
+}
+
+.input-error {
+    border-color: red !important;
+    animation: shake 0.5s;
+}
+
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-10px);
+    }
+
+    75% {
+        transform: translateX(10px);
+    }
+}

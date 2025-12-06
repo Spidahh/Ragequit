@@ -1,0 +1,179 @@
+/* --- HUD CSS --- */
+
+.skill-icon {
+    width: 80%;
+    height: 80%;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+#ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+/* Stats (Top Left) */
+.hud-stats {
+    position: absolute;
+    bottom: 150px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Smooth bar transitions */
+.bar-fill {
+    transition: width 0.2s ease-out;
+}
+
+/* Crosshair */
+#crosshair {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 6px;
+    height: 6px;
+    background-color: white;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+    z-index: 1001;
+}
+
+/* Skill Bar (Bottom Center) */
+#skill-bar {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+
+    /* Glassmorphism */
+    background: rgba(10, 10, 15, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 12px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+
+    pointer-events: auto;
+}
+
+.skill-slot {
+    width: 56px;
+    height: 56px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.skill-slot.active {
+    border-color: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.key-hint {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    font-weight: bold;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-bottom: none;
+    z-index: 10;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.cooldown-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 0%;
+    background: rgba(0, 0, 0, 0.7);
+    transition: height 0.1s linear;
+}
+
+.slot-separator {
+    width: 20px;
+}
+
+/* Special Slots */
+.skill-heal {
+    border-color: rgba(0, 255, 0, 0.3);
+}
+
+.skill-transfer-hp {
+    border-color: rgba(255, 0, 0, 0.3);
+}
+
+.skill-transfer-mana {
+    border-color: rgba(0, 0, 255, 0.3);
+}
+
+.skill-transfer-stm {
+    border-color: rgba(255, 255, 0, 0.3);
+}
+
+/* --- STAT BARS --- */
+.stat-bar {
+    position: relative;
+    width: 150px;
+    height: 20px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+}
+
+.stat-bar .bar-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #ff3333, #ff6666);
+    border-radius: 3px;
+    transition: width 0.2s ease-out;
+}
+
+.stat-bar .bar-label {
+    position: absolute;
+    left: 8px;
+    font-size: 11px;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* Mana bar (Blue) */
+.mana-bar .bar-fill {
+    background: linear-gradient(90deg, #3366ff, #6699ff);
+}
+
+/* Stamina bar (Yellow) */
+.stamina-bar .bar-fill {
+    background: linear-gradient(90deg, #ffff33, #ffff99);
+}

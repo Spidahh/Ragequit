@@ -1,0 +1,9 @@
+{
+  "gravity": 600.0,
+  "moveSpeed": 14.0,
+  "jumpForce": 210.0,
+  "friction": 10.0,
+  "airControl": 0.5,
+  "lookSensitivity": 0.002,
+  "playerHeight": 1.8
+}

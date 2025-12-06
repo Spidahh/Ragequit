@@ -1,0 +1,28 @@
+﻿{
+    "gravity": 800.0,
+    "moveSpeed": 14.0,
+    "jumpForce": 25.0,
+    "friction": 10.0,
+    "airControl": 0.5,
+    "lookSensitivity": 0.002,
+    "playerHeight": 1.8,
+    "sprintMultiplier": 1.5,
+    "regen": {
+        "hp": 0.0,
+        "stamina": 4.0,
+        "mana": 3.0
+    },
+    "camera": {
+        "fpsOffset": {
+            "x": 0,
+            "y": 0.6,
+            "z": 0
+        },
+        "tpsOffset": {
+            "x": 0,
+            "y": 2.0,
+            "z": 4.0
+        },
+        "lerpSpeed": 10.0
+    }
+}

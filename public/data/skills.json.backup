@@ -1,0 +1,20 @@
+{
+  "fireball": {
+    "id": "fireball",
+    "type": "PROJECTILE",
+    "damage": 40,
+    "speed": 60.0,
+    "gravity": 15.0,
+    "cooldown": 0.8,
+    "color": 10040064,
+    "size": 0.3
+  },
+  "greatsword": {
+    "id": "greatsword",
+    "type": "MELEE",
+    "damage": 60,
+    "range": 3.5,
+    "cooldown": 1.2,
+    "color": 8947848
+  }
+}
