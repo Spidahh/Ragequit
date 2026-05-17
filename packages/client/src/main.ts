@@ -106,6 +106,8 @@ const hudManaFill = document.querySelector<HTMLElement>('#hud-mana .fill')!
 const hudManaNum = document.getElementById('hud-mana-num')!
 const hudStamFill = document.querySelector<HTMLElement>('#hud-stam .fill')!
 const hudStamNum = document.getElementById('hud-stam-num')!
+const hudPanel = document.getElementById('hud')!
+const hudDragHandle = document.getElementById('hud-drag-handle')!
 const comboDots = [0, 1, 2].map((i) => document.getElementById(`combo-${i}`)!)
 const hudComboEl = document.getElementById('hud-combo')!
 const serverToast = document.getElementById('server-toast')!
@@ -2252,6 +2254,122 @@ let camFovBase = 90
 // settings panel; persisted by menu.ts via localStorage.
 let settingsFovBase = 90
 let pendingLaunchMode: string | null = null
+const HUD_POS_KEY = 'ragequit.hud.position.v1'
+
+function clampHudPosition(left: number, top: number): { left: number; top: number } {
+  const rect = hudPanel.getBoundingClientRect()
+  const margin = 8
+  const maxLeft = Math.max(margin, window.innerWidth - rect.width - margin)
+  const maxTop = Math.max(margin, window.innerHeight - rect.height - margin)
+  return {
+    left: Math.max(margin, Math.min(maxLeft, left)),
+    top: Math.max(margin, Math.min(maxTop, top)),
+  }
+}
+
+function setHudPosition(left: number, top: number, persist = true): void {
+  const pos = clampHudPosition(left, top)
+  hudPanel.style.left = `${pos.left}px`
+  hudPanel.style.top = `${pos.top}px`
+  hudPanel.style.right = 'auto'
+  hudPanel.style.bottom = 'auto'
+  if (persist) {
+    try {
+      localStorage.setItem(HUD_POS_KEY, JSON.stringify(pos))
+    } catch {
+      // Local storage can be disabled by privacy settings.
+    }
+  }
+}
+
+function resetHudPosition(): void {
+  hudPanel.style.left = ''
+  hudPanel.style.top = ''
+  hudPanel.style.right = ''
+  hudPanel.style.bottom = ''
+  try {
+    localStorage.removeItem(HUD_POS_KEY)
+  } catch {
+    // Storage is optional.
+  }
+}
+
+function initDraggableHud(): void {
+  try {
+    const raw = localStorage.getItem(HUD_POS_KEY)
+    if (raw) {
+      const parsed = JSON.parse(raw) as { left?: number; top?: number }
+      if (Number.isFinite(parsed.left) && Number.isFinite(parsed.top)) {
+        setHudPosition(parsed.left!, parsed.top!, false)
+      }
+    }
+  } catch {
+    resetHudPosition()
+  }
+
+  let dragging = false
+  let offsetX = 0
+  let offsetY = 0
+  let activePointer = -1
+
+  const beginDrag = (clientX: number, clientY: number): void => {
+    dragging = true
+    const rect = hudPanel.getBoundingClientRect()
+    offsetX = clientX - rect.left
+    offsetY = clientY - rect.top
+    hudPanel.classList.add('dragging')
+  }
+
+  const moveDrag = (clientX: number, clientY: number): void => {
+    if (!dragging) return
+    setHudPosition(clientX - offsetX, clientY - offsetY)
+  }
+
+  const endDrag = (): void => {
+    dragging = false
+    activePointer = -1
+    hudPanel.classList.remove('dragging')
+  }
+
+  hudDragHandle.addEventListener('pointerdown', (e) => {
+    activePointer = e.pointerId
+    beginDrag(e.clientX, e.clientY)
+    hudDragHandle.setPointerCapture(e.pointerId)
+    e.preventDefault()
+  })
+
+  hudDragHandle.addEventListener('pointermove', (e) => {
+    if (!dragging || e.pointerId !== activePointer) return
+    moveDrag(e.clientX, e.clientY)
+  })
+
+  const stopDrag = (e: PointerEvent): void => {
+    if (!dragging || e.pointerId !== activePointer) return
+    endDrag()
+    hudDragHandle.releasePointerCapture(e.pointerId)
+  }
+  hudDragHandle.addEventListener('pointerup', stopDrag)
+  hudDragHandle.addEventListener('pointercancel', stopDrag)
+  hudDragHandle.addEventListener('mousedown', (e) => {
+    if (dragging) return
+    beginDrag(e.clientX, e.clientY)
+    e.preventDefault()
+  })
+  document.addEventListener('mousemove', (e) => {
+    if (activePointer !== -1) return
+    moveDrag(e.clientX, e.clientY)
+  })
+  document.addEventListener('mouseup', () => {
+    if (activePointer !== -1) return
+    endDrag()
+  })
+  hudDragHandle.addEventListener('dblclick', (e) => {
+    e.preventDefault()
+    resetHudPosition()
+  })
+}
+
+initDraggableHud()
 
 function setStatus(text: string, color: string): void {
   dbgStatus.textContent = text
@@ -4010,17 +4128,17 @@ function render(now: number): void {
     playerLight.position.set(x, y + 0.5 + idleBob, z)
 
     // Per-weapon camera:
-    //   Bow / Staff → first-person (camBack → 0, camera at eye level).
-    //   Sword       → third-person (camBack → 5.5, orbiting behind).
+    // Keep every weapon in the same over-shoulder camera family. Earlier builds
+    // blended bow/staff into first-person, which made auto-swaps from spells
+    // feel like the view dipped toward the floor.
     const wSchema = selfSchema && isWeapon(selfSchema.activeWeapon) ? selfSchema.activeWeapon : 'sword'
     // Update weapon prop if weapon changed.
     if (wSchema !== selfLastWeapon) {
       selfLastWeapon = wSchema
       applyWeaponProp(selfMesh, wSchema)
     }
-    const EYE_HEIGHT = CAPSULE_HALF_HEIGHT_M * 1.8          // eye-level above feet
-    const wBackTarget = (wSchema === 'bow' || wSchema === 'staff') ? 0 : 5.5
-    const wUpTarget   = (wSchema === 'bow' || wSchema === 'staff') ? EYE_HEIGHT : 1.3
+    const wBackTarget = wSchema === 'bow' ? 4.45 : wSchema === 'staff' ? 4.9 : 5.5
+    const wUpTarget   = wSchema === 'bow' ? 1.45 : wSchema === 'staff' ? 1.4 : 1.3
 
     // Bow: very slight FOV narrow when charged — tactile draw-back feel.
     const wFovTarget = wSchema === 'bow'
@@ -4031,31 +4149,26 @@ function render(now: number): void {
     camUp      += (wUpTarget   - camUp)      * CAM_LERP
     camFovBase += (wFovTarget  - camFovBase) * CAM_LERP
 
-    // In first-person mode, hide own capsule so it doesn't fill the screen.
-    selfMesh.visible = !dead && camBack > 0.5
+    selfMesh.visible = !dead
 
-    if (camBack < 0.5) {
-      // ── First-person (bow / staff) ──────────────────────────────────────
-      // Place camera at the player's eye, rotate directly from mouse input.
-      camera.position.set(x, y + camUp, z)
-      camera.rotation.order = 'YXZ'
-      camera.rotation.set(mousePitch, mouseYaw, 0)
-    } else {
-      // ── Third-person (sword) ────────────────────────────────────────────
-      // Orbit behind/above the player and look at the player's eye level.
-      const camOff = new THREE.Vector3(0, camUp, camBack)
-      camOff.applyEuler(new THREE.Euler(mousePitch, mouseYaw, 0, 'YXZ'))
-      camera.position.set(x + camOff.x, y + camOff.y, z + camOff.z)
+    // Stable third-person orbit. Yaw controls the shoulder/back position; pitch
+    // controls only the look target. This avoids the old "camera dives down"
+    // feeling when pitch was also rotating the camera's height offset.
+    const back = new THREE.Vector3(Math.sin(mouseYaw) * camBack, 0, Math.cos(mouseYaw) * camBack)
+    camera.position.set(x + back.x, y + camUp, z + back.z)
 
-      // Clamp camera above ground so it never clips underground.
-      const groundFloor = getMap(activeMapId || 'blockout').groundY
-      if (camera.position.y < groundFloor + 0.4) camera.position.y = groundFloor + 0.4
+    // Clamp camera above ground so it never clips underground.
+    const groundFloor = getMap(activeMapId || 'blockout').groundY
+    if (camera.position.y < groundFloor + 0.4) camera.position.y = groundFloor + 0.4
 
-      // Look-at target at eye level — keeps crosshair aim direction accurate.
-      const look = new THREE.Vector3(0, CAPSULE_HALF_HEIGHT_M * 0.6, 0)
-      look.applyEuler(new THREE.Euler(0, mouseYaw, 0, 'YXZ'))
-      camera.lookAt(x + look.x, y + look.y, z + look.z)
-    }
+    const aimForward = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(mousePitch, mouseYaw, 0, 'YXZ'))
+    const lookDistance = wSchema === 'bow' ? 18 : wSchema === 'staff' ? 15 : 10
+    const lookY = y + CAPSULE_HALF_HEIGHT_M * 0.85
+    camera.lookAt(
+      x + aimForward.x * lookDistance,
+      lookY + aimForward.y * lookDistance,
+      z + aimForward.z * lookDistance,
+    )
 
     // --- Directional shake — apply current offset to camera, then decay. ---
     if (shakeDecay > 0.001) {
@@ -4636,6 +4749,9 @@ addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight
   camera.updateProjectionMatrix()
   renderer.setSize(window.innerWidth, window.innerHeight)
+  if (hudPanel.style.left && hudPanel.style.top) {
+    setHudPosition(parseFloat(hudPanel.style.left), parseFloat(hudPanel.style.top), false)
+  }
 })
 
 addEventListener('beforeunload', () => {

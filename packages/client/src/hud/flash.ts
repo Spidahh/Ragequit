@@ -1,5 +1,3 @@
-const WEAPON_BANNER_ICONS: Record<string, string> = { sword: 'SWD', bow: 'BOW', staff: 'STF' }
-
 export function createHudFlash(shootFlashEl: HTMLElement, weaponBannerEl: HTMLElement) {
   let shootFlashTimer = 0
   let weaponBannerTimer = 0
@@ -14,8 +12,7 @@ export function createHudFlash(shootFlashEl: HTMLElement, weaponBannerEl: HTMLEl
     },
 
     showWeaponBanner(weapon: string): void {
-      const icon = WEAPON_BANNER_ICONS[weapon] ?? 'WPN'
-      weaponBannerEl.textContent = `${icon}  ${weapon.toUpperCase()}`
+      weaponBannerEl.textContent = weapon.toUpperCase()
       weaponBannerEl.classList.remove('active')
       void weaponBannerEl.offsetWidth
       weaponBannerEl.classList.add('active')

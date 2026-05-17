@@ -267,25 +267,56 @@
       #hud {
         position: fixed;
         left: 18px;
-        bottom: 20px;
+        bottom: 132px;
         transform: none;
-        width: min(282px, 32vw);
+        width: min(340px, 38vw);
         display: flex;
         flex-direction: column;
-        gap: 4px;
-        pointer-events: none;
+        gap: 7px;
+        pointer-events: auto;
         user-select: none;
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         background:
-          linear-gradient(180deg, rgba(16,20,38,0.60), rgba(4,6,12,0.50)),
-          rgba(0,0,0,0.30);
-        border: 1px solid rgba(255,255,255,0.08);
-        border-top: 1px solid rgba(255,255,255,0.12);
-        border-radius: 9px;
-        padding: 8px 10px;
-        box-shadow: 0 4px 22px rgba(0,0,0,0.52), inset 0 1px 0 rgba(255,255,255,0.06);
-        backdrop-filter: blur(4px);
-        opacity: 0.94;
+          linear-gradient(180deg, rgba(13,18,34,0.92), rgba(4,7,14,0.86)),
+          radial-gradient(circle at 18% 0%, rgba(255,255,255,0.08), transparent 34%);
+        border: 1px solid rgba(180,210,255,0.16);
+        border-left: 2px solid rgba(255,210,96,0.42);
+        border-radius: 8px;
+        padding: 8px 10px 10px;
+        box-shadow: 0 10px 28px rgba(0,0,0,0.58), inset 0 1px 0 rgba(255,255,255,0.08);
+        backdrop-filter: blur(8px);
+        opacity: 0.97;
+        touch-action: none;
+      }
+      #hud.dragging {
+        cursor: grabbing;
+        box-shadow: 0 14px 34px rgba(0,0,0,0.68), 0 0 0 1px rgba(255,210,96,0.22), inset 0 1px 0 rgba(255,255,255,0.10);
+      }
+      #hud-drag-handle {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 8px;
+        min-height: 16px;
+        cursor: grab;
+        color: rgba(220,230,255,0.82);
+        letter-spacing: 0.12em;
+        font-size: 9px;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+      #hud-drag-handle:active { cursor: grabbing; }
+      #hud-drag-handle .grip {
+        width: 26px;
+        height: 8px;
+        opacity: 0.72;
+        background:
+          linear-gradient(90deg, rgba(255,255,255,0.32) 0 2px, transparent 2px 6px) 0 0 / 6px 8px;
+      }
+      #hud-drag-handle .hint {
+        color: rgba(255,210,96,0.78);
+        font-size: 8px;
+        letter-spacing: 0.08em;
       }
       /* Corner accent brackets on the HUD panel */
       #hud::before, #hud::after {
@@ -308,36 +339,34 @@
       /* Skewed bar wrapper — game-HUD parallelogram style */
       .bar {
         position: relative;
-        height: 17px;
-        background: rgba(0, 0, 0, 0.65);
-        border: 1px solid rgba(255,255,255,0.09);
-        border-radius: 3px;
+        height: 22px;
+        background: linear-gradient(180deg, rgba(0,0,0,0.74), rgba(8,10,18,0.70));
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 5px;
         overflow: hidden;
-        box-shadow: inset 0 2px 5px rgba(0,0,0,0.55);
-        transform: skewX(-6deg);
+        box-shadow: inset 0 2px 6px rgba(0,0,0,0.60), 0 1px 0 rgba(255,255,255,0.04);
       }
       /* Counter-skew everything inside so text stays upright */
-      .bar .fill, .bar .label { transform: skewX(6deg) scaleX(1.025); }
       .bar .fill {
         position: absolute;
-        inset: 0 auto 0 -2px;
-        width: calc(100% + 4px);
+        inset: 0 auto 0 0;
+        width: 100%;
         transition: width 0.10s linear;
       }
       .bar .label {
         position: absolute;
         inset: 0;
-        left: -2px; right: -2px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 10px;
-        font-size: 9px;
+        padding: 0 11px;
+        font-size: 10px;
         font-weight: 800;
         color: rgba(255,255,255,0.94);
-        letter-spacing: 0.07em;
+        letter-spacing: 0.06em;
         text-shadow: 0 1px 4px rgba(0,0,0,0.95);
         text-transform: uppercase;
+        z-index: 3;
       }
       /* Sheen highlight overlay */
       .bar::after {
@@ -349,16 +378,16 @@
         z-index: 2;
       }
       #hud-hp .fill {
-        background: linear-gradient(90deg, #a02020 0%, #e04040 45%, #f06060 80%, #ff9090 100%);
-        box-shadow: 0 0 8px rgba(255,60,60,0.45), 2px 0 14px rgba(255,80,80,0.25);
+        background: linear-gradient(90deg, #781818 0%, #d7343f 50%, #ff7b70 100%);
+        box-shadow: 0 0 12px rgba(255,60,70,0.36), 2px 0 18px rgba(255,80,80,0.30);
       }
       #hud-mana .fill {
-        background: linear-gradient(90deg, #1840a8 0%, #3860d0 45%, #6090f0 80%, #90b8ff 100%);
-        box-shadow: 0 0 8px rgba(60,100,255,0.45), 2px 0 14px rgba(80,120,255,0.25);
+        background: linear-gradient(90deg, #17348d 0%, #3169d8 52%, #7cbcff 100%);
+        box-shadow: 0 0 12px rgba(60,100,255,0.38), 2px 0 18px rgba(80,120,255,0.28);
       }
       #hud-stam .fill {
-        background: linear-gradient(90deg, #887818 0%, #c0a828 45%, #dcc040 80%, #f0d868 100%);
-        box-shadow: 0 0 8px rgba(220,190,40,0.35), 2px 0 12px rgba(200,170,30,0.20);
+        background: linear-gradient(90deg, #6d6719 0%, #c5b234 52%, #ffe66a 100%);
+        box-shadow: 0 0 12px rgba(220,190,40,0.32), 2px 0 16px rgba(200,170,30,0.22);
       }
       /* Low resource warning */
       .bar.warn {
@@ -389,8 +418,8 @@
       /* Transmute bar ─ 3 resource-conversion slots */
       #transmute-bar {
         display: flex;
-        gap: 4px;
-        margin-top: 5px;
+        gap: 6px;
+        margin-top: 2px;
         pointer-events: auto;
       }
       .t-slot {
@@ -399,10 +428,10 @@
         grid-template-columns: auto 1fr auto;
         align-items: center;
         gap: 4px;
-        background: rgba(6, 8, 18, 0.88);
-        border: 1px solid rgba(255,255,255,0.07);
+        background: rgba(6, 9, 18, 0.92);
+        border: 1px solid rgba(255,255,255,0.10);
         border-bottom: 2px solid #3a3a6a;
-        border-radius: 5px 5px 2px 2px;
+        border-radius: 6px;
         padding: 4px 7px;
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         font-size: 8px;
@@ -410,9 +439,7 @@
         cursor: default;
         transition: border-color 0.12s, opacity 0.12s, box-shadow 0.12s;
         user-select: none;
-        transform: skewX(-4deg);
       }
-      .t-slot > * { transform: skewX(4deg); }
       .t-slot.ready {
         border-bottom-color: #5868d0;
         background: rgba(16,18,44,0.90);
@@ -460,7 +487,7 @@
         border-bottom-color: #8090f8;
         background: rgba(24,28,68,0.95);
         box-shadow: 0 2px 0 #8090f8, 0 0 14px rgba(100,120,255,0.35);
-        transform: skewX(-4deg) translateY(-1px);
+        transform: translateY(-1px);
       }
 
       /* Combo dots — sword chain indicator, 14 px for readability */
@@ -3442,6 +3469,11 @@
     </div>
 
     <div id="hud">
+      <div id="hud-drag-handle" title="Drag to move HUD. Double-click to reset.">
+        <span class="grip"></span>
+        <span>Vitals</span>
+        <span class="hint">::</span>
+      </div>
       <div class="bar" id="hud-hp">
         <div class="fill" style="width: 100%"></div>
         <div class="label">
