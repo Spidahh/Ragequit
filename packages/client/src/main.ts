@@ -2905,6 +2905,9 @@ function clearGameplayUi(): void {
   comboFlash.classList.remove('active')
   comboPopup.classList.remove('show')
   blindVignette.classList.remove('active')
+  deathOverlay.classList.remove('active')
+  respawnOverlay.classList.remove('active')
+  document.body.classList.remove('player-dead')
   crosshairEl.classList.remove('hit')
   roundTimer.textContent = ''
   roundTimer.classList.remove('urgent')
@@ -4556,10 +4559,11 @@ function render(now: number): void {
       }
     } else {
       castStartedAtMs = 0
-      castBar.classList.remove('active')
+      castBar.classList.remove('active', 'interrupted')
       castBarFill.style.width = '0%'
       castBarFill.style.background = ''
       castBarFill.style.boxShadow = ''
+      castBarLabel.textContent = 'CAST'
     }
 
     // --- Cooldown rings ---------------------------------------------------
