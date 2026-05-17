@@ -1074,6 +1074,8 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap
 // ACES filmic tone mapping makes the scene colours pop without over-exposing.
 renderer.toneMapping = THREE.ACESFilmicToneMapping
 renderer.toneMappingExposure = 1.1
+renderer.domElement.tabIndex = 0
+renderer.domElement.style.outline = 'none'
 app.appendChild(renderer.domElement)
 
 // Nameplate container — absolutely positioned over the canvas for HP bars /
@@ -1705,6 +1707,10 @@ let rmbReleaseEdge = false
 let weaponSwapRequest: Weapon | null = null
 let optimisticWeapon: Weapon | null = null
 let pointerLocked = false
+let canvasInputEngaged = false
+let pointerLookActive = false
+let lastPointerClientX = 0
+let lastPointerClientY = 0
 let loadoutReturnsToPause = false
 // Local cast-bar start timestamp — set when casting becomes true, cleared on reset.
 let castStartedAtMs = 0
@@ -1746,9 +1752,20 @@ function requestPointerLockSafely(): void {
   }
 }
 
+function engageCanvasInput(): void {
+  canvasInputEngaged = true
+  renderer.domElement.focus({ preventScroll: true })
+}
+
+function disengageCanvasInput(): void {
+  canvasInputEngaged = false
+  pointerLookActive = false
+}
+
 function openPauseMenu(): void {
   if (!room || isPauseMenuOpen()) return
   if (radialOpen) radialClose(false)
+  disengageCanvasInput()
   clearCombatInputEdges()
   loadoutStation.close()
   menu.hideMain()
@@ -1764,6 +1781,9 @@ function openPauseMenu(): void {
 function closePauseMenu(lockPointer: boolean): void {
   pauseMenu.classList.add('hidden')
   clearCombatInputEdges()
+  if (lockPointer && room) {
+    engageCanvasInput()
+  }
   if (lockPointer && room && document.pointerLockElement !== renderer.domElement) {
     requestPointerLockSafely()
   }
@@ -1810,6 +1830,15 @@ function loadoutStationHidden(): boolean {
 function isGameplayInputAllowed(): boolean {
   return Boolean(room)
     && currentMatchPhase === 'live'
+    && loadoutStationHidden()
+    && !isPauseMenuOpen()
+    && !isOverlayOpen(settingsOverlay)
+    && !document.body.classList.contains('main-menu-active')
+    && !document.body.classList.contains('loadout-active')
+}
+
+function canEngageGameplaySurface(): boolean {
+  return Boolean(room)
     && loadoutStationHidden()
     && !isPauseMenuOpen()
     && !isOverlayOpen(settingsOverlay)
@@ -1948,9 +1977,14 @@ renderer.domElement.addEventListener('contextmenu', (e) => {
 })
 
 function handleCombatPointerDown(button: number): void {
+  if (!canEngageGameplaySurface()) return
+  engageCanvasInput()
+  if (button === 0 && !pointerLocked) requestPointerLockSafely()
+  if (!isGameplayInputAllowed()) return
   if (!pointerLocked) {
-    if (button === 0) requestPointerLockSafely()
-    if (!isGameplayInputAllowed()) return
+    pointerLookActive = true
+    lastPointerClientX = 0
+    lastPointerClientY = 0
   }
   if (button === 0) {
     if (!lmbDown) lmbPressEdge = true
@@ -1969,18 +2003,69 @@ function handleCombatPointerUp(button: number): void {
   }
 }
 
+function shouldIgnoreGameplayPointerTarget(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null
+  if (!el) return false
+  return Boolean(el.closest('button, input, textarea, select, [contenteditable="true"], #settings-overlay, #loadout-station, #pause-menu, #main-menu'))
+}
+
+function handleGameplayPointerMove(e: PointerEvent | MouseEvent): void {
+  // While a radial wheel is open, mouse movement keeps updating the highlighted
+  // sector until the wheel key is released. The wheel is a selector, not a cast.
+  if (radialOpen) {
+    if (pointerLocked) radialMouseMove(e.movementX, e.movementY)
+    else radialPointMove(e.clientX, e.clientY)
+    return
+  }
+  if (pointerLocked) {
+    mouseYaw   -= e.movementX * mouseSens
+    mousePitch -= e.movementY * mouseSens
+  } else if (canvasInputEngaged && pointerLookActive && isGameplayInputAllowed()) {
+    if (lastPointerClientX !== 0 || lastPointerClientY !== 0) {
+      mouseYaw   -= (e.clientX - lastPointerClientX) * mouseSens
+      mousePitch -= (e.clientY - lastPointerClientY) * mouseSens
+    }
+    lastPointerClientX = e.clientX
+    lastPointerClientY = e.clientY
+  } else {
+    return
+  }
+  if (mousePitch > PITCH_UP_LIMIT)   mousePitch = PITCH_UP_LIMIT
+  if (mousePitch < PITCH_DOWN_LIMIT) mousePitch = PITCH_DOWN_LIMIT
+}
+
 renderer.domElement.addEventListener('pointerdown', (e) => {
+  e.preventDefault()
   handleCombatPointerDown(e.button)
 })
 renderer.domElement.addEventListener('pointerup', (e) => {
+  e.preventDefault()
   handleCombatPointerUp(e.button)
 })
 renderer.domElement.addEventListener('mousedown', (e) => {
+  e.preventDefault()
   handleCombatPointerDown(e.button)
 })
 renderer.domElement.addEventListener('mouseup', (e) => {
+  e.preventDefault()
   handleCombatPointerUp(e.button)
 })
+
+document.addEventListener('pointerdown', (e) => {
+  if (!canEngageGameplaySurface() || shouldIgnoreGameplayPointerTarget(e.target)) return
+  e.preventDefault()
+  handleCombatPointerDown(e.button)
+}, { capture: true })
+
+document.addEventListener('pointerup', (e) => {
+  if (!canvasInputEngaged || shouldIgnoreGameplayPointerTarget(e.target)) return
+  e.preventDefault()
+  handleCombatPointerUp(e.button)
+}, { capture: true })
+
+document.addEventListener('pointermove', (e) => {
+  handleGameplayPointerMove(e)
+}, { capture: true })
 
 document.addEventListener('pointerlockchange', () => {
   pointerLocked = document.pointerLockElement === renderer.domElement
@@ -2006,27 +2091,21 @@ document.addEventListener('visibilitychange', () => {
 
 // Scroll wheel — cycle through weapons (standard arena-game convention).
 // Wheel down = next weapon (sword→bow→staff→sword), wheel up = prev.
-renderer.domElement.addEventListener('wheel', (e: WheelEvent) => {
+function handleGameplayWheel(e: WheelEvent): void {
   if (!isGameplayInputAllowed()) return
+  if (shouldIgnoreGameplayPointerTarget(e.target)) return
+  e.preventDefault()
+  engageCanvasInput()
   const idx = (WEAPON_IDS as readonly string[]).indexOf(currentWeaponForInput())
   const dir = e.deltaY > 0 ? 1 : -1
   const next = WEAPON_IDS[(idx + dir + WEAPON_IDS.length) % WEAPON_IDS.length]!
   weaponSwapRequest = next
-}, { passive: true })
+}
+document.addEventListener('wheel', handleGameplayWheel, { capture: true, passive: false })
 
 addEventListener('mousemove', (e) => {
-  // While a radial wheel is open, mouse movement keeps updating the highlighted
-  // sector until the wheel key is released. The wheel is a selector, not a cast.
-  if (radialOpen) {
-    if (pointerLocked) radialMouseMove(e.movementX, e.movementY)
-    else radialPointMove(e.clientX, e.clientY)
-    return
-  }
-  if (!pointerLocked) return
-  mouseYaw   -= e.movementX * mouseSens
-  mousePitch -= e.movementY * mouseSens
-  if (mousePitch > PITCH_UP_LIMIT)   mousePitch = PITCH_UP_LIMIT
-  if (mousePitch < PITCH_DOWN_LIMIT) mousePitch = PITCH_DOWN_LIMIT
+  if ('PointerEvent' in window) return
+  handleGameplayPointerMove(e)
 })
 
 function sampleInput(airborne: boolean, dead: boolean): SimInput {
