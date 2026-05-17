@@ -27,7 +27,7 @@ A PvP 3D browser arena combat game. Skill-based, build-crafting at its core, flu
 
 ## Target feel
 
-- **Fluid**: instant weapon swap via the Q radial wheel. No "drawing animation" lockouts.
+- **Fluid**: instant weapon swap via Tab/scroll, with Q reserved for the Utility Wheel and E reserved for the Ability Wheel. No "drawing animation" lockouts.
 - **Readable**: stylized VFX with element-coded colors (red / cyan / yellow / purple / green). Silhouette-first visuals.
 - **Punishing but fair**: knockup enables combos, but parry and positioning defeat it. Misreads cost, but they never snowball from gear.
 - **Replayable**: deep build space, quest-based permanent ability unlocks, ELO ranked ladder across 7 tiers.

@@ -33,7 +33,7 @@ Sector 2: Bow ability
 Sectors 3-7: Magic abilities 1-5
 ```
 
-Direct binds mirror the wheel slots and cast immediately. The wheel itself only primes a slot; LMB fires the primed ability. See `01_controls.md`.
+Direct binds mirror the wheel slots and bypass wheel priming. Instant abilities cast immediately; placement abilities open their preview and use LMB to confirm. The wheel itself only primes a slot; LMB fires the primed ability or opens its placement preview. See `01_controls.md`.
 
 The same ability cannot occupy multiple slots in one build. Fixed transfers are locked to Z/X/F and cannot be selected again in the V flex utility slot.
 

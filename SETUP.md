@@ -10,13 +10,17 @@ Installa (se non li hai già):
 - **pnpm 10** — `npm install -g pnpm@10`. Verifica: `pnpm -v` deve dire `10.*`.
 - **Git** — https://git-scm.com/ (probabilmente già installato).
 
-## Passo 1 — entrare nel workspace
+## Passo 1 - entrare nel workspace
 
-Apri un terminale dentro `E:\GIOCHI\RAGEQUIT\ragequit\`.
+Apri un terminale dentro la cartella della repo clonata. Sul workspace locale attuale:
+
+```powershell
+cd E:\GIOCHI\RAGEQUIT_NEW_REPO
+```
 
 ## Passo 2 — installare le dipendenze
 
-Sempre da `E:\GIOCHI\RAGEQUIT\ragequit\`:
+Sempre dalla root della repo:
 
 ```bash
 pnpm install

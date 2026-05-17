@@ -93,7 +93,7 @@ status: target
 - Circular overlay, semi-transparent background dim
 - Each sector shows icon + key hint + CD (if applicable)
 - Active sector highlighted in yellow
-- Releasing Q/E primes the selected sector; M1 fires the primed action. Direct hotkeys still cast immediately.
+- Releasing Q/E primes the selected sector; M1 fires the primed action or opens its placement preview. Direct hotkeys bypass the wheel: instant abilities fire immediately, placement abilities show a confirm preview.
 
 ### Damage numbers
 

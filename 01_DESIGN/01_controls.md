@@ -34,7 +34,7 @@ status: final
 - Wheel opens when the key is pressed and closes on release
 - Mouse direction selects the sector; releasing the key primes that action
 - M1 fires the primed ability toward the current crosshair and then clears the prime
-- Direct hotkeys (`R`, `G`, `1-5`, `Z/X/F/V`) cast immediately and do not use the prime step
+- Direct hotkeys (`R`, `G`, `1-5`, `Z/X/F/V`) bypass the wheel prime step. Instant abilities cast immediately; placement abilities show their preview and confirm with M1.
 - Movement is not blocked while holding Q/E (slight slow during hold for readability)
 - The game does NOT pause while a wheel is open — server clock keeps running. Visual UI dims the world for focus.
 - This is a hard input contract: there are always two wheels, one for utilities/transfers and one for spells/combat abilities. Do not collapse them into direct hotkeys only.
@@ -53,14 +53,14 @@ The current default direct binds mirror the 11-slot loadout:
 
 Custom rebinds are live in the Settings menu and persist locally. Any ability slot can be remapped to a free key; if a chosen key is already used, the two actions swap bindings instead of creating duplicates.
 
-### Auto-swap on direct ability cast
+### Auto-swap on direct ability use
 
-If the ability belongs to a **different weapon** than the one currently equipped, pressing the direct bind performs two atomic actions in the same input frame:
+If the ability belongs to a **different weapon** than the one currently equipped, pressing the direct bind performs two atomic actions in the same input frame for instant casts, or before opening the placement preview for preview casts:
 
 1. Switch weapon to the ability's required weapon
-2. Cast the ability
+2. Cast the ability immediately, or arm its placement preview if it is not instant
 
-**Example**: sword equipped. Press `G` for the bow ability → bow is equipped AND that bow ability casts in the same tick if all server checks pass.
+**Example**: sword equipped. Press `G` for an instant bow ability -> bow is equipped and the ability casts if all server checks pass. Press a non-instant placement spell -> the preview appears first, then M1 confirms.
 
 Rules:
 

@@ -1,6 +1,6 @@
 # RAGEQUIT — Roadmap / Stato Reale
 
-Ultimo riallineamento documentale: 2026-05-16.
+Ultimo riallineamento documentale: 2026-05-17.
 
 Questo file non descrive più il bootstrap iniziale come se dovesse ancora partire. Il progetto ha già una vertical slice giocabile con server autoritativo, client Three.js, abilità data-driven, loadout, mastery, bot/training e match flow.
 
@@ -20,7 +20,7 @@ Implementato:
   - 11 utility
 - Utility wheel: tre transfer fissi Z/X/F + una utility flessibile V.
 - Ability wheel: melee, bow, 5 magic. La wheel è palette di selezione: rilasciare E/Q prima uno slot, LMB lo spara.
-- Direct hotkeys: R, G, 1-5, Z/X/F/V castano immediatamente.
+- Direct hotkeys: R, G, 1-5, Z/X/F/V bypassano la wheel; le abilità instant castano subito, quelle con placement aprono preview e confermano con LMB.
 - Play/Training aprono prima il Loadout Station; la room parte solo dopo `SAVE BUILD`.
 - Settings: FOV, sensitivity, volume, quality e keybind sono modificabili e persistono in `localStorage`.
 - Nessun sistema rune/passive.
@@ -48,7 +48,7 @@ Implementato:
   - E = ability palette
   - Q = utility/transfer palette
   - LMB = fire primed ability
-  - direct keys = instant cast
+  - direct keys = bypass wheel; instant cast immediato, placement con preview + LMB
 - Aggiungere preset persistenti quando entra il layer account/storage.
 
 ### 3. Client Modularization

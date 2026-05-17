@@ -24,7 +24,7 @@ status: current
 | --- | --- | --- |
 | `input` | `{ tick, seq, moveX, moveZ, yaw, pitch, jump, jumpHold, m1, m2 }` | Movement intent; server echoes processed seq through player schema |
 | `swing` | `{ atTick, yaw }` | Sword M1 rising edge |
-| `cast` | `{ abilityId, atTick, targetYaw?, targetPitch?, targetPoint? }` | Direct key casts and LMB-fired primed wheel abilities |
+| `cast` | `{ abilityId, atTick, targetYaw?, targetPitch?, targetPoint? }` | Instant direct casts, LMB-fired primed wheel abilities, and LMB-confirmed placement previews |
 | `weaponSwap` | `{ weapon, atTick }` | `sword`, `bow`, or `staff` |
 | `chargeStart` | `{ atTick }` | Bow M1 press |
 | `chargeRelease` | `{ atTick, yaw, pitch }` | Bow M1 release |
@@ -35,7 +35,7 @@ status: current
 | `loadoutSet` | `{ melee, bow, magic[5], utility[4] }` | Server normalizes fixed transfer slots, rejects duplicates, and rejects transfer utilities in V |
 | `heartbeat` | `{ clientTime }` | Ping/keepalive |
 
-The wheel interaction itself is client-side UI. Releasing Q/E primes a slot; the subsequent LMB sends `cast`.
+The wheel interaction itself is client-side UI. Releasing Q/E primes a slot; the subsequent LMB either sends `cast` immediately or opens the placement preview for non-instant abilities. Placement previews send `cast` only when LMB confirms the target point.
 
 Server validation clamps `targetPoint` to the ability range and rejects/ignores impossible casts after checking loadout membership, locks, cost, cooldown, weapon requirement, Phase Shift, parry state, and airborne state. Direct forward/target abilities must also pass server line-of-sight against static map cover before selecting a victim.
 
