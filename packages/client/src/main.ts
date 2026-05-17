@@ -1853,6 +1853,25 @@ function isTextEditingTarget(target: EventTarget | null): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable
 }
 
+function isGameplayKeyCode(code: string): boolean {
+  if (code === 'Escape' || code === 'Backquote') return true
+  const actionCodes = [
+    actionCode('moveForward'),
+    actionCode('moveBack'),
+    actionCode('moveLeft'),
+    actionCode('moveRight'),
+    actionCode('jump'),
+    actionCode('swapWeapon'),
+    actionCode('wheelUtility'),
+    actionCode('wheelAbility'),
+    actionCode('openLoadout'),
+    actionCode('sensDown'),
+    actionCode('sensUp'),
+  ]
+  if (actionCodes.includes(code)) return true
+  return slotKeybindEntries().some(([slotCode]) => slotCode === code)
+}
+
 function closeSettingsOverlayToReturnTarget(): void {
   settingsOverlay.classList.add('hidden')
   if (settingsOverlay.dataset['returnTo'] === 'pause' && room) pauseMenu.classList.remove('hidden')
@@ -1860,6 +1879,17 @@ function closeSettingsOverlayToReturnTarget(): void {
   else menu.showMain()
   settingsOverlay.dataset['returnTo'] = ''
 }
+
+function guardGameplayKeyboardEvent(e: KeyboardEvent): void {
+  if (!canEngageGameplaySurface()) return
+  if (isTextEditingTarget(e.target)) return
+  if (!isGameplayKeyCode(e.code)) return
+  e.preventDefault()
+  engageCanvasInput()
+}
+
+addEventListener('keydown', guardGameplayKeyboardEvent, { capture: true })
+addEventListener('keyup', guardGameplayKeyboardEvent, { capture: true })
 
 addEventListener('keydown', (e) => {
   const k = e.code
