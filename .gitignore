@@ -51,6 +51,7 @@ tools/asset-pipeline/out/
 # Local playground
 scratch/
 sandbox/
+.continuerules
 
 # Legacy material — not for git
 /_archive/

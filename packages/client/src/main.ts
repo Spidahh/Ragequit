@@ -1980,7 +1980,7 @@ document.addEventListener('pointerlockchange', () => {
 // Scroll wheel — cycle through weapons (standard arena-game convention).
 // Wheel down = next weapon (sword→bow→staff→sword), wheel up = prev.
 renderer.domElement.addEventListener('wheel', (e: WheelEvent) => {
-  if (!pointerLocked) return
+  if (!isGameplayInputAllowed()) return
   const idx = (WEAPON_IDS as readonly string[]).indexOf(currentWeaponForInput())
   const dir = e.deltaY > 0 ? 1 : -1
   const next = WEAPON_IDS[(idx + dir + WEAPON_IDS.length) % WEAPON_IDS.length]!
