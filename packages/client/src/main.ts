@@ -1977,6 +1977,14 @@ document.addEventListener('pointerlockchange', () => {
   }
 })
 
+addEventListener('blur', () => {
+  clearCombatInputEdges()
+})
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) clearCombatInputEdges()
+})
+
 // Scroll wheel — cycle through weapons (standard arena-game convention).
 // Wheel down = next weapon (sword→bow→staff→sword), wheel up = prev.
 renderer.domElement.addEventListener('wheel', (e: WheelEvent) => {
