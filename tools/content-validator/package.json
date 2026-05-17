@@ -1,0 +1,12 @@
+{
+  "name": "@ragequit/content-validator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "validate": "tsx validate.ts"
+  },
+  "dependencies": {
+    "@ragequit/shared": "workspace:*"
+  }
+}

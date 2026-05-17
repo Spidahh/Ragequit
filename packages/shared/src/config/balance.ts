@@ -1,0 +1,111 @@
+// Runtime balance config loader (Fase 10b).
+//
+// `packages/shared/src/constants/balance.json` is the SINGLE SOURCE OF
+// TRUTH for tunable numbers post-launch. The server reads it at boot and
+// the values override the defaults exported from `constants/*.ts`. This
+// module exposes a typed shape + a default value built from the on-disk
+// JSON so:
+//   - server: import `RUNTIME_BALANCE` from this module to read live values.
+//   - tests: pass a custom JSON path to `loadBalance()` to verify overrides.
+//   - client: imports the JSON directly via vite for cosmetic display
+//     (tooltip text, ranked thresholds in lobby UI, etc).
+
+export interface BalanceConfig {
+  version: number
+  ttk: { min_sec: number; max_sec: number }
+  weapons: {
+    sword_m1_damage: [number, number, number]
+    bow_charge_min_sec: number
+    bow_charge_full_sec: number
+    bow_damage_min: number
+    bow_damage_full: number
+    staff_m1_damage: number
+    staff_m1_mana_cost: number
+    staff_m1_cadence_sec: number
+  }
+  parry: {
+    tap_window_sec: number
+    tap_cost_stamina: number
+    tap_cooldown_sec: number
+    hold_block_frac: number
+    hold_drain_per_sec: number
+  }
+  match: {
+    rounds_to_win: number
+    max_rounds: number
+    round_timer_sec: number
+    elo_starting: number
+    elo_k_ranked: number
+    elo_k_ffa: number
+  }
+}
+
+// Hardcoded defaults — mirror the JSON shape so the type system stays
+// honest even if the file is missing at runtime. These match the values
+// in `balance.json` 1:1; bump in lockstep with the JSON when tuning.
+export const DEFAULT_BALANCE: BalanceConfig = {
+  version: 1,
+  ttk: { min_sec: 20, max_sec: 30 },
+  weapons: {
+    sword_m1_damage: [6, 6, 9],
+    bow_charge_min_sec: 0.3,
+    bow_charge_full_sec: 2.0,
+    bow_damage_min: 4,
+    bow_damage_full: 22,
+    staff_m1_damage: 8,
+    staff_m1_mana_cost: 5,
+    staff_m1_cadence_sec: 0.5,
+  },
+  parry: {
+    tap_window_sec: 0.5,
+    tap_cost_stamina: 20,
+    tap_cooldown_sec: 3,
+    hold_block_frac: 0.7,
+    hold_drain_per_sec: 15,
+  },
+  match: {
+    rounds_to_win: 3,
+    max_rounds: 5,
+    round_timer_sec: 120,
+    elo_starting: 1000,
+    elo_k_ranked: 25,
+    elo_k_ffa: 20,
+  },
+}
+
+// Live runtime balance — mutated only by `loadBalance()` at boot. After that
+// the values are read-only for the rest of the process. Keep in mind that
+// changing values mid-match would break determinism between server and
+// client prediction; reload requires server restart.
+export const RUNTIME_BALANCE: BalanceConfig = structuredClone(DEFAULT_BALANCE)
+
+// Merge a partial `BalanceConfig` (parsed from JSON) into RUNTIME_BALANCE.
+// Returns the merged result so callers can inspect the effective config.
+// Missing fields fall back to defaults — the JSON only needs to contain
+// the values the operator wants to override.
+export function applyBalanceOverride(overrides: Partial<BalanceConfig>): BalanceConfig {
+  if (typeof overrides.version === 'number') RUNTIME_BALANCE.version = overrides.version
+  if (overrides.ttk) Object.assign(RUNTIME_BALANCE.ttk, overrides.ttk)
+  if (overrides.weapons) Object.assign(RUNTIME_BALANCE.weapons, overrides.weapons)
+  if (overrides.parry) Object.assign(RUNTIME_BALANCE.parry, overrides.parry)
+  if (overrides.match) Object.assign(RUNTIME_BALANCE.match, overrides.match)
+  return RUNTIME_BALANCE
+}
+
+// Pure validator — checks the structural shape + value ranges. Returns the
+// list of issues so a fail-loud server boot can refuse to start with a
+// malformed config. Empty array = config is OK.
+export function validateBalance(c: BalanceConfig): string[] {
+  const issues: string[] = []
+  if (c.ttk.min_sec >= c.ttk.max_sec) issues.push('ttk.min_sec must be < max_sec')
+  if (c.match.rounds_to_win > c.match.max_rounds)
+    issues.push('match.rounds_to_win must be <= max_rounds')
+  if (c.match.elo_k_ranked <= 0) issues.push('match.elo_k_ranked must be > 0')
+  if (c.weapons.bow_charge_min_sec >= c.weapons.bow_charge_full_sec)
+    issues.push('bow_charge_min_sec must be < bow_charge_full_sec')
+  if (c.weapons.bow_damage_min >= c.weapons.bow_damage_full)
+    issues.push('bow_damage_min must be < bow_damage_full')
+  if (c.parry.hold_block_frac < 0 || c.parry.hold_block_frac > 1)
+    issues.push('parry.hold_block_frac must be in [0, 1]')
+  return issues
+}

@@ -1,0 +1,284 @@
+// Match flow / round state machine (Fase 7).
+//
+// Drives the BO5 1v1 round loop:
+//   lobby (waiting for 2 players) → countdown (3 s) → live → roundEnd (2 s)
+//   → live (next round) → matchEnd at MATCH_ROUNDS_TO_WIN
+// Round ends when:
+//   - one player reaches HP 0 → other player wins the round
+//   - the 2-min timer expires → higher-HP player wins the round; on tie, no
+//     one wins (tie round, replay)
+//
+// The MatchManager owns the GameState.phase + roundWins map. Damage / death
+// signals are pushed in by GameRoom on each player kill via `notifyDeath`.
+// HP/Mana/Stamina/CDs reset between rounds is delegated back to GameRoom via
+// a host hook so the existing respawn pipeline is reused.
+
+import {
+  ELO_K_RANKED,
+  ELO_STARTING,
+  FFA_KILLS_TO_WIN,
+  MATCH_MAX_ROUNDS,
+  MATCH_ROUNDS_TO_WIN,
+  MessageTypes,
+  ROUND_COUNTDOWN_SEC,
+  ROUND_END_HOLD_SEC,
+  ROUND_TIMER_SEC,
+  TEAM_KILLS_TO_WIN,
+  TICK_RATE_HZ,
+  type GameState,
+  type ServerMatchPhaseMessage,
+  type ServerScoreMessage,
+} from '@ragequit/shared'
+
+// Modes that use BO5 round logic. Everything else uses kill-count win condition.
+const ROUND_MODES = new Set(['duel_arena', 'training', 'blockout', '1v1'])
+
+const ROUND_TIMER_TICKS = Math.round(ROUND_TIMER_SEC * TICK_RATE_HZ)
+const COUNTDOWN_TICKS = Math.round(ROUND_COUNTDOWN_SEC * TICK_RATE_HZ)
+const ROUND_END_HOLD_TICKS = Math.round(ROUND_END_HOLD_SEC * TICK_RATE_HZ)
+
+export interface MatchHost {
+  state: GameState
+  // Reset HP/Mana/Stamina/cooldowns/airborne/parry/statuses on every player —
+  // called between rounds and on match start.
+  resetAllPlayers: () => void
+  broadcast: (type: string, message: unknown) => void
+}
+
+type Phase = 'lobby' | 'countdown' | 'live' | 'roundEnd' | 'matchEnd'
+
+export class MatchManager {
+  private phaseEndsAtTick = 0
+  // Tick at which the current round started (to compute timer end at start +
+  // ROUND_TIMER_TICKS for the live phase).
+  private roundStartTick = 0
+  private roundIndex = 0
+  // In-memory ELO (Fase 7 scaffold; persisted to Supabase in Fase 9).
+  private readonly elo = new Map<string, number>()
+  // The winner of the LAST round (for roundEnd → next live transition).
+  private lastRoundWinnerId = ''
+
+  constructor(private readonly host: MatchHost) {}
+
+  private get mode(): string {
+    return this.host.state.mode ?? 'duel_arena'
+  }
+  private get isRoundMode(): boolean {
+    return ROUND_MODES.has(this.mode)
+  }
+
+  // Get / seed in-memory ELO for a player.
+  ratingFor(sid: string): number {
+    return this.elo.get(sid) ?? ELO_STARTING
+  }
+
+  // Server-side death notification — call from GameRoom drainDamage when a
+  // player's HP reaches 0. Records the round winner (1v1) or increments kill
+  // counters (FFA / 5v5).
+  notifyDeath(victimId: string, killerId: string): void {
+    if (this.host.state.phase !== 'live') return
+    if (victimId === killerId) return
+
+    if (this.isRoundMode) {
+      this.endRound(killerId)
+      return
+    }
+
+    if (this.mode === 'ffa') {
+      const cur = this.host.state.soloKills.get(killerId) ?? 0
+      const next = cur + 1
+      this.host.state.soloKills.set(killerId, next)
+      this.broadcastScore()
+      if (next >= FFA_KILLS_TO_WIN) this.enterMatchEnd(this.host.state.tick)
+      return
+    }
+
+    if (this.mode === '5v5') {
+      const killer = this.host.state.players.get(killerId)
+      const team = killer?.team ?? ''
+      if (!team) return
+      const cur = this.host.state.teamKills.get(team) ?? 0
+      const next = cur + 1
+      this.host.state.teamKills.set(team, next)
+      this.broadcastScore()
+      if (next >= TEAM_KILLS_TO_WIN) this.enterMatchEnd(this.host.state.tick)
+    }
+  }
+
+  // Driven each server tick from GameRoom.startTickLoop(). Manages phase
+  // timers + transitions.
+  tick(): void {
+    const tickNow = this.host.state.tick
+    const phase = this.host.state.phase as Phase
+
+    switch (phase) {
+      case 'lobby': {
+        // FFA/5v5 start with 2+ players; round modes also start with 2.
+        const minToStart = 2
+        if (this.host.state.players.size >= minToStart) {
+          this.enterCountdown(tickNow)
+        }
+        break
+      }
+      case 'countdown': {
+        if (tickNow >= this.phaseEndsAtTick) this.enterLive(tickNow)
+        break
+      }
+      case 'live': {
+        // Round timeout only applies to 1v1 round modes.
+        if (this.isRoundMode) {
+          const liveEnd = this.roundStartTick + ROUND_TIMER_TICKS
+          if (tickNow >= liveEnd) {
+            const winner = this.higherHpWinner()
+            this.endRound(winner)
+          }
+        }
+        break
+      }
+      case 'roundEnd': {
+        if (tickNow >= this.phaseEndsAtTick) {
+          if (this.matchOver()) {
+            this.enterMatchEnd(tickNow)
+          } else {
+            this.enterCountdown(tickNow)
+          }
+        }
+        break
+      }
+      case 'matchEnd':
+        // Terminal — room dispose handled by Colyseus when clients leave.
+        break
+    }
+  }
+
+  private enterCountdown(tickNow: number): void {
+    this.host.state.phase = 'countdown'
+    this.phaseEndsAtTick = tickNow + COUNTDOWN_TICKS
+    this.host.resetAllPlayers()
+    this.broadcastPhase('countdown', ROUND_COUNTDOWN_SEC * 1000)
+  }
+
+  private enterLive(tickNow: number): void {
+    this.host.state.phase = 'live'
+    this.roundStartTick = tickNow
+    this.broadcastPhase('live')
+  }
+
+  private enterRoundEnd(tickNow: number): void {
+    this.host.state.phase = 'roundEnd'
+    this.phaseEndsAtTick = tickNow + ROUND_END_HOLD_TICKS
+    this.broadcastPhase('roundEnd', ROUND_END_HOLD_SEC * 1000)
+    this.broadcastScore()
+  }
+
+  private enterMatchEnd(_tickNow: number): void {
+    this.host.state.phase = 'matchEnd'
+    this.broadcastPhase('matchEnd')
+    this.applyEloUpdates()
+    this.broadcastScore()
+  }
+
+  // Awarding + transition — `winnerId === ''` means tie (no win recorded).
+  private endRound(winnerId: string): void {
+    if (this.host.state.phase !== 'live') return
+    this.lastRoundWinnerId = winnerId
+    if (winnerId !== '') {
+      const cur = this.host.state.roundWins.get(winnerId) ?? 0
+      this.host.state.roundWins.set(winnerId, cur + 1)
+    }
+    this.roundIndex += 1
+    this.enterRoundEnd(this.host.state.tick)
+  }
+
+  // True when a player reached the rounds-to-win OR we exhausted MAX_ROUNDS.
+  // FFA/5v5 win conditions are handled directly in notifyDeath, so this only
+  // applies to round modes.
+  private matchOver(): boolean {
+    if (!this.isRoundMode) return false
+    if (this.roundIndex >= MATCH_MAX_ROUNDS) return true
+    let max = 0
+    this.host.state.roundWins.forEach((n) => {
+      if (n > max) max = n
+    })
+    return max >= MATCH_ROUNDS_TO_WIN
+  }
+
+  private higherHpWinner(): string {
+    let best = ''
+    let bestHp = -1
+    let tie = false
+    this.host.state.players.forEach((p, sid) => {
+      if (!p.alive) return
+      if (p.hp > bestHp) {
+        best = sid
+        bestHp = p.hp
+        tie = false
+      } else if (p.hp === bestHp) {
+        tie = true
+      }
+    })
+    return tie ? '' : best
+  }
+
+  // Update in-memory ELO at match end. 1v1 round modes: winner by round count.
+  // FFA/5v5: ELO deferred to the ranked multiplayer pass; round modes update now.
+  private applyEloUpdates(): void {
+    if (!this.isRoundMode) return
+    let winnerId = ''
+    let loserId = ''
+    let bestWins = -1
+    this.host.state.players.forEach((_p, sid) => {
+      const w = this.host.state.roundWins.get(sid) ?? 0
+      if (w > bestWins) {
+        bestWins = w
+        winnerId = sid
+      }
+    })
+    this.host.state.players.forEach((_p, sid) => {
+      if (sid !== winnerId) loserId = sid
+    })
+    if (!winnerId || !loserId) return
+    const rW = this.ratingFor(winnerId)
+    const rL = this.ratingFor(loserId)
+    const exW = 1 / (1 + Math.pow(10, (rL - rW) / 400))
+    const exL = 1 / (1 + Math.pow(10, (rW - rL) / 400))
+    const newW = Math.round(rW + ELO_K_RANKED * (1 - exW))
+    const newL = Math.round(rL + ELO_K_RANKED * (0 - exL))
+    this.elo.set(winnerId, newW)
+    this.elo.set(loserId, newL)
+  }
+
+  private broadcastPhase(phase: Phase, countdownMs?: number): void {
+    const msg: ServerMatchPhaseMessage = {
+      phase,
+      ...(countdownMs !== undefined ? { countdownMs } : {}),
+    }
+    this.host.broadcast(MessageTypes.MatchPhase, msg)
+  }
+
+  private broadcastScore(): void {
+    const msg: ServerScoreMessage = {}
+    if (this.isRoundMode) {
+      const wins: Record<string, number> = {}
+      this.host.state.roundWins.forEach((n, sid) => { wins[sid] = n })
+      msg.roundWins = wins
+    } else if (this.mode === 'ffa') {
+      const solo: Record<string, number> = {}
+      this.host.state.soloKills.forEach((n, sid) => { solo[sid] = n })
+      msg.solo = solo
+    } else if (this.mode === '5v5') {
+      const team: Record<string, number> = {}
+      this.host.state.teamKills.forEach((n, t) => { team[t] = n })
+      msg.team = team
+    }
+    this.host.broadcast(MessageTypes.Score, msg)
+  }
+
+  // Read-only — last round winner, used by HUD + scoreboard.
+  getLastRoundWinnerId(): string {
+    return this.lastRoundWinnerId
+  }
+  getRoundIndex(): number {
+    return this.roundIndex
+  }
+}

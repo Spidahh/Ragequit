@@ -1,0 +1,139 @@
+import { MessageTypes } from '@ragequit/shared'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { __loadoutStationSmoke, initLoadoutStation } from './loadout-station.js'
+
+function mountLoadoutDom(): void {
+  document.body.innerHTML = `
+    <div id="loadout-station" class="hidden">
+      <div id="mastery-pills">
+        <span class="mpill" data-el="fire"></span>
+        <span class="mpill" data-el="ice"></span>
+        <span class="mpill" data-el="lightning"></span>
+        <span class="mpill" data-el="dark"></span>
+        <span class="mpill" data-el="nature"></span>
+      </div>
+      <span id="mastery-badge"></span>
+      <div id="ls-melee"></div>
+      <div id="ls-bow"></div>
+      <div id="ls-magic"></div>
+      <div id="ls-utility"></div>
+      <div id="ls-detail-name"></div>
+      <div id="ls-detail-meta"></div>
+      <div id="ls-detail-desc"></div>
+      <div id="ls-detail-malus"></div>
+      <button id="ls-detail-instant"></button>
+      <input id="ls-search" />
+      <button data-filter="all"></button>
+      <button data-filter="starter"></button>
+      <button data-filter="fire"></button>
+      <button data-filter="ice"></button>
+      <button data-filter="lightning"></button>
+      <button data-filter="dark"></button>
+      <button data-filter="nature"></button>
+      <button data-filter="none"></button>
+      <div id="ls-pool"></div>
+      <button id="ls-back"></button>
+      <button id="ls-default"></button>
+      <button id="ls-confirm"></button>
+    </div>
+  `
+}
+
+describe('loadout station smoke', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    mountLoadoutDom()
+  })
+
+  it('keeps the expected 11-slot keyboard layout', () => {
+    expect(__loadoutStationSmoke.slotOrder).toEqual([
+      'melee',
+      'bow',
+      'magic',
+      'magic',
+      'magic',
+      'magic',
+      'magic',
+      'utility',
+      'utility',
+      'utility',
+      'utility',
+    ])
+    expect(__loadoutStationSmoke.defaultSlots).toHaveLength(11)
+  })
+
+  it('sends a clean loadout message without hidden build fields', () => {
+    const send = vi.fn()
+    const room = { send } as never
+    const api = initLoadoutStation(() => room)
+
+    api.open()
+    document.getElementById('ls-confirm')?.click()
+
+    expect(send).toHaveBeenCalledOnce()
+    expect(send.mock.calls[0]?.[0]).toBe(MessageTypes.Loadout)
+    expect(send.mock.calls[0]?.[1]).toEqual({
+      melee: 'uppercut',
+      bow: 'piercing_shot',
+      magic: ['fireball', 'flame_wall', 'frost_bolt', 'chain_bolt', 'shadow_bolt'],
+      utility: ['transfer_hp_mana', 'transfer_mana_stam', 'transfer_stam_hp', 'quick_dash'],
+    })
+    expect(api.getLoadout()).toHaveLength(11)
+  })
+
+  it('saves local builds before connecting without treating it as a back action', () => {
+    const onClose = vi.fn()
+    const onSaved = vi.fn()
+    const api = initLoadoutStation(() => undefined, undefined, onClose, undefined, onSaved)
+
+    api.open()
+    document.getElementById('ls-confirm')?.click()
+
+    expect(onSaved).toHaveBeenCalledOnce()
+    expect(onClose).not.toHaveBeenCalled()
+    expect(document.getElementById('loadout-station')?.classList.contains('hidden')).toBe(true)
+  })
+
+  it('defaults placed spells to preview and persists explicit instant-cast overrides', () => {
+    const api = initLoadoutStation(() => undefined)
+
+    expect(api.isInstantCast('flame_wall')).toBe(false)
+    expect(api.isInstantCast('fireball')).toBe(true)
+
+    api.open()
+    document.getElementById('ls-detail-instant')?.click()
+
+    const stored = JSON.parse(localStorage.getItem(__loadoutStationSmoke.instantCastStorageKey) ?? '{}') as Record<string, boolean>
+    expect(stored['uppercut']).toBe(false)
+    expect(api.isInstantCast('uppercut')).toBe(false)
+  })
+
+  it('does not send or close when build changes are locked', () => {
+    const send = vi.fn()
+    const room = { send } as never
+    const api = initLoadoutStation(() => room, undefined, undefined, () => false)
+
+    api.open()
+    document.getElementById('ls-confirm')?.click()
+
+    expect(send).not.toHaveBeenCalled()
+    expect(document.getElementById('loadout-station')?.classList.contains('hidden')).toBe(false)
+    expect(document.getElementById('ls-confirm')?.textContent).toBe('LOCKED IN COMBAT')
+  })
+
+  it('keeps build editing read-only while locked', () => {
+    const room = { send: vi.fn() } as never
+    const api = initLoadoutStation(() => room, undefined, undefined, () => false)
+
+    api.open()
+    const before = api.getLoadout().join('|')
+    document.querySelector<HTMLButtonElement>('.pool-card:not(.equipped)')?.click()
+    document.getElementById('ls-default')?.click()
+    document.getElementById('ls-detail-instant')?.click()
+
+    expect(api.getLoadout().join('|')).toBe(before)
+    expect(localStorage.getItem(__loadoutStationSmoke.storageKey)).toBeNull()
+    expect(document.querySelector<HTMLButtonElement>('.pool-card')?.disabled).toBe(true)
+  })
+})

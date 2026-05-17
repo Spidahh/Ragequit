@@ -1,0 +1,121 @@
+# RAGEQUIT Design Docs — Machine-readable index
+# Purpose: Fast lookup for Claude (and humans) to load minimum relevant context per query.
+
+project: RAGEQUIT
+version: 1.1
+status: current
+
+# Read in this order for a full mental model
+read_order:
+  - 00_vision.md
+  - 00_pillars.md
+  - 00_player_journey.md
+  - 01_stats.md
+  - 01_controls.md
+  - 01_combat_fundamentals.md
+  - 02_weapon_sword.md
+  - 02_weapon_bow.md
+  - 02_weapon_staff.md
+  - 03_mastery_system.md
+  - 04_transmutation.md
+  - 05_abilities_philosophy.md
+  - 05_abilities_melee.md
+  - 05_abilities_bow.md
+  - 05_abilities_magic.md
+  - 05_abilities_utility.md
+  - 06_loadout_build.md
+  - 07_modes.md
+  - 08_progression.md
+  - 09_visual.md
+  - 10_tech_stack.md
+  - 10_tech_netcode.md
+  - 10_tech_assets.md
+  - 99_resolved_ambiguities.md
+
+files:
+  00_vision.md: { section: core, status: final, tags: [philosophy, pitch] }
+  00_pillars.md: { section: core, status: final, tags: [rules, anti-patterns] }
+  00_player_journey.md: { section: core, status: final, tags: [flow, ux] }
+  01_stats.md: { section: combat, status: final, tags: [numbers, hp, mana, stamina] }
+  01_controls.md: { section: combat, status: final, tags: [input, wheels, binds] }
+  01_combat_fundamentals.md: { section: combat, status: final, tags: [ttk, gcd, parry, knockup] }
+  02_weapon_sword.md: { section: weapons, status: final, tags: [melee, m1] }
+  02_weapon_bow.md: { section: weapons, status: final, tags: [ranged, projectile, m1] }
+  02_weapon_staff.md: { section: weapons, status: final, tags: [magic, m1] }
+  03_mastery_system.md: { section: systems, status: final, tags: [mastery, elements, infusion] }
+  04_transmutation.md: { section: systems, status: final, tags: [resources, trade] }
+  05_abilities_philosophy.md: { section: abilities, status: final, tags: [bonus, malus, tradeoffs] }
+  05_abilities_melee.md: { section: abilities, status: final, tags: [melee, list] }
+  05_abilities_bow.md: { section: abilities, status: final, tags: [bow, list] }
+  05_abilities_magic.md: { section: abilities, status: final, tags: [magic, elements, list] }
+  05_abilities_utility.md: { section: abilities, status: final, tags: [utility, fixed] }
+  06_loadout_build.md: { section: meta, status: final, tags: [build, loadout, slots] }
+  07_modes.md: { section: meta, status: final, tags: [modes, win_conditions] }
+  08_progression.md: { section: meta, status: final, tags: [elo, quests, talents] }
+  09_visual.md: { section: art, status: final, tags: [style, vfx] }
+  10_tech_stack.md: { section: tech, status: final, tags: [frameworks, versions] }
+  10_tech_netcode.md: { section: tech, status: final, tags: [multiplayer, server_auth] }
+  10_tech_assets.md: { section: tech, status: final, tags: [assets, pipeline] }
+  99_resolved_ambiguities.md: { section: meta, status: final, tags: [decisions, history] }
+
+sections:
+  core: [00_vision.md, 00_pillars.md, 00_player_journey.md]
+  combat: [01_stats.md, 01_controls.md, 01_combat_fundamentals.md]
+  weapons: [02_weapon_sword.md, 02_weapon_bow.md, 02_weapon_staff.md]
+  systems: [03_mastery_system.md, 04_transmutation.md]
+  abilities:
+    [
+      05_abilities_philosophy.md,
+      05_abilities_melee.md,
+      05_abilities_bow.md,
+      05_abilities_magic.md,
+      05_abilities_utility.md,
+    ]
+  meta: [06_loadout_build.md, 07_modes.md, 08_progression.md, 99_resolved_ambiguities.md]
+  art: [09_visual.md]
+  tech: [10_tech_stack.md, 10_tech_netcode.md, 10_tech_assets.md]
+
+query_hints:
+  controls_and_input: [01_controls.md]
+  player_movement: [01_stats.md, 01_controls.md]
+  weapons_overview: [02_weapon_sword.md, 02_weapon_bow.md, 02_weapon_staff.md]
+  aiming_and_projectiles: [02_weapon_bow.md, 02_weapon_staff.md]
+  element_bonuses: [03_mastery_system.md]
+  ability_list:
+    [05_abilities_melee.md, 05_abilities_bow.md, 05_abilities_magic.md, 05_abilities_utility.md]
+  build_crafting: [06_loadout_build.md, 05_abilities_philosophy.md]
+  game_modes: [07_modes.md]
+  progression_and_elo: [08_progression.md]
+  art_style: [09_visual.md, 10_tech_assets.md]
+  tech_stack: [10_tech_stack.md, 10_tech_netcode.md]
+  ttk_and_damage: [01_combat_fundamentals.md, 01_stats.md]
+  decision_history: [99_resolved_ambiguities.md]
+
+locked_decisions:
+  - classless_game
+  - no_tank_vs_glass_axis
+  - ttk_window: '20-30 seconds'
+  - wheels_Q_E_radial
+  - no_dodge
+  - no_shift_sprint
+  - m1_basic_or_primed_ability_fire
+  - m2_is_parry
+  - all_players_access_all_3_weapons
+  - mastery_infuses_m1
+  - no_pentagon_counter_between_elements
+  - auto_swap_on_direct_ability_cast
+  - wheel_release_primes_lmb_fires
+  - no_season_pass
+  - 1v1_and_team_modes_at_launch
+  - quest_based_permanent_unlocks
+  - small_talent_tree
+  - mini_malus_on_every_ability
+  - visual_style: 'low-poly stylized (Risk of Rain 2 direction)'
+  - asset_sources: [Kenney.nl, Quaternius]
+
+ability_counts:
+  melee: 6
+  bow: 8
+  magic: 27
+  utility: 11
+  total: 52

@@ -1,0 +1,63 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# IDE / OS
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Coverage
+coverage/
+*.lcov
+.nyc_output
+
+# Cache
+.cache/
+.eslintcache
+.parcel-cache/
+.vite/
+
+# Playtest data
+replay-archive/
+telemetry-dumps/
+
+# Asset pipeline intermediates
+tools/asset-pipeline/tmp/
+tools/asset-pipeline/out/
+
+# Local playground
+scratch/
+sandbox/
+
+# Legacy material — not for git
+/_archive/
+
+# pnpm temp files (from failed symlink operations on Windows-mounted filesystems)
+_tmp_*
+
+# Smoke / scratch scripts dropped in package roots during local verification
+.smoke.mjs
+.smoke.*.mjs

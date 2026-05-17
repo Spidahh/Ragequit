@@ -1,0 +1,30 @@
+{
+  "$comment": "Fase 10 balance overrides — production tuning lands here after closed playtest data. Server reads this file at boot and overrides the default constants in stats.ts / weapons.ts / combat.ts. Fase 9 telemetry (PostHog match length + TTK + pickrate per ability) feeds the next balance pass.",
+  "version": 1,
+  "ttk": { "min_sec": 20, "max_sec": 30 },
+  "weapons": {
+    "sword_m1_damage": [6, 6, 9],
+    "bow_charge_min_sec": 0.3,
+    "bow_charge_full_sec": 2.0,
+    "bow_damage_min": 4,
+    "bow_damage_full": 22,
+    "staff_m1_damage": 8,
+    "staff_m1_mana_cost": 5,
+    "staff_m1_cadence_sec": 0.5
+  },
+  "parry": {
+    "tap_window_sec": 0.5,
+    "tap_cost_stamina": 20,
+    "tap_cooldown_sec": 3,
+    "hold_block_frac": 0.7,
+    "hold_drain_per_sec": 15
+  },
+  "match": {
+    "rounds_to_win": 3,
+    "max_rounds": 5,
+    "round_timer_sec": 120,
+    "elo_starting": 1000,
+    "elo_k_ranked": 25,
+    "elo_k_ffa": 20
+  }
+}
