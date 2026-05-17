@@ -61,7 +61,7 @@ export function initLoadoutStation(
   const lsMagic = document.getElementById('ls-magic')!
   const lsUtility = document.getElementById('ls-utility')!
   const lsPool = document.getElementById('ls-pool')!
-  const masteryBadge = document.getElementById('mastery-badge')!
+  const masteryBadge = document.getElementById('ls-mastery-badge')!
   const masteryPills = Array.from(document.querySelectorAll<HTMLElement>('#mastery-pills .mpill'))
   const btnBack = document.getElementById('ls-back') as HTMLButtonElement
   const btnDefault = document.getElementById('ls-default') as HTMLButtonElement

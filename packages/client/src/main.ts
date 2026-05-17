@@ -516,11 +516,22 @@ function rebuildCdStrip(loadout: ReadonlyArray<string>): void {
   cdStripLoadoutSig = loadoutSignature(cdStripLoadoutRef)
   while (cdStrip.firstChild) cdStrip.removeChild(cdStrip.firstChild)
   cdPipEls.clear()
+
+  const abilitySection = document.createElement('div')
+  abilitySection.className = 'hotbar-section ability-section'
+  abilitySection.innerHTML = '<div class="hotbar-title"><span>E</span><b>Ability Wheel</b></div>'
+  const abilityRail = document.createElement('div')
+  abilityRail.className = 'hotbar-rail'
+  abilitySection.appendChild(abilityRail)
+
+  const utilitySection = document.createElement('div')
+  utilitySection.className = 'hotbar-section utility-section'
+  utilitySection.innerHTML = '<div class="hotbar-title"><span>Q</span><b>Utility Wheel</b></div>'
+  const utilityRail = document.createElement('div')
+  utilityRail.className = 'hotbar-rail'
+  utilitySection.appendChild(utilityRail)
+
   for (const [, label, slotIdx] of slotKeybindEntries()) {
-    // Fixed transfer slots (Z/X/F = slots 7/8/9) have their own dedicated
-    // transmute bar UI with separate CD tracking. Showing them here too would
-    // create a duplicate with CDs tracked from different sources.
-    if (slotIdx in FIXED_TRANSFER_SLOTS) continue
     const id = loadout[slotIdx] ?? ''
     if (!id) continue
     const def = ABILITY_DEFS[id]
@@ -543,8 +554,11 @@ function rebuildCdStrip(loadout: ReadonlyArray<string>): void {
     const malusHtml = def?.miniMalus ? `<div class="tt-malus">${def.miniMalus}</div>` : ''
 
     const pip = document.createElement('div')
-    pip.className = 'cd-pip ready'
+    const isUtility = slotIdx >= 7
+    const isFixedTransfer = slotIdx in FIXED_TRANSFER_SLOTS
+    pip.className = `cd-pip ready ${isUtility ? 'utility-pip' : 'ability-pip'} ${isFixedTransfer ? 'transfer-pip' : ''}`
     pip.dataset['abilityId'] = id
+    pip.dataset['slotIdx'] = String(slotIdx)
     pip.title = tooltip
     // Colour accent driven by element.
     pip.style.setProperty('--elem-color', elemColor)
@@ -575,9 +589,11 @@ function rebuildCdStrip(loadout: ReadonlyArray<string>): void {
       e.stopPropagation()
       activateAbilitySlot(slotIdx, true)
     })
-    cdStrip.appendChild(pip)
+    ;(isUtility ? utilityRail : abilityRail).appendChild(pip)
     cdPipEls.set(id, pip)
   }
+  cdStrip.appendChild(abilitySection)
+  cdStrip.appendChild(utilitySection)
 }
 
 function loadoutSignature(loadout: ReadonlyArray<string>): string {
@@ -3183,19 +3199,35 @@ function updateTransmuteBar(): void {
   const now = performance.now()
   for (const dir of ['hp_mana', 'mana_stam', 'stam_hp'] as const) {
     const el = transmuteSlotEls[dir]
-    if (!el) continue
+    const abilityId =
+      dir === 'hp_mana'
+        ? 'transfer_hp_mana'
+        : dir === 'mana_stam'
+          ? 'transfer_mana_stam'
+          : 'transfer_stam_hp'
+    const pip = cdPipEls.get(abilityId)
     const expiry = transmuteCdExpiry[dir] ?? 0
     const remaining = expiry - now
     if (remaining > 0) {
-      el.classList.remove('ready')
-      el.classList.add('cooling')
-      const cdTextEl = el.querySelector<HTMLElement>('.t-cd-text')
+      el?.classList.remove('ready')
+      el?.classList.add('cooling')
+      const cdTextEl = el?.querySelector<HTMLElement>('.t-cd-text')
       if (cdTextEl) cdTextEl.textContent = `${(remaining / 1000).toFixed(1)}s`
+      pip?.classList.remove('ready')
+      pip?.classList.add('cooling')
+      const timerEl = pip?.querySelector<HTMLElement>('.cd-timer')
+      if (timerEl) timerEl.textContent = (remaining / 1000).toFixed(1)
     } else {
-      el.classList.remove('cooling')
-      el.classList.add('ready')
-      const cdTextEl = el.querySelector<HTMLElement>('.t-cd-text')
+      el?.classList.remove('cooling')
+      el?.classList.add('ready')
+      const cdTextEl = el?.querySelector<HTMLElement>('.t-cd-text')
       if (cdTextEl) cdTextEl.textContent = ''
+      if (pip?.classList.contains('transfer-pip')) {
+        pip.classList.remove('cooling')
+        pip.classList.add('ready')
+        const timerEl = pip.querySelector<HTMLElement>('.cd-timer')
+        if (timerEl) timerEl.textContent = ''
+      }
     }
   }
 }
@@ -4689,7 +4721,6 @@ function render(now: number): void {
 
     // --- Cooldown rings ---------------------------------------------------
     for (const [, label, slotIdx] of slotKeybindEntries()) {
-      if (slotIdx in FIXED_TRANSFER_SLOTS) continue  // transmute bar handles these
       const id = cdStripLoadoutRef[slotIdx] ?? ''
       const pip = cdPipEls.get(id)
       if (!pip) continue

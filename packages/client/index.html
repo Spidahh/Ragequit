@@ -417,7 +417,7 @@
 
       /* Transmute bar ─ 3 resource-conversion slots */
       #transmute-bar {
-        display: flex;
+        display: none;
         gap: 6px;
         margin-top: 2px;
         pointer-events: auto;
@@ -534,21 +534,34 @@
       /* Weapon wheel — bottom-right sidecar with 3 icons + hotkey hint. */
       #weapons {
         position: fixed;
-        right: 18px;
-        bottom: 22px;
+        left: 50%;
+        bottom: 136px;
+        transform: translateX(-50%);
         display: flex;
-        gap: 8px;
+        gap: 6px;
         pointer-events: none;
         user-select: none;
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         align-items: flex-end;
+        padding: 7px 8px 8px;
+        background:
+          linear-gradient(180deg, rgba(12,16,30,0.90), rgba(4,6,12,0.84)),
+          radial-gradient(circle at 50% 0%, rgba(120,170,255,0.07), transparent 56%);
+        border: 1px solid rgba(180,210,255,0.14);
+        border-bottom: 2px solid rgba(120,170,255,0.30);
+        border-radius: 8px;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 12px 32px rgba(0,0,0,0.60), inset 0 1px 0 rgba(255,255,255,0.07);
+        z-index: 600;
       }
       .wslot {
-        width: 58px;
-        height: 58px;
-        border: 1.5px solid #2a2a3a;
-        border-radius: 8px;
-        background: rgba(0, 0, 0, 0.60);
+        width: 52px;
+        height: 56px;
+        border: 1px solid rgba(255,255,255,0.10);
+        border-bottom: 3px solid rgba(120,170,255,0.42);
+        border-radius: 6px;
+        background:
+          linear-gradient(180deg, rgba(9,12,22,0.96) 0%, rgba(7,9,18,0.94) 62%, rgba(80,100,150,0.22) 100%);
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -561,14 +574,15 @@
           box-shadow 0.12s ease-out;
       }
       .wslot .icon {
-        font-size: 22px;
+        font-size: 21px;
         line-height: 1;
         transition: font-size 0.12s ease-out, text-shadow 0.12s ease-out;
+        filter: drop-shadow(0 1px 3px rgba(0,0,0,0.8));
       }
       .wslot .wname {
-        font-size: 8px;
-        color: #70789a;
-        letter-spacing: 0.08em;
+        font-size: 7px;
+        color: rgba(200,210,230,0.72);
+        letter-spacing: 0.06em;
         margin-top: 1px;
         transition: color 0.12s;
       }
@@ -578,9 +592,9 @@
         letter-spacing: 0.05em;
       }
       /* Per-weapon idle accent colours */
-      #wslot-sword { border-color: #3a5080; }
-      #wslot-bow   { border-color: #2e5c38; }
-      #wslot-staff { border-color: #4a2e70; }
+      #wslot-sword { border-bottom-color: #78a0ff; }
+      #wslot-bow   { border-bottom-color: #50d278; }
+      #wslot-staff { border-bottom-color: #b464ff; }
       #wslot-sword .wname { color: #6080b0; }
       #wslot-bow   .wname { color: #4a8c5a; }
       #wslot-staff .wname { color: #7a50aa; }
@@ -588,9 +602,10 @@
       /* Active weapon slot — large, bright, unmissable */
       .wslot.active {
         border-color: #ffd260;
-        border-width: 2px;
-        background: rgba(70, 45, 8, 0.80);
-        transform: translateY(-5px) scale(1.14);
+        border-bottom-color: #ffd260;
+        background:
+          linear-gradient(180deg, rgba(30,24,12,0.98) 0%, rgba(18,14,8,0.96) 60%, rgba(255,210,96,0.24) 100%);
+        transform: translateY(-4px) scale(1.08);
         box-shadow:
           0 0 18px rgba(255, 210, 96, 0.60),
           0 0 8px rgba(255, 210, 96, 0.35),
@@ -601,7 +616,7 @@
       #wslot-bow.active   { box-shadow: 0 0 18px rgba(80,210,120,0.40), 0 0 6px rgba(255,210,96,0.35), 0 6px 18px rgba(0,0,0,0.6); border-color: #ffd260; }
       #wslot-staff.active { box-shadow: 0 0 18px rgba(180,100,255,0.45), 0 0 6px rgba(255,210,96,0.35), 0 6px 18px rgba(0,0,0,0.6); border-color: #ffd260; }
       .wslot.active .icon {
-        font-size: 28px;
+        font-size: 25px;
         text-shadow:
           0 0 14px rgba(255, 220, 80, 1),
           0 0 26px rgba(255, 180, 40, 0.7);
@@ -1200,36 +1215,75 @@
       #cd-strip {
         position: fixed;
         left: 50%;
-        bottom: 20px;
+        bottom: 18px;
         transform: translateX(-50%);
         display: flex;
-        gap: 6px;
+        align-items: flex-end;
+        gap: 10px;
         pointer-events: auto;
         user-select: none;
         z-index: 600;
-        background: rgba(0,0,0,0.35);
-        border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 10px;
-        padding: 6px 8px;
-        backdrop-filter: blur(4px);
-        box-shadow: 0 4px 20px rgba(0,0,0,0.55);
+        background:
+          linear-gradient(180deg, rgba(12,16,30,0.90), rgba(4,6,12,0.84)),
+          radial-gradient(circle at 50% 0%, rgba(255,210,96,0.08), transparent 50%);
+        border: 1px solid rgba(180,210,255,0.14);
+        border-bottom: 2px solid rgba(255,210,96,0.30);
+        border-radius: 8px;
+        padding: 7px 9px 8px;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 12px 32px rgba(0,0,0,0.64), inset 0 1px 0 rgba(255,255,255,0.07);
+      }
+      .hotbar-section {
+        display: grid;
+        grid-template-rows: 15px auto;
+        gap: 4px;
+      }
+      .hotbar-section.utility-section {
+        padding-left: 10px;
+        border-left: 1px solid rgba(255,255,255,0.10);
+      }
+      .hotbar-title {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 8px;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: rgba(210,222,255,0.64);
+      }
+      .hotbar-title span {
+        min-width: 18px;
+        height: 13px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffd260;
+        background: rgba(255,210,96,0.10);
+        border: 1px solid rgba(255,210,96,0.28);
+        border-radius: 3px;
+      }
+      .hotbar-rail {
+        display: flex;
+        gap: 6px;
       }
       .cd-pip {
         --elem-color: #9ba0b4;
         --elem-dim: rgba(80,88,120,0.35);
         position: relative;
-        width: 70px;
-        height: 70px;
+        width: 60px;
+        height: 64px;
         /* Two-tone background: top dark, bottom element tint */
         background:
           linear-gradient(180deg,
-            rgba(8,10,20,0.95) 0%,
-            rgba(8,10,20,0.92) 65%,
+            rgba(9,12,22,0.96) 0%,
+            rgba(7,9,18,0.94) 60%,
             var(--elem-dim) 100%
           );
-        border: 1.5px solid rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.11);
         border-bottom: 3px solid var(--elem-color);
-        border-radius: 4px 4px 2px 2px;
+        border-radius: 6px;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -1241,11 +1295,21 @@
         overflow: hidden;
         cursor: default;
       }
+      .cd-pip.utility-pip {
+        width: 52px;
+        height: 56px;
+        --elem-color: #9da8ff;
+        --elem-dim: rgba(82,92,160,0.35);
+      }
+      .cd-pip.transfer-pip {
+        --elem-color: #ffd260;
+        --elem-dim: rgba(255,210,96,0.16);
+      }
       .cd-pip.ready {
         border-color: rgba(255,255,255,0.12);
         border-bottom-color: var(--elem-color);
         opacity: 1;
-        box-shadow: 0 0 10px rgba(0,0,0,0.4), 0 2px 0 0 var(--elem-color), inset 0 1px 0 rgba(255,255,255,0.05);
+        box-shadow: 0 0 10px rgba(0,0,0,0.4), 0 2px 0 0 var(--elem-color), inset 0 1px 0 rgba(255,255,255,0.06);
       }
       .cd-pip.ready:hover {
         transform: translateY(-2px);
@@ -1348,11 +1412,15 @@
       .cd-pip .ability-icon {
         position: relative;
         z-index: 1;
-        font-size: 24px;
+        font-size: 22px;
         line-height: 1;
         pointer-events: none;
         margin-top: 6px;
         filter: drop-shadow(0 1px 3px rgba(0,0,0,0.8));
+      }
+      .cd-pip.utility-pip .ability-icon {
+        font-size: 18px;
+        margin-top: 4px;
       }
       /* Ability name — bottom strip */
       .cd-pip .ability-name {
@@ -1369,6 +1437,10 @@
         padding: 0 4px;
         letter-spacing: 0.06em;
         text-transform: uppercase;
+      }
+      .cd-pip.utility-pip .ability-name {
+        font-size: 7px;
+        bottom: 4px;
       }
       /* Cooldown timer — large, centered over icon */
       .cd-pip .cd-timer {
@@ -3265,7 +3337,7 @@
       }
 
       /* Mastery badge — shown in HUD when element mastery is active */
-      #mastery-badge {
+      #hud > #mastery-badge {
         text-align: center;
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         font-size: 10px;
@@ -3275,7 +3347,11 @@
         transition: color 0.4s, text-shadow 0.4s;
         text-transform: uppercase;
       }
-      #mastery-badge:not(:empty) {
+      #hud > #mastery-badge:empty {
+        display: none;
+      }
+      #hud > #mastery-badge:not(:empty) {
+        display: block;
         text-shadow: 0 0 8px currentColor;
       }
 
@@ -3722,7 +3798,7 @@
           <span class="mpill" data-el="dark">Dark 0/5</span>
           <span class="mpill" data-el="nature">Nature 0/5</span>
         </div>
-        <div id="mastery-badge" class="mastery-badge tier-0">NO MASTERY</div>
+        <div id="ls-mastery-badge" class="mastery-badge tier-0">NO MASTERY</div>
       </div>
 
       <div id="ls-body">

@@ -13,7 +13,7 @@ function mountLoadoutDom(): void {
         <span class="mpill" data-el="dark"></span>
         <span class="mpill" data-el="nature"></span>
       </div>
-      <span id="mastery-badge"></span>
+      <span id="ls-mastery-badge"></span>
       <div id="ls-melee"></div>
       <div id="ls-bow"></div>
       <div id="ls-magic"></div>
