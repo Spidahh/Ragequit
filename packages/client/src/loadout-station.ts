@@ -407,6 +407,7 @@ export function initLoadoutStation(
   })
 
   btnBack.addEventListener('click', () => {
+    document.body.classList.remove('loadout-active')
     overlay.classList.add('hidden')
     onClose?.()
   })
@@ -425,6 +426,7 @@ export function initLoadoutStation(
     const room = getRoom()
     if (room) {
       room.send(MessageTypes.Loadout, buildLoadoutMessage(slots))
+      document.body.classList.remove('loadout-active')
       overlay.classList.add('hidden')
       try {
         const result = getCanvas?.()?.requestPointerLock?.()
@@ -435,6 +437,7 @@ export function initLoadoutStation(
         // Pointer lock can fail if the browser rejects the user gesture.
       }
     } else {
+      document.body.classList.remove('loadout-active')
       overlay.classList.add('hidden')
       onSaved?.()
     }
@@ -451,9 +454,11 @@ export function initLoadoutStation(
       btnConfirm.textContent = locked ? 'LOCKED IN COMBAT' : getRoom() ? 'CONFIRM BUILD' : 'SAVE BUILD'
       btnConfirm.classList.toggle('locked', locked)
       overlay.classList.toggle('build-locked', locked)
+      document.body.classList.add('loadout-active')
       overlay.classList.remove('hidden')
     },
     close: () => {
+      document.body.classList.remove('loadout-active')
       overlay.classList.remove('build-locked')
       overlay.classList.add('hidden')
     },

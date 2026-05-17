@@ -339,7 +339,18 @@ function radialMouseMove(dx: number, dy: number): void {
   if (!radialOpen || !activeWheel) return
   radialDx += dx
   radialDy += dy
-  const dist = Math.hypot(radialDx, radialDy)
+  radialSelectVector(radialDx, radialDy)
+}
+
+function radialPointMove(clientX: number, clientY: number): void {
+  if (!radialOpen || !activeWheel) return
+  const rect = activeWheel.el.getBoundingClientRect()
+  radialSelectVector(clientX - (rect.left + rect.width / 2), clientY - (rect.top + rect.height / 2))
+}
+
+function radialSelectVector(dx: number, dy: number): void {
+  if (!radialOpen || !activeWheel) return
+  const dist = Math.hypot(dx, dy)
   if (dist < 18) {
     // Below threshold: no sector selected yet
     radialSelectedDir = null
@@ -347,7 +358,7 @@ function radialMouseMove(dx: number, dy: number): void {
     for (const s of Array.from(activeWheel.el.querySelectorAll<HTMLElement>('.radial-slot'))) s.classList.remove('selected')
     return
   }
-  const angle = Math.atan2(radialDy, radialDx) * (180 / Math.PI) // -180..180
+  const angle = Math.atan2(dy, dx) * (180 / Math.PI) // -180..180
   const sector = nearestWheelSector(activeWheel, angle)
   const dir = sector.dir
 
@@ -557,6 +568,11 @@ function rebuildCdStrip(loadout: ReadonlyArray<string>): void {
         ${malusHtml}
       </div>
     `
+    pip.addEventListener('click', (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      activateAbilitySlot(slotIdx, true)
+    })
     cdStrip.appendChild(pip)
     cdPipEls.set(id, pip)
   }
@@ -1772,6 +1788,16 @@ function loadoutStationHidden(): boolean {
   return document.getElementById('loadout-station')?.classList.contains('hidden') ?? true
 }
 
+function isGameplayInputAllowed(): boolean {
+  return Boolean(room)
+    && currentMatchPhase === 'live'
+    && loadoutStationHidden()
+    && !isPauseMenuOpen()
+    && !isOverlayOpen(settingsOverlay)
+    && !document.body.classList.contains('main-menu-active')
+    && !document.body.classList.contains('loadout-active')
+}
+
 function isTextEditingTarget(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null
   if (!el) return false
@@ -1782,6 +1808,7 @@ function isTextEditingTarget(target: EventTarget | null): boolean {
 function closeSettingsOverlayToReturnTarget(): void {
   settingsOverlay.classList.add('hidden')
   if (settingsOverlay.dataset['returnTo'] === 'pause' && room) pauseMenu.classList.remove('hidden')
+  else if (room) openPauseMenu()
   else menu.showMain()
   settingsOverlay.dataset['returnTo'] = ''
 }
@@ -1802,6 +1829,8 @@ addEventListener('keydown', (e) => {
       if (loadoutReturnsToPause && room) {
         loadoutReturnsToPause = false
         pauseMenu.classList.remove('hidden')
+      } else if (room) {
+        openPauseMenu()
       } else if (!pointerLocked) {
         menu.showMain()
       }
@@ -1837,7 +1866,7 @@ addEventListener('keydown', (e) => {
     return
   }
 
-  const gameplayInputActive = pointerLocked && Boolean(room) && currentMatchPhase === 'live'
+  const gameplayInputActive = isGameplayInputAllowed()
   if (!gameplayInputActive) return
 
   if (matchesAction(k, 'jump')) jumpEdgeQueued = true
@@ -1899,25 +1928,39 @@ renderer.domElement.addEventListener('contextmenu', (e) => {
   e.preventDefault()
 })
 
-renderer.domElement.addEventListener('mousedown', (e) => {
+function handleCombatPointerDown(button: number): void {
   if (!pointerLocked) {
-    if (e.button === 0) requestPointerLockSafely()
-    return
+    if (button === 0) requestPointerLockSafely()
+    if (!isGameplayInputAllowed()) return
   }
-  if (e.button === 0) {
+  if (button === 0) {
     if (!lmbDown) lmbPressEdge = true
     lmbDown = true
-  } else if (e.button === 2) {
+  } else if (button === 2) {
     rmbPressEdge = true
   }
-})
-renderer.domElement.addEventListener('mouseup', (e) => {
-  if (e.button === 0) {
+}
+
+function handleCombatPointerUp(button: number): void {
+  if (button === 0) {
     if (lmbDown) lmbReleaseEdge = true
     lmbDown = false
-  } else if (e.button === 2) {
+  } else if (button === 2) {
     rmbReleaseEdge = true
   }
+}
+
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  handleCombatPointerDown(e.button)
+})
+renderer.domElement.addEventListener('pointerup', (e) => {
+  handleCombatPointerUp(e.button)
+})
+renderer.domElement.addEventListener('mousedown', (e) => {
+  handleCombatPointerDown(e.button)
+})
+renderer.domElement.addEventListener('mouseup', (e) => {
+  handleCombatPointerUp(e.button)
 })
 
 document.addEventListener('pointerlockchange', () => {
@@ -1945,13 +1988,14 @@ renderer.domElement.addEventListener('wheel', (e: WheelEvent) => {
 }, { passive: true })
 
 addEventListener('mousemove', (e) => {
-  if (!pointerLocked) return
   // While a radial wheel is open, mouse movement keeps updating the highlighted
   // sector until the wheel key is released. The wheel is a selector, not a cast.
   if (radialOpen) {
-    radialMouseMove(e.movementX, e.movementY)
+    if (pointerLocked) radialMouseMove(e.movementX, e.movementY)
+    else radialPointMove(e.clientX, e.clientY)
     return
   }
+  if (!pointerLocked) return
   mouseYaw   -= e.movementX * mouseSens
   mousePitch -= e.movementY * mouseSens
   if (mousePitch > PITCH_UP_LIMIT)   mousePitch = PITCH_UP_LIMIT
@@ -2218,6 +2262,8 @@ const loadoutStation = initLoadoutStation(
     }
     if (loadoutReturnsToPause) {
       loadoutReturnsToPause = false
+      pauseMenu.classList.remove('hidden')
+    } else {
       openPauseMenu()
     }
   },

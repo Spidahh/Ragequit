@@ -63,8 +63,10 @@ const gameServer = new Server({
   transport: new WebSocketTransport({ server: httpServer }),
 })
 
-// Current local vertical slice uses a single room kind; mode-specific rooms are roadmap work.
-gameServer.define('game', GameRoom)
+// Keep one room kind, but never match clients across different modes.
+// Without this, `joinOrCreate('game', { mode: 'training' })` could reuse an
+// existing duel room and training would wait in lobby without its bot.
+gameServer.define('game', GameRoom).filterBy(['mode'])
 
 httpServer.listen(PORT, () => {
   console.info(`[ragequit-server] listening on http://localhost:${PORT}`)

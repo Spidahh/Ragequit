@@ -44,6 +44,32 @@
       #debug.hidden {
         display: none;
       }
+      body.main-menu-active #hud,
+      body.main-menu-active #hud-combo,
+      body.main-menu-active #weapons,
+      body.main-menu-active #cd-strip,
+      body.main-menu-active #crosshair,
+      body.main-menu-active #status-strip,
+      body.main-menu-active #cast-bar,
+      body.main-menu-active #bow-charge,
+      body.main-menu-active #kill-feed,
+      body.main-menu-active #ping-hud,
+      body.main-menu-active #streak-display,
+      body.main-menu-active #round-hud,
+      body.loadout-active #hud,
+      body.loadout-active #hud-combo,
+      body.loadout-active #weapons,
+      body.loadout-active #cd-strip,
+      body.loadout-active #crosshair,
+      body.loadout-active #status-strip,
+      body.loadout-active #cast-bar,
+      body.loadout-active #bow-charge,
+      body.loadout-active #kill-feed,
+      body.loadout-active #ping-hud,
+      body.loadout-active #streak-display,
+      body.loadout-active #round-hud {
+        display: none !important;
+      }
       #hint {
         display: none;
       }
@@ -1216,6 +1242,24 @@
       .cd-pip.pending {
         border-color: rgba(255,255,255,0.45);
         transform: scale(1.05);
+      }
+      .cd-pip.primed {
+        border-color: rgba(255,210,96,0.92);
+        border-bottom-color: #ffd260;
+        transform: translateY(-4px) scale(1.06);
+        box-shadow: 0 0 18px rgba(255,210,96,0.50), 0 0 0 1px rgba(255,210,96,0.28), inset 0 0 18px rgba(255,210,96,0.12);
+      }
+      .cd-pip.primed::after {
+        content: 'PRIMED';
+        position: absolute;
+        top: 22px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 4;
+        color: #ffe58a;
+        font: 900 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.10em;
+        text-shadow: 0 0 8px #000;
       }
       .cd-pip.placing {
         border-color: rgba(255,210,96,0.88);

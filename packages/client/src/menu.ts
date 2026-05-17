@@ -74,6 +74,7 @@ export function initMenu(handlers: {
   const sbBack = document.getElementById('scoreboard-back') as HTMLButtonElement
   const settingsOverlay = document.getElementById('settings-overlay')!
   initKeybindLabels()
+  document.body.classList.add('main-menu-active')
 
   document.getElementById('menu-play')?.addEventListener('click', () => handlers.onPlay())
   document.getElementById('menu-train')?.addEventListener('click', () => handlers.onTraining())
@@ -231,8 +232,14 @@ export function initMenu(handlers: {
   }
 
   return {
-    showMain: () => mainMenu.classList.remove('hidden'),
-    hideMain: () => mainMenu.classList.add('hidden'),
+    showMain: () => {
+      document.body.classList.add('main-menu-active')
+      mainMenu.classList.remove('hidden')
+    },
+    hideMain: () => {
+      document.body.classList.remove('main-menu-active')
+      mainMenu.classList.add('hidden')
+    },
     showScoreboard: (_selfId) => scoreboard.classList.remove('hidden'),
     hideScoreboard: () => scoreboard.classList.add('hidden'),
     getSettings: () => settings,
