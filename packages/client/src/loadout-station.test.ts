@@ -166,4 +166,15 @@ describe('loadout station smoke', () => {
     expect(document.querySelector<HTMLButtonElement>('[data-filter="all"]')?.classList.contains('active-filter')).toBe(true)
     expect(document.querySelector<HTMLButtonElement>('[data-filter="starter"]')?.classList.contains('active-filter')).toBe(false)
   })
+
+  it('filters starter cards by combo role instead of legacy starter flags', () => {
+    const api = initLoadoutStation(() => undefined)
+
+    api.open()
+    document.querySelectorAll<HTMLButtonElement>('.ls-slot')[10]?.click()
+    document.querySelector<HTMLButtonElement>('[data-filter="starter"]')?.click()
+
+    expect(document.querySelectorAll('.pool-card')).toHaveLength(0)
+    expect(document.getElementById('ls-pool')?.textContent).toContain('No abilities available')
+  })
 })

@@ -361,7 +361,7 @@ export function initLoadoutStation(
       .filter((def) => !slots.some((id, idx) => idx !== activeIdx && id === def.id))
       .filter((def) => {
         if (poolFilterEl === 'all') return true
-        if (poolFilterEl === 'starter') return !!def.isStarter
+        if (poolFilterEl === 'starter') return def.comboRole === 'starter'
         if (poolFilterEl === 'none') return def.element === 'none'
         return def.element === poolFilterEl
       })
@@ -392,7 +392,7 @@ export function initLoadoutStation(
       )
       card.innerHTML = [
         `<span class="pool-icon-box">${abilityIconMarkup(def.id)}</span>`,
-        `<span class="pool-topline"><span class="pool-role-icon">${role.icon}</span><span class="pool-role-text">${escapeHtml(role.title)}</span>${def.isStarter ? ' <span class="starter-tag">STARTER</span>' : ''}</span>`,
+        `<span class="pool-topline"><span class="pool-role-icon">${role.icon}</span><span class="pool-role-text">${escapeHtml(role.title)}</span>${def.comboRole === 'starter' ? ' <span class="starter-tag">STARTER</span>' : ''}</span>`,
         `<span class="instant-toggle ${instant ? 'on' : ''}" role="switch" aria-checked="${instant}" title="${instant ? 'Instant cast: key casts immediately' : 'Preview cast: key arms placement, LMB confirms'}">${instant ? 'INSTANT' : 'PREVIEW'}</span>`,
         `<span class="pool-name">${escapeHtml(def.name)}</span>`,
         `<span class="pool-meta">${def.element !== 'none' ? def.element.toUpperCase() : 'PHYSICAL'} · ${formatCost(def)} · ${def.cooldownSec}s CD</span>`,
