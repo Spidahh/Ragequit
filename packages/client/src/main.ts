@@ -1737,18 +1737,35 @@ function clearCombatInputEdges(): void {
   cancelPlacementPreview()
 }
 
+function requestArenaPointerLock(): void {
+  if (document.pointerLockElement === renderer.domElement) return
+  try {
+    const result = renderer.domElement.requestPointerLock?.()
+    if (result && typeof result.catch === 'function') {
+      void result.catch(() => {
+        // Keep the non-lock fallback active if the browser refuses capture.
+        pointerLookActive = true
+      })
+    }
+  } catch {
+    pointerLookActive = true
+  }
+}
+
 function isPauseMenuOpen(): boolean {
   return !pauseMenu.classList.contains('hidden')
 }
 
 function engageCanvasInput(): void {
   canvasInputEngaged = true
+  document.body.classList.add('input-locked')
   renderer.domElement.focus({ preventScroll: true })
 }
 
 function disengageCanvasInput(): void {
   canvasInputEngaged = false
   pointerLookActive = false
+  document.body.classList.remove('input-locked')
 }
 
 function openPauseMenu(): void {
@@ -1772,6 +1789,7 @@ function closePauseMenu(lockPointer: boolean): void {
   clearCombatInputEdges()
   if (lockPointer && room) {
     engageCanvasInput()
+    requestArenaPointerLock()
   }
 }
 
@@ -2005,8 +2023,10 @@ function handleCombatPointerDown(button: number): void {
   if (button === 0) {
     if (!lmbDown) lmbPressEdge = true
     lmbDown = true
+    requestArenaPointerLock()
   } else if (button === 2) {
     rmbPressEdge = true
+    requestArenaPointerLock()
   }
 }
 
@@ -2084,16 +2104,29 @@ document.addEventListener('pointermove', (e) => {
 }, { capture: true })
 
 document.addEventListener('pointerlockchange', () => {
+  const wasPointerLocked = pointerLocked
   pointerLocked = document.pointerLockElement === renderer.domElement
+  if (pointerLocked) {
+    canvasInputEngaged = true
+    pointerLookActive = true
+    lastPointerClientX = 0
+    lastPointerClientY = 0
+    document.body.classList.add('input-locked')
+  } else {
+    document.body.classList.toggle('input-locked', canvasInputEngaged)
+  }
   hint.classList.toggle('hidden', pointerLocked)
   pingHud.classList.toggle('ingame', pointerLocked && ping > 0)
-  if (!pointerLocked) {
+  if (wasPointerLocked && !pointerLocked) {
     if (lmbDown) lmbReleaseEdge = true
     lmbDown = false
     // Clear held keys so the character stops moving when pointer lock is released
     // (tab-out, ESC, loadout open). Without this, WASD stay "pressed" and the
     // player keeps moving until each key is physically re-pressed and released.
     keys.clear()
+    if (canEngageGameplaySurface() && currentMatchPhase === 'live') {
+      openPauseMenu()
+    }
   }
 })
 

@@ -2,7 +2,7 @@
 //
 // Three small overlays driven from server MatchPhase + Score events:
 //   - main-menu: shown pre-connect; PLAY routes through the loadout station
-//     to confirm the build, then opens pointer-lock for the in-game canvas.
+//     to confirm the build, then focuses the in-game canvas.
 //   - round-hud: per-round phase + countdown + win pips. Shown during
 //     'countdown' / 'live' / 'roundEnd'; hidden in 'lobby' / 'matchEnd'.
 //   - scoreboard: shown on 'matchEnd', dismissed by BACK TO MENU.
