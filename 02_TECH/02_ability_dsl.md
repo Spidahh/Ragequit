@@ -43,6 +43,7 @@ interface AbilityDef {
   windupSec: number
   range: number
   targeting: 'self' | 'forward' | 'target' | 'point'
+  comboRole: 'starter' | 'extender' | 'finisher' | 'ray' | 'pressure' | 'survival' | 'counter' | 'mobility' | 'drain' | 'resource'
   effects: readonly EffectSpec[]
   description: string
   miniMalus: string
@@ -80,6 +81,23 @@ Current primitives:
 | `cleanse` | Remove one status or all debuffs |
 | `restoreStamina` | Flat stamina restore |
 | `transmute` | Fixed HP/Mana/Stamina transfer utilities |
+
+## Combo Role Contract
+
+`comboRole` is mandatory and design-authored. Do not infer it from effects in new ability data.
+
+| Role | Contract |
+| --- | --- |
+| `starter` | Applies real control: launch, root, freeze, stun, blind, or meaningful slow |
+| `extender` | Keeps enemies inside a started combo through zones, repeated control, or space denial |
+| `finisher` | Rewards setup with high-value damage or precision payoff |
+| `ray` | Instant forward line-of-sight hit; no projectile or point zone |
+| `pressure` | Sustained poke, DoT, bleed, poison, chill, or lifesteal pressure |
+| `survival` | Heal, shield, sustain, or recovery |
+| `counter` | Cleanse, phase, disengage, anti-melee, or interrupt answer |
+| `mobility` | Repositioning tool that changes engage/disengage geometry |
+| `drain` | Attacks enemy Mana/Stamina or converts enemy tempo into your resources |
+| `resource` | Fixed transfer or resource restore utility |
 
 ## Runtime Guarantees
 

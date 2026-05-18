@@ -56,6 +56,8 @@ The mini-malus is always a measurable, play-visible property — never invisible
 
 Current ability tuning follows a combo-first taxonomy. The exact live numbers are authoritative in `packages/shared/src/abilities/registry.ts`; design docs describe the intended roles.
 
+Every ability must declare its `comboRole` in the registry. The loadout UI reads that role directly, and tests enforce the role contract so abilities cannot silently collapse back into generic damage buttons.
+
 | Role | Purpose | Examples |
 | --- | --- | --- |
 | Starter | Opens a punish window through launch, root, freeze, stun, blind or slow | Uppercut, Guard Break, Pin Shot, Eruption, Frost Pillar, Arc Lift, Entangle, Root Upthrow |

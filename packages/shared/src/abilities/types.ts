@@ -38,6 +38,21 @@ export type RequiredWeapon = 'sword' | 'bow' | 'staff' | 'none'
 //   point     — caster-supplied world point, clamped by the server to range
 export type TargetingMode = 'self' | 'forward' | 'target' | 'point'
 
+// Design role used by the loadout UI and balance tests. This is not inferred
+// from effects because two abilities can share primitives but serve different
+// combat jobs.
+export type AbilityComboRole =
+  | 'starter'
+  | 'extender'
+  | 'finisher'
+  | 'ray'
+  | 'pressure'
+  | 'survival'
+  | 'counter'
+  | 'mobility'
+  | 'drain'
+  | 'resource'
+
 // --- Effect primitive union -------------------------------------------------
 
 // `at` controls when the engine resolves the effect within the cast lifecycle.
@@ -231,6 +246,8 @@ export interface AbilityDef {
   range: number
   // How the engine selects what the effects apply to.
   targeting: TargetingMode
+  // Combat role in the combo system: opener, extender, finisher, ray, etc.
+  comboRole: AbilityComboRole
   // The actual effects, evaluated in array order at the configured phase.
   effects: readonly EffectSpec[]
   // What the ability does — shown as primary tooltip text in the loadout UI.

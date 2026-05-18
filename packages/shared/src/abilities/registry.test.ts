@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { ABILITY_DEFS, abilityIds, getAbilityDef } from './registry.js'
-import type { AbilityDef } from './types.js'
+import type { AbilityComboRole, AbilityDef } from './types.js'
 
 describe('ability registry', () => {
   it('has the full ability library (52 abilities total, including fixed transfers)', () => {
@@ -47,6 +47,49 @@ describe('ability registry', () => {
     for (const def of Object.values(ABILITY_DEFS)) {
       expect(def.effects.length).toBeGreaterThan(0)
       expect(def.miniMalus.length).toBeGreaterThan(4)
+    }
+  })
+
+  it('every ability declares a valid combo role and the library covers every role family', () => {
+    const validRoles: AbilityComboRole[] = [
+      'starter',
+      'extender',
+      'finisher',
+      'ray',
+      'pressure',
+      'survival',
+      'counter',
+      'mobility',
+      'drain',
+      'resource',
+    ]
+    const seen = new Set<AbilityComboRole>()
+    for (const def of Object.values(ABILITY_DEFS) as AbilityDef[]) {
+      expect(validRoles).toContain(def.comboRole)
+      seen.add(def.comboRole)
+    }
+    for (const role of validRoles) expect(seen.has(role), role).toBe(true)
+  })
+
+  it('ray role abilities are direct forward line-of-sight tools, not projectiles or point zones', () => {
+    for (const def of Object.values(ABILITY_DEFS) as AbilityDef[]) {
+      if (def.comboRole !== 'ray') continue
+      expect(def.targeting, def.id).toBe('forward')
+      expect(def.effects.some((e) => e.kind === 'projectile' || e.kind === 'zone'), def.id).toBe(false)
+    }
+  })
+
+  it('starter role abilities apply real control, not only damage', () => {
+    for (const def of Object.values(ABILITY_DEFS) as AbilityDef[]) {
+      if (def.comboRole !== 'starter') continue
+      const hasControl = def.effects.some((e) => {
+        if (e.kind === 'knockup') return true
+        if (e.kind === 'applyStatus') return ['root', 'stun', 'freeze', 'blind', 'slow'].includes(e.status)
+        if (e.kind === 'projectile') return ['root', 'stun', 'freeze', 'blind', 'slow'].includes(e.onHitStatus?.status ?? '')
+        if (e.kind === 'zone') return ['root', 'stun', 'freeze', 'blind', 'slow'].includes(e.applyStatus?.status ?? '')
+        return false
+      })
+      expect(hasControl, def.id).toBe(true)
     }
   })
 

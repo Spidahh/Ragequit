@@ -555,7 +555,22 @@ function renderEffectTags(def: AbilityDef): HTMLDivElement {
   return wrap
 }
 
+const COMBO_ROLE_INFO: Record<AbilityDef['comboRole'], AbilityRoleInfo> = {
+  starter: { icon: '^', title: 'Combo Starter', line: 'Launches, roots, freezes, blinds or stuns to open a punish window.' },
+  extender: { icon: '[]', title: 'Combo Extender', line: 'Controls space so a started combo keeps paying off.' },
+  finisher: { icon: '!', title: 'Finisher', line: 'High-value hit that rewards setup, aim, or committed timing.' },
+  ray: { icon: '|', title: 'Instant Ray', line: 'Instant line-of-sight hit if the target is under the crosshair.' },
+  pressure: { icon: '*', title: 'Pressure', line: 'Keeps damage, DoT, or threat active while both players move.' },
+  survival: { icon: '+', title: 'Survival Tool', line: 'Keeps you alive through healing, shield, sustain, or recovery.' },
+  counter: { icon: '<>', title: 'Counter Tool', line: 'Breaks pressure, cleanses, phases, disengages, or interrupts.' },
+  mobility: { icon: '>>', title: 'Mobility', line: 'Moves you in, out, or around a punish window.' },
+  drain: { icon: '-', title: 'Resource Drain', line: 'Attacks enemy Mana or Stamina while creating tempo.' },
+  resource: { icon: '=', title: 'Resource Tool', line: 'Converts or restores resources on a fixed utility rhythm.' },
+}
+
 function abilityRole(def: AbilityDef): AbilityRoleInfo {
+  if (def.comboRole) return COMBO_ROLE_INFO[def.comboRole]
+
   let hasMove = false
   let hasHardCc = false
   let hasPersistentZone = false
@@ -660,6 +675,7 @@ function clampStat(value: number): number {
 
 function formatEffectTags(def: AbilityDef): string[] {
   const tags = new Set<string>()
+  tags.add(def.comboRole.toUpperCase())
   for (const tag of targetingTags(def)) tags.add(tag)
   if (def.windupSec > 0) tags.add(`${def.windupSec}s WINDUP`)
   for (const e of def.effects) {
@@ -726,6 +742,7 @@ function escapeHtml(text: string): string {
 }
 
 function tagClass(tag: string): string {
+  if (/\b(STARTER|EXTENDER|FINISHER|RAY|PRESSURE|SURVIVAL|COUNTER|MOBILITY|DRAIN|RESOURCE)\b/.test(tag)) return 'tag-role'
   if (/\b(SELF|POINT PREVIEW|SKILL SHOT|AIM LOCK|TARGET)\b/.test(tag)) return 'tag-targeting'
   if (/\b(DMG|DAMAGE|PROJECTILE|SPLASH|TICK)\b/.test(tag)) return 'tag-damage'
   if (/\b(AIRBORNE|KNOCKBACK|ROOT|STUN|FREEZE|SLOW|BLIND|MARK|CURSE)\b/.test(tag)) return 'tag-control'

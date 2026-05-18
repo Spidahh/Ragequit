@@ -22,6 +22,7 @@ export const ABILITY_M1_WHIRLWIND: AbilityDef = {
   windupSec: 0,
   range: 4,
   targeting: 'self',
+  comboRole: 'pressure',
   effects: [
     {
       at: 'onCast',
@@ -56,6 +57,7 @@ export const ABILITY_M2_GAP_CLOSER: AbilityDef = {
   windupSec: 0,
   range: 6,
   targeting: 'forward',
+  comboRole: 'mobility',
   effects: [
     { at: 'onCast', kind: 'move', mode: 'dash', distance: 6, cancelOnCollision: true },
     { at: 'onLand', kind: 'damage', amount: 18, radius: 1.5 },
@@ -78,6 +80,7 @@ export const ABILITY_M3_UPPERCUT: AbilityDef = {
   windupSec: 0.4,
   range: 2.5,
   targeting: 'forward',
+  comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 16 },
     { at: 'onCast', kind: 'knockup', airborneSec: 1.0, knockbackDistance: 0.8 },
@@ -101,6 +104,7 @@ export const ABILITY_M4_BLEED_STRIKE: AbilityDef = {
   windupSec: 0,
   range: 2.5,
   targeting: 'forward',
+  comboRole: 'pressure',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 10 },
     { at: 'onCast', kind: 'applyStatus', status: 'bleed', durationSec: 3, stacks: 1 },
@@ -122,6 +126,7 @@ export const ABILITY_M5_GUARD_BREAK: AbilityDef = {
   windupSec: 0.25,
   range: 2.2,
   targeting: 'forward',
+  comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 10 },
     { at: 'onCast', kind: 'applyStatus', status: 'stun', durationSec: 0.55, stacks: 1 },
@@ -145,6 +150,7 @@ export const ABILITY_M6_RENDING_DASH: AbilityDef = {
   windupSec: 0,
   range: 5,
   targeting: 'forward',
+  comboRole: 'mobility',
   effects: [
     { at: 'onCast', kind: 'move', mode: 'dash', distance: 5, cancelOnCollision: true },
     { at: 'onLand', kind: 'damage', amount: 14, radius: 1.6 },
@@ -171,6 +177,7 @@ export const ABILITY_B1_PIERCING_SHOT: AbilityDef = {
   windupSec: 0.35,
   range: 20,
   targeting: 'forward',
+  comboRole: 'finisher',
   effects: [
     {
       at: 'onCast',
@@ -197,6 +204,7 @@ export const ABILITY_B2_VOLLEY: AbilityDef = {
   windupSec: 0,
   range: 30,
   targeting: 'point',
+  comboRole: 'finisher',
   effects: [
     {
       at: 'onLand',
@@ -224,6 +232,7 @@ export const ABILITY_B3_PIN_SHOT: AbilityDef = {
   windupSec: 0.8,
   range: 25,
   targeting: 'forward',
+  comboRole: 'starter',
   effects: [
     {
       at: 'onCast',
@@ -250,6 +259,7 @@ export const ABILITY_B4_SNARE_TRAP: AbilityDef = {
   windupSec: 0,
   range: 5,
   targeting: 'self',
+  comboRole: 'starter',
   effects: [
     {
       at: 'onCast',
@@ -280,6 +290,7 @@ export const ABILITY_B5_MARKSMAN_SHOT: AbilityDef = {
   windupSec: 1.0,
   range: 100,
   targeting: 'forward',
+  comboRole: 'finisher',
   effects: [
     {
       at: 'onCast',
@@ -305,6 +316,7 @@ export const ABILITY_B6_DISENGAGE_SHOT: AbilityDef = {
   windupSec: 0,
   range: 15,
   targeting: 'forward',
+  comboRole: 'counter',
   effects: [
     { at: 'onCast', kind: 'move', mode: 'dash', distance: -3, cancelOnCollision: true },
     {
@@ -331,6 +343,7 @@ export const ABILITY_B7_BROADHEAD: AbilityDef = {
   windupSec: 0.25,
   range: 24,
   targeting: 'forward',
+  comboRole: 'pressure',
   effects: [
     {
       at: 'onCast',
@@ -358,6 +371,7 @@ export const ABILITY_B8_BLAST_ARROW: AbilityDef = {
   windupSec: 0.45,
   range: 22,
   targeting: 'forward',
+  comboRole: 'finisher',
   effects: [
     {
       at: 'onCast',
@@ -390,6 +404,7 @@ export const ABILITY_F1_FIREBALL: AbilityDef = {
   windupSec: 0,
   range: 20,
   targeting: 'forward',
+  comboRole: 'finisher',
   effects: [
     {
       at: 'onCast',
@@ -419,6 +434,7 @@ export const ABILITY_F2_FLAME_WALL: AbilityDef = {
   windupSec: 0,
   range: 10,
   targeting: 'point',
+  comboRole: 'extender',
   effects: [
     {
       at: 'onLand',
@@ -449,6 +465,7 @@ export const ABILITY_F3_IGNITE: AbilityDef = {
   windupSec: 0,
   range: 12,
   targeting: 'forward',
+  comboRole: 'ray',
   effects: [{ at: 'onCast', kind: 'applyStatus', status: 'burn', durationSec: 3, stacks: 3 }],
   description: 'Instant ray within 12m. Applies Burn x3 if the enemy is in the crosshair and line of sight.',
   miniMalus: 'No direct damage. Requires clear line of sight.',
@@ -466,6 +483,7 @@ export const ABILITY_F4_METEOR: AbilityDef = {
   windupSec: 1.5,
   range: 25,
   targeting: 'point',
+  comboRole: 'finisher',
   effects: [
     { at: 'onLand', kind: 'damage', amount: 44, radius: 3.5, element: 'fire' },
     {
@@ -493,6 +511,7 @@ export const ABILITY_F5_ERUPTION: AbilityDef = {
   windupSec: 0,
   range: 10,
   targeting: 'forward',
+  comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 8, radius: 2.4, element: 'fire' },
     { at: 'onCast', kind: 'knockup', airborneSec: 0.9, radius: 2.4, knockbackDistance: 1.0 },
@@ -514,6 +533,7 @@ export const ABILITY_F6_FIRE_BLINK: AbilityDef = {
   windupSec: 0,
   range: 7,
   targeting: 'forward',
+  comboRole: 'mobility',
   effects: [
     {
       at: 'onCast',
@@ -548,6 +568,7 @@ export const ABILITY_I1_FROST_BOLT: AbilityDef = {
   windupSec: 0,
   range: 20,
   targeting: 'forward',
+  comboRole: 'pressure',
   effects: [
     {
       at: 'onCast',
@@ -576,6 +597,7 @@ export const ABILITY_I2_ICE_WALL: AbilityDef = {
   windupSec: 0,
   range: 8,
   targeting: 'point',
+  comboRole: 'extender',
   effects: [
     {
       at: 'onLand',
@@ -605,6 +627,7 @@ export const ABILITY_I3_BLIZZARD: AbilityDef = {
   windupSec: 0,
   range: 20,
   targeting: 'point',
+  comboRole: 'extender',
   effects: [
     {
       at: 'onLand',
@@ -633,6 +656,7 @@ export const ABILITY_I4_FREEZE_TARGET: AbilityDef = {
   windupSec: 0.5,
   range: 12,
   targeting: 'forward',
+  comboRole: 'ray',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 8, element: 'ice' },
     { at: 'onCast', kind: 'applyStatus', status: 'freeze', durationSec: 1.2, stacks: 1 },
@@ -654,6 +678,7 @@ export const ABILITY_I5_FROST_PILLAR: AbilityDef = {
   windupSec: 1.0,
   range: 10,
   targeting: 'forward',
+  comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 12, element: 'ice' },
     { at: 'onCast', kind: 'knockup', airborneSec: 1.0, knockbackDistance: 0.6 },
@@ -679,6 +704,7 @@ export const ABILITY_L1_CHAIN_BOLT: AbilityDef = {
   windupSec: 0,
   range: 15,
   targeting: 'forward',
+  comboRole: 'ray',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 22, element: 'lightning' },
     { at: 'onCast', kind: 'damage', amount: 10, radius: 6, element: 'lightning', excludePrimary: true },
@@ -700,6 +726,7 @@ export const ABILITY_L2_THUNDER_CLAP: AbilityDef = {
   windupSec: 0,
   range: 3,
   targeting: 'self',
+  comboRole: 'counter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 16, radius: 3.2, element: 'lightning' },
     { at: 'onCast', kind: 'applyStatus', status: 'stun', durationSec: 0.6, stacks: 1, radius: 3.2 },
@@ -720,6 +747,7 @@ export const ABILITY_L3_STORM_FIELD: AbilityDef = {
   windupSec: 0,
   range: 20,
   targeting: 'point',
+  comboRole: 'extender',
   effects: [
     {
       at: 'onLand',
@@ -748,6 +776,7 @@ export const ABILITY_L4_LIGHTNING_DASH: AbilityDef = {
   windupSec: 0,
   range: 5,
   targeting: 'forward',
+  comboRole: 'mobility',
   effects: [
     { at: 'onCast', kind: 'move', mode: 'teleport', distance: 5, cancelOnCollision: true },
     { at: 'onCast', kind: 'damage', amount: 15, radius: 1, element: 'lightning' },
@@ -768,6 +797,7 @@ export const ABILITY_L5_ARC_LIFT: AbilityDef = {
   windupSec: 0,
   range: 15,
   targeting: 'forward',
+  comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 8, element: 'lightning' },
     { at: 'onCast', kind: 'knockup', airborneSec: 0.8, knockbackDistance: 1.4 },
@@ -793,6 +823,7 @@ export const ABILITY_D1_SHADOW_BOLT: AbilityDef = {
   windupSec: 0,
   range: 20,
   targeting: 'forward',
+  comboRole: 'pressure',
   effects: [
     {
       at: 'onCast',
@@ -821,6 +852,7 @@ export const ABILITY_D2_CURSE_OF_WEAKNESS: AbilityDef = {
   windupSec: 0.35,
   range: 15,
   targeting: 'forward',
+  comboRole: 'drain',
   effects: [
     { at: 'onCast', kind: 'applyStatus', status: 'curse', durationSec: 5, stacks: 1 },
     { at: 'onCast', kind: 'applyStatus', status: 'blind', durationSec: 2.4, stacks: 1 },
@@ -843,6 +875,7 @@ export const ABILITY_D3_LIFE_DRAIN: AbilityDef = {
   windupSec: 0,
   range: 12,
   targeting: 'forward',
+  comboRole: 'drain',
   effects: [
     {
       at: 'onCast',
@@ -872,6 +905,7 @@ export const ABILITY_D4_DARK_BARRIER: AbilityDef = {
   windupSec: 0,
   range: 0,
   targeting: 'self',
+  comboRole: 'survival',
   effects: [
     {
       at: 'onCast',
@@ -897,6 +931,7 @@ export const ABILITY_D5_VOID_SPIKE: AbilityDef = {
   windupSec: 0,
   range: 10,
   targeting: 'forward',
+  comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 14, element: 'dark' },
     { at: 'onCast', kind: 'knockup', airborneSec: 0.9, knockbackDistance: 1.0 },
@@ -923,6 +958,7 @@ export const ABILITY_N1_POISON_DART: AbilityDef = {
   windupSec: 0,
   range: 18,
   targeting: 'forward',
+  comboRole: 'pressure',
   effects: [
     {
       at: 'onCast',
@@ -950,6 +986,7 @@ export const ABILITY_N2_THORN_FIELD: AbilityDef = {
   windupSec: 0,
   range: 12,
   targeting: 'point',
+  comboRole: 'extender',
   effects: [
     {
       at: 'onLand',
@@ -978,6 +1015,7 @@ export const ABILITY_N3_ENTANGLE: AbilityDef = {
   windupSec: 0.5,
   range: 10,
   targeting: 'forward',
+  comboRole: 'ray',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 4, element: 'nature' },
     { at: 'onCast', kind: 'applyStatus', status: 'root', durationSec: 1.7, stacks: 1 },
@@ -998,6 +1036,7 @@ export const ABILITY_N4_HEALING_TOTEM: AbilityDef = {
   windupSec: 0,
   range: 0,
   targeting: 'self',
+  comboRole: 'survival',
   effects: [
     {
       at: 'onCast',
@@ -1024,6 +1063,7 @@ export const ABILITY_N5_ROOT_UPTHROW: AbilityDef = {
   windupSec: 0,
   range: 10,
   targeting: 'forward',
+  comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 8, element: 'nature' },
     { at: 'onCast', kind: 'knockup', airborneSec: 1.1, requiresGroundedTarget: true },
@@ -1045,6 +1085,7 @@ export const ABILITY_N6_VINE_DASH: AbilityDef = {
   windupSec: 0,
   range: 5,
   targeting: 'forward',
+  comboRole: 'mobility',
   effects: [
     { at: 'onCast', kind: 'move', mode: 'dash', distance: 5, cancelOnCollision: true },
     {
@@ -1079,6 +1120,7 @@ export const ABILITY_U1_SELF_HEAL_POTION: AbilityDef = {
   windupSec: 0,
   range: 0,
   targeting: 'self',
+  comboRole: 'survival',
   effects: [
     {
       at: 'onCast',
@@ -1106,6 +1148,7 @@ export const ABILITY_U2_QUICK_DASH: AbilityDef = {
   windupSec: 0,
   range: 4,
   targeting: 'forward',
+  comboRole: 'mobility',
   effects: [{ at: 'onCast', kind: 'move', mode: 'dash', distance: 4, useMovementDirection: true, cancelOnCollision: true }],
   description: '4m dash in movement direction.',
   miniMalus: 'No invulnerability.',
@@ -1124,6 +1167,7 @@ export const ABILITY_U3_PING_MARK: AbilityDef = {
   windupSec: 0,
   range: 30,
   targeting: 'forward',
+  comboRole: 'drain',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 6 },
     { at: 'onCast', kind: 'applyStatus', status: 'mark', durationSec: 5, stacks: 1 },
@@ -1145,6 +1189,7 @@ export const ABILITY_U4_CLEANSE_SURGE: AbilityDef = {
   windupSec: 0,
   range: 0,
   targeting: 'self',
+  comboRole: 'counter',
   effects: [
     { at: 'onCast', kind: 'cleanse' },
     { at: 'onCast', kind: 'applyStatus', status: 'haste', durationSec: 2, stacks: 1 },
@@ -1165,6 +1210,7 @@ export const ABILITY_U5_BARRIER: AbilityDef = {
   windupSec: 0,
   range: 0,
   targeting: 'self',
+  comboRole: 'survival',
   effects: [{ at: 'onCast', kind: 'applyStatus', status: 'shield', durationSec: 8, stacks: 42 }],
   description: 'Self shield. Absorbs 42 damage for up to 8.0s.',
   miniMalus: 'No cleanse or heal.',
@@ -1183,6 +1229,7 @@ export const ABILITY_U6_ENERGIZE: AbilityDef = {
   windupSec: 0,
   range: 0,
   targeting: 'self',
+  comboRole: 'resource',
   effects: [{ at: 'onCast', kind: 'restoreStamina', amount: 35 }],
   description: 'Restores 35 Stamina instantly.',
   miniMalus: 'No Mana restore.',
@@ -1201,6 +1248,7 @@ export const ABILITY_U7_PHASE_SHIFT: AbilityDef = {
   windupSec: 0,
   range: 0,
   targeting: 'self',
+  comboRole: 'counter',
   effects: [{ at: 'onCast', kind: 'applyStatus', status: 'invulnerable', durationSec: 0.6, stacks: 1 }],
   description: 'Invulnerable 0.6s. Prevents damage and crowd control.',
   miniMalus: 'Cannot attack or cast during phase.',
@@ -1218,6 +1266,7 @@ export const ABILITY_U8_SMOKE_SCREEN: AbilityDef = {
   windupSec: 0,
   range: 8,
   targeting: 'forward',
+  comboRole: 'extender',
   effects: [
     {
       at: 'onCast',
@@ -1248,6 +1297,7 @@ export const ABILITY_U9_TRANSFER_HP_MANA: AbilityDef = {
   windupSec: 0,
   range: 0,
   targeting: 'self',
+  comboRole: 'resource',
   effects: [{ at: 'onCast', kind: 'transmute', direction: 'hp_mana' }],
   description: 'Spend 20 HP to gain 20 Mana.',
   miniMalus: 'Requires more than 20 HP.',
@@ -1265,6 +1315,7 @@ export const ABILITY_U10_TRANSFER_MANA_STAM: AbilityDef = {
   windupSec: 0,
   range: 0,
   targeting: 'self',
+  comboRole: 'resource',
   effects: [{ at: 'onCast', kind: 'transmute', direction: 'mana_stam' }],
   description: 'Spend 20 Mana to gain 20 Stamina.',
   miniMalus: 'Requires 20 Mana.',
@@ -1282,6 +1333,7 @@ export const ABILITY_U11_TRANSFER_STAM_HP: AbilityDef = {
   windupSec: 0,
   range: 0,
   targeting: 'self',
+  comboRole: 'resource',
   effects: [{ at: 'onCast', kind: 'transmute', direction: 'stam_hp' }],
   description: 'Spend 30 Stamina to gain 20 HP.',
   miniMalus: 'Requires 30 Stamina.',
