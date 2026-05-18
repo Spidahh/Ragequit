@@ -13,6 +13,7 @@ import {
   INTERPOLATION_DELAY_MS,
   MANA_MAX,
   MessageTypes,
+  PROJECTILE_MUZZLE_Y_OFFSET_M,
   ROUND_TIMER_SEC,
   STAFF_M1_CADENCE_SEC,
   STAMINA_MAX,
@@ -4429,7 +4430,7 @@ function render(now: number): void {
     }
     const firstPersonWeapon = wSchema === 'bow' || wSchema === 'staff'
     const wBackTarget = firstPersonWeapon ? 0 : 5.5
-    const wUpTarget   = firstPersonWeapon ? CAPSULE_HALF_HEIGHT_M * 0.9 : 1.3
+    const wUpTarget   = firstPersonWeapon ? PROJECTILE_MUZZLE_Y_OFFSET_M : 1.3
 
     // Bow ADS narrows more while drawn; staff keeps a crisp FPS FOV.
     const wFovTarget = wSchema === 'bow'

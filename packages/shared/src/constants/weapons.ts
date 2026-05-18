@@ -98,6 +98,11 @@ export const STAFF_M1_LIFETIME_SEC = STAFF_M1_MAX_RANGE_M / STAFF_M1_SPEED_MPS
 // Values kept in sync with the kinematic controller's capsule dimensions.
 export const PLAYER_CAPSULE_RADIUS_M = 0.65 as const  // 0.5→0.65: larger hitbox, projectiles feel better
 export const PLAYER_CAPSULE_HEIGHT_M = 1.8 as const
+// Offset from replicated capsule centre to the first-person eye / projectile
+// muzzle. The player transform is already capsule-centre height, so this must
+// be below half-height; adding full body height here makes shots spawn above
+// the head and breaks close-range crosshair alignment.
+export const PROJECTILE_MUZZLE_Y_OFFSET_M = 0.65 as const
 // Simple terrain floor plane y=0. More complex geo lands later.
 export const TERRAIN_GROUND_Y = 0 as const
 

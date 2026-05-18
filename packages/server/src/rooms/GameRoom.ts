@@ -32,6 +32,7 @@ import {
   PARRY_TAP_WINDOW_SEC,
   PLAYER_CAPSULE_HEIGHT_M,
   PLAYER_CAPSULE_RADIUS_M,
+  PROJECTILE_MUZZLE_Y_OFFSET_M,
   Player,
   Projectile,
   RESPAWN_SEC,
@@ -142,11 +143,8 @@ const STAFF_LIFETIME_TICKS = Math.max(1, Math.round(STAFF_M1_LIFETIME_SEC * TICK
 // Must be > PLAYER_CAPSULE_RADIUS_M (0.65) so the projectile spawns outside
 // the shooter's own capsule and avoids an immediate self-collision.
 const PROJECTILE_SPAWN_FORWARD_OFFSET_M = 0.8
-// Eye height above capsule centre (transform.y = capsule centre).
-// Must match the client FPS camera: camUp → CAPSULE_HALF_HEIGHT_M * 1.8 = 1.62 m.
-// Using the same offset keeps the projectile spawn aligned with the crosshair
-// so arrows don't fly visibly below the aim point at close range.
-const PROJECTILE_SPAWN_Y_OFFSET_M = PLAYER_CAPSULE_HEIGHT_M * 0.9
+// Eye/muzzle height above capsule centre. Must match the client FPS camera.
+const PROJECTILE_SPAWN_Y_OFFSET_M = PROJECTILE_MUZZLE_Y_OFFSET_M
 
 interface PendingSwing {
   attackerId: string
@@ -2336,7 +2334,7 @@ function isValidWeaponId(w: string): w is Weapon {
   return (WEAPON_IDS as readonly string[]).includes(w)
 }
 
-function computeProjectileOrigin(
+export function computeProjectileOrigin(
   player: Player,
   dir: { x: number; y: number; z: number },
 ): { x: number; y: number; z: number } {
