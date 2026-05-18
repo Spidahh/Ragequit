@@ -2659,6 +2659,11 @@ const loadoutStation = initLoadoutStation(
     }
   },
   () => Boolean(pendingLaunchMode),
+  () => pendingLaunchMode === 'training'
+    ? 'START TRAINING'
+    : pendingLaunchMode === 'duel_arena'
+      ? 'START 1V1'
+      : null,
 )
 
 async function connectWithMode(mode: string, reopenLoadout = true): Promise<void> {

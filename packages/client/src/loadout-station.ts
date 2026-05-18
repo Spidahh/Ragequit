@@ -56,6 +56,7 @@ export function initLoadoutStation(
   canApplyBuild?: () => boolean,
   onSaved?: () => void,
   shouldCaptureOnSave?: () => boolean,
+  getLaunchCtaLabel?: () => string | null,
 ): LoadoutStationApi {
   const overlay = document.getElementById('loadout-station')!
   const lsMelee = document.getElementById('ls-melee')!
@@ -468,7 +469,11 @@ export function initLoadoutStation(
     open: () => {
       rerender()
       const locked = buildLocked()
-      btnConfirm.textContent = locked ? 'LOCKED IN COMBAT' : getRoom() ? 'CONFIRM BUILD' : 'SAVE BUILD'
+      btnConfirm.textContent = locked
+        ? 'LOCKED IN COMBAT'
+        : getRoom()
+          ? 'CONFIRM BUILD'
+          : getLaunchCtaLabel?.() ?? 'SAVE BUILD'
       btnConfirm.classList.toggle('locked', locked)
       overlay.classList.toggle('build-locked', locked)
       document.body.classList.add('loadout-active')
