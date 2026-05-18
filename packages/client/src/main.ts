@@ -1652,9 +1652,7 @@ function applyWeaponProp(charGroup: THREE.Group, weapon: string): void {
     addProp(new THREE.CylinderGeometry(0.005, 0.005, 0.68, 4), stringMat, 0, 0, 0)  // string
   } else if (weapon === 'staff') {
     const woodMat = new THREE.MeshToonMaterial({ color: 0x2e2048, gradientMap: toonGradient })
-    const orbMat  = new THREE.MeshStandardMaterial({
-      color: 0x80c8ff, emissive: 0x3090ff, emissiveIntensity: 4.5, roughness: 0.05,
-    })
+    const orbMat = new THREE.MeshBasicMaterial({ color: 0x80c8ff })
     const ringMat = new THREE.MeshBasicMaterial({ color: 0x60a8ff, transparent: true, opacity: 0.75 })
     addProp(new THREE.CylinderGeometry(0.028, 0.022, 1.20, 8), woodMat, 0, 0.60, 0)  // shaft
     addProp(new THREE.SphereGeometry(0.078, 12, 8), orbMat, 0, 1.28, 0)               // orb
@@ -3500,12 +3498,10 @@ function onZoneSpawned(msg: ServerZoneSpawnedMessage): void {
     // along the caster's yaw. Length = width (designer's term), thickness
     // is fixed and visual only — server geometry uses a 0.6 m perp range.
     const geo = new THREE.BoxGeometry(msg.width, 1.6, 0.4)
-    const mat = new THREE.MeshStandardMaterial({
+    const mat = new THREE.MeshBasicMaterial({
       color: 0xff6a32,
-      emissive: 0x803010,
       transparent: true,
       opacity: 0.7,
-      roughness: 0.5,
     })
     mesh = new THREE.Mesh(geo, mat)
     mesh.position.set(msg.pos.x, msg.pos.y + 0.8, msg.pos.z)
@@ -4620,9 +4616,7 @@ function render(now: number): void {
         // Pass scalars directly to avoid allocating a Vector3 per frame.
         vis.mesh.lookAt(p.x + p.vx, p.y + p.vy, p.z + p.vz)
       } else if (vis.kind === 'bolt') {
-        // Pulse emissive intensity for a living magic-bolt feel.
-        const boltMat = vis.mesh.material as THREE.MeshStandardMaterial
-        boltMat.emissiveIntensity = 5.0 + 2.0 * Math.sin(now * 0.018 + p.x * 0.5)
+        // Pulse scale/rotation only; the material stays unlit and cheap.
         vis.mesh.rotation.y += 0.06
         vis.mesh.scale.setScalar(1.0 + 0.08 * Math.sin(now * 0.022))
       }
@@ -4677,13 +4671,13 @@ function render(now: number): void {
     bowCharge.classList.toggle('full', ratio >= 1)
     bowCharge.classList.toggle('mid', ratio >= 0.4 && ratio < 1)
     bowChargeFill.style.width = `${ratio * 100}%`
-    // Tint the charge fill dynamically: green→yellow→orange→red.
+    // Tint the charge fill dynamically with the HUD/VFX palette.
     if (ratio < 0.4) {
-      bowChargeFill.style.background = 'linear-gradient(90deg,#3a8a3a,#80d040)'
+      bowChargeFill.style.background = 'linear-gradient(90deg,#00ff88,#ffd260)'
     } else if (ratio < 0.75) {
-      bowChargeFill.style.background = 'linear-gradient(90deg,#8a7e3a,#f0c86a)'
+      bowChargeFill.style.background = 'linear-gradient(90deg,#ffd260,#ffe600)'
     } else {
-      bowChargeFill.style.background = 'linear-gradient(90deg,#c84020,#ff7030)'
+      bowChargeFill.style.background = 'linear-gradient(90deg,#ffd260,#ff4500)'
     }
     // Crosshair charge tint — drives CSS via data-charge attribute.
     if (ratio >= 1) {
@@ -4745,7 +4739,7 @@ function render(now: number): void {
   // Animate zone visuals — cylinder rotates slowly, opacity pulses.
   zoneVisuals.forEach((vis) => {
     const pulse = 0.5 + 0.5 * Math.sin(now * 0.0035)
-    const mat = vis.mesh.material as THREE.MeshBasicMaterial | THREE.MeshStandardMaterial
+    const mat = vis.mesh.material as THREE.MeshBasicMaterial
     if ('opacity' in mat) mat.opacity = 0.18 + pulse * 0.18
     // Slowly rotate the cylinder for a magical "field" feel.
     vis.mesh.rotation.y += 0.006

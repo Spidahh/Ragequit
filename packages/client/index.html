@@ -6,6 +6,22 @@
     <meta name="color-scheme" content="dark" />
     <title>RAGEQUIT</title>
     <style>
+      :root {
+        --font-body: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+        --font-hud: Rajdhani, Inter, ui-sans-serif, system-ui, sans-serif;
+        --font-code: ui-monospace, SFMono-Regular, Menlo, monospace;
+        --ui-panel: rgba(15, 17, 26, 0.85);
+        --ui-panel-strong: rgba(8, 10, 18, 0.94);
+        --accent-gold: #ffd260;
+        --hp: #ff3344;
+        --mana: #00d0ff;
+        --stam: #00ff88;
+        --fire: #ff4500;
+        --ice: #00e5ff;
+        --lightning: #ffe600;
+        --dark: #6a0dad;
+        --nature: #39ff14;
+      }
       html,
       body {
         margin: 0;
@@ -14,7 +30,7 @@
         height: 100%;
         background: #0a0a10;
         color: #e4e4ef;
-        font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+        font-family: var(--font-body);
         overflow: hidden;
       }
       #app {
@@ -29,7 +45,7 @@
         background: rgba(2, 4, 10, 0.78);
         border: 1px solid rgba(255,255,255,0.07);
         border-radius: 6px;
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-family: var(--font-code);
         font-size: 11px;
         line-height: 1.55;
         pointer-events: none;
@@ -166,8 +182,8 @@
         animation: charge-full-pulse 0.25s ease-in-out infinite alternate;
       }
       @keyframes charge-full-pulse {
-        from { filter: brightness(1.0); }
-        to   { filter: brightness(1.35); }
+        from { transform: translate(-50%, -50%) scale(1); }
+        to   { transform: translate(-50%, -50%) scale(1.12); }
       }
 
       /* Hitmarker flash when a hit lands */
@@ -193,12 +209,12 @@
         position: fixed;
         left: 50%;
         top: 50%;
-        width: 58px;
-        height: 58px;
-        margin-left: -29px;
-        margin-top: -29px;
+        width: 60px;
+        height: 60px;
+        margin-left: -30px;
+        margin-top: -30px;
         border-radius: 50%;
-        border: 2.5px solid rgba(80, 180, 255, 0.88);
+        border: 2px solid var(--mana);
         box-shadow:
           0 0 18px rgba(80,180,255,0.65),
           0 0 40px rgba(60,140,255,0.25),
@@ -217,7 +233,7 @@
         to   { box-shadow: 0 0 26px rgba(80,200,255,0.85), 0 0 50px rgba(60,160,255,0.30), inset 0 0 18px rgba(80,200,255,0.6); }
       }
       #parry-ring.hold {
-        border-color: rgba(60, 255, 140, 0.92);
+        border-color: var(--stam);
         box-shadow:
           0 0 20px rgba(60,255,140,0.70),
           0 0 40px rgba(40,200,100,0.30),
@@ -229,10 +245,10 @@
         position: fixed;
         left: 50%;
         top: 50%;
-        margin-left: -70px;
-        margin-top: 36px;
-        width: 140px;
-        height: 8px;
+        margin-left: -60px;
+        margin-top: 40px;
+        width: 120px;
+        height: 6px;
         background: rgba(0, 0, 0, 0.65);
         border: 1px solid #3a3a4a;
         border-radius: 4px;
@@ -248,57 +264,57 @@
       #bow-charge .fill {
         height: 100%;
         width: 0%;
-        background: linear-gradient(90deg, #2a6a2a, #60b030);
-        transition: width 0.04s linear, background 0.15s ease, box-shadow 0.15s ease;
+        background: linear-gradient(90deg, var(--stam), var(--accent-gold));
+        transition: width 0.04s linear, background-color 0.15s ease;
         border-radius: 3px;
         box-shadow: none;
       }
       #bow-charge.mid .fill {
-        background: linear-gradient(90deg, #9a8010, #d4b020, #ffe050);
-        box-shadow: 0 0 6px rgba(220,180,20,0.5);
+        background: linear-gradient(90deg, var(--accent-gold), var(--lightning));
+        box-shadow: none;
       }
       #bow-charge.full .fill {
-        background: linear-gradient(90deg, #b82020, #e84020, #ff6040);
-        box-shadow: 0 0 12px rgba(255,80,40,0.8), 0 0 4px rgba(255,180,100,0.6);
+        background: linear-gradient(90deg, var(--accent-gold), var(--fire));
+        box-shadow: 0 0 10px rgba(255,69,0,0.65);
         animation: bow-charge-pulse 0.25s ease-in-out infinite alternate;
       }
       @keyframes bow-charge-pulse {
-        from { box-shadow: 0 0 10px rgba(255,80,40,0.7); }
-        to   { box-shadow: 0 0 20px rgba(255,100,40,1.0), 0 0 6px rgba(255,200,100,0.8); }
+        from { opacity: 0.82; }
+        to   { opacity: 1; }
       }
 
       /* ── Resource bar container ─────────────────────────────────────────── */
       #hud {
         position: fixed;
-        left: 18px;
-        bottom: 132px;
+        left: 40px;
+        bottom: 40px;
         transform: none;
         --hud-bar-h: 22px;
-        width: min(340px, 38vw);
+        width: min(320px, 38vw);
         min-width: 250px;
         max-width: min(520px, calc(100vw - 24px));
         display: flex;
         flex-direction: column;
-        gap: 7px;
+        gap: 6px;
         pointer-events: auto;
         user-select: none;
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-family: var(--font-hud);
         background:
-          linear-gradient(180deg, rgba(13,18,34,0.92), rgba(4,7,14,0.86)),
-          radial-gradient(circle at 18% 0%, rgba(255,255,255,0.08), transparent 34%);
-        border: 1px solid rgba(180,210,255,0.16);
-        border-left: 2px solid rgba(255,210,96,0.42);
+          linear-gradient(180deg, var(--ui-panel), rgba(6, 8, 14, 0.88)),
+          radial-gradient(circle at 18% 0%, rgba(255,255,255,0.07), transparent 34%);
+        border: 1px solid rgba(180,210,255,0.14);
+        border-left: 3px solid rgba(255,210,96,0.58);
         border-radius: 8px;
         padding: 8px 10px 10px;
-        box-shadow: 0 10px 28px rgba(0,0,0,0.58), inset 0 1px 0 rgba(255,255,255,0.08);
-        backdrop-filter: blur(8px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.50), inset 0 1px 0 rgba(255,255,255,0.07);
+        backdrop-filter: blur(3px);
         opacity: 0.97;
         touch-action: none;
       }
       #hud.dragging,
       #hud.resizing {
         cursor: grabbing;
-        box-shadow: 0 14px 34px rgba(0,0,0,0.68), 0 0 0 1px rgba(255,210,96,0.22), inset 0 1px 0 rgba(255,255,255,0.10);
+        box-shadow: 0 12px 26px rgba(0,0,0,0.64), 0 0 0 1px rgba(255,210,96,0.22), inset 0 1px 0 rgba(255,255,255,0.10);
       }
       #hud.resizing {
         cursor: nwse-resize;
@@ -370,17 +386,17 @@
         border-width: 1.5px 1.5px 0 0;
         border-radius: 0 10px 0 0;
       }
-      /* Skewed bar wrapper — game-HUD parallelogram style */
+      /* Flat resource bars: readable, draggable and resizable, no skew. */
       .bar {
         position: relative;
         height: var(--hud-bar-h);
         background: linear-gradient(180deg, rgba(0,0,0,0.74), rgba(8,10,18,0.70));
         border: 1px solid rgba(255,255,255,0.12);
+        border-left: 3px solid var(--bar-color, rgba(255,255,255,0.28));
         border-radius: 5px;
         overflow: hidden;
-        box-shadow: inset 0 2px 6px rgba(0,0,0,0.60), 0 1px 0 rgba(255,255,255,0.04);
+        box-shadow: inset 0 2px 5px rgba(0,0,0,0.58);
       }
-      /* Counter-skew everything inside so text stays upright */
       .bar .fill {
         position: absolute;
         inset: 0 auto 0 0;
@@ -412,17 +428,20 @@
         z-index: 2;
       }
       #hud-hp .fill {
-        background: linear-gradient(90deg, #781818 0%, #d7343f 50%, #ff7b70 100%);
-        box-shadow: 0 0 12px rgba(255,60,70,0.36), 2px 0 18px rgba(255,80,80,0.30);
+        background: linear-gradient(90deg, #82101b 0%, var(--hp) 62%, #ff7b70 100%);
+        box-shadow: 2px 0 14px rgba(255,51,68,0.24);
       }
       #hud-mana .fill {
-        background: linear-gradient(90deg, #17348d 0%, #3169d8 52%, #7cbcff 100%);
-        box-shadow: 0 0 12px rgba(60,100,255,0.38), 2px 0 18px rgba(80,120,255,0.28);
+        background: linear-gradient(90deg, #075680 0%, var(--mana) 64%, #92f4ff 100%);
+        box-shadow: 2px 0 14px rgba(0,208,255,0.24);
       }
       #hud-stam .fill {
-        background: linear-gradient(90deg, #6d6719 0%, #c5b234 52%, #ffe66a 100%);
-        box-shadow: 0 0 12px rgba(220,190,40,0.32), 2px 0 16px rgba(200,170,30,0.22);
+        background: linear-gradient(90deg, #087a4b 0%, var(--stam) 64%, #baffd6 100%);
+        box-shadow: 2px 0 14px rgba(0,255,136,0.22);
       }
+      #hud-hp { --bar-color: var(--hp); }
+      #hud-mana { --bar-color: var(--mana); }
+      #hud-stam { --bar-color: var(--stam); }
       /* Low resource warning */
       .bar.warn {
         animation: bar-warn 0.7s ease-in-out infinite alternate;
@@ -436,9 +455,9 @@
         animation: fill-pulse 0.35s ease-out;
       }
       @keyframes fill-pulse {
-        0%   { filter: brightness(1.0); }
-        40%  { filter: brightness(2.4); }
-        100% { filter: brightness(1.0); }
+        0%   { opacity: 1; }
+        40%  { opacity: 0.72; }
+        100% { opacity: 1; }
       }
       /* Cost-fail flash */
       .bar.flash-cost {
@@ -569,28 +588,28 @@
       #weapons {
         position: fixed;
         left: 50%;
-        bottom: 136px;
+        bottom: 132px;
         transform: translateX(-50%);
         display: flex;
-        gap: 6px;
+        gap: 8px;
         pointer-events: none;
         user-select: none;
-        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-family: var(--font-hud);
         align-items: flex-end;
-        padding: 7px 8px 8px;
+        padding: 8px 10px 10px;
         background:
-          linear-gradient(180deg, rgba(12,16,30,0.90), rgba(4,6,12,0.84)),
+          linear-gradient(180deg, var(--ui-panel), rgba(4,6,12,0.86)),
           radial-gradient(circle at 50% 0%, rgba(120,170,255,0.07), transparent 56%);
         border: 1px solid rgba(180,210,255,0.14);
-        border-bottom: 2px solid rgba(120,170,255,0.30);
+        border-bottom: 2px solid rgba(255,210,96,0.30);
         border-radius: 8px;
-        backdrop-filter: blur(8px);
-        box-shadow: 0 12px 32px rgba(0,0,0,0.60), inset 0 1px 0 rgba(255,255,255,0.07);
+        backdrop-filter: blur(3px);
+        box-shadow: 0 9px 24px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07);
         z-index: 600;
       }
       .wslot {
-        width: 52px;
-        height: 56px;
+        width: 60px;
+        height: 60px;
         border: 1px solid rgba(255,255,255,0.10);
         border-bottom: 3px solid rgba(120,170,255,0.42);
         border-radius: 6px;
@@ -601,27 +620,28 @@
         align-items: center;
         justify-content: center;
         gap: 2px;
+        will-change: transform, opacity;
         transition:
           border-color 0.12s ease-out,
-          background 0.12s ease-out,
+          background-color 0.12s ease-out,
           transform 0.12s ease-out,
           box-shadow 0.12s ease-out;
       }
       .wslot .icon {
-        font-size: 21px;
+        font-size: 23px;
         line-height: 1;
-        transition: font-size 0.12s ease-out, text-shadow 0.12s ease-out;
+        transition: transform 0.12s ease-out, text-shadow 0.12s ease-out;
         filter: drop-shadow(0 1px 3px rgba(0,0,0,0.8));
       }
       .wslot .wname {
-        font-size: 7px;
+        font-size: 9px;
         color: rgba(200,210,230,0.72);
-        letter-spacing: 0.06em;
+        letter-spacing: 0.04em;
         margin-top: 1px;
         transition: color 0.12s;
       }
       .wslot .key {
-        font-size: 9px;
+        font-size: 10px;
         color: #5a6070;
         letter-spacing: 0.05em;
       }
@@ -639,7 +659,7 @@
         border-bottom-color: #ffd260;
         background:
           linear-gradient(180deg, rgba(30,24,12,0.98) 0%, rgba(18,14,8,0.96) 60%, rgba(255,210,96,0.24) 100%);
-        transform: translateY(-4px) scale(1.08);
+        transform: scale(1.15) translateY(-6px);
         box-shadow:
           0 0 18px rgba(255, 210, 96, 0.60),
           0 0 8px rgba(255, 210, 96, 0.35),
@@ -650,14 +670,14 @@
       #wslot-bow.active   { box-shadow: 0 0 18px rgba(80,210,120,0.40), 0 0 6px rgba(255,210,96,0.35), 0 6px 18px rgba(0,0,0,0.6); border-color: #ffd260; }
       #wslot-staff.active { box-shadow: 0 0 18px rgba(180,100,255,0.45), 0 0 6px rgba(255,210,96,0.35), 0 6px 18px rgba(0,0,0,0.6); border-color: #ffd260; }
       .wslot.active .icon {
-        font-size: 25px;
+        transform: scale(1.08);
         text-shadow:
           0 0 14px rgba(255, 220, 80, 1),
           0 0 26px rgba(255, 180, 40, 0.7);
       }
       .wslot.active .wname {
         color: #ffd260;
-        font-size: 9px;
+        font-size: 10px;
         letter-spacing: 0.10em;
       }
 
@@ -955,9 +975,9 @@
         transition: opacity 0s;
       }
       @keyframes parry-flash-burst {
-        0%   { opacity: 1; filter: brightness(1.6); }
-        18%  { opacity: 1; filter: brightness(1.0); }
-        100% { opacity: 0; filter: brightness(1.0); }
+        0%   { opacity: 1; }
+        18%  { opacity: 0.82; }
+        100% { opacity: 0; }
       }
 
       /* Heal flash — green edge glow when self-healed. */
@@ -1264,7 +1284,7 @@
         border-bottom: 2px solid rgba(255,210,96,0.30);
         border-radius: 8px;
         padding: 7px 9px 8px;
-        backdrop-filter: blur(8px);
+        backdrop-filter: blur(3px);
         box-shadow: 0 12px 32px rgba(0,0,0,0.64), inset 0 1px 0 rgba(255,255,255,0.07);
       }
       .hotbar-section {
@@ -1518,8 +1538,8 @@
         animation: bar-cost-flash 0.35s ease-out;
       }
       @keyframes bar-cost-flash {
-        0%   { filter: brightness(2.5); }
-        100% { filter: brightness(1); }
+        0%   { opacity: 0.66; }
+        100% { opacity: 1; }
       }
       /* Cast bar interrupted state */
       #cast-bar.interrupted .label {
@@ -2315,7 +2335,7 @@
         font: 700 9px/1 ui-monospace, monospace;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        transition: all 0.2s;
+        transition: color 0.2s, border-color 0.2s, background-color 0.2s, opacity 0.2s;
       }
       .mpill.el-fire      { border-color: rgba(255,80,30,0.18); }
       .mpill.el-ice       { border-color: rgba(60,200,255,0.18); }
@@ -2413,7 +2433,7 @@
         letter-spacing: 0.08em;
         color: rgba(150,160,200,0.40);
         text-align: center;
-        transition: all 0.25s;
+        transition: color 0.25s, border-color 0.25s, background-color 0.25s, opacity 0.25s;
       }
 
       /* Slot buttons */
@@ -2434,7 +2454,7 @@
         color: inherit;
         cursor: pointer;
         text-align: left;
-        transition: all 0.14s;
+        transition: transform 0.14s, color 0.14s, border-color 0.14s, background-color 0.14s, box-shadow 0.14s;
       }
       .ls-slot:hover {
         background: rgba(255,255,255,0.075);
@@ -2797,7 +2817,7 @@
         letter-spacing: 0.10em;
         text-transform: uppercase;
         cursor: pointer;
-        transition: all 0.14s;
+        transition: color 0.14s, border-color 0.14s, background-color 0.14s;
         white-space: nowrap;
       }
       .filter-btn:hover { border-color: rgba(255,255,255,0.20); color: #dde0f5; background: rgba(255,255,255,0.07); }
@@ -3060,7 +3080,7 @@
         font: 600 11px/1 'Segoe UI', sans-serif;
         letter-spacing: 0.10em;
         text-transform: uppercase;
-        transition: all 0.14s;
+        transition: color 0.14s, border-color 0.14s, background-color 0.14s, box-shadow 0.14s;
       }
       .btn:hover { background: rgba(255,255,255,0.068); border-color: rgba(255,255,255,0.20); color: #fff; }
       .btn.primary {

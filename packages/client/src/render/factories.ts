@@ -35,22 +35,14 @@ export function makeProjectileMesh(kind: 'arrow' | 'bolt'): THREE.Mesh {
   if (kind === 'arrow') {
     const geo = new THREE.CylinderGeometry(0.04, 0.09, 1.1, 6)
     geo.rotateX(Math.PI / 2)
-    const mat = new THREE.MeshStandardMaterial({
+    const mat = new THREE.MeshBasicMaterial({
       color: 0xffd060,
-      emissive: 0xd05000,
-      emissiveIntensity: 5.0,
-      roughness: 0.2,
-      metalness: 0.4,
     })
     return new THREE.Mesh(geo, mat)
   }
   const geo = new THREE.SphereGeometry(0.22, 12, 8)
-  const mat = new THREE.MeshStandardMaterial({
+  const mat = new THREE.MeshBasicMaterial({
     color: 0x20ffff,
-    emissive: 0x00c8ff,
-    emissiveIntensity: 6.0,
-    roughness: 0.1,
-    metalness: 0.0,
   })
   return new THREE.Mesh(geo, mat)
 }

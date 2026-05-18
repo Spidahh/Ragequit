@@ -12,12 +12,12 @@ status: target
 
 ## Direction
 
-**Low-poly stylized** — reference: **Risk of Rain 2**.
+**Low-poly stylized action** — reference: **Risk of Rain 2** for readable chaos, with cleaner arena silhouettes and sharper combat UI.
 
 ### Why this direction
 
 - Pragmatic fit with free asset sources: Kenney.nl, Quaternius, and similar libraries produce thousands of low-poly models in a coherent style
-- Minimal shader work: MeshStandardMaterial + a light toon shader pass, no custom shaders needed
+- Minimal shader work: flat/toon materials first; reserve expensive lit materials for final assets only when they add clear readability
 - VFX feasible with Three.js standard particle systems — no ragdoll, no blood decal system required at launch
 - Silhouette-driven: readable in 5v5 chaos
 - Browser-performant: 60+ fps on mid-range hardware
@@ -33,19 +33,22 @@ status: target
 
 ### Palette
 
-- Environment: muted earth tones (grays, browns, deep greens) so VFX pop
+- Environment muted base: `#2A2A35`, `#4B4D58`, `#3D3D33`
+- UI panels: `#0F111A` at roughly 85% opacity, small blur only where it helps legibility
+- Accent / active selection: `#FFD260`
+- HUD resources: HP `#FF3344`, Mana `#00D0FF`, Stamina `#00FF88`
 - Character outfits: mid-saturation with element-tinted accents (armor trim color = main element)
 - VFX: **saturated element colors**:
-  - Fire: saturated red-orange
-  - Ice: bright cyan / pale blue
-  - Lightning: electric yellow / white core
-  - Dark: deep purple with black smoke
-  - Nature: vivid green
+  - Fire: `#FF4500`
+  - Ice: `#00E5FF`
+  - Lightning: `#FFE600`
+  - Dark: `#6A0DAD`
+  - Nature: `#39FF14`
 
 ### Shading
 
 - Toon shader with 2-3 light bands (not fully cel-shaded — softer)
-- No shadow-per-pixel at launch (performance) — baked shadow maps on static geometry, simple blob shadows on characters
+- No heavy dynamic-shadow dependency at launch — prefer baked/static lighting, cheap unlit VFX, and simple blob/contact shadows for gameplay readability
 
 ## VFX (combat feedback)
 
@@ -82,11 +85,13 @@ status: target
 
 ### HUD elements
 
-- Bottom left: HP (red bar), Mana (blue), Stamina (green) — stacked, compact
-- Bottom center: active weapon icon + the 11-slot hotbar reference. The 7 combat slots mirror the E wheel; the 4 utility slots mirror the Q wheel with fixed Z/X/F transfers plus V flex utility.
+- Font contract: Rajdhani-style condensed HUD for numbers/labels; Inter-style UI text for menus, settings, loadout descriptions, and readable body copy.
+- Bottom left: HP (red), Mana (cyan), Stamina (green) — stacked, compact, draggable/resizable, **flat rectangular bars only**. No skew/trapezoid treatment for resource bars.
+- Bottom center: weapon strip, 60x60 slots, active slot scales up and lifts slightly with a gold bottom border. The 7 combat slots mirror the E wheel; the 4 utility slots mirror the Q wheel with fixed Z/X/F transfers plus V flex utility.
 - Top right: minimap (small, overhead)
 - Top center: kill feed + scoreboard ticker (in team modes)
 - Around crosshair: GCD pip indicator; cast bar on active abilities; parry charge indicator
+- Crosshair HUD: parry ring is a 60px circle with 2px stroke; normal parry uses Mana cyan, hold/block uses Stamina green. Bow charge sits 40px below the crosshair, 120x6px, progressing from Stamina green to gold/orange.
 
 ### Wheels (Q / E)
 
