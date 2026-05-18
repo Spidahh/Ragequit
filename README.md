@@ -13,6 +13,8 @@ Browser PvP arena — 1v1-first vertical slice with 5v5 / FFA as product targets
 
 Read order for a fresh walkthrough: `ROADMAP.md` -> `01_DESIGN/MANIFEST.yaml` -> `02_TECH/00_architecture_overview.md`.
 
+AI/coding agents must also read [`AGENTS.md`](AGENTS.md) before editing. It contains the non-negotiable gameplay, UI, input, visual, verification, and documentation rules for this repo.
+
 ## Repository layout
 
 ```
@@ -20,6 +22,7 @@ ragequit/
 ├── README.md              # This file
 ├── ROADMAP.md             # 11-phase implementation plan
 ├── SETUP.md               # Local setup instructions
+├── AGENTS.md              # Mandatory rules for AI/coding agents
 ├── LICENSE                # MIT
 ├── 01_DESIGN/             # Gameplay design (single source of truth)
 ├── 02_TECH/               # Technical architecture docs
