@@ -69,7 +69,7 @@ When hovering a build preview:
 
 ## Build saving
 
-Account-backed build presets are not implemented yet. The Loadout Station currently saves the local active build in browser storage; when a room is active it also sends the validated loadout to the server. Play/Training must pass through `SAVE BUILD` before connecting.
+Account-backed build presets are not implemented yet. The Loadout Station currently saves the local active build in browser storage; when a room is active it also sends the validated loadout to the server. Play/Training must pass through the launch CTA (`START 1V1` / `START TRAINING`) before connecting; the standalone editor keeps the `SAVE BUILD` label.
 
 ## Respecc
 

@@ -6,7 +6,7 @@ This file records the current browser-game input rules so we do not regress the 
 
 - The in-game canvas must receive focus when entering or resuming gameplay.
 - Pointer lock must be requested from a trusted user gesture: loadout confirm, pause resume, or direct canvas click.
-- Main-menu launch goes through the loadout screen before the room exists. That `SAVE BUILD` click is still the trusted launch gesture, so it must focus the canvas and request pointer lock before starting the async connect.
+- Main-menu launch goes through the loadout screen before the room exists. The launch CTA (`START 1V1` / `START TRAINING`) is the trusted gesture, so it must focus the canvas and request pointer lock before starting the async connect. The standalone Loadout editor still uses `SAVE BUILD`.
 - Do not rely on async state callbacks, such as `matchPhase: live`, to request pointer lock. Browsers can reject that because it is no longer inside the user's gesture.
 - If pointer lock is rejected, the fallback may keep keyboard and relative mouse-look active, but it is not equivalent to real pointer capture: the mouse can still leave the window.
 

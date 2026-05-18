@@ -14,7 +14,7 @@ status: target
 
 Target flow: Login (Google OAuth or guest) → short tutorial → Main Menu → Mode Select → first match.
 
-Current local flow: Main Menu → Play 1v1 / Training → Loadout Station → `SAVE BUILD` → local room/training path. OAuth, quests, and account-backed unlocks are not implemented yet.
+Current local flow: Main Menu -> Play 1v1 / Training -> Loadout Station -> `START 1V1` / `START TRAINING` -> local room/training path. The standalone Loadout editor uses `SAVE BUILD`. OAuth, quests, and account-backed unlocks are not implemented yet.
 
 ## Typical session
 

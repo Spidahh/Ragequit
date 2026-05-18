@@ -95,6 +95,22 @@ describe('loadout station smoke', () => {
     expect(document.getElementById('loadout-station')?.classList.contains('hidden')).toBe(true)
   })
 
+  it('uses launch-specific confirm copy when opening from a play flow', () => {
+    const api = initLoadoutStation(
+      () => undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      () => 'START TRAINING',
+    )
+
+    api.open()
+
+    expect(document.getElementById('ls-confirm')?.textContent).toBe('START TRAINING')
+  })
+
   it('defaults placed spells to preview and persists explicit instant-cast overrides', () => {
     const api = initLoadoutStation(() => undefined)
 

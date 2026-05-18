@@ -21,7 +21,7 @@ Implementato:
 - Utility wheel: tre transfer fissi Z/X/F + una utility flessibile V.
 - Ability wheel: melee, bow, 5 magic. La wheel è palette di selezione: rilasciare E/Q prima uno slot, LMB lo spara.
 - Direct hotkeys: R, G, 1-5, Z/X/F/V bypassano la wheel; le abilità instant castano subito, quelle con placement aprono preview e confermano con LMB.
-- Play/Training aprono prima il Loadout Station; la room parte solo dopo `SAVE BUILD`.
+- Play/Training aprono prima il Loadout Station; la room parte solo dopo la CTA di lancio (`START 1V1` o `START TRAINING`). L'editor aperto dal menu resta su `SAVE BUILD`.
 - Settings: FOV, sensitivity, volume, quality e keybind sono modificabili e persistono in `localStorage`.
 - Nessun sistema rune/passive.
 - Mastery calcolata solo sui 5 slot magic.
