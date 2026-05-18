@@ -2368,10 +2368,15 @@ let victimHitStopUntilMs = 0
 // Hit-stop durations by damage source category (milliseconds).
 const HITSTOP_ATTACKER: Record<string, number> = { sword_m1: 65, uppercut: 65, bow: 35, staff: 35 }
 const HITSTOP_VICTIM: Record<string, number>   = { sword_m1: 45, uppercut: 45, bow: 30, staff: 30 }
+function isAirPunishCause(cause: string): boolean {
+  return cause.includes(':air_punish')
+}
 function hitstopAttacker(cause: string): number {
+  if (isAirPunishCause(cause)) return 95
   return HITSTOP_ATTACKER[cause] ?? (cause.startsWith('zone:') || cause.startsWith('combo:') ? 20 : 45)
 }
 function hitstopVictim(cause: string): number {
+  if (isAirPunishCause(cause)) return 70
   return HITSTOP_VICTIM[cause] ?? (cause.startsWith('zone:') || cause.startsWith('combo:') ? 25 : 35)
 }
 
@@ -2869,9 +2874,9 @@ function triggerComboFlash(): void {
 }
 
 let comboPopupTimer: ReturnType<typeof setTimeout> | null = null
-function showComboPopupText(count: number): void {
+function showComboPopupLabel(text: string): void {
   if (comboPopupTimer !== null) clearTimeout(comboPopupTimer)
-  comboPopup.textContent = `COMBO! ×${count}`
+  comboPopup.textContent = text
   comboPopup.classList.remove('pop')
   void comboPopup.offsetHeight
   comboPopup.classList.add('pop')
@@ -2881,12 +2886,17 @@ function showComboPopupText(count: number): void {
   }, 900)
 }
 
+function showComboPopupText(count: number): void {
+  showComboPopupLabel(`COMBO! ×${count}`)
+}
+
 function onHit(msg: ServerHitMessage): void {
   const amISelf = msg.victimId === self?.sessionId
   const amIAttacker = msg.attackerId === self?.sessionId
   const now = performance.now()
+  const isAirPunish = isAirPunishCause(msg.cause)
   // Normalise power 0–1 against typical hit ceiling (~40 damage = full power).
-  const power = Math.min(1, msg.damage / 40)
+  const power = Math.min(1, msg.damage / (isAirPunish ? 55 : 40))
 
   // --- Parry sound: victim side already handled by ParryEvent; play for others. ---
   if (msg.didParry && !amISelf) {
@@ -2900,7 +2910,14 @@ function onHit(msg: ServerHitMessage): void {
     localComboCount++
     lastHitAsAttackerMs = now
 
-    if (localComboCount >= 3) {
+    if (isAirPunish) {
+      soundEngine.playCrack(Math.max(power, 0.85))
+      triggerComboFlash()
+      showComboPopupLabel('AIR PUNISH')
+      hitStopUntilMs = now + hitstopAttacker(msg.cause)
+      applyDirectionalShake(getPlayerWorldPos(msg.victimId), 1.0)
+      localComboCount = 0
+    } else if (localComboCount >= 3) {
       // ── CRACK ── strong hit, golden flash, COMBO popup, max shake.
       soundEngine.playCrack(power)
       triggerComboFlash()
@@ -2972,7 +2989,11 @@ function onHit(msg: ServerHitMessage): void {
   }
 
   const victimPos = getPlayerWorldPos(msg.victimId)
-  if (victimPos) showDamagePopup(victimPos, msg.damage, amISelf, msg.didParry, msg.element)
+  if (victimPos) {
+    showDamagePopup(victimPos, msg.damage, amISelf, msg.didParry, msg.element, {
+      airPunish: isAirPunish && amIAttacker && !amISelf,
+    })
+  }
   // Trigger white blink on the victim's remote character mesh so hits feel impactful.
   if (!amISelf && msg.damage > 0 && !msg.didParry) {
     remoteDamageBlinkUntil.set(msg.victimId, performance.now() + 160)
@@ -3551,6 +3572,7 @@ function showDamagePopup(
   inbound: boolean,
   parried: boolean,
   element?: string,
+  opts: { airPunish?: boolean } = {},
 ): void {
   const v = worldPos.clone().project(camera)
   const sx = (v.x * 0.5 + 0.5) * window.innerWidth
@@ -3560,8 +3582,9 @@ function showDamagePopup(
   const cls = ['popup']
   if (inbound) cls.push('inbound')
   if (parried) cls.push('parried')
+  if (opts.airPunish) cls.push('air-punish')
   // Big-hit class: damage ≥ 40 outbound gets a larger, more dramatic popup.
-  if (!inbound && !parried && damage >= 40) cls.push('big')
+  if (!inbound && !parried && (damage >= 40 || opts.airPunish)) cls.push('big')
   el.className = cls.join(' ')
   const jitter = (Math.random() - 0.5) * 30
   el.style.left = `${sx + jitter}px`
@@ -3573,9 +3596,11 @@ function showDamagePopup(
   if (parried && damage === 0) {
     el.textContent = 'PARRY'
   } else if (parried) {
-    el.textContent = `PARRY -${damage}`
+    el.textContent = `PARRY -${Math.round(damage)}`
+  } else if (opts.airPunish) {
+    el.textContent = `AIR ${Math.round(damage)}`
   } else {
-    el.textContent = String(damage)
+    el.textContent = String(Math.round(damage))
   }
   popupsLayer.appendChild(el)
   setTimeout(() => el.remove(), 900)
