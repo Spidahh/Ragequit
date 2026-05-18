@@ -2646,8 +2646,9 @@ const loadoutStation = initLoadoutStation(
     const mode = pendingLaunchMode
     pendingLaunchMode = null
     if (mode) {
-      void connectWithMode(mode, false)
       engageCanvasInput()
+      requestArenaPointerLock()
+      void connectWithMode(mode, false)
     } else if (!room) {
       menu.showMain()
     }
