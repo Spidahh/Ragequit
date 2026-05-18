@@ -29,6 +29,7 @@ import {
   getMasteryBonus,
   isElementId,
   type AbilityDef,
+  type AbilityComboRole,
   type ChannelEffect,
   type DamageEffect,
   type EffectSpec,
@@ -56,6 +57,8 @@ import type { PendingDamageEntry, StatusRuntime } from './StatusRuntime.js'
 
 export interface ProjectileSpawnRequest {
   ownerId: string
+  abilityId: string
+  comboRole: AbilityComboRole
   kind: 'arrow' | 'bolt'
   origin: Vec3
   vel: Vec3
@@ -128,6 +131,7 @@ interface PendingCast {
 
 const GCD_TICKS = Math.round(GCD_SEC * TICK_RATE_HZ)
 const KNOCKUP_IMMUNITY_TICKS = Math.round(KNOCKUP_IMMUNITY_AFTER_LAND_SEC * TICK_RATE_HZ)
+export const AIR_PUNISH_DAMAGE_MULT = 1.25
 
 export class AbilityEngine {
   private readonly windups: PendingCast[] = []
@@ -512,16 +516,17 @@ export class AbilityEngine {
       if (!victimId) return 0
       const victim = this.host.state.players.get(victimId)
       if (!victim?.alive) return 0
+      const finalAmount = this.damageWithAirPunish(def, victim, amount)
       this.host.pendingDamage.push({
         attackerId: sid,
         victimId,
-        amount,
+        amount: finalAmount,
         element: element ?? '',
         cause: `ability:${def.id}`,
         canParry: !!def.canParry,
         lifestealFraction: lifestealFraction > 0 ? lifestealFraction : undefined,
       })
-      return amount
+      return finalAmount
     }
 
     const primaryVictimId = e.excludePrimary ? this.resolveSingleTarget(sid, caster, target, def) : null
@@ -534,18 +539,25 @@ export class AbilityEngine {
       const dy = victim.transform.y + PLAYER_CAPSULE_HEIGHT_M / 2 - center.y
       const dist = Math.hypot(dx, dz, dy)
       if (dist > radius) return
+      const finalAmount = this.damageWithAirPunish(def, victim, amount)
       this.host.pendingDamage.push({
         attackerId: sid,
         victimId: vid,
-        amount,
+        amount: finalAmount,
         element: element ?? '',
         cause: `ability:${def.id}`,
         canParry: !!def.canParry,
         lifestealFraction: lifestealFraction > 0 ? lifestealFraction : undefined,
       })
-      totalDealt += amount
+      totalDealt += finalAmount
     })
     return totalDealt
+  }
+
+  private damageWithAirPunish(def: AbilityDef, victim: Player, amount: number): number {
+    if (def.comboRole !== 'finisher') return amount
+    if (this.host.state.tick >= victim.airborneUntilTick) return amount
+    return amount * AIR_PUNISH_DAMAGE_MULT
   }
 
   private effectStatus(sid: string, def: AbilityDef, e: StatusEffect, target: CastTarget): void {
@@ -728,6 +740,8 @@ export class AbilityEngine {
     const lifestealFraction = (e.lifestealFraction ?? 0) + (bonus?.lifestealAdd ?? 0)
     this.host.spawnProjectile({
       ownerId: sid,
+      abilityId: def.id,
+      comboRole: def.comboRole,
       // The projectile sim doesn't care about kind; we map magic projectiles
       // to 'bolt' so the client knows it's not an arrow.
       kind: 'bolt',

@@ -35,6 +35,8 @@ interface RecordedZone {
 
 interface RecordedProjectile {
   ownerId: string
+  abilityId: string
+  comboRole: string
   damage: number
   splashRadius?: number
   lifestealFraction?: number
@@ -84,6 +86,8 @@ function makeRoom(hostOverrides: Partial<Pick<EngineHost, 'hasLineOfSight'>> = {
     spawnProjectile: (req: ProjectileSpawnRequest) => {
       projectiles.push({
         ownerId: req.ownerId,
+        abilityId: req.abilityId,
+        comboRole: req.comboRole,
         damage: req.damage,
         splashRadius: req.splashRadius,
         lifestealFraction: req.lifestealFraction,
@@ -170,6 +174,8 @@ function makeRoomWithMoveResolver(
       spawnProjectile: (req) => {
         r.projectiles.push({
           ownerId: req.ownerId,
+          abilityId: req.abilityId,
+          comboRole: req.comboRole,
           damage: req.damage,
           splashRadius: req.splashRadius,
           lifestealFraction: req.lifestealFraction,
@@ -471,8 +477,23 @@ describe('AbilityEngine — Fireball (auto-swap to staff + projectile)', () => {
     expect(r.engine.tryCast('A', 'fireball', { yaw: 0, pitch: 0 })).toBe(true)
     expect(r.caster.activeWeapon).toBe('staff')
     expect(r.projectiles.length).toBe(1)
+    expect(r.projectiles[0]!.abilityId).toBe('fireball')
+    expect(r.projectiles[0]!.comboRole).toBe('finisher')
     expect(r.projectiles[0]!.damage).toBe(24)
     expect(r.projectiles[0]!.splashRadius).toBe(2.6)
+  })
+})
+
+describe('AbilityEngine — finisher air punish', () => {
+  it('adds the air-punish multiplier when a finisher hits an airborne target', () => {
+    const r = makeRoom()
+    r.target.airborneUntilTick = r.state.tick + 200
+
+    expect(r.engine.tryCast('A', 'meteor', { yaw: 0, pitch: 0, point: { x: 0, y: 0, z: -2 } })).toBe(true)
+    r.state.tick += Math.round(ABILITY_DEFS.meteor!.windupSec * 60) + 1
+    r.engine.tickWindups()
+
+    expect(r.pendingDamage.find((d) => d.cause === 'ability:meteor')?.amount).toBeCloseTo(55)
   })
 })
 

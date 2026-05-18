@@ -109,6 +109,7 @@ Current primitives:
 - Mastery applies through shared constants and is computed from the five magic slots only.
 - "Ray" abilities are implemented with `targeting: 'forward'` plus direct `damage`, `applyStatus`, `knockup`, or `resourceDrain` effects. The server picks the aimed line-of-sight enemy within range, so these are instant but still require crosshair discipline.
 - HP drain must stay as `damage` + `lifesteal`; `resourceDrain` is only for Mana/Stamina so shields, parry, invulnerability, damage events, and death credit are not bypassed.
+- Finisher air punish is authoritative on the server: `comboRole: 'finisher'` damage is multiplied by 1.25 when the victim is still in the airborne window. Projectile finishers carry `abilityId` and `comboRole` in server projectile metadata so the same rule applies on impact.
 
 ## Validation Coverage
 

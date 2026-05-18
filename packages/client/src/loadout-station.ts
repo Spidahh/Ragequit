@@ -558,7 +558,7 @@ function renderEffectTags(def: AbilityDef): HTMLDivElement {
 const COMBO_ROLE_INFO: Record<AbilityDef['comboRole'], AbilityRoleInfo> = {
   starter: { icon: '^', title: 'Combo Starter', line: 'Launches, roots, freezes, blinds or stuns to open a punish window.' },
   extender: { icon: '[]', title: 'Combo Extender', line: 'Controls space so a started combo keeps paying off.' },
-  finisher: { icon: '!', title: 'Finisher', line: 'High-value hit that rewards setup, aim, or committed timing.' },
+  finisher: { icon: '!', title: 'Finisher', line: 'High-value hit that gains +25% damage against airborne targets.' },
   ray: { icon: '|', title: 'Instant Ray', line: 'Instant line-of-sight hit if the target is under the crosshair.' },
   pressure: { icon: '*', title: 'Pressure', line: 'Keeps damage, DoT, or threat active while both players move.' },
   survival: { icon: '+', title: 'Survival Tool', line: 'Keeps you alive through healing, shield, sustain, or recovery.' },
@@ -676,6 +676,7 @@ function clampStat(value: number): number {
 function formatEffectTags(def: AbilityDef): string[] {
   const tags = new Set<string>()
   tags.add(def.comboRole.toUpperCase())
+  if (def.comboRole === 'finisher') tags.add('AIR PUNISH')
   for (const tag of targetingTags(def)) tags.add(tag)
   if (def.windupSec > 0) tags.add(`${def.windupSec}s WINDUP`)
   for (const e of def.effects) {
@@ -745,7 +746,7 @@ function tagClass(tag: string): string {
   if (/\b(STARTER|EXTENDER|FINISHER|RAY|PRESSURE|SURVIVAL|COUNTER|MOBILITY|DRAIN|RESOURCE)\b/.test(tag)) return 'tag-role'
   if (/\b(SELF|POINT PREVIEW|SKILL SHOT|AIM LOCK|TARGET)\b/.test(tag)) return 'tag-targeting'
   if (/\b(DMG|DAMAGE|PROJECTILE|SPLASH|TICK)\b/.test(tag)) return 'tag-damage'
-  if (/\b(AIRBORNE|KNOCKBACK|ROOT|STUN|FREEZE|SLOW|BLIND|MARK|CURSE)\b/.test(tag)) return 'tag-control'
+  if (/\b(AIRBORNE|AIR PUNISH|KNOCKBACK|ROOT|STUN|FREEZE|SLOW|BLIND|MARK|CURSE)\b/.test(tag)) return 'tag-control'
   if (/\b(BURN|BLEED|POISON|CHILL|SHIELD|HASTE|CLEANSE|INVULNERABLE)\b/.test(tag)) return 'tag-status'
   if (/\b(DASH|TELEPORT|MOVE)\b/.test(tag)) return 'tag-move'
   if (/\b(HEAL|STAMINA|MANA|HP|LIFESTEAL|->)\b/.test(tag)) return 'tag-resource'

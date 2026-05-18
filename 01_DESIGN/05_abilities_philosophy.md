@@ -74,6 +74,8 @@ Combo examples to preserve when balancing:
 - Blind → melee engage: `Smoke Screen` / `Curse of Weakness` → `Gap Closer` → `Guard Break`
 - Resource pressure → sustain swing: `Curse of Weakness` or `Void Spike` drains Mana; `Life Drain` drains Stamina and heals through damage
 
+Finisher rule: abilities with `comboRole: 'finisher'` gain **+25% damage** against targets that are still airborne. This makes launch → aimed punish a real combat loop instead of only visual flair.
+
 ## Ability count
 
 **52 abilities total**:

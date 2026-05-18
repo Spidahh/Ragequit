@@ -1,6 +1,7 @@
 import { Room, type Client } from '@colyseus/core'
 import {
   type ClientTransmuteMessage,
+  type AbilityComboRole,
   type ServerZoneExpiredMessage,
   type ServerZoneSpawnedMessage,
   ABILITY_DEFS,
@@ -99,6 +100,7 @@ import {
 
 import {
   AbilityEngine,
+  AIR_PUNISH_DAMAGE_MULT,
   BotController,
   MatchManager,
   RateLimiter,
@@ -180,6 +182,8 @@ interface PendingDamage {
 
 interface ProjectileMeta {
   ownerId: string
+  abilityId?: string
+  comboRole?: AbilityComboRole
   kind: 'arrow' | 'bolt'
   damage: number
   element: string
@@ -1573,6 +1577,8 @@ export class GameRoom extends Room<GameState> {
 
   private spawnProjectile(params: {
     ownerId: string
+    abilityId?: string
+    comboRole?: AbilityComboRole
     kind: 'arrow' | 'bolt'
     origin: { x: number; y: number; z: number }
     vel: { x: number; y: number; z: number }
@@ -1619,6 +1625,8 @@ export class GameRoom extends Room<GameState> {
     })
     this.projectileMeta.set(pid, {
       ownerId: params.ownerId,
+      abilityId: params.abilityId,
+      comboRole: params.comboRole,
       kind: params.kind,
       damage: params.damage,
       element: params.element ?? 'none',
@@ -1794,7 +1802,7 @@ export class GameRoom extends Room<GameState> {
     hitPos: { x: number; y: number; z: number },
     directVictimId: string | null,
   ): void {
-    const cause = meta.kind === 'arrow' ? 'bow' : 'staff'
+    const baseCause = meta.abilityId ? `ability:${meta.abilityId}` : meta.kind === 'arrow' ? 'bow' : 'staff'
     const victimIds: string[] = []
     if (meta.splashRadius > 0) {
       this.state.players.forEach((player, pid) => {
@@ -1811,12 +1819,15 @@ export class GameRoom extends Room<GameState> {
     }
 
     for (const victimId of victimIds) {
+      const victim = this.state.players.get(victimId)
+      if (!victim) continue
+      const airPunish = meta.comboRole === 'finisher' && this.state.tick < victim.airborneUntilTick
       this.damageQueue.push({
         attackerId: meta.ownerId,
         victimId,
-        damage: meta.damage,
+        damage: airPunish ? meta.damage * AIR_PUNISH_DAMAGE_MULT : meta.damage,
         knockup: false,
-        cause,
+        cause: airPunish ? `${baseCause}:air_punish` : baseCause,
         canParry: meta.splashRadius <= 0,
         element: meta.element,
         lifestealFraction: meta.lifestealFraction,
@@ -1836,7 +1847,7 @@ export class GameRoom extends Room<GameState> {
           victimId,
           damage: meta.chainDamage ?? 0,
           knockup: false,
-          cause: `${cause}:chain`,
+          cause: `${baseCause}:chain`,
           canParry: false,
           element: meta.element,
           lifestealFraction: meta.lifestealFraction,
@@ -2000,6 +2011,8 @@ export class GameRoom extends Room<GameState> {
     p.element = elementStr
     this.projectileMeta.set(pid, {
       ownerId: req.ownerId,
+      abilityId: req.abilityId,
+      comboRole: req.comboRole,
       kind: req.kind,
       damage: req.damage,
       element: elementStr,
