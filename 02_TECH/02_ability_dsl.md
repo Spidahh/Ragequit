@@ -72,6 +72,7 @@ Current primitives:
 | `knockup` | Airborne lock; optional grounded-target requirement; optional horizontal knockback distance |
 | `heal` | Instant or over-time healing |
 | `lifesteal` | Cast-level lifesteal fraction |
+| `resourceDrain` | Drain Mana or Stamina from the resolved enemy and optionally refund part to the caster |
 | `projectile` | Arrow/bolt-like projectile with gravity, splash, on-hit status |
 | `zone` | Circle/wall zones with duration, arming delay, damage/status ticks |
 | `move` | Dash/teleport with collision cancellation and optional movement direction |
@@ -88,6 +89,8 @@ Current primitives:
 - Parryable abilities skip status/knockup followups when the initial hit is parried.
 - Point-target abilities use `ClientCastMessage.targetPoint`; the client may preview range, but the server clamps the final point to the ability range.
 - Mastery applies through shared constants and is computed from the five magic slots only.
+- "Ray" abilities are implemented with `targeting: 'forward'` plus direct `damage`, `applyStatus`, `knockup`, or `resourceDrain` effects. The server picks the aimed line-of-sight enemy within range, so these are instant but still require crosshair discipline.
+- HP drain must stay as `damage` + `lifesteal`; `resourceDrain` is only for Mana/Stamina so shields, parry, invulnerability, damage events, and death credit are not bypassed.
 
 ## Validation Coverage
 

@@ -12,6 +12,8 @@ status: final
 
 Player picks **1** melee ability per loadout. This ability lives in the melee slot and is cast via the E wheel or a custom bind (which auto-swaps to sword — see `01_controls.md`).
 
+Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abilities/registry.ts` is the authoritative source for exact damage, CC duration, stamina cost, cooldown, and tooltip text.
+
 ## Pool — 6 abilities
 
 ### M1 · Whirlwind Slash

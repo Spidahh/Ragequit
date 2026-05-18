@@ -102,6 +102,17 @@ export interface LifestealEffect extends EffectBase {
   fraction: number // 0..1
 }
 
+// Drain a non-HP resource from the resolved enemy and optionally refund part
+// of it to the caster. HP drain should use damage + lifesteal so shields,
+// parry, invulnerability, and damage events stay authoritative.
+export interface ResourceDrainEffect extends EffectBase {
+  kind: 'resourceDrain'
+  resource: 'mana' | 'stamina'
+  amount: number
+  gainFraction?: number
+  radius?: number
+}
+
 // Spawn a projectile through the shared projectile simulation.
 export interface ProjectileEffect extends EffectBase {
   kind: 'projectile'
@@ -185,6 +196,7 @@ export type EffectSpec =
   | KnockupEffect
   | HealEffect
   | LifestealEffect
+  | ResourceDrainEffect
   | ProjectileEffect
   | ZoneEffect
   | MoveEffect

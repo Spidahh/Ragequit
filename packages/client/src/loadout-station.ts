@@ -593,7 +593,7 @@ function abilityRole(def: AbilityDef): AbilityRoleInfo {
       hasAreaHit = hasAreaHit || (e.perTick.kind === 'damage' && Boolean(e.perTick.radius && e.perTick.radius > 0))
       hasSustain = hasSustain || e.perTick.kind === 'heal'
       hasHardCc = hasHardCc || (e.perTick.kind === 'applyStatus' && statusControlScore(e.perTick.status) >= 2)
-    } else if (e.kind === 'heal' || e.kind === 'cleanse' || e.kind === 'restoreStamina' || e.kind === 'transmute' || e.kind === 'lifesteal') {
+    } else if (e.kind === 'heal' || e.kind === 'cleanse' || e.kind === 'restoreStamina' || e.kind === 'transmute' || e.kind === 'lifesteal' || e.kind === 'resourceDrain') {
       hasSustain = true
     }
   }
@@ -634,7 +634,7 @@ function abilityQuickStats(def: AbilityDef): AbilityQuickStat[] {
       control += e.airborneSec >= 0.8 ? 3 : 2
     } else if (e.kind === 'move') {
       mobility += e.distance >= 6 ? 3 : 2
-    } else if (e.kind === 'heal' || e.kind === 'cleanse' || e.kind === 'restoreStamina' || e.kind === 'transmute' || e.kind === 'lifesteal') {
+    } else if (e.kind === 'heal' || e.kind === 'cleanse' || e.kind === 'restoreStamina' || e.kind === 'transmute' || e.kind === 'lifesteal' || e.kind === 'resourceDrain') {
       sustain += 2
     }
   }
@@ -695,6 +695,8 @@ function formatEffectTags(def: AbilityDef): string[] {
       tags.add(e.direction.replaceAll('_', ' -> ').toUpperCase())
     } else if (e.kind === 'lifesteal') {
       tags.add(`${Math.round(e.fraction * 100)}% LIFESTEAL`)
+    } else if (e.kind === 'resourceDrain') {
+      tags.add(`-${e.amount} ${e.resource.toUpperCase()}`)
     }
   }
   return Array.from(tags).slice(0, 6)

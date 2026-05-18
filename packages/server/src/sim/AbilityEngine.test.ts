@@ -226,7 +226,7 @@ describe('AbilityEngine — Uppercut (porting Fase 2 numbers)', () => {
     expect(r.failures.find((f) => f.reason === 'cooldown')).toBeDefined()
   })
 
-  it('damages the target in front (15 dmg) and applies knockup (0.8 s)', () => {
+  it('damages the target in front and applies the launcher knockup', () => {
     const r = makeRoom()
     // Yaw points -Z (yaw=0 is forward).
     r.engine.tryCast('A', 'uppercut', { yaw: 0, pitch: 0 })
@@ -234,7 +234,7 @@ describe('AbilityEngine — Uppercut (porting Fase 2 numbers)', () => {
     r.engine.tickWindups()
     const dmgEntries = r.pendingDamage.filter((d) => d.victimId === 'B')
     expect(dmgEntries.length).toBeGreaterThan(0)
-    expect(dmgEntries[0]!.amount).toBe(15)
+    expect(dmgEntries[0]!.amount).toBe(16)
     expect(r.target.airborneUntilTick).toBeGreaterThan(0)
     expect(r.target.transform.z).toBeLessThan(-2)
   })
@@ -245,11 +245,11 @@ describe('AbilityEngine — Whirlwind (channel)', () => {
     const r = makeRoom()
     expect(r.engine.tryCast('A', 'whirlwind', { yaw: 0, pitch: 0 })).toBe(true)
     const slow = r.caster.statuses.find((s) => s.kind === 'slow')
-    expect(slow?.slowFractionOverride).toBeCloseTo(0.3)
+    expect(slow?.slowFractionOverride).toBeCloseTo(0.2)
     expect(r.target.statuses.some((s) => s.kind === 'slow')).toBe(false)
   })
 
-  it('fires 3 ticks of 6 dmg over 1 s against target inside 4 m', () => {
+  it('fires 3 ticks of 7 dmg over 1 s against target inside 4 m', () => {
     const r = makeRoom()
     r.engine.tryCast('A', 'whirlwind', { yaw: 0, pitch: 0 })
     // Drive 1 s of ticks (60 frames). Each frame advance state.tick + tickWindups.
@@ -259,10 +259,10 @@ describe('AbilityEngine — Whirlwind (channel)', () => {
       r.engine.tickWindups()
     }
     for (const d of r.pendingDamage) {
-      if (d.victimId === 'B' && d.amount === 6) total += d.amount
+      if (d.victimId === 'B' && d.amount === 7) total += d.amount
     }
     expect(total).toBeGreaterThanOrEqual(12) // 2-3 ticks
-    expect(total).toBeLessThanOrEqual(20)
+    expect(total).toBeLessThanOrEqual(21)
   })
 })
 
@@ -275,9 +275,9 @@ describe('AbilityEngine — Life Drain', () => {
       r.state.tick += 1
       r.engine.tickWindups()
     }
-    expect(r.pendingDamage.some((d) => d.victimId === 'B' && d.amount === 8)).toBe(true)
-    expect(r.pendingDamage.find((d) => d.victimId === 'B' && d.amount === 8)?.lifestealFraction)
-      .toBeCloseTo(0.65)
+    expect(r.pendingDamage.some((d) => d.victimId === 'B' && d.amount === 6)).toBe(true)
+    expect(r.pendingDamage.find((d) => d.victimId === 'B' && d.amount === 6)?.lifestealFraction)
+      .toBeCloseTo(0.7)
     expect(r.caster.hp).toBe(40)
   })
 
@@ -351,7 +351,7 @@ describe('AbilityEngine — self utility targeting', () => {
   it('applies Barrier shield to the caster, not the nearest enemy', () => {
     const r = makeRoom()
     expect(r.engine.tryCast('A', 'barrier', { yaw: 0, pitch: 0 })).toBe(true)
-    expect(r.caster.statuses.some((s) => s.kind === 'shield' && s.stacks === 35)).toBe(true)
+    expect(r.caster.statuses.some((s) => s.kind === 'shield' && s.stacks === 42)).toBe(true)
     expect(r.target.statuses.some((s) => s.kind === 'shield')).toBe(false)
   })
 
@@ -417,7 +417,21 @@ describe('AbilityEngine — vision control', () => {
     r.engine.tickWindups()
 
     expect(r.target.statuses.some((s) => s.kind === 'curse')).toBe(true)
-    expect(r.target.statuses.some((s) => s.kind === 'blind' && s.remainingSec === 2)).toBe(true)
+    expect(r.target.statuses.some((s) => s.kind === 'blind' && s.remainingSec === 2.4)).toBe(true)
+    expect(r.target.mana).toBe(102)
+  })
+})
+
+describe('AbilityEngine — resource drain', () => {
+  it('drains stamina and refunds the caster through Life Drain', () => {
+    const r = makeRoom()
+    r.caster.stamina = 20
+    r.target.stamina = 50
+
+    expect(r.engine.tryCast('A', 'life_drain', { yaw: 0, pitch: 0 })).toBe(true)
+
+    expect(r.target.stamina).toBe(30)
+    expect(r.caster.stamina).toBe(30)
   })
 })
 
@@ -457,8 +471,8 @@ describe('AbilityEngine — Fireball (auto-swap to staff + projectile)', () => {
     expect(r.engine.tryCast('A', 'fireball', { yaw: 0, pitch: 0 })).toBe(true)
     expect(r.caster.activeWeapon).toBe('staff')
     expect(r.projectiles.length).toBe(1)
-    expect(r.projectiles[0]!.damage).toBe(22)
-    expect(r.projectiles[0]!.splashRadius).toBe(2)
+    expect(r.projectiles[0]!.damage).toBe(24)
+    expect(r.projectiles[0]!.splashRadius).toBe(2.6)
   })
 })
 
@@ -467,8 +481,8 @@ describe('AbilityEngine — projectile payloads', () => {
     const r = makeRoom()
     expect(r.engine.tryCast('A', 'shadow_bolt', { yaw: 0, pitch: 0 })).toBe(true)
     expect(r.projectiles.length).toBe(1)
-    expect(r.projectiles[0]!.damage).toBe(20)
-    expect(r.projectiles[0]!.lifestealFraction).toBe(0.1)
+    expect(r.projectiles[0]!.damage).toBe(18)
+    expect(r.projectiles[0]!.lifestealFraction).toBe(0.25)
   })
 })
 
@@ -484,8 +498,8 @@ describe('AbilityEngine — forward aim targeting', () => {
 
     expect(r.engine.tryCast('A', 'chain_bolt', { yaw: 0, pitch: 0 })).toBe(true)
 
-    expect(r.pendingDamage.find((d) => d.victimId === 'B' && d.amount === 20)).toBeDefined()
-    expect(r.pendingDamage.find((d) => d.victimId === 'C' && d.amount === 20)).toBeUndefined()
+    expect(r.pendingDamage.find((d) => d.victimId === 'B' && d.amount === 22)).toBeDefined()
+    expect(r.pendingDamage.find((d) => d.victimId === 'C' && d.amount === 22)).toBeUndefined()
   })
 
   it('does not double-hit Chain Bolt primary with its secondary arc', () => {
@@ -499,8 +513,8 @@ describe('AbilityEngine — forward aim targeting', () => {
 
     expect(r.engine.tryCast('A', 'chain_bolt', { yaw: 0, pitch: 0 })).toBe(true)
 
-    expect(r.pendingDamage.filter((d) => d.victimId === 'B').map((d) => d.amount)).toEqual([20])
-    expect(r.pendingDamage.find((d) => d.victimId === 'C' && d.amount === 12)).toBeDefined()
+    expect(r.pendingDamage.filter((d) => d.victimId === 'B').map((d) => d.amount)).toEqual([22])
+    expect(r.pendingDamage.find((d) => d.victimId === 'C' && d.amount === 10)).toBeDefined()
   })
 
   it('does not target enemies hidden behind line-of-sight blockers', () => {
@@ -517,7 +531,7 @@ describe('AbilityEngine — forward aim targeting', () => {
 
     expect(r.engine.tryCast('A', 'eruption', { yaw: 0, pitch: 0 })).toBe(true)
 
-    expect(r.pendingDamage.find((d) => d.victimId === 'B' && d.amount === 10)).toBeDefined()
+    expect(r.pendingDamage.find((d) => d.victimId === 'B' && d.amount === 8)).toBeDefined()
     expect(r.target.airborneUntilTick).toBeGreaterThan(0)
   })
 })
@@ -536,7 +550,7 @@ describe('AbilityEngine — Mastery bonuses', () => {
     projectileRoom.caster.masteryElement = 'dark'
     projectileRoom.caster.masteryLevel = 1
     expect(projectileRoom.engine.tryCast('A', 'shadow_bolt', { yaw: 0, pitch: 0 })).toBe(true)
-    expect(projectileRoom.projectiles[0]!.lifestealFraction).toBeCloseTo(0.3)
+    expect(projectileRoom.projectiles[0]!.lifestealFraction).toBeCloseTo(0.45)
 
     const directRoom = makeRoom()
     directRoom.caster.masteryElement = 'dark'
@@ -591,9 +605,9 @@ describe('AbilityEngine — Flame Wall (DoD probe: data-only ability)', () => {
     expect(r.zones[0]!.abilityId).toBe('flame_wall')
     expect(r.zones[0]!.pos.x).toBe(3)
     expect(r.zones[0]!.pos.z).toBe(-4)
-    expect(r.zones[0]!.damagePerTick).toBe(8)
-    expect(r.zones[0]!.durationSec).toBe(3)
-    expect(r.zones[0]!.width).toBe(6)
+    expect(r.zones[0]!.damagePerTick).toBe(6)
+    expect(r.zones[0]!.durationSec).toBe(3.5)
+    expect(r.zones[0]!.width).toBe(7)
   })
 })
 

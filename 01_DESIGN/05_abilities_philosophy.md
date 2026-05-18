@@ -52,6 +52,26 @@ The mini-malus is always a measurable, play-visible property — never invisible
 4. **TTK alignment** — all damage values align with the 20-30 s TTK window (`01_combat_fundamentals.md`)
 5. **Opportunity cost visible** — the mini-malus is on the tooltip, not hidden
 
+## Combo Combat 2.0
+
+Current ability tuning follows a combo-first taxonomy. The exact live numbers are authoritative in `packages/shared/src/abilities/registry.ts`; design docs describe the intended roles.
+
+| Role | Purpose | Examples |
+| --- | --- | --- |
+| Starter | Opens a punish window through launch, root, freeze, stun, blind or slow | Uppercut, Guard Break, Pin Shot, Eruption, Frost Pillar, Arc Lift, Entangle, Root Upthrow |
+| Extender | Keeps the enemy inside danger after the starter | Flame Wall, Blizzard, Thorn Field, Storm Field, Smoke Screen |
+| Finisher | Rewards accurate follow-up aim after setup | Marksman Shot, Piercing Shot, Meteor, Fireball, Blast Arrow |
+| Ray | Instant line-of-sight hit if the target is under the crosshair | Ignite, Chain Bolt, Freeze Target, Curse of Weakness, Mark Target |
+| Survival / Counter | Breaks or survives an enemy combo | Barrier, Dark Barrier, Cleanse Surge, Phase Shift, Quick Dash |
+| Drain | Attacks enemy resources instead of only HP | Curse of Weakness, Life Drain, Void Spike, Mark Target |
+
+Combo examples to preserve when balancing:
+
+- Launch → precision punish: `Uppercut` / `Frost Pillar` / `Arc Lift` → `Marksman Shot` or `Piercing Shot`
+- Root/freeze → placed punish: `Pin Shot` / `Entangle` / `Freeze Target` → `Meteor`, `Volley`, `Flame Wall`
+- Blind → melee engage: `Smoke Screen` / `Curse of Weakness` → `Gap Closer` → `Guard Break`
+- Resource pressure → sustain swing: `Curse of Weakness` or `Void Spike` drains Mana; `Life Drain` drains Stamina and heals through damage
+
 ## Ability count
 
 **52 abilities total**:

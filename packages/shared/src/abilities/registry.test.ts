@@ -50,7 +50,7 @@ describe('ability registry', () => {
     }
   })
 
-  it('uppercut keeps Fase 2 numbers (15 dmg / 0.4 windup / 0.8 airborne / 40 stam / 10 cd)', () => {
+  it('uppercut keeps the melee launcher contract', () => {
     const u = getAbilityDef('uppercut')!
     expect(u.windupSec).toBe(0.4)
     expect(u.cooldownSec).toBe(10)
@@ -59,9 +59,9 @@ describe('ability registry', () => {
     expect(u.canParry).toBe(true)
     expect(u.isKnockup).toBe(true)
     const dmg = u.effects.find((e) => e.kind === 'damage')
-    expect(dmg && 'amount' in dmg ? dmg.amount : -1).toBe(15)
+    expect(dmg && 'amount' in dmg ? dmg.amount : -1).toBe(16)
     const ku = u.effects.find((e) => e.kind === 'knockup')
-    expect(ku && 'airborneSec' in ku ? ku.airborneSec : -1).toBeCloseTo(0.8, 5)
+    expect(ku && 'airborneSec' in ku ? ku.airborneSec : -1).toBeCloseTo(1.0, 5)
   })
 
   it('fireball is staff/fire/projectile with onHit burn application', () => {
@@ -82,8 +82,8 @@ describe('ability registry', () => {
     const zone = w.effects.find((e) => e.kind === 'zone')
     expect(zone).toBeDefined()
     if (zone && 'durationSec' in zone) {
-      expect(zone.durationSec).toBe(3)
-      expect(zone.damagePerTick).toBe(8)
+      expect(zone.durationSec).toBe(3.5)
+      expect(zone.damagePerTick).toBe(6)
       expect(zone.element).toBe('fire')
     }
   })
@@ -92,6 +92,18 @@ describe('ability registry', () => {
     for (const def of Object.values(ABILITY_DEFS) as AbilityDef[]) {
       for (const e of def.effects) {
         if (e.kind === 'projectile') expect(e.damage).toBeGreaterThan(0)
+      }
+    }
+  })
+
+  it('resource drain effects only target mana or stamina', () => {
+    for (const def of Object.values(ABILITY_DEFS) as AbilityDef[]) {
+      for (const e of def.effects) {
+        if (e.kind !== 'resourceDrain') continue
+        expect(['mana', 'stamina']).toContain(e.resource)
+        expect(e.amount, def.id).toBeGreaterThan(0)
+        expect(e.gainFraction ?? 0, def.id).toBeGreaterThanOrEqual(0)
+        expect(e.gainFraction ?? 0, def.id).toBeLessThanOrEqual(1)
       }
     }
   })

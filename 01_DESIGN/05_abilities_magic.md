@@ -12,6 +12,8 @@ status: final
 
 Player picks **5** magic abilities for their loadout. These fill the 5 magic slots. Having 4+ of the same element activates Mastery (`03_mastery_system.md`).
 
+Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abilities/registry.ts` is the authoritative source for exact numbers, tooltips, ray/projectile behavior, drain values, and cooldowns.
+
 **27 magic abilities total** — every element has at least 5 magic abilities, with Fire and Nature currently carrying one extra mobility/control option.
 
 Casting a magic ability via a custom bind auto-swaps the weapon to **staff** before the cast (`01_controls.md`).

@@ -38,6 +38,7 @@ import {
   type MoveEffect,
   type Player,
   type ProjectileEffect,
+  type ResourceDrainEffect,
   type ServerAbilityCastedMessage,
   type ServerAbilityFailedMessage,
   type ServerChannelInterruptedMessage,
@@ -384,6 +385,9 @@ export class AbilityEngine {
         return 0
       case 'lifesteal':
         return 0 // handled by the caller after damage aggregation
+      case 'resourceDrain':
+        this.effectResourceDrain(sid, def, effect, target)
+        return 0
       case 'projectile':
         this.effectProjectile(sid, def, effect, target)
         return 0
@@ -663,6 +667,46 @@ export class AbilityEngine {
       // Channeled heal — modelled in Fase 5; for now apply instant.
     }
     caster.hp = Math.min(caster.hp + e.amount, HP_MAX)
+  }
+
+  private effectResourceDrain(
+    sid: string,
+    def: AbilityDef,
+    e: ResourceDrainEffect,
+    target: CastTarget,
+  ): void {
+    const caster = this.host.state.players.get(sid)
+    if (!caster) return
+    const radius = e.radius ?? 0
+    const victimIds: string[] = []
+    if (radius > 0) {
+      const center = this.resolveAreaCenter(sid, caster, target, def)
+      if (!center) return
+      this.host.state.players.forEach((victim, vid) => {
+        if (!victim.alive || vid === sid) return
+        const dx = victim.transform.x - center.x
+        const dz = victim.transform.z - center.z
+        if (Math.hypot(dx, dz) <= radius) victimIds.push(vid)
+      })
+    } else {
+      const victimId = this.resolveSingleTarget(sid, caster, target, def)
+      if (victimId) victimIds.push(victimId)
+    }
+
+    for (const victimId of victimIds) {
+      const victim = this.host.state.players.get(victimId)
+      if (!victim?.alive) continue
+      const current = e.resource === 'mana' ? victim.mana : victim.stamina
+      const drained = Math.min(current, e.amount)
+      if (drained <= 0) continue
+      if (e.resource === 'mana') {
+        victim.mana -= drained
+        caster.mana = Math.min(caster.mana + drained * (e.gainFraction ?? 0), MANA_MAX)
+      } else {
+        victim.stamina -= drained
+        caster.stamina = Math.min(caster.stamina + drained * (e.gainFraction ?? 0), STAMINA_MAX)
+      }
+    }
   }
 
   private effectProjectile(

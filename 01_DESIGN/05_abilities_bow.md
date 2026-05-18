@@ -12,6 +12,8 @@ status: final
 
 Player picks **1** bow ability per loadout. Auto-swap applies — binding a bow ability while holding sword means pressing the bind swaps to bow and casts in the same input frame (`01_controls.md`).
 
+Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abilities/registry.ts` is the authoritative source for exact projectile speed, gravity, splash, setup duration, and tooltip text.
+
 ## Pool — 8 abilities
 
 ### B1 · Piercing Shot

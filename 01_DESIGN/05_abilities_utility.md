@@ -12,6 +12,8 @@ status: final
 
 Utility slots are **wheel-first**. The player always has 4 utility sectors on the Q Utility Wheel: three fixed resource swaps and one flex utility pick.
 
+Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abilities/registry.ts` is the authoritative source for exact shield, blind, drain, heal, cooldown, and tooltip values.
+
 Utility abilities are NOT counted for Element Mastery (they have no element). They cast without auto-swapping weapon — they're self-contained tools.
 
 ## Utility wheel sectors
