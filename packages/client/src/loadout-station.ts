@@ -369,17 +369,19 @@ export function initLoadoutStation(
       const instant = isInstantCast(def)
       card.className = `pool-card el-${def.element} ${isActive ? 'equipped' : ''} ${locked ? 'locked' : ''}`
       card.disabled = locked
+      card.title = def.description
+      card.setAttribute(
+        'aria-label',
+        `${def.name}. ${role.title}. ${def.element !== 'none' ? def.element : 'physical'}. ${formatCost(def)}. ${formatEffectTags(def).join(', ')}`,
+      )
       card.innerHTML = [
         `<span class="pool-icon-box">${abilityIconMarkup(def.id)}</span>`,
         `<span class="pool-topline"><span class="pool-role-icon">${role.icon}</span><span class="pool-role-text">${escapeHtml(role.title)}</span>${def.isStarter ? ' <span class="starter-tag">STARTER</span>' : ''}</span>`,
         `<span class="instant-toggle ${instant ? 'on' : ''}" role="switch" aria-checked="${instant}" title="${instant ? 'Instant cast: key casts immediately' : 'Preview cast: key arms placement, LMB confirms'}">${instant ? 'INSTANT' : 'PREVIEW'}</span>`,
         `<span class="pool-name">${escapeHtml(def.name)}</span>`,
         `<span class="pool-meta">${def.element !== 'none' ? def.element.toUpperCase() : 'PHYSICAL'} · ${formatCost(def)} · ${def.cooldownSec}s CD</span>`,
-        `<span class="pool-read">${escapeHtml(role.line)}</span>`,
         `<span class="effect-tags">${formatEffectTags(def).map((tag) => `<span class="${tagClass(tag)}">${escapeHtml(tag)}</span>`).join('')}</span>`,
         `<span class="pool-bars">${quickStats.map((s) => `<span class="pool-bar ${s.className}" title="${escapeHtml(s.label)}"><i style="width:${s.value * 20}%"></i></span>`).join('')}</span>`,
-        `<span class="pool-desc">${escapeHtml(def.description)}</span>`,
-        `<span class="pool-malus">${escapeHtml(def.miniMalus)}</span>`,
       ].join('')
       card.addEventListener('click', () => {
         if (buildLocked()) return
