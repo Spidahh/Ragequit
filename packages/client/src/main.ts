@@ -61,6 +61,7 @@ import { Client, type Room } from 'colyseus.js'
 import * as THREE from 'three'
 
 import { createHudFlash } from './hud/flash.js'
+import { abilityIcon, abilityIconMarkup, ensureIconSprite, statusIcon, weaponIcon } from './icons.js'
 import {
   actionCode,
   actionLabel,
@@ -81,6 +82,7 @@ import { ImpactPool } from './vfx/impact-pool.js'
 
 const app = document.getElementById('app')
 if (!app) throw new Error('#app element missing in index.html')
+void ensureIconSprite()
 
 const dbgStatus = document.getElementById('dbg-status')!
 const dbgTick = document.getElementById('dbg-tick')!
@@ -148,6 +150,9 @@ const weaponSlots: Record<Weapon, HTMLElement> = {
   sword: document.getElementById('wslot-sword')!,
   bow: document.getElementById('wslot-bow')!,
   staff: document.getElementById('wslot-staff')!,
+}
+for (const [weapon, slot] of Object.entries(weaponSlots) as Array<[Weapon, HTMLElement]>) {
+  slot.querySelector<HTMLElement>('.icon')?.replaceChildren(weaponIcon(weapon, 30))
 }
 const shootFlashEl = document.getElementById('shoot-flash')!
 const weaponBannerEl = document.getElementById('weapon-banner')!
@@ -259,15 +264,12 @@ function radialRefresh(wheel: RadialWheel): void {
     const iconEl = slotEl.querySelector<HTMLElement>('.r-icon')!
     const keyEl  = slotEl.querySelector<HTMLElement>('.r-key')!
     if (def) {
-      // AbilityDef has no icon field — derive one from element or slot.
-      const elemIcons: Record<string, string> = {
-        fire: '🔥', ice: '❄️', lightning: '⚡', dark: '🌑', nature: '🌿', none: '✨',
-      }
-      iconEl.textContent = ABILITY_ICON[id] ?? elemIcons[def.element] ?? '✨'
+      iconEl.replaceChildren(abilityIcon(id, 25))
       nameEl.textContent = def.name
       nameEl.classList.remove('r-empty')
       keyEl.textContent = slotBindLabel(idx)
     } else {
+      iconEl.replaceChildren()
       iconEl.textContent = '·'
       nameEl.textContent = 'empty'
       nameEl.classList.add('r-empty')
@@ -440,22 +442,6 @@ const PITCH_DOWN_LIMIT = -Math.PI * 0.360 //  -65° — max look-down angle
 
 // --- HUD helpers -----------------------------------------------------------
 
-const STATUS_ICON: Record<string, string> = {
-  burn: '🔥',
-  bleed: '🩸',
-  chill: '❄️',
-  poison: '☠️',
-  slow: '🐢',
-  root: '🪢',
-  stun: '💫',
-  freeze: '🧊',
-  curse: '👁️',
-  blind: '◉',
-  mark: '📍',
-  shield: '🛡️',
-  haste: '⚡',
-}
-
 // Tips shown on the respawn screen — rotated randomly on each death.
 const RESPAWN_TIPS: readonly string[] = [
   'RMB: tap for a parry window, hold to block repeated hits.',
@@ -469,30 +455,6 @@ const RESPAWN_TIPS: readonly string[] = [
   'Airborne targets cannot parry or cast until they recover.',
   'Collision stops dash abilities; walls are hard cover.',
 ]
-
-// Emoji icons for ability pips — gives instant visual recognition in the hotbar.
-const ABILITY_ICON: Record<string, string> = {
-  // Melee
-  uppercut: '👊', whirlwind: '🌀', gap_closer: '💨', bleed_strike: '🗡️',
-  guard_break: '🔨', rending_dash: '🗡️',
-  // Bow
-  piercing_shot: '🏹', volley: '🎯', pin_shot: '📌', snare_trap: '🪤',
-  marksman_shot: '🎯', disengage_shot: '💨', broadhead: '🩸', blast_arrow: '💥',
-  // Fire
-  fireball: '🔥', flame_wall: '🧱', meteor: '☄️', eruption: '🌋', fire_blink: '🔥',
-  // Ice
-  frost_bolt: '❄️', freeze_target: '🧊', blizzard: '🌨️', frost_pillar: '🧊', ice_wall: '🧊',
-  // Lightning
-  chain_bolt: '⚡', storm_field: '⛈️', lightning_dash: '⚡', arc_lift: '⚡',
-  // Dark
-  shadow_bolt: '🌑', life_drain: '🩸', dark_barrier: '🛡️', void_spike: '🕳️', curse_of_weakness: '👁️',
-  // Nature
-  poison_dart: '☠️', thorn_field: '🌿', entangle: '🪢', healing_totem: '💚', root_upthrow: '🌱', vine_dash: '🌿',
-  // Utility
-  self_heal: '💊', quick_dash: '💨', ping_mark: '📍', cleanse_surge: '✨',
-  barrier: '🛡️', energize: '⚡', phase_shift: '👻', smoke_screen: '💨',
-  transfer_hp_mana: '♥→◆', transfer_mana_stam: '◆→⚡', transfer_stam_hp: '⚡→♥',
-}
 
 // Element accent colours used for ability pip backgrounds and status borders.
 const ELEMENT_COLOR: Record<string, string> = {
@@ -565,7 +527,7 @@ function rebuildCdStrip(loadout: ReadonlyArray<string>): void {
     // Colour accent driven by element.
     pip.style.setProperty('--elem-color', elemColor)
     // SVG ring + rich hover tooltip.
-    const icon = ABILITY_ICON[id] ?? '✦'
+    const icon = abilityIconMarkup(id)
     pip.innerHTML = `
       <svg class="cd-arc" viewBox="0 0 44 44" width="44" height="44">
         <circle class="cd-arc-bg" cx="22" cy="22" r="${CD_ARC_R}"/>
@@ -580,7 +542,7 @@ function rebuildCdStrip(loadout: ReadonlyArray<string>): void {
       ${hasMana    ? `<span class="cost-dot mana"></span>` : ''}
       ${hasStamina ? `<span class="cost-dot stam"></span>` : ''}
       <div class="ability-tooltip">
-        <div class="tt-name">${icon} ${def?.name ?? id}</div>
+        <div class="tt-name">${icon} <span>${def?.name ?? id}</span></div>
         <div class="tt-el">${elemLabel}${cdLabel ? ' · ' + cdLabel : ''}</div>
         <div class="tt-cost">${costLabel}</div>
         ${malusHtml}
@@ -4917,7 +4879,7 @@ function render(now: number): void {
       const icon = document.createElement('div')
       icon.className = 'status-icon'
       icon.dataset['kind'] = st.kind
-      icon.textContent = STATUS_ICON[st.kind] ?? '?'
+      icon.appendChild(statusIcon(st.kind, 22))
       icon.title = `${st.kind} x${st.stacks} (${st.remainingSec.toFixed(1)}s)`
       const stack = document.createElement('span')
       stack.className = 'stack'

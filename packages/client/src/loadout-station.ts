@@ -15,6 +15,7 @@ import {
 } from '@ragequit/shared'
 import type { Room } from 'colyseus.js'
 
+import { abilityIconMarkup } from './icons.js'
 import { actionLabel, onKeybindsChanged, slotKeybindEntries } from './input/keybinds.js'
 import {
   FIXED_TRANSFER_SLOTS,
@@ -368,6 +369,7 @@ export function initLoadoutStation(
       card.className = `pool-card el-${def.element} ${isActive ? 'equipped' : ''} ${locked ? 'locked' : ''}`
       card.disabled = locked
       card.innerHTML = [
+        `<span class="pool-icon-box">${abilityIconMarkup(def.id)}</span>`,
         `<span class="pool-topline"><span class="pool-role-icon">${role.icon}</span><span class="pool-role-text">${escapeHtml(role.title)}</span>${def.isStarter ? ' <span class="starter-tag">STARTER</span>' : ''}</span>`,
         `<span class="instant-toggle ${instant ? 'on' : ''}" role="switch" aria-checked="${instant}" title="${instant ? 'Instant cast: key casts immediately' : 'Preview cast: key arms placement, LMB confirms'}">${instant ? 'INSTANT' : 'PREVIEW'}</span>`,
         `<span class="pool-name">${escapeHtml(def.name)}</span>`,

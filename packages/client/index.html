@@ -94,6 +94,14 @@
         width: 100%;
         height: 100%;
       }
+      .sprite-icon {
+        width: 1em;
+        height: 1em;
+        display: block;
+        color: currentColor;
+        fill: currentColor;
+        flex: 0 0 auto;
+      }
       body.input-locked,
       body.input-locked canvas {
         cursor: none;
@@ -630,6 +638,11 @@
       .wslot .icon {
         font-size: 23px;
         line-height: 1;
+        width: 30px;
+        height: 30px;
+        display: grid;
+        place-items: center;
+        color: rgba(255, 230, 160, 0.96);
         transition: transform 0.12s ease-out, text-shadow 0.12s ease-out;
         filter: drop-shadow(0 1px 3px rgba(0,0,0,0.8));
       }
@@ -764,6 +777,11 @@
       .radial-slot .r-icon {
         font-size: 22px;
         line-height: 1;
+        width: 28px;
+        height: 28px;
+        display: grid;
+        place-items: center;
+        color: rgba(255, 230, 150, 0.95);
         filter: drop-shadow(0 1px 3px rgba(0,0,0,0.8));
       }
       .radial-slot .r-key {
@@ -1159,6 +1177,7 @@
         align-items: center;
         justify-content: center;
         font-size: 19px;
+        color: var(--s-color);
         position: relative;
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
         box-shadow: 0 2px 8px rgba(0,0,0,0.65), 0 3px 0 var(--s-color), inset 0 1px 0 rgba(255,255,255,0.06);
@@ -1184,6 +1203,7 @@
       .status-icon[data-kind="mark"]   { --s-color: #d06020; }
       .status-icon[data-kind="shield"] { --s-color: #60a8ff; }
       .status-icon[data-kind="haste"]  { --s-color: #ffee20; }
+      .status-icon[data-kind="invulnerable"] { --s-color: #b870ff; }
       .status-icon .stack {
         position: absolute;
         bottom: 1px;
@@ -1467,6 +1487,11 @@
         position: relative;
         z-index: 1;
         font-size: 22px;
+        width: 28px;
+        height: 28px;
+        display: grid;
+        place-items: center;
+        color: var(--elem-color);
         line-height: 1;
         pointer-events: none;
         margin-top: 6px;
@@ -1474,7 +1499,16 @@
       }
       .cd-pip.utility-pip .ability-icon {
         font-size: 18px;
+        width: 26px;
+        height: 26px;
         margin-top: 4px;
+      }
+      .ability-tooltip .sprite-icon {
+        width: 16px;
+        height: 16px;
+        display: inline-block;
+        vertical-align: -3px;
+        margin-right: 5px;
       }
       /* Ability name — bottom strip */
       .cd-pip .ability-name {
@@ -2844,7 +2878,7 @@
       .pool-card {
         --ec: #4a5280;
         --eg: rgba(74,82,128,0);
-        padding: 13px 14px 12px;
+        padding: 13px 14px 12px 72px;
         min-height: 126px;
         background:
           linear-gradient(180deg, rgba(255,255,255,0.052), rgba(255,255,255,0.020)),
@@ -2930,6 +2964,28 @@
       }
       .pool-card.equipped .instant-toggle {
         right: 86px;
+      }
+      .pool-icon-box {
+        position: absolute;
+        left: 13px;
+        top: 39px;
+        width: 45px;
+        height: 45px;
+        display: grid;
+        place-items: center;
+        border-radius: 8px;
+        border: 1px solid color-mix(in srgb, var(--ec) 52%, transparent);
+        background:
+          radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--ec) 26%, transparent), transparent 62%),
+          rgba(0,0,0,0.26);
+        color: var(--ec);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 18px rgba(0,0,0,0.25);
+        z-index: 2;
+      }
+      .pool-icon-box .sprite-icon {
+        width: 30px;
+        height: 30px;
+        filter: drop-shadow(0 2px 5px rgba(0,0,0,0.55));
       }
       .pool-topline {
         display: flex;
