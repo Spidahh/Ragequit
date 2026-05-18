@@ -14,6 +14,7 @@ This file records the current browser-game input rules so we do not regress the 
 
 - Client gameplay input is allowed only while the local match phase is `live`.
 - The client must sync phase from both `matchPhase` messages and Colyseus room state. The message can arrive before client handlers are registered.
+- Training must stay `live` after deaths. If the bot can drive Training to `matchEnd`, input will correctly disable and look broken while the player is trying to test controls.
 
 ## Wheel Input
 

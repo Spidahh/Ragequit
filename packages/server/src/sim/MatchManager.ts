@@ -30,8 +30,9 @@ import {
   type ServerScoreMessage,
 } from '@ragequit/shared'
 
-// Modes that use BO5 round logic. Everything else uses kill-count win condition.
-const ROUND_MODES = new Set(['duel_arena', 'training', 'blockout', '1v1'])
+// Modes that use BO5 round logic. Training stays live so players can test input,
+// weapons, and abilities without the bot ending the session.
+const ROUND_MODES = new Set(['duel_arena', 'blockout', '1v1'])
 
 const ROUND_TIMER_TICKS = Math.round(ROUND_TIMER_SEC * TICK_RATE_HZ)
 const COUNTDOWN_TICKS = Math.round(ROUND_COUNTDOWN_SEC * TICK_RATE_HZ)

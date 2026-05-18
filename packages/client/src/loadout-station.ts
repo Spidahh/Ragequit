@@ -447,12 +447,13 @@ export function initLoadoutStation(
       getCanvas?.()?.focus({ preventScroll: true })
       requestCanvasPointerLock()
     } else {
-      if (shouldCaptureOnSave?.()) {
+      const captureOnSave = shouldCaptureOnSave?.() ?? false
+      document.body.classList.remove('loadout-active')
+      overlay.classList.add('hidden')
+      if (captureOnSave) {
         getCanvas?.()?.focus({ preventScroll: true })
         requestCanvasPointerLock()
       }
-      document.body.classList.remove('loadout-active')
-      overlay.classList.add('hidden')
       onSaved?.()
     }
   })

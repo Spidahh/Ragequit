@@ -67,6 +67,19 @@ describe('MatchManager', () => {
     expect(r.state.roundWins.get('B')).toBe(1)
   })
 
+  it('keeps training live after a death so controls remain testable', () => {
+    r.state.mode = 'training'
+    mm.tick()
+    for (let i = 0; i < 60 * 3 + 5; i++) {
+      r.state.tick += 1
+      mm.tick()
+    }
+    expect(r.state.phase).toBe('live')
+    mm.notifyDeath('A', 'B')
+    expect(r.state.phase).toBe('live')
+    expect(r.state.roundWins.get('B')).toBeUndefined()
+  })
+
   it('cycles BO5 to matchEnd at 3 wins', () => {
     // Force 3 round wins for B.
     for (let round = 0; round < 3; round++) {
