@@ -152,4 +152,18 @@ describe('loadout station smoke', () => {
     expect(localStorage.getItem(__loadoutStationSmoke.storageKey)).toBeNull()
     expect(document.querySelector<HTMLButtonElement>('.pool-card')?.disabled).toBe(true)
   })
+
+  it('resets pool filters when selecting another loadout slot', () => {
+    const api = initLoadoutStation(() => undefined)
+
+    api.open()
+    document.querySelector<HTMLButtonElement>('[data-filter="starter"]')?.click()
+    expect(document.querySelector<HTMLButtonElement>('[data-filter="starter"]')?.classList.contains('active-filter')).toBe(true)
+
+    document.querySelectorAll<HTMLButtonElement>('.ls-slot')[1]?.click()
+
+    expect(document.querySelector<HTMLInputElement>('#ls-search')?.value).toBe('')
+    expect(document.querySelector<HTMLButtonElement>('[data-filter="all"]')?.classList.contains('active-filter')).toBe(true)
+    expect(document.querySelector<HTMLButtonElement>('[data-filter="starter"]')?.classList.contains('active-filter')).toBe(false)
+  })
 })

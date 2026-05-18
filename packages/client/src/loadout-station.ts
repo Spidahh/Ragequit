@@ -89,6 +89,21 @@ export function initLoadoutStation(
   let poolFilterEl = 'all'
   let poolSearch = ''
 
+  function resetPoolFilters(): void {
+    poolFilterEl = 'all'
+    poolSearch = ''
+    if (searchInput) searchInput.value = ''
+  }
+
+  function syncPoolFilterButtons(): void {
+    filterBtns.forEach((btn) => btn.classList.toggle('active-filter', btn.dataset['filter'] === poolFilterEl))
+  }
+
+  function setActiveSlot(idx: number): void {
+    if (activeIdx !== idx) resetPoolFilters()
+    activeIdx = idx
+  }
+
   function buildLocked(): boolean {
     return !!getRoom() && !!canApplyBuild && !canApplyBuild()
   }
@@ -211,19 +226,19 @@ export function initLoadoutStation(
     ].join('')
     el.addEventListener('click', (event) => {
       if (lockedTransfer) {
-        activeIdx = idx
+        setActiveSlot(idx)
         rerender()
         return
       }
       if ((event.target as HTMLElement).classList.contains('ls-slot-clear')) {
         if (buildLocked()) return
         slots[idx] = ''
-        activeIdx = idx
+        setActiveSlot(idx)
         save()
         rerender()
         return
       }
-      activeIdx = idx
+      setActiveSlot(idx)
       rerender()
     })
     return el
@@ -326,6 +341,7 @@ export function initLoadoutStation(
 
   function rebuildPool(): void {
     while (lsPool.firstChild) lsPool.removeChild(lsPool.firstChild)
+    syncPoolFilterButtons()
 
     const targetSlot = LOADOUT_SLOT_ORDER[activeIdx]!
     const locked = buildLocked()
@@ -422,7 +438,7 @@ export function initLoadoutStation(
   btnDefault.addEventListener('click', () => {
     if (buildLocked()) return
     slots = normalizeLoadoutSlots(DEFAULT_SLOTS)
-    activeIdx = 0
+    setActiveSlot(0)
     save()
     rerender()
   })
