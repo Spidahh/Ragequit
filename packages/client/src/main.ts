@@ -2691,6 +2691,7 @@ const loadoutStation = initLoadoutStation(
       menu.showMain()
     }
   },
+  () => Boolean(pendingLaunchMode),
 )
 
 async function connectWithMode(mode: string, reopenLoadout = true): Promise<void> {

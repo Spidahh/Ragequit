@@ -54,6 +54,7 @@ export function initLoadoutStation(
   onClose?: () => void,
   canApplyBuild?: () => boolean,
   onSaved?: () => void,
+  shouldCaptureOnSave?: () => boolean,
 ): LoadoutStationApi {
   const overlay = document.getElementById('loadout-station')!
   const lsMelee = document.getElementById('ls-melee')!
@@ -145,6 +146,21 @@ export function initLoadoutStation(
     instantCast = { ...instantCast, [def.id]: !isInstantCast(def) }
     saveInstantCastPrefs()
     rerender()
+  }
+
+  function requestCanvasPointerLock(): void {
+    const canvas = getCanvas?.()
+    if (!canvas || document.pointerLockElement === canvas) return
+    try {
+      const result = canvas.requestPointerLock?.()
+      if (result && typeof result.catch === 'function') {
+        void result.catch(() => {
+          // Browsers can reject pointer lock outside trusted gestures.
+        })
+      }
+    } catch {
+      // Pointer lock is an enhancement; focus still lets keyboard input work.
+    }
   }
 
   function currentMastery(): { level: MasteryLevel; element: ElementId | undefined } {
@@ -429,7 +445,12 @@ export function initLoadoutStation(
       document.body.classList.remove('loadout-active')
       overlay.classList.add('hidden')
       getCanvas?.()?.focus({ preventScroll: true })
+      requestCanvasPointerLock()
     } else {
+      if (shouldCaptureOnSave?.()) {
+        getCanvas?.()?.focus({ preventScroll: true })
+        requestCanvasPointerLock()
+      }
       document.body.classList.remove('loadout-active')
       overlay.classList.add('hidden')
       onSaved?.()

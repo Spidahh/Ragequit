@@ -9,6 +9,7 @@ This folder describes the current code contracts that support the gameplay docs 
 3. [`02_ability_dsl.md`](02_ability_dsl.md) — current 52-ability data schema and effect primitives
 4. [`03_network_protocol.md`](03_network_protocol.md) — message and state protocol
 5. [`04_code_conventions.md`](04_code_conventions.md) — layout, naming, imports, tests
+6. [`05_input_contract.md`](05_input_contract.md) — browser focus, pointer lock, wheel, and input regression rules
 
 ## Status
 
