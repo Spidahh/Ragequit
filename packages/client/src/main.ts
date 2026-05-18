@@ -2347,7 +2347,7 @@ function applyDirectionalShake(attackerWorldPos: THREE.Vector3 | null, intensity
 
 // Live round phase start tick — set when MatchPhase 'live' arrives.
 let livePhaseStartTick = -1
-let currentMatchPhase = 'lobby'
+let currentMatchPhase: ServerMatchPhaseMessage['phase'] = 'lobby'
 let lastKillerName = ''
 // Previous self HP — used to detect heals for the green edge flash.
 let prevSelfHp = -1
@@ -2360,6 +2360,40 @@ let selfLastWeapon = ''
 let room: Room | null = null
 let connectSeq = 0
 let ping = 0
+
+function isMatchPhase(value: unknown): value is ServerMatchPhaseMessage['phase'] {
+  return value === 'lobby'
+    || value === 'countdown'
+    || value === 'live'
+    || value === 'roundEnd'
+    || value === 'matchEnd'
+}
+
+function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
+  currentMatchPhase = msg.phase
+  menu.onMatchPhase(msg, selfId)
+  if (msg.phase === 'live') {
+    livePhaseStartTick = getSchemaTick()
+    roundTimer.textContent = ''
+  } else {
+    livePhaseStartTick = -1
+    roundTimer.textContent = ''
+    roundTimer.classList.remove('urgent')
+  }
+  if (msg.phase === 'matchEnd') {
+    // Release pointer lock so the cursor is visible and the scoreboard
+    // buttons (BACK TO MENU) are clickable.
+    if (document.pointerLockElement) document.exitPointerLock()
+    menu.showScoreboard(selfId)
+  }
+}
+
+function syncMatchPhaseFromState(joinedRoom: Room): void {
+  if (room !== joinedRoom) return
+  const phase = (joinedRoom.state as { phase?: unknown }).phase
+  if (!isMatchPhase(phase) || phase === currentMatchPhase) return
+  applyMatchPhase({ phase }, joinedRoom.sessionId)
+}
 
 // Hit-stop — briefly freeze visual updates when a landed hit is confirmed.
 // The sim still runs; only the camera lerp and particle animation pause.
@@ -2827,23 +2861,10 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
     // Fase 7 — match flow events
     joinedRoom.onMessage(MessageTypes.MatchPhase, (msg: ServerMatchPhaseMessage) => {
       if (!isCurrentRoom()) return
-      currentMatchPhase = msg.phase
-      menu.onMatchPhase(msg, joinedRoom.sessionId)
-      if (msg.phase === 'live') {
-        livePhaseStartTick = getSchemaTick()
-        roundTimer.textContent = ''
-      } else {
-        livePhaseStartTick = -1
-        roundTimer.textContent = ''
-        roundTimer.classList.remove('urgent')
-      }
-      if (msg.phase === 'matchEnd') {
-        // Release pointer lock so the cursor is visible and the scoreboard
-        // buttons (BACK TO MENU) are clickable.
-        if (document.pointerLockElement) document.exitPointerLock()
-        menu.showScoreboard(joinedRoom.sessionId)
-      }
+      applyMatchPhase(msg, joinedRoom.sessionId)
     })
+    joinedRoom.onStateChange(() => syncMatchPhaseFromState(joinedRoom))
+    syncMatchPhaseFromState(joinedRoom)
     joinedRoom.onMessage(MessageTypes.Score, (msg: ServerScoreMessage) => {
       if (!isCurrentRoom()) return
       const selfId = joinedRoom.sessionId
