@@ -1880,19 +1880,14 @@ function closeSettingsOverlayToReturnTarget(): void {
   settingsOverlay.dataset['returnTo'] = ''
 }
 
-function guardGameplayKeyboardEvent(e: KeyboardEvent): void {
-  if (!canEngageGameplaySurface()) return
-  if (isTextEditingTarget(e.target)) return
-  if (!isGameplayKeyCode(e.code)) return
-  e.preventDefault()
-  engageCanvasInput()
-}
-
-addEventListener('keydown', guardGameplayKeyboardEvent, { capture: true })
-addEventListener('keyup', guardGameplayKeyboardEvent, { capture: true })
-
 addEventListener('keydown', (e) => {
   const k = e.code
+  const gameplaySurfaceKey = canEngageGameplaySurface() && !isTextEditingTarget(e.target) && isGameplayKeyCode(k)
+  if (gameplaySurfaceKey) {
+    e.preventDefault()
+    e.stopImmediatePropagation()
+    engageCanvasInput()
+  }
   const fresh = !keys.has(k)
   keys.add(k)
   if (!fresh) return
@@ -1991,15 +1986,21 @@ addEventListener('keydown', (e) => {
     saveSens(mouseSens)
     showSensOverlay()
   }
-})
+}, { capture: true })
 addEventListener('keyup', (e) => {
+  const gameplaySurfaceKey = canEngageGameplaySurface() && !isTextEditingTarget(e.target) && isGameplayKeyCode(e.code)
+  if (gameplaySurfaceKey) {
+    e.preventDefault()
+    e.stopImmediatePropagation()
+    engageCanvasInput()
+  }
   keys.delete(e.code)
   // Wheel key release: close the radial menu and prime the selected slot.
   // It does not cast. LMB fires the primed ability with the current crosshair.
   if (radialOpen && e.code === activeWheelKey) {
     radialClose(true)
   }
-})
+}, { capture: true })
 
 renderer.domElement.addEventListener('contextmenu', (e) => {
   // Suppress browser menu so RMB is ours for parry.

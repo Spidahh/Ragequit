@@ -428,6 +428,7 @@ export function initLoadoutStation(
       room.send(MessageTypes.Loadout, buildLoadoutMessage(slots))
       document.body.classList.remove('loadout-active')
       overlay.classList.add('hidden')
+      getCanvas?.()?.focus({ preventScroll: true })
       try {
         const result = getCanvas?.()?.requestPointerLock?.()
         if (result && typeof result.catch === 'function') {
