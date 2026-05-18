@@ -2375,6 +2375,9 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
   if (msg.phase === 'live') {
     livePhaseStartTick = getSchemaTick()
     roundTimer.textContent = ''
+    if (canEngageGameplaySurface()) {
+      engageCanvasInput()
+    }
   } else {
     livePhaseStartTick = -1
     roundTimer.textContent = ''
