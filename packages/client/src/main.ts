@@ -1741,17 +1741,6 @@ function isPauseMenuOpen(): boolean {
   return !pauseMenu.classList.contains('hidden')
 }
 
-function requestPointerLockSafely(): void {
-  try {
-    const result = renderer.domElement.requestPointerLock?.()
-    if (result && typeof result.catch === 'function') {
-      void result.catch(() => {})
-    }
-  } catch {
-    // Browser may reject pointer lock outside trusted gestures or automation.
-  }
-}
-
 function engageCanvasInput(): void {
   canvasInputEngaged = true
   renderer.domElement.focus({ preventScroll: true })
@@ -1783,9 +1772,6 @@ function closePauseMenu(lockPointer: boolean): void {
   clearCombatInputEdges()
   if (lockPointer && room) {
     engageCanvasInput()
-  }
-  if (lockPointer && room && document.pointerLockElement !== renderer.domElement) {
-    requestPointerLockSafely()
   }
 }
 
@@ -2010,7 +1996,6 @@ renderer.domElement.addEventListener('contextmenu', (e) => {
 function handleCombatPointerDown(button: number): void {
   if (!canEngageGameplaySurface()) return
   engageCanvasInput()
-  if (button === 0 && !pointerLocked) requestPointerLockSafely()
   if (!isGameplayInputAllowed()) return
   if (!pointerLocked) {
     pointerLookActive = true
@@ -2631,7 +2616,7 @@ const loadoutStation = initLoadoutStation(
     pendingLaunchMode = null
     if (mode) {
       void connectWithMode(mode, false)
-      requestPointerLockSafely()
+      engageCanvasInput()
     } else if (!room) {
       menu.showMain()
     }

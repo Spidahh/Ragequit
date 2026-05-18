@@ -429,14 +429,6 @@ export function initLoadoutStation(
       document.body.classList.remove('loadout-active')
       overlay.classList.add('hidden')
       getCanvas?.()?.focus({ preventScroll: true })
-      try {
-        const result = getCanvas?.()?.requestPointerLock?.()
-        if (result && typeof result.catch === 'function') {
-          void result.catch(() => {})
-        }
-      } catch {
-        // Pointer lock can fail if the browser rejects the user gesture.
-      }
     } else {
       document.body.classList.remove('loadout-active')
       overlay.classList.add('hidden')
