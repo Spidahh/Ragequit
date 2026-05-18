@@ -2718,7 +2718,8 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
   setStatus('connecting', '#e4c05a')
   try {
     const client = new Client(SERVER_URL)
-    const joinedRoom = await client.joinOrCreate('game', { mode })
+    const roomOptions = { mode, botFill: mode === 'duel_arena' }
+    const joinedRoom = await client.joinOrCreate('game', roomOptions)
     const mainMenuHidden = document.getElementById('main-menu')?.classList.contains('hidden') ?? false
     if (seq !== connectSeq || !mainMenuHidden) {
       void joinedRoom.leave()

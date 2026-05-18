@@ -295,7 +295,7 @@ export class GameRoom extends Room<GameState> {
     this.broadcast(type, message)
   }
 
-  override onCreate(options: { mode?: string; mapId?: string } = {}): void {
+  override onCreate(options: { mode?: string; mapId?: string; botFill?: boolean } = {}): void {
     this.setState(new GameState())
 
     // Resolve map and mode from options. Defaults: duel_arena for 1v1/training,
@@ -316,7 +316,7 @@ export class GameRoom extends Room<GameState> {
     if (resolvedMode === 'ffa') this.maxClients = Number(process.env['MAX_CLIENTS_FFA'] ?? 8)
     else if (resolvedMode === '5v5') this.maxClients = Number(process.env['MAX_CLIENTS_5V5'] ?? 10)
 
-    if (resolvedMode === 'training') {
+    if (resolvedMode === 'training' || options.botFill === true) {
       this.botSpawnAtMatchStart = Math.max(1, this.botSpawnAtMatchStart)
     }
 

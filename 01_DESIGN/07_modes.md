@@ -38,6 +38,7 @@ Four modes are the product target. The current local vertical slice supports the
 - No respawn (round-based)
 - ELO: separate 1v1 ladder, K-factor 25
 - Map: smaller symmetric arena (`duel_arena`) using the current compact duel layout
+- Current local build: the main-menu 1v1 button bot-fills the second slot so solo testing enters a live duel immediately. Real matchmaking must replace this with a human opponent queue before ranked launch.
 
 ## FFA 10
 
