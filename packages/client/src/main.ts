@@ -2424,8 +2424,8 @@ let shakeDecay = 0  // current magnitude (metres), decays at shakeDecayRate/s
 const SHAKE_DECAY_RATE = 9 // m/s — shake disappears in ~1/SHAKE_DECAY_RATE seconds
 
 // Per-weapon camera — smoothly lerped so swapping weapons doesn't snap.
-// bow: ADS zoom (less back, lower FOV); melee: wide; staff: default.
-// FOV default is 90° (industry standard for TPS; Overwatch, Battlerite, Apex).
+// sword: third-person melee readability; bow/staff: first-person precision.
+// FOV default is 90°.
 let camBack = 5.5
 let camUp = 1.3
 let camFovBase = 90
@@ -4415,47 +4415,55 @@ function render(now: number): void {
     playerLight.position.set(x, y + 0.5 + idleBob, z)
 
     // Per-weapon camera:
-    // Keep every weapon in the same over-shoulder camera family. Earlier builds
-    // blended bow/staff into first-person, which made auto-swaps from spells
-    // feel like the view dipped toward the floor.
+    // Sword keeps an over-shoulder view for melee spacing. Bow and staff are
+    // first-person precision weapons, so their aim must match the crosshair.
     const wSchema = selfSchema && isWeapon(selfSchema.activeWeapon) ? selfSchema.activeWeapon : 'sword'
     // Update weapon prop if weapon changed.
     if (wSchema !== selfLastWeapon) {
       selfLastWeapon = wSchema
       applyWeaponProp(selfMesh, wSchema)
     }
-    const wBackTarget = wSchema === 'bow' ? 4.45 : wSchema === 'staff' ? 4.9 : 5.5
-    const wUpTarget   = wSchema === 'bow' ? 1.45 : wSchema === 'staff' ? 1.4 : 1.3
+    const firstPersonWeapon = wSchema === 'bow' || wSchema === 'staff'
+    const wBackTarget = firstPersonWeapon ? 0 : 5.5
+    const wUpTarget   = firstPersonWeapon ? CAPSULE_HALF_HEIGHT_M * 0.9 : 1.3
 
-    // Bow: very slight FOV narrow when charged — tactile draw-back feel.
+    // Bow ADS narrows more while drawn; staff keeps a crisp FPS FOV.
     const wFovTarget = wSchema === 'bow'
-      ? settingsFovBase - 5 - bowChargeRatio * 4
-      : settingsFovBase
+      ? settingsFovBase - 7 - bowChargeRatio * 5
+      : wSchema === 'staff'
+        ? settingsFovBase - 3
+        : settingsFovBase
     const CAM_LERP = inHitStop ? 0 : 0.12
     camBack    += (wBackTarget - camBack)    * CAM_LERP
     camUp      += (wUpTarget   - camUp)      * CAM_LERP
     camFovBase += (wFovTarget  - camFovBase) * CAM_LERP
 
-    selfMesh.visible = !dead
+    selfMesh.visible = !dead && !firstPersonWeapon
 
-    // Stable third-person orbit. Yaw controls the shoulder/back position; pitch
-    // controls only the look target. This avoids the old "camera dives down"
-    // feeling when pitch was also rotating the camera's height offset.
-    const back = new THREE.Vector3(Math.sin(mouseYaw) * camBack, 0, Math.cos(mouseYaw) * camBack)
-    camera.position.set(x + back.x, y + camUp, z + back.z)
+    if (firstPersonWeapon) {
+      camera.position.set(x, y + camUp, z)
+      camera.rotation.set(mousePitch, mouseYaw, 0, 'YXZ')
+    } else {
+      // Stable third-person orbit. Yaw controls the shoulder/back position;
+      // pitch controls only the look target so the camera never dives down.
+      const back = new THREE.Vector3(Math.sin(mouseYaw) * camBack, 0, Math.cos(mouseYaw) * camBack)
+      camera.position.set(x + back.x, y + camUp, z + back.z)
+    }
 
     // Clamp camera above ground so it never clips underground.
     const groundFloor = getMap(activeMapId || 'blockout').groundY
     if (camera.position.y < groundFloor + 0.4) camera.position.y = groundFloor + 0.4
 
-    const aimForward = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(mousePitch, mouseYaw, 0, 'YXZ'))
-    const lookDistance = wSchema === 'bow' ? 18 : wSchema === 'staff' ? 15 : 10
-    const lookY = y + CAPSULE_HALF_HEIGHT_M * 0.85
-    camera.lookAt(
-      x + aimForward.x * lookDistance,
-      lookY + aimForward.y * lookDistance,
-      z + aimForward.z * lookDistance,
-    )
+    if (!firstPersonWeapon) {
+      const aimForward = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(mousePitch, mouseYaw, 0, 'YXZ'))
+      const lookDistance = 10
+      const lookY = y + CAPSULE_HALF_HEIGHT_M * 0.85
+      camera.lookAt(
+        x + aimForward.x * lookDistance,
+        lookY + aimForward.y * lookDistance,
+        z + aimForward.z * lookDistance,
+      )
+    }
 
     // --- Directional shake — apply current offset to camera, then decay. ---
     if (shakeDecay > 0.001) {
