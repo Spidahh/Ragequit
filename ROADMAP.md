@@ -64,7 +64,7 @@ Implementato:
 - Sensibilità mouse e overlay di regolazione estratti in `packages/client/src/input/sensitivity.ts`.
 - Game input controller (keyboard/mouse/pointer event registration + mutable state bag) estratto in `packages/client/src/input/game-input.ts`.
 - HUD self-player status renderer (HP/mana/stamina/mastery/status strip/cast bar/GCD) estratto in `packages/client/src/hud/self-hud.ts`.
-- cast/fire/weapon input dispatcher
+- Cast/fire/weapon input dispatcher (primedSlot, castQueue, placementId, dispatch per tick) estratto in `packages/client/src/input/cast-dispatcher.ts`.
 - projectile/zone/player render systems
 - menu/loadout orchestration
 

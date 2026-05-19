@@ -13,8 +13,6 @@ import {
   MessageTypes,
   PROJECTILE_MUZZLE_Y_OFFSET_M,
   ROUND_TIMER_SEC,
-  STAFF_M1_CADENCE_SEC,
-  STAMINA_MAX,
   getMap,
   TICK_MS,
   TICK_RATE_HZ,
@@ -33,13 +31,7 @@ import {
   type ServerZoneExpiredMessage,
   type ServerZoneSpawnedMessage,
   type StatusKind,
-  type ClientChargeReleaseMessage,
-  type ClientChargeStartMessage,
-  type ClientFireStaffMessage,
   type ClientInputMessage,
-  type ClientParryPressMessage,
-  type ClientParryReleaseMessage,
-  type ClientSwingMessage,
   type ClientWeaponSwapMessage,
   type PlayerSimState,
   type ServerAbilityFailedMessage,
@@ -64,6 +56,7 @@ import { initDraggableHud } from './hud/hud-drag.js'
 import { initSelfHud } from './hud/self-hud.js'
 import { ensureIconSprite, weaponIcon } from './icons.js'
 import { actionLabel, onKeybindsChanged } from './input/keybinds.js'
+import { initCastDispatcher } from './input/cast-dispatcher.js'
 import { initGameInput, makeGameInputState } from './input/game-input.js'
 import { initRadialWheels } from './input/radial-wheels.js'
 import { initMouseSensitivity } from './input/sensitivity.js'
@@ -212,35 +205,11 @@ const combatFeedHud = createCombatFeedHud({
 // Radial wheels — Q for fixed transfers/flex utility, E for combat abilities
 // -----------------------------------------------------------------------
 
-// Currently primed ability slot (selected via radial wheel).
-// Fires on LMB instead of the weapon attack; cleared after firing or on death.
-// null means no ability is primed — LMB does weapon attack normally.
-let primedSlotIdx: number | null = null
-
 function currentLoadoutArray(): string[] {
   const schemaLoadout = getSelfSchemaPlayer?.()?.loadout
   return schemaLoadout
     ? Array.from(schemaLoadout as unknown as Iterable<string>)
     : Array.from(loadoutStation.getLoadout() as Iterable<string>)
-}
-
-function activateAbilitySlot(slotIdx: number, fromWheel: boolean): void {
-  const id = currentLoadoutArray()[slotIdx] ?? ''
-  if (!id) return
-  const def = ABILITY_DEFS[id]
-  if (!def) return
-  if (fromWheel) {
-    cancelPlacementPreview()
-    primedSlotIdx = slotIdx
-    return
-  }
-  if (loadoutStation.isInstantCast(id)) {
-    cancelPlacementPreview()
-    abilityCastQueue.push(id)
-    return
-  }
-  beginPlacementPreview(id)
-  primedSlotIdx = null
 }
 
 const mouseSensitivity = initMouseSensitivity()
@@ -255,9 +224,19 @@ const mouseSensitivity = initMouseSensitivity()
 const PITCH_UP_LIMIT   =  Math.PI * 0.415 //  +75° — max look-up angle
 const PITCH_DOWN_LIMIT = -Math.PI * 0.360 //  -65° — max look-down angle
 
+// Cast / fire / weapon input dispatcher — owns primedSlotIdx, abilityCastQueue,
+// placementAbilityId, lastStaffFireMs and dispatches combat actions each sim tick.
+const castDispatcher = initCastDispatcher({
+  getLoadout: currentLoadoutArray,
+  isInstantCast: (id) => loadoutStation.isInstantCast(id),
+  hidePlacementVisual: () => { placementPreviewGroup.visible = false },
+  sendCast: (id, tick) => sendAbilityCast(id, tick),
+  showShootFlash,
+})
+
 // --- HUD helpers -----------------------------------------------------------
 
-const cooldownStrip = initCooldownStrip(cdStrip, (slotIdx) => activateAbilitySlot(slotIdx, true))
+const cooldownStrip = initCooldownStrip(cdStrip, (slotIdx) => castDispatcher.activateAbilitySlot(slotIdx, true))
 
 const selfHud = initSelfHud({
   hudHpFill, hudManaFill, hudStamFill,
@@ -406,15 +385,6 @@ const inp = makeGameInputState()
 let loadoutReturnsToPause = false
 // Local cast-bar start timestamp — set when casting becomes true, cleared on reset.
 let castStartedAtMs = 0
-// Queue of ability id casts requested via direct binds or LMB-fired primed wheel slots.
-const abilityCastQueue: string[] = []
-let placementAbilityId: string | null = null
-
-// Staff auto-fire throttle — cadence enforced locally so we don't spam the
-// server. The server also enforces cadence authoritatively.
-let lastStaffFireMs = 0
-// Cooldown on staff clicks while LMB is held: send one on edge + auto at cadence.
-const STAFF_FIRE_THROTTLE_MS = STAFF_M1_CADENCE_SEC * 1000
 
 function isPauseMenuOpen(): boolean {
   return !pauseMenu.classList.contains('hidden')
@@ -470,10 +440,9 @@ function clearCombatInputEdges(): void {
   inp.rmbReleaseEdge = false
   inp.weaponSwapRequest = null
   inp.optimisticWeapon = null
-  abilityCastQueue.length = 0
-  primedSlotIdx = null
+  castDispatcher.clearQueue()
   radialWheels.refreshAll()
-  cancelPlacementPreview()
+  castDispatcher.cancelPlacementPreview()
 }
 
 function openPauseMenu(): void {
@@ -794,8 +763,8 @@ const loadoutStation = initLoadoutStation(
 const radialWheels = initRadialWheels({
   abilityWheelEl,
   getLoadout: currentLoadoutArray,
-  getPrimedSlot: () => primedSlotIdx,
-  onPrimeSlot: (slotIdx) => activateAbilitySlot(slotIdx, true),
+  getPrimedSlot: () => castDispatcher.getPrimedSlotIdx(),
+  onPrimeSlot: (slotIdx) => castDispatcher.activateAbilitySlot(slotIdx, true),
   utilityWheelEl,
 })
 
@@ -871,7 +840,7 @@ const gameInput = initGameInput(inp, {
   menu,
   getRoom: () => room,
   getCurrentMatchPhase: () => currentMatchPhase,
-  getPlacementAbilityId: () => placementAbilityId,
+  getPlacementAbilityId: () => castDispatcher.getPlacementAbilityId(),
   getLoadoutReturnsToPause: () => loadoutReturnsToPause,
   setLoadoutReturnsToPause: (v) => { loadoutReturnsToPause = v },
   getPing: () => ping,
@@ -880,8 +849,8 @@ const gameInput = initGameInput(inp, {
   canEngageGameplaySurface: () => canEngageGameplaySurface(),
   openPauseMenu: () => openPauseMenu(),
   closePauseMenu: (lock) => closePauseMenu(lock),
-  cancelPlacementPreview: () => cancelPlacementPreview(),
-  activateAbilitySlot: (idx, fromWheel) => activateAbilitySlot(idx, fromWheel),
+  cancelPlacementPreview: () => castDispatcher.cancelPlacementPreview(),
+  activateAbilitySlot: (idx, fromWheel) => castDispatcher.activateAbilitySlot(idx, fromWheel),
   onClear: () => clearCombatInputEdges(),
 })
 const { engageCanvasInput, disengageCanvasInput, requestArenaPointerLock, sampleInput } = gameInput
@@ -1179,7 +1148,7 @@ function onDeath(msg: ServerDeathMessage): void {
     // Reset local combo counter so a kill doesn't carry over to next life.
     localComboCount = 0
     // Clear any primed ability — it would fire on the wrong tick after respawn.
-    primedSlotIdx = null
+    castDispatcher.clearQueue()
   } else if (isSelfKill) {
     soundEngine.playKill()
     const now = performance.now()
@@ -1358,8 +1327,6 @@ function onWeaponSwapped(msg: ServerWeaponSwappedMessage): void {
     self.bowChargeStartMs = 0
     self.bowChargeServerAcked = false
   }
-  lastStaffFireMs = 0
-
   soundEngine.playSwap()
 
   // Flash the new weapon slot to signal the swap was accepted by the server.
@@ -1478,10 +1445,8 @@ function clearGameplayInputState(): void {
   inp.rmbReleaseEdge = false
   inp.weaponSwapRequest = null
   inp.optimisticWeapon = null
-  abilityCastQueue.length = 0
-  primedSlotIdx = null
+  castDispatcher.clearQueue()
   radialWheels.refreshAll()
-  lastStaffFireMs = 0
 }
 
 function clearLocalMatchState(): void {
@@ -1973,18 +1938,6 @@ function sendAbilityCast(abilityId: string, tick: number): void {
   showShootFlash()
 }
 
-function beginPlacementPreview(abilityId: string): void {
-  const def = ABILITY_DEFS[abilityId]
-  if (!def) return
-  placementAbilityId = abilityId
-  abilityCastQueue.length = 0
-}
-
-function cancelPlacementPreview(): void {
-  placementAbilityId = null
-  placementPreviewGroup.visible = false
-}
-
 function placementFootprint(abilityId: string): { radius: number; width: number; depth: number; wall: boolean } {
   const def = ABILITY_DEFS[abilityId]
   let radius = 0.85
@@ -2016,6 +1969,7 @@ function placementFootprint(abilityId: string): { radius: number; width: number;
 }
 
 function updatePlacementPreview(now: number): void {
+  const placementAbilityId = castDispatcher.getPlacementAbilityId()
   if (!placementAbilityId || !self) {
     placementPreviewGroup.visible = false
     return
@@ -2065,18 +2019,13 @@ function simStep(): void {
   const schemaTick = getSchemaTick()
   const airborne = !!selfSchema && selfSchema.airborneUntilTick > schemaTick
   const dead = !!selfSchema && !selfSchema.alive
-  if ((dead || airborne) && placementAbilityId) cancelPlacementPreview()
+  if ((dead || airborne) && castDispatcher.getPlacementAbilityId()) castDispatcher.cancelPlacementPreview()
   if (inp.optimisticWeapon && selfSchema?.activeWeapon === inp.optimisticWeapon) inp.optimisticWeapon = null
   const activeWeapon: Weapon = currentWeaponForInput()
   const combatLive = currentMatchPhase === 'live'
-  if (!combatLive) {
-    abilityCastQueue.length = 0
-    primedSlotIdx = null
-    if (placementAbilityId) cancelPlacementPreview()
-    if (self.bowChargeStartMs > 0) {
-      self.bowChargeStartMs = 0
-      self.bowChargeServerAcked = false
-    }
+  if (!combatLive && self.bowChargeStartMs > 0) {
+    self.bowChargeStartMs = 0
+    self.bowChargeServerAcked = false
   }
 
   // Sync bow-charge state with server authority. A just-started local draw must
@@ -2138,123 +2087,10 @@ function simStep(): void {
   }
   inp.weaponSwapRequest = null
 
-  // --- Primed ability fire -------------------------------------------------
-  // Radial wheels are palettes: Q/E only select a slot. The next LMB press
-  // fires that primed ability with the current crosshair and suppresses the
-  // weapon's normal LMB action for this click.
-  if (combatLive && inp.lmbPressEdge && placementAbilityId && !dead && !airborne) {
-    sendAbilityCast(placementAbilityId, schemaTick + 1)
-    cancelPlacementPreview()
-    inp.lmbPressEdge = false
-    inp.lmbDown = false
-  }
-
-  if (combatLive && inp.lmbPressEdge && primedSlotIdx !== null && !dead && !airborne) {
-    const loadout = currentLoadoutArray()
-    const id = loadout[primedSlotIdx] ?? ''
-    primedSlotIdx = null
-    if (id) {
-      if (loadoutStation.isInstantCast(id)) sendAbilityCast(id, schemaTick + 1)
-      else beginPlacementPreview(id)
-    }
-    inp.lmbPressEdge = false
-    inp.lmbDown = false
-  }
-
-  // --- LMB behaviour by weapon --------------------------------------------
-  // Bow charge release is allowed even while airborne (design: bow can fire mid-air).
-  // Only dead players cannot act.
-  if (combatLive && !dead && activeWeapon === 'bow') {
-    if (inp.lmbPressEdge) {
-      const msg: ClientChargeStartMessage = { atTick: schemaTick + 1 }
-      room.send(MessageTypes.ChargeStart, msg)
-      self.bowChargeStartMs = performance.now()
-      self.bowChargeServerAcked = false
-    }
-    // Release is always sent regardless of airborne state.
-    if (inp.lmbReleaseEdge && self.bowChargeStartMs > 0) {
-      const msg: ClientChargeReleaseMessage = {
-        atTick: schemaTick + 1,
-        yaw: inp.mouseYaw,
-        pitch: inp.mousePitch,
-      }
-      room.send(MessageTypes.ChargeRelease, msg)
-      self.bowChargeStartMs = 0
-      self.bowChargeServerAcked = false
-      showShootFlash()
-    }
-  }
-
-  if (combatLive && !dead && !airborne) {
-    if (activeWeapon === 'sword') {
-      if (inp.lmbPressEdge) {
-        // Swing yaw: use inp.mouseYaw directly — it is the horizontal facing direction
-        // and equals the forward direction of both the character mesh and the server
-        // hit cone. Deriving from camera.quaternion in TPS mode gave incorrect pitch
-        // contamination when the camera orbited at an angle.
-        const msg: ClientSwingMessage = { atTick: schemaTick + 1, yaw: inp.mouseYaw }
-        room.send(MessageTypes.Swing, msg)
-        showShootFlash()
-      }
-    } else if (activeWeapon === 'staff') {
-      const now = performance.now()
-      const canFire = now - lastStaffFireMs >= STAFF_FIRE_THROTTLE_MS
-      if ((inp.lmbPressEdge || (inp.lmbDown && canFire)) && canFire) {
-        const msg: ClientFireStaffMessage = {
-          atTick: schemaTick + 1,
-          yaw: inp.mouseYaw,
-          pitch: inp.mousePitch,
-        }
-        room.send(MessageTypes.FireStaff, msg)
-        lastStaffFireMs = now
-        showShootFlash()
-      }
-    }
-  } else if (dead) {
-    // Dead: drop any bow HUD charge.
-    if (self.bowChargeStartMs > 0) {
-      self.bowChargeStartMs = 0
-      self.bowChargeServerAcked = false
-    }
-  }
-
-  // --- Parry (RMB) --------------------------------------------------------
-  if (combatLive && inp.rmbPressEdge && placementAbilityId) {
-    cancelPlacementPreview()
-    inp.rmbPressEdge = false
-    inp.rmbReleaseEdge = false
-  }
-
-  if (combatLive && !dead && !airborne) {
-    if (inp.rmbPressEdge) {
-      const msg: ClientParryPressMessage = { atTick: schemaTick + 1 }
-      room.send(MessageTypes.ParryPress, msg)
-    }
-    if (inp.rmbReleaseEdge) {
-      const msg: ClientParryReleaseMessage = { atTick: schemaTick + 1 }
-      room.send(MessageTypes.ParryRelease, msg)
-    }
-  }
-
-  // --- Drain queued ability casts (one per tick, max 2 queued).
-  // Capping to 1/tick prevents macro-spam; cap 2 lets a "queue next cast"
-  // feel responsive during short windups (standard arena-game practice).
-  // Airborne here means knockup/launch lock, not a normal jump. A launched
-  // player cannot activate abilities; clear queued attempts so they do not
-  // fire late after landing.
-  if (airborne || !combatLive) abilityCastQueue.length = 0
-  if (abilityCastQueue.length > 0 && combatLive && !dead && !airborne) {
-    const id = abilityCastQueue.shift()!
-    sendAbilityCast(id, schemaTick + 1)
-  }
-  // Hard cap: discard oldest if more than 2 are queued (lag buildup).
-  while (abilityCastQueue.length > 2) abilityCastQueue.shift()
-
-  // Clear per-tick edges.
-  inp.lmbPressEdge = false
-  inp.lmbReleaseEdge = false
-  inp.rmbPressEdge = false
-  inp.rmbReleaseEdge = false
+  castDispatcher.dispatch({
+    inp, bowCharge: self, room,
+    schemaTick, combatLive, dead, airborne, activeWeapon,
+  })
 
   // --- Input message ------------------------------------------------------
   const inMsg: ClientInputMessage = {
@@ -3028,15 +2864,15 @@ function render(now: number): void {
     now,
     tickNow,
     castStartedAtMs,
-    placementAbilityId,
-    primedSlotIdx,
+    placementAbilityId: castDispatcher.getPlacementAbilityId(),
+    primedSlotIdx: castDispatcher.getPrimedSlotIdx(),
     lastKillerName,
     selfMesh,
     getCurrentLoadout: currentLoadoutArray,
     updateTransmuteBar,
     setCastStartedAt: (ms) => { castStartedAtMs = ms },
-    clearPrimedSlot:  () =>  { primedSlotIdx = null },
-    cancelPlacementPreview,
+    clearPrimedSlot:  () =>  { castDispatcher.clearQueue() },
+    cancelPlacementPreview: () => castDispatcher.cancelPlacementPreview(),
   })
 
   renderer.render(scene, camera)
