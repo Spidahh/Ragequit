@@ -219,10 +219,14 @@ export function initLoadoutStation(
     el.type = 'button'
     el.className = `ls-slot ${idx === activeIdx ? 'active' : ''} ${lockedTransfer ? 'locked-transfer' : ''} el-${def?.element ?? 'none'}`
     el.dataset['idx'] = String(idx)
+    const role = def ? abilityRole(def) : undefined
+    const slotKind = LOADOUT_SLOT_ORDER[idx] ?? 'utility'
     el.innerHTML = [
+      `<span class="ls-slot-icon">${def ? abilityIconMarkup(def.id) : slotKind.slice(0, 1).toUpperCase()}</span>`,
       `<span class="ls-slot-label">${slotKeyLabel(idx)}</span>`,
-      `<span class="ls-slot-name">${def?.name ?? '— empty —'}</span>`,
+      `<span class="ls-slot-main"><span class="ls-slot-name">${def?.name ?? '— empty —'}</span><span class="ls-slot-role">${role?.title ?? slotPoolTitle(slotKind, idx)}</span></span>`,
       def ? `<span class="ls-slot-cost">${formatCost(def)} · ${def.cooldownSec}s</span>` : '',
+      def && !lockedTransfer ? `<span class="ls-slot-mode ${isInstantCast(def) ? 'instant' : 'preview'}">${isInstantCast(def) ? 'INSTANT' : 'PREVIEW'}</span>` : '',
       lockedTransfer ? '<span class="ls-slot-lock">FIXED</span>' : id ? '<button class="ls-slot-clear" title="Clear">×</button>' : '',
     ].join('')
     el.addEventListener('click', (event) => {
@@ -318,7 +322,7 @@ export function initLoadoutStation(
       `${def.cooldownSec}s CD`,
       def.range > 0 ? `${def.range}m` : 'self',
     ].join(' · ')
-    detailsDesc.replaceChildren(roleBlock(role), renderEffectTags(def), quickStatBlock(quickStats), textBlock(def.description))
+    detailsDesc.replaceChildren(roleBlock(role), castModeBlock(def, isInstantCast(def)), renderEffectTags(def), quickStatBlock(quickStats), textBlock(def.description))
     rebuildBuildCoach()
     detailsMalus.textContent = def.miniMalus
   }
@@ -361,6 +365,7 @@ export function initLoadoutStation(
     }
 
     buildCoach.append(head, grid, lines)
+    rebuildFlowStrip(report)
   }
 
   filterBtns.forEach((btn) => {
@@ -404,7 +409,11 @@ export function initLoadoutStation(
       .filter((def) => !slots.some((id, idx) => idx !== activeIdx && id === def.id))
       .filter((def) => {
         if (poolFilterEl === 'all') return true
+        if (poolFilterEl === 'recommended') return recommendationTags(def, activeIdx, slots).length > 0
         if (poolFilterEl === 'starter') return def.comboRole === 'starter'
+        if (poolFilterEl === 'control') return abilityHasControl(def)
+        if (poolFilterEl === 'instant') return isInstantCast(def)
+        if (poolFilterEl === 'preview') return !isInstantCast(def)
         if (poolFilterEl === 'none') return def.element === 'none'
         return def.element === poolFilterEl
       })
@@ -443,6 +452,7 @@ export function initLoadoutStation(
         `<span class="instant-toggle ${instant ? 'on' : ''}" role="switch" aria-checked="${instant}" title="${instant ? 'Instant cast: key casts immediately' : 'Preview cast: key arms placement, LMB confirms'}">${instant ? 'INSTANT' : 'PREVIEW'}</span>`,
         `<span class="pool-name">${escapeHtml(def.name)}</span>`,
         `<span class="pool-meta">${def.element !== 'none' ? def.element.toUpperCase() : 'PHYSICAL'} · ${formatCost(def)} · ${def.cooldownSec}s CD</span>`,
+        `<span class="pool-summary">${escapeHtml(def.description)}</span>`,
         `<span class="effect-tags">${formatEffectTags(def).map((tag) => `<span class="${tagClass(tag)}">${escapeHtml(tag)}</span>`).join('')}</span>`,
         `<span class="pool-bars">${quickStats.map((s) => `<span class="pool-bar ${s.className}" title="${escapeHtml(s.label)}"><i style="width:${s.value * 20}%"></i></span>`).join('')}</span>`,
       ].join('')
@@ -567,6 +577,26 @@ function textBlock(text: string): HTMLParagraphElement {
   return p
 }
 
+function castModeBlock(def: AbilityDef, instant: boolean): HTMLDivElement {
+  const block = document.createElement('div')
+  block.className = `cast-mode-card ${instant ? 'instant' : 'preview'}`
+
+  const label = document.createElement('b')
+  label.textContent = instant ? 'Instant cast' : 'Preview placement'
+
+  const copy = document.createElement('span')
+  if (instant) {
+    copy.textContent = def.targeting === 'forward'
+      ? 'Direct key press fires toward the current crosshair.'
+      : 'Direct key press activates immediately.'
+  } else {
+    copy.textContent = 'Key press primes the spell, shows the placement preview, then LMB confirms.'
+  }
+
+  block.append(label, copy)
+  return block
+}
+
 interface AbilityRoleInfo {
   icon: string
   title: string
@@ -630,6 +660,22 @@ function analyzeBuild(slotIds: readonly string[]): BuildCoachReport {
     ],
     lines: lines.slice(0, 5),
   }
+}
+
+function rebuildFlowStrip(report: BuildCoachReport): void {
+  const state = new Map(report.pills.map((pill) => [pill.label.toLowerCase(), pill.ok]))
+  for (const step of flowStepsGlobal()) {
+    const key = step.dataset['flow'] ?? ''
+    const lookup = key === 'cashout' ? 'cashout' : key
+    const ok = state.get(lookup) ?? false
+    step.classList.toggle('online', ok)
+    step.classList.toggle('missing', !ok)
+    step.title = ok ? `${step.textContent ?? lookup} ready` : `${step.textContent ?? lookup} missing`
+  }
+}
+
+function flowStepsGlobal(): HTMLElement[] {
+  return Array.from(document.querySelectorAll<HTMLElement>('#ls-flow-strip [data-flow]'))
 }
 
 function abilityHasControl(def: AbilityDef): boolean {

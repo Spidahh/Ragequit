@@ -5,7 +5,13 @@ import { __loadoutStationSmoke, initLoadoutStation } from './loadout-station.js'
 
 function mountLoadoutDom(): void {
   document.body.innerHTML = `
-    <div id="loadout-station" class="hidden">
+      <div id="loadout-station" class="hidden">
+      <div id="ls-flow-strip">
+        <span data-flow="opener"></span>
+        <span data-flow="control"></span>
+        <span data-flow="cashout"></span>
+        <span data-flow="reset"></span>
+      </div>
       <div id="mastery-pills">
         <span class="mpill" data-el="fire"></span>
         <span class="mpill" data-el="ice"></span>
@@ -24,8 +30,12 @@ function mountLoadoutDom(): void {
       <div id="ls-detail-malus"></div>
       <button id="ls-detail-instant"></button>
       <input id="ls-search" />
+      <button data-filter="recommended"></button>
       <button data-filter="all"></button>
       <button data-filter="starter"></button>
+      <button data-filter="control"></button>
+      <button data-filter="instant"></button>
+      <button data-filter="preview"></button>
       <button data-filter="fire"></button>
       <button data-filter="ice"></button>
       <button data-filter="lightning"></button>
@@ -176,5 +186,20 @@ describe('loadout station smoke', () => {
 
     expect(document.querySelectorAll('.pool-card')).toHaveLength(0)
     expect(document.getElementById('ls-pool')?.textContent).toContain('No abilities available')
+  })
+
+  it('supports smart and cast-mode filters in the ability pool', () => {
+    const api = initLoadoutStation(() => undefined)
+
+    api.open()
+    document.querySelectorAll<HTMLButtonElement>('.ls-slot')[2]?.click()
+    document.querySelector<HTMLButtonElement>('[data-filter="recommended"]')?.click()
+    expect(document.querySelectorAll('.pool-card.recommended').length).toBeGreaterThan(0)
+
+    document.querySelector<HTMLButtonElement>('[data-filter="preview"]')?.click()
+    expect(Array.from(document.querySelectorAll('.pool-card .instant-toggle')).every((el) => el.textContent === 'PREVIEW')).toBe(true)
+
+    document.querySelector<HTMLButtonElement>('[data-filter="instant"]')?.click()
+    expect(Array.from(document.querySelectorAll('.pool-card .instant-toggle')).every((el) => el.textContent === 'INSTANT')).toBe(true)
   })
 })
