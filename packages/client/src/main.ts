@@ -73,6 +73,7 @@ import {
   slotKeybindEntries,
 } from './input/keybinds.js'
 import { initRadialWheels } from './input/radial-wheels.js'
+import { initMouseSensitivity } from './input/sensitivity.js'
 import { initLoadoutStation } from './loadout-station.js'
 import { initMenu } from './menu.js'
 import { sendLoadout } from './net/loadout-sync.js'
@@ -238,45 +239,8 @@ function activateAbilitySlot(slotIdx: number, fromWheel: boolean): void {
   primedSlotIdx = null
 }
 
-// -----------------------------------------------------------------------
-// Mouse sensitivity — persisted to localStorage, adjustable in-game
-// -----------------------------------------------------------------------
-
-const SENS_KEY = 'ragequit.sensitivity.v1'
-const SENS_DEFAULT = 0.0022
-const SENS_MIN = 0.0004
-const SENS_MAX = 0.008
-
-function loadSens(): number {
-  try {
-    const v = parseFloat(localStorage.getItem(SENS_KEY) ?? '')
-    return isFinite(v) && v >= SENS_MIN && v <= SENS_MAX ? v : SENS_DEFAULT
-  } catch { return SENS_DEFAULT }
-}
-function saveSens(v: number): void {
-  try { localStorage.setItem(SENS_KEY, String(v)) } catch { /* ignore */ }
-}
-let mouseSens = loadSens()
-
-// Transient overlay that flashes current sensitivity when adjusted.
-const sensOverlay = document.createElement('div')
-sensOverlay.style.cssText = [
-  'position:fixed', 'top:50%', 'left:50%',
-  'transform:translate(-50%,-50%) translateY(-80px)',
-  'background:rgba(0,0,0,0.78)', 'color:#ffd260',
-  'padding:6px 16px', 'border-radius:6px',
-  'font:bold 13px/1.4 ui-monospace,monospace',
-  'pointer-events:none', 'opacity:0',
-  'transition:opacity 0.2s', 'z-index:900',
-].join(';')
-document.body.appendChild(sensOverlay)
-let sensOverlayTimer = 0
-function showSensOverlay(): void {
-  sensOverlay.textContent = `🖱 SENS  ${mouseSens.toFixed(4)}`
-  sensOverlay.style.opacity = '1'
-  clearTimeout(sensOverlayTimer)
-  sensOverlayTimer = setTimeout(() => { sensOverlay.style.opacity = '0' }, 1600) as unknown as number
-}
+const mouseSensitivity = initMouseSensitivity()
+let mouseSens = mouseSensitivity.value
 
 // -----------------------------------------------------------------------
 // Camera pitch limits — asymmetric for 3rd-person feel
@@ -1672,14 +1636,10 @@ addEventListener('keydown', (e) => {
 
   // Sensitivity — [ to lower, ] to raise (10 % steps, min/max clamped).
   if (matchesAction(k, 'sensDown')) {
-    mouseSens = Math.max(SENS_MIN, parseFloat((mouseSens * 0.9).toFixed(4)))
-    saveSens(mouseSens)
-    showSensOverlay()
+    mouseSens = mouseSensitivity.scale(0.9)
   }
   if (matchesAction(k, 'sensUp')) {
-    mouseSens = Math.min(SENS_MAX, parseFloat((mouseSens * 1.1).toFixed(4)))
-    saveSens(mouseSens)
-    showSensOverlay()
+    mouseSens = mouseSensitivity.scale(1.1)
   }
 }, { capture: true })
 addEventListener('keyup', (e) => {
@@ -2193,8 +2153,7 @@ const menu = initMenu({
     camFovBase = fov // snap immediately when changed from settings
   },
   onSensChange: (sens) => {
-    mouseSens = sens
-    saveSens(sens)
+    mouseSens = mouseSensitivity.set(sens)
   },
   onVolumeChange: (vol) => {
     soundEngine.volume = vol
