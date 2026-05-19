@@ -328,13 +328,14 @@ function activateAbilitySlot(slotIdx: number, fromWheel: boolean): void {
   if (!id) return
   const def = ABILITY_DEFS[id]
   if (!def) return
+  if (fromWheel) {
+    cancelPlacementPreview()
+    primedSlotIdx = slotIdx
+    return
+  }
   if (loadoutStation.isInstantCast(id)) {
     cancelPlacementPreview()
-    if (fromWheel) {
-      primedSlotIdx = slotIdx
-    } else {
-      abilityCastQueue.push(id)
-    }
+    abilityCastQueue.push(id)
     return
   }
   beginPlacementPreview(id)
