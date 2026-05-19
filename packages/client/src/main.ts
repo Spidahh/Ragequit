@@ -54,6 +54,7 @@ import { createHudFlash } from './hud/flash.js'
 import { initDraggableHud } from './hud/hud-drag.js'
 import { initSelfHud } from './hud/self-hud.js'
 import { initAbilityFailHud } from './hud/ability-fail-hud.js'
+import { initHitFeedback } from './hud/hit-feedback.js'
 import { initTransmuteHud } from './hud/transmute-hud.js'
 import { ensureIconSprite, weaponIcon } from './icons.js'
 import { actionLabel, onKeybindsChanged } from './input/keybinds.js'
@@ -376,6 +377,15 @@ const remotePlayerSystem = initRemotePlayers({
   capsuleHalfHeightM: CAPSULE_HALF_HEIGHT_M,
 })
 
+const hitFeedback = initHitFeedback({
+  crosshairEl,
+  hitDirEls,
+  popupsLayer,
+  camera,
+  getSelfPos: () => self?.sim.pos ?? null,
+  getCamYaw: () => camera.rotation.y,
+})
+
 // -----------------------------------------------------------------------
 // Input capture — keyboard + mouse
 // -----------------------------------------------------------------------
@@ -515,50 +525,11 @@ interface SelfState {
 
 let self: SelfState | null = null
 
-// Hitmarker — briefly flashes the crosshair red when a hit lands.
-let hitmarkerTimeout = 0
-function showHitmarker(): void {
-  clearTimeout(hitmarkerTimeout)
-  crosshairEl.classList.add('hit')
-  hitmarkerTimeout = setTimeout(() => crosshairEl.classList.remove('hit'), 130) as unknown as number
-}
-
 // Damage blink — classic white-flash on the self character when taking a hit.
 // Stored as a timestamp; the render loop ramps emissive up to white then back.
 let selfDamageBlinkUntilMs = 0
 function triggerDamageBlink(): void {
   selfDamageBlinkUntilMs = performance.now() + 160
-}
-
-
-// Flash one of the 4 directional hit indicators based on the attacker's screen
-// direction relative to the player's current facing yaw.
-// Determines which screen quadrant the attacker is in and pulses that wedge.
-function showDirectionalHit(attackerWorldPos: THREE.Vector3 | null): void {
-  let dir: string
-  if (!attackerWorldPos || !self?.sim.pos) {
-    dir = (['top', 'bottom', 'left', 'right'] as const)[Math.floor(Math.random() * 4)]!
-  } else {
-    const dx = attackerWorldPos.x - self.sim.pos.x
-    const dz = attackerWorldPos.z - self.sim.pos.z
-    // Camera yaw = facing direction (negative Z = forward by convention).
-    // We project the attacker offset onto the 2-D screen plane.
-    const camYaw = camera.rotation.y
-    // Rotate attacker delta into camera space.
-    const cos = Math.cos(-camYaw), sin = Math.sin(-camYaw)
-    const camX =  cos * dx + sin * dz  // positive = right on screen
-    const camZ = -sin * dx + cos * dz  // positive = behind camera = upper screen
-    if (Math.abs(camX) > Math.abs(camZ)) {
-      dir = camX > 0 ? 'right' : 'left'
-    } else {
-      dir = camZ < 0 ? 'top' : 'bottom'
-    }
-  }
-  const el = hitDirEls[dir]
-  if (!el) return
-  el.classList.remove('flash')
-  void el.offsetWidth
-  el.classList.add('flash')
 }
 
 // Directional screen shake — offset the camera toward/away from attacker.
@@ -1036,7 +1007,7 @@ function onHit(msg: ServerHitMessage): void {
   }
 
   // --- Hitmarker ---
-  if (amIAttacker && !amISelf && msg.damage > 0) showHitmarker()
+  if (amIAttacker && !amISelf && msg.damage > 0) hitFeedback.showHitmarker()
 
   // --- Victim: flash + directional shake ---
   if (amISelf) {
@@ -1054,7 +1025,7 @@ function onHit(msg: ServerHitMessage): void {
         ? Math.min(1.2, msg.damage / 25)   // melee hits harder
         : Math.min(1, msg.damage / 30)
       applyDirectionalShake(attackerPos, shakeIntensity)
-      showDirectionalHit(attackerPos)
+      hitFeedback.showDirectionalHit(attackerPos)
       triggerDamageBlink()
     }
   }
@@ -1076,7 +1047,7 @@ function onHit(msg: ServerHitMessage): void {
 
   const victimPos = getPlayerWorldPos(msg.victimId)
   if (victimPos) {
-    showDamagePopup(victimPos, msg.damage, amISelf, msg.didParry, msg.element, {
+    hitFeedback.showDamagePopup(victimPos, msg.damage, amISelf, msg.didParry, msg.element, {
       airPunish: isAirPunish && amIAttacker && !amISelf,
     })
   }
@@ -1104,7 +1075,7 @@ function onDeath(msg: ServerDeathMessage): void {
     lastKillerName = killerName
     soundEngine.playDeath()
     applyDirectionalShake(null, 1.4) // max intensity on death
-    showDirectionalHit(null)
+    hitFeedback.showDirectionalHit(null)
     combatFeedHud.showKillSplash('ELIMINATO', 'died')
     damageFlash.classList.add('active')
     void damageFlash.offsetHeight
@@ -1341,55 +1312,6 @@ function getPlayerWorldPos(sid: string): THREE.Vector3 | null {
   return remotePlayerSystem.getWorldPos(sid)
 }
 
-// Element → popup accent colour (outbound hits only).
-const ELEMENT_POPUP_COLOR: Record<string, string> = {
-  fire:      '#ff8a4a',
-  ice:       '#9adfff',
-  lightning: '#ffe566',
-  dark:      '#c890ff',
-  nature:    '#aef090',
-  steam:     '#ccddff',
-}
-
-function showDamagePopup(
-  worldPos: THREE.Vector3,
-  damage: number,
-  inbound: boolean,
-  parried: boolean,
-  element?: string,
-  opts: { airPunish?: boolean } = {},
-): void {
-  const v = worldPos.clone().project(camera)
-  const sx = (v.x * 0.5 + 0.5) * window.innerWidth
-  const sy = (-v.y * 0.5 + 0.5) * window.innerHeight
-  if (v.z > 1) return
-  const el = document.createElement('span')
-  const cls = ['popup']
-  if (inbound) cls.push('inbound')
-  if (parried) cls.push('parried')
-  if (opts.airPunish) cls.push('air-punish')
-  // Big-hit class: damage ≥ 40 outbound gets a larger, more dramatic popup.
-  if (!inbound && !parried && (damage >= 40 || opts.airPunish)) cls.push('big')
-  el.className = cls.join(' ')
-  const jitter = (Math.random() - 0.5) * 30
-  el.style.left = `${sx + jitter}px`
-  el.style.top = `${sy}px`
-  // Elemental colour for outbound hits (attacker sees coloured numbers).
-  if (!inbound && !parried && element && ELEMENT_POPUP_COLOR[element]) {
-    el.style.color = ELEMENT_POPUP_COLOR[element]!
-  }
-  if (parried && damage === 0) {
-    el.textContent = 'PARRY'
-  } else if (parried) {
-    el.textContent = `PARRY -${Math.round(damage)}`
-  } else if (opts.airPunish) {
-    el.textContent = `AIR ${Math.round(damage)}`
-  } else {
-    el.textContent = String(Math.round(damage))
-  }
-  popupsLayer.appendChild(el)
-  setTimeout(() => el.remove(), 900)
-}
 
 // -----------------------------------------------------------------------
 // Self init
