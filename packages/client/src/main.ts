@@ -3154,6 +3154,11 @@ function getAbilityFailText(msg: ServerAbilityFailedMessage): string {
         : msg.abilityId === 'parry'
           ? 'Parry'
           : 'Ability')
+  const actionVerb = msg.abilityId === 'parry'
+    ? 'parry'
+    : msg.abilityId === 'staff_m1' || msg.abilityId === 'bow_m1'
+      ? 'fire'
+      : 'cast'
   switch (msg.reason) {
     case 'cost':
       return `${abilityName}: not enough resources`
@@ -3162,13 +3167,13 @@ function getAbilityFailText(msg: ServerAbilityFailedMessage): string {
     case 'gcd':
       return 'Global cooldown'
     case 'cc':
-      return 'Cannot cast while controlled'
+      return `Cannot ${actionVerb} while controlled`
     case 'casting':
       return 'Already casting'
     case 'airborne':
-      return 'Cannot cast while airborne'
+      return `Cannot ${actionVerb} while airborne`
     case 'parrying':
-      return 'Cannot cast while parrying'
+      return `Cannot ${actionVerb} while parrying`
     case 'wrong_weapon':
       return `${abilityName}: wrong weapon`
     case 'not_in_loadout':
@@ -3178,7 +3183,7 @@ function getAbilityFailText(msg: ServerAbilityFailedMessage): string {
     case 'unreachable':
       return `${abilityName}: no clear path`
     case 'dead':
-      return 'Cannot cast while dead'
+      return `Cannot ${actionVerb} while dead`
     case 'unknown_ability':
       return 'Unknown ability'
   }
