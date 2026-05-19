@@ -69,7 +69,14 @@ Implementato:
 - Zone visual system (onSpawned, onExpired, animateFrame, zoneColorForElement) estratto in `packages/client/src/render/zone-visuals.ts`.
 - Placement preview system (footprint, aimPoint, update) estratto in `packages/client/src/render/placement-preview.ts`.
 - Remote player visual system (snapshot capture, interpolated render, emissives, nameplate) estratto in `packages/client/src/render/remote-players.ts`.
-- menu/loadout orchestration
+- Ability fail / server toast HUD estratto in `packages/client/src/hud/ability-fail-hud.ts`.
+- Transmute bar HUD estratto in `packages/client/src/hud/transmute-hud.ts`.
+- Hit feedback HUD (hitmarker, directional hit, damage popup) estratto in `packages/client/src/hud/hit-feedback.ts`.
+- Arena particle/torch/ring animation spostata in `buildArena` closure in `packages/client/src/world/arena.ts`.
+- Bow charge / parry ring / round timer / vignettes estratti in `packages/client/src/hud/combat-overlay-hud.ts`.
+- Status applied/expired vignette flash estratto in `packages/client/src/hud/status-overlay.ts`.
+- Self-character emissive + player-light estratti in `packages/client/src/render/self-emissive.ts`.
+- main.ts ridotto a 1825 linee (da 2896); nucleo rimasto è orchestrazione pura (connect, simStep, render, reconcileSelf, onHit, onDeath).
 
 ### 4. Content Consistency
 
