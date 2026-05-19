@@ -49,7 +49,6 @@ interface AbilityDef {
   miniMalus: string
   canParry?: boolean
   isKnockup?: boolean
-  isStarter?: boolean
 }
 ```
 
@@ -84,7 +83,7 @@ Current primitives:
 
 ## Combo Role Contract
 
-`comboRole` is mandatory and design-authored. Do not infer it from effects in new ability data.
+`comboRole` is mandatory and design-authored. Do not infer it from effects in new ability data. There is no separate `isStarter` flag: starter filtering, tags, and tests read `comboRole` directly.
 
 | Role | Contract |
 | --- | --- |

@@ -89,7 +89,6 @@ export const ABILITY_M3_UPPERCUT: AbilityDef = {
   miniMalus: '0.4s windup. Parryable.',
   canParry: true,
   isKnockup: true,
-  isStarter: true,
 }
 
 export const ABILITY_M4_BLEED_STRIKE: AbilityDef = {
@@ -135,7 +134,6 @@ export const ABILITY_M5_GUARD_BREAK: AbilityDef = {
   description: '10 damage. Stun 0.55s plus a short 0.45s pop to interrupt guards and start close combos.',
   miniMalus: 'Very short 2.2m reach and fully parryable.',
   canParry: true,
-  isStarter: true,
 }
 
 export const ABILITY_M6_RENDING_DASH: AbilityDef = {
@@ -189,7 +187,6 @@ export const ABILITY_B1_PIERCING_SHOT: AbilityDef = {
   ],
   description: 'Fast line shot. 28 damage with 150 m/s travel for clean airborne punish windows.',
   miniMalus: 'Narrow shot; misses hard against lateral movement.',
-  isStarter: true,
 }
 
 export const ABILITY_B2_VOLLEY: AbilityDef = {
@@ -356,7 +353,6 @@ export const ABILITY_B7_BROADHEAD: AbilityDef = {
   ],
   description: 'Heavy arrow. 14 damage and Bleed for 4.0s to force cleanse or resource transfer decisions.',
   miniMalus: 'Arc drop makes long shots require lead.',
-  isStarter: true,
 }
 
 export const ABILITY_B8_BLAST_ARROW: AbilityDef = {
@@ -419,7 +415,6 @@ export const ABILITY_F1_FIREBALL: AbilityDef = {
   ],
   description: 'Arcing fire orb. 24 splash damage in 2.6m and Burn x1 on impact.',
   miniMalus: 'Visible travel arc; aim ahead or use after control.',
-  isStarter: true,
 }
 
 export const ABILITY_F2_FLAME_WALL: AbilityDef = {
@@ -450,7 +445,6 @@ export const ABILITY_F2_FLAME_WALL: AbilityDef = {
   ],
   description: 'Point wall, 7m wide for 3.5s. Ticks 6 damage and Burn x1 to cut routes and trap rooted targets.',
   miniMalus: 'Wall is visible and punishable if placed without setup.',
-  isStarter: true,
 }
 
 export const ABILITY_F3_IGNITE: AbilityDef = {
@@ -582,7 +576,6 @@ export const ABILITY_I1_FROST_BOLT: AbilityDef = {
   ],
   description: 'Fast frost projectile. 16 damage and Chill x1; repeated hits build toward Freeze.',
   miniMalus: 'Lower direct damage than fire or bow finishers.',
-  isStarter: true,
 }
 
 export const ABILITY_I2_ICE_WALL: AbilityDef = {
@@ -711,7 +704,6 @@ export const ABILITY_L1_CHAIN_BOLT: AbilityDef = {
   ],
   description: 'Instant ray within 15m. 22 damage to the aimed target and 10 damage arcs to nearby enemies.',
   miniMalus: 'Arc requires nearby secondary targets.',
-  isStarter: true,
 }
 
 export const ABILITY_L2_THUNDER_CLAP: AbilityDef = {
@@ -837,7 +829,6 @@ export const ABILITY_D1_SHADOW_BOLT: AbilityDef = {
   ],
   description: 'Dark projectile. 18 damage and 25% lifesteal to reward accurate sustain pressure.',
   miniMalus: 'Projectile can be dodged or blocked by cover.',
-  isStarter: true,
 }
 
 export const ABILITY_D2_CURSE_OF_WEAKNESS: AbilityDef = {
@@ -1133,7 +1124,6 @@ export const ABILITY_U1_SELF_HEAL_POTION: AbilityDef = {
   ],
   description: 'Self heal over 2.0s. Restores 40 HP total.',
   miniMalus: 'Healing is delayed over time.',
-  isStarter: true,
 }
 
 export const ABILITY_U2_QUICK_DASH: AbilityDef = {
@@ -1152,7 +1142,6 @@ export const ABILITY_U2_QUICK_DASH: AbilityDef = {
   effects: [{ at: 'onCast', kind: 'move', mode: 'dash', distance: 4, useMovementDirection: true, cancelOnCollision: true }],
   description: '4m dash in movement direction.',
   miniMalus: 'No invulnerability.',
-  isStarter: true,
 }
 
 export const ABILITY_U3_PING_MARK: AbilityDef = {
@@ -1214,7 +1203,6 @@ export const ABILITY_U5_BARRIER: AbilityDef = {
   effects: [{ at: 'onCast', kind: 'applyStatus', status: 'shield', durationSec: 8, stacks: 42 }],
   description: 'Self shield. Absorbs 42 damage for up to 8.0s.',
   miniMalus: 'No cleanse or heal.',
-  isStarter: true,
 }
 
 export const ABILITY_U6_ENERGIZE: AbilityDef = {
@@ -1233,7 +1221,6 @@ export const ABILITY_U6_ENERGIZE: AbilityDef = {
   effects: [{ at: 'onCast', kind: 'restoreStamina', amount: 35 }],
   description: 'Restores 35 Stamina instantly.',
   miniMalus: 'No Mana restore.',
-  isStarter: true,
 }
 
 export const ABILITY_U7_PHASE_SHIFT: AbilityDef = {

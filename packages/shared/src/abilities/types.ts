@@ -260,8 +260,6 @@ export interface AbilityDef {
   // True iff the ability counts as a knockup setup for the airborne lock
   // bookkeeping. Mostly informational at the client level.
   isKnockup?: boolean
-  // True for beginner-friendly abilities highlighted in the loadout pool.
-  isStarter?: boolean
 }
 
 // Convenience type for the registry — keys are ability ids.
