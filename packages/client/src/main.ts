@@ -64,7 +64,7 @@ import { ELEMENT_COLOR, initCooldownStrip } from './hud/cd-strip.js'
 import { createCombatFeedHud } from './hud/combat-feed.js'
 import { createHudFlash } from './hud/flash.js'
 import { initDraggableHud } from './hud/hud-drag.js'
-import { abilityIcon, ensureIconSprite, statusIcon, weaponIcon } from './icons.js'
+import { ensureIconSprite, statusIcon, weaponIcon } from './icons.js'
 import {
   actionCode,
   actionLabel,
@@ -72,6 +72,7 @@ import {
   onKeybindsChanged,
   slotKeybindEntries,
 } from './input/keybinds.js'
+import { initRadialWheels } from './input/radial-wheels.js'
 import { initLoadoutStation } from './loadout-station.js'
 import { initMenu } from './menu.js'
 import { sendLoadout } from './net/loadout-sync.js'
@@ -206,121 +207,6 @@ const combatFeedHud = createCombatFeedHud({
 // Radial wheels — Q for fixed transfers/flex utility, E for combat abilities
 // -----------------------------------------------------------------------
 
-interface WheelSector {
-  dir: string
-  angleDeg: number
-  slotIdx: number
-  label: string
-}
-
-interface RadialWheel {
-  id: 'utility' | 'ability'
-  el: HTMLElement
-  sectors: readonly WheelSector[]
-}
-
-const utilityWheel: RadialWheel = {
-  id: 'utility',
-  el: utilityWheelEl,
-  sectors: [
-    { dir: 'top', angleDeg: -90, slotIdx: 7, label: 'Z' },
-    { dir: 'right', angleDeg: 0, slotIdx: 8, label: 'X' },
-    { dir: 'bottom', angleDeg: 90, slotIdx: 9, label: 'F' },
-    { dir: 'left', angleDeg: 180, slotIdx: 10, label: 'V' },
-  ],
-}
-
-const abilityWheel: RadialWheel = {
-  id: 'ability',
-  el: abilityWheelEl,
-  sectors: [
-    { dir: 'top', angleDeg: -90, slotIdx: 0, label: 'R' },
-    { dir: 'top-right', angleDeg: -45, slotIdx: 1, label: 'G' },
-    { dir: 'right', angleDeg: 0, slotIdx: 2, label: '1' },
-    { dir: 'bottom-right', angleDeg: 45, slotIdx: 3, label: '2' },
-    { dir: 'bottom', angleDeg: 90, slotIdx: 4, label: '3' },
-    { dir: 'bottom-left', angleDeg: 135, slotIdx: 5, label: '4' },
-    { dir: 'left', angleDeg: 180, slotIdx: 6, label: '5' },
-  ],
-}
-
-let radialOpen = false
-let radialDx = 0
-let radialDy = 0
-let activeWheel: RadialWheel | null = null
-let activeWheelKey: string | null = null
-let radialSelectedDir: string | null = null
-
-function slotBindLabel(slotIdx: number): string {
-  return slotKeybindEntries().find(([, , idx]) => idx === slotIdx)?.[1] ?? '?'
-}
-
-/** Refresh radial slot labels from the current loadout. */
-function radialRefresh(wheel: RadialWheel): void {
-  const schemaLoadout = getSelfSchemaPlayer?.()?.loadout
-  // Convert Colyseus ArraySchema to plain array so numeric bracket access
-  // works reliably across all Colyseus versions.
-  const loadout: string[] = schemaLoadout
-    ? Array.from(schemaLoadout as unknown as Iterable<string>)
-    : Array.from(loadoutStation.getLoadout() as Iterable<string>)
-  for (const slotEl of Array.from(wheel.el.querySelectorAll<HTMLElement>('.radial-slot'))) {
-    const dir = slotEl.dataset['dir']!
-    const sector = wheel.sectors.find((s) => s.dir === dir)
-    if (!sector) continue
-    const idx = sector.slotIdx
-    const id = loadout[idx] ?? ''
-    const def = id ? ABILITY_DEFS[id] : null
-    const nameEl = slotEl.querySelector<HTMLElement>('.r-name')!
-    const iconEl = slotEl.querySelector<HTMLElement>('.r-icon')!
-    const keyEl  = slotEl.querySelector<HTMLElement>('.r-key')!
-    if (def) {
-      iconEl.replaceChildren(abilityIcon(id, 25))
-      nameEl.textContent = def.name
-      nameEl.classList.remove('r-empty')
-      keyEl.textContent = slotBindLabel(idx)
-    } else {
-      iconEl.replaceChildren()
-      iconEl.textContent = '·'
-      nameEl.textContent = 'empty'
-      nameEl.classList.add('r-empty')
-      keyEl.textContent = slotBindLabel(idx)
-    }
-    // Mark the currently primed slot so the player can see which one is armed.
-    slotEl.classList.toggle('r-primed', idx === primedSlotIdx)
-  }
-}
-
-function radialOpen_(wheel: RadialWheel, keyCode: string): void {
-  if (radialOpen) return
-  radialOpen = true
-  activeWheel = wheel
-  activeWheelKey = keyCode
-  radialDx = 0
-  radialDy = 0
-  radialSelectedDir = null
-  radialRefresh(wheel)
-  wheel.el.classList.add('open')
-  wheel.el.classList.remove('has-selection')
-  for (const s of Array.from(wheel.el.querySelectorAll<HTMLElement>('.radial-slot'))) s.classList.remove('selected')
-}
-
-function radialClose(cast: boolean): void {
-  if (!radialOpen) return
-  const wheel = activeWheel
-  radialOpen = false
-  activeWheel = null
-  activeWheelKey = null
-  if (!wheel) return
-  wheel.el.classList.remove('open', 'has-selection')
-  for (const s of Array.from(wheel.el.querySelectorAll<HTMLElement>('.radial-slot'))) s.classList.remove('selected')
-
-  if (cast && radialSelectedDir) {
-    const sector = wheel.sectors.find((s) => s.dir === radialSelectedDir)
-    if (sector) activateAbilitySlot(sector.slotIdx, true)
-  }
-  radialSelectedDir = null
-}
-
 // Currently primed ability slot (selected via radial wheel).
 // Fires on LMB instead of the weapon attack; cleared after firing or on death.
 // null means no ability is primed — LMB does weapon attack normally.
@@ -350,55 +236,6 @@ function activateAbilitySlot(slotIdx: number, fromWheel: boolean): void {
   }
   beginPlacementPreview(id)
   primedSlotIdx = null
-}
-
-function radialMouseMove(dx: number, dy: number): void {
-  if (!radialOpen || !activeWheel) return
-  radialDx += dx
-  radialDy += dy
-  radialSelectVector(radialDx, radialDy)
-}
-
-function radialPointMove(clientX: number, clientY: number): void {
-  if (!radialOpen || !activeWheel) return
-  const rect = activeWheel.el.getBoundingClientRect()
-  radialSelectVector(clientX - (rect.left + rect.width / 2), clientY - (rect.top + rect.height / 2))
-}
-
-function radialSelectVector(dx: number, dy: number): void {
-  if (!radialOpen || !activeWheel) return
-  const dist = Math.hypot(dx, dy)
-  if (dist < 18) {
-    // Below threshold: no sector selected yet
-    radialSelectedDir = null
-    activeWheel.el.classList.remove('has-selection')
-    for (const s of Array.from(activeWheel.el.querySelectorAll<HTMLElement>('.radial-slot'))) s.classList.remove('selected')
-    return
-  }
-  const angle = Math.atan2(dy, dx) * (180 / Math.PI) // -180..180
-  const sector = nearestWheelSector(activeWheel, angle)
-  const dir = sector.dir
-
-  if (dir !== radialSelectedDir) {
-    radialSelectedDir = dir
-    activeWheel.el.classList.add('has-selection')
-    for (const s of Array.from(activeWheel.el.querySelectorAll<HTMLElement>('.radial-slot'))) {
-      s.classList.toggle('selected', s.dataset['dir'] === dir)
-    }
-  }
-}
-
-function nearestWheelSector(wheel: RadialWheel, angleDeg: number): WheelSector {
-  let best = wheel.sectors[0]!
-  let bestDelta = Number.POSITIVE_INFINITY
-  for (const sector of wheel.sectors) {
-    const delta = Math.abs((((angleDeg - sector.angleDeg + 540) % 360) - 180))
-    if (delta < bestDelta) {
-      best = sector
-      bestDelta = delta
-    }
-  }
-  return best
 }
 
 // -----------------------------------------------------------------------
@@ -470,8 +307,7 @@ const RESPAWN_TIPS: readonly string[] = [
 const cooldownStrip = initCooldownStrip(cdStrip, (slotIdx) => activateAbilitySlot(slotIdx, true))
 
 onKeybindsChanged(() => {
-  radialRefresh(utilityWheel)
-  radialRefresh(abilityWheel)
+  radialWheels.refreshAll()
   cooldownStrip.rebuild(currentLoadoutArray())
   refreshKeybindHudLabels()
 })
@@ -1588,8 +1424,7 @@ function clearCombatInputEdges(): void {
   optimisticWeapon = null
   abilityCastQueue.length = 0
   primedSlotIdx = null
-  radialRefresh(utilityWheel)
-  radialRefresh(abilityWheel)
+  radialWheels.refreshAll()
   cancelPlacementPreview()
 }
 
@@ -1626,7 +1461,7 @@ function disengageCanvasInput(): void {
 
 function openPauseMenu(): void {
   if (!room || isPauseMenuOpen()) return
-  if (radialOpen) radialClose(false)
+  if (radialWheels.isOpen()) radialWheels.close(false)
   disengageCanvasInput()
   clearCombatInputEdges()
   loadoutStation.close()
@@ -1755,7 +1590,7 @@ addEventListener('keydown', (e) => {
   if (k === 'Escape') {
     e.preventDefault()
     if (placementAbilityId) { cancelPlacementPreview(); return }
-    if (radialOpen) { radialClose(false); return }
+    if (radialWheels.isOpen()) { radialWheels.close(false); return }
     if (isOverlayOpen(settingsOverlay)) { closeSettingsOverlayToReturnTarget(); return }
     if (!loadoutStationHidden()) {
       loadoutStation.close()
@@ -1785,7 +1620,7 @@ addEventListener('keydown', (e) => {
   if (matchesAction(k, 'openLoadout')) {
     e.preventDefault()
     clearCombatInputEdges()
-    if (radialOpen) radialClose(false)
+    if (radialWheels.isOpen()) radialWheels.close(false)
     if (room && currentMatchPhase === 'live') {
       openPauseMenu()
       return
@@ -1807,11 +1642,11 @@ addEventListener('keydown', (e) => {
   // Q — open utility/transfer wheel. E — open combat ability wheel.
   if (matchesAction(k, 'wheelUtility')) {
     e.preventDefault()
-    radialOpen_(utilityWheel, k)
+    radialWheels.openUtility(k)
   }
   if (matchesAction(k, 'wheelAbility')) {
     e.preventDefault()
-    radialOpen_(abilityWheel, k)
+    radialWheels.openAbility(k)
   }
   if (k === 'Backquote') {
     document.getElementById('debug')?.classList.toggle('hidden')
@@ -1857,8 +1692,8 @@ addEventListener('keyup', (e) => {
   keys.delete(e.code)
   // Wheel key release: close the radial menu and prime the selected slot.
   // It does not cast. LMB fires the primed ability with the current crosshair.
-  if (radialOpen && e.code === activeWheelKey) {
-    radialClose(true)
+  if (radialWheels.isOpen() && e.code === radialWheels.activeKey()) {
+    radialWheels.close(true)
   }
 }, { capture: true })
 
@@ -1904,9 +1739,9 @@ function shouldIgnoreGameplayPointerTarget(target: EventTarget | null): boolean 
 function handleGameplayPointerMove(e: PointerEvent | MouseEvent): void {
   // While a radial wheel is open, mouse movement keeps updating the highlighted
   // sector until the wheel key is released. The wheel is a selector, not a cast.
-  if (radialOpen) {
-    if (pointerLocked) radialMouseMove(e.movementX, e.movementY)
-    else radialPointMove(e.clientX, e.clientY)
+  if (radialWheels.isOpen()) {
+    if (pointerLocked) radialWheels.relativeMove(e.movementX, e.movementY)
+    else radialWheels.pointMove(e.clientX, e.clientY)
     return
   }
   if (pointerLocked) {
@@ -2305,6 +2140,13 @@ const loadoutStation = initLoadoutStation(
       ? 'START 1V1'
       : null,
 )
+const radialWheels = initRadialWheels({
+  abilityWheelEl,
+  getLoadout: currentLoadoutArray,
+  getPrimedSlot: () => primedSlotIdx,
+  onPrimeSlot: (slotIdx) => activateAbilitySlot(slotIdx, true),
+  utilityWheelEl,
+})
 
 async function connectWithMode(mode: string, reopenLoadout = true): Promise<void> {
   if (!room) {
@@ -2940,7 +2782,7 @@ function clearGameplayUi(): void {
 }
 
 function clearGameplayInputState(): void {
-  if (radialOpen) radialClose(false)
+  if (radialWheels.isOpen()) radialWheels.close(false)
   keys.clear()
   jumpEdgeQueued = false
   lmbPressEdge = false
@@ -2952,8 +2794,7 @@ function clearGameplayInputState(): void {
   optimisticWeapon = null
   abilityCastQueue.length = 0
   primedSlotIdx = null
-  radialRefresh(utilityWheel)
-  radialRefresh(abilityWheel)
+  radialWheels.refreshAll()
   lastStaffFireMs = 0
 }
 
