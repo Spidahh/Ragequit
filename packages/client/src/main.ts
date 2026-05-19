@@ -1695,6 +1695,10 @@ function clearCombatInputEdges(): void {
   rmbReleaseEdge = false
   weaponSwapRequest = null
   optimisticWeapon = null
+  abilityCastQueue.length = 0
+  primedSlotIdx = null
+  radialRefresh(utilityWheel)
+  radialRefresh(abilityWheel)
   cancelPlacementPreview()
 }
 
