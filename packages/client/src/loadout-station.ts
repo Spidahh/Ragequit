@@ -306,11 +306,16 @@ export function initLoadoutStation(
     if (detailsInstant) {
       const instant = isInstantCast(def)
       detailsInstant.hidden = false
-      detailsInstant.textContent = instant ? 'INSTANT' : 'PREVIEW'
+      detailsInstant.setAttribute('aria-pressed', String(instant))
+      detailsInstant.innerHTML = [
+        '<span class="mode-kicker">Cast mode</span>',
+        `<span class="mode-state">${instant ? 'Instant' : 'Preview'}</span>`,
+        `<span class="mode-help">${instant ? 'Key casts now' : 'Key primes · LMB confirms'}</span>`,
+      ].join('')
       detailsInstant.classList.toggle('on', instant)
       detailsInstant.title = instant
-        ? 'Instant cast: the key casts this ability immediately.'
-        : 'Preview cast: the key arms placement and LMB confirms.'
+        ? 'Click to switch to preview placement: key primes, LMB confirms.'
+        : 'Click to switch to instant cast: direct key casts immediately.'
     }
     detailsName.textContent = def.name
     const role = abilityRole(def)
@@ -449,7 +454,7 @@ export function initLoadoutStation(
       card.innerHTML = [
         `<span class="pool-icon-box">${abilityIconMarkup(def.id)}</span>`,
         `<span class="pool-topline"><span class="pool-role-icon">${role.icon}</span><span class="pool-role-text">${escapeHtml(role.title)}</span>${recTags.length > 0 ? ` <span class="recommend-tag">${escapeHtml(recTags[0]!)}</span>` : def.comboRole === 'starter' ? ' <span class="starter-tag">STARTER</span>' : ''}</span>`,
-        `<span class="instant-toggle ${instant ? 'on' : ''}" role="switch" aria-checked="${instant}" title="${instant ? 'Instant cast: key casts immediately' : 'Preview cast: key arms placement, LMB confirms'}">${instant ? 'INSTANT' : 'PREVIEW'}</span>`,
+        `<span class="instant-toggle ${instant ? 'on' : ''}" role="switch" aria-checked="${instant}" title="${instant ? 'Click: switch to Preview placement' : 'Click: switch to Instant cast'}"><span>${instant ? 'Instant' : 'Preview'}</span><small>${instant ? 'key casts' : 'LMB confirms'}</small></span>`,
         `<span class="pool-name">${escapeHtml(def.name)}</span>`,
         `<span class="pool-meta">${def.element !== 'none' ? def.element.toUpperCase() : 'PHYSICAL'} · ${formatCost(def)} · ${def.cooldownSec}s CD</span>`,
         `<span class="pool-summary">${escapeHtml(def.description)}</span>`,

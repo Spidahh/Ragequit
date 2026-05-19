@@ -2692,6 +2692,11 @@
         overflow: hidden;
       }
       #ls-detail-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 148px;
+        grid-template-rows: auto auto;
+        gap: 8px 14px;
+        align-items: start;
         padding: 22px 22px 17px;
         border-bottom: 1px solid rgba(255,255,255,0.06);
         background:
@@ -2701,44 +2706,77 @@
         position: relative;
       }
       #ls-detail-name {
+        grid-column: 1;
+        grid-row: 1;
         font-size: 20px;
         font-weight: 900;
         color: #f0eeff;
         text-transform: uppercase;
         letter-spacing: 0.05em;
         line-height: 1.1;
-        margin-bottom: 10px;
+        margin-bottom: 0;
+        min-width: 0;
       }
       #ls-detail-meta {
+        grid-column: 1;
+        grid-row: 2;
         font: 10px/1.6 ui-monospace, monospace;
         letter-spacing: 0.07em;
         color: rgba(200,210,255,0.55);
         text-transform: uppercase;
-        padding-right: 86px;
+        padding-right: 0;
+        min-width: 0;
       }
       #ls-detail-instant {
-        position: absolute;
-        right: 20px;
-        top: 24px;
-        min-width: 74px;
-        height: 24px;
-        border-radius: 999px;
+        grid-column: 2;
+        grid-row: 1 / span 2;
+        justify-self: stretch;
+        width: 146px;
+        min-height: 58px;
+        display: grid;
+        grid-template-rows: auto auto auto;
+        gap: 4px;
+        align-content: center;
+        padding: 8px 10px;
+        border-radius: 8px;
         border: 1px solid rgba(125,190,255,0.28);
-        background: rgba(80,150,255,0.08);
+        background:
+          linear-gradient(180deg, rgba(80,150,255,0.12), rgba(80,150,255,0.04)),
+          rgba(0,0,0,0.28);
         color: rgba(170,215,255,0.90);
-        font: 900 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.10em;
-        text-transform: uppercase;
         cursor: pointer;
+        text-align: left;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 10px 20px rgba(0,0,0,0.24);
+        transition: border-color 0.14s, background-color 0.14s, transform 0.14s;
       }
       #ls-detail-instant.on {
         border-color: rgba(255,210,96,0.42);
-        background: rgba(255,210,96,0.10);
+        background:
+          linear-gradient(180deg, rgba(255,210,96,0.13), rgba(255,210,96,0.045)),
+          rgba(0,0,0,0.28);
         color: #ffe28a;
       }
       #ls-detail-instant:hover {
         border-color: rgba(255,255,255,0.38);
         color: #fff;
+        transform: translateY(-1px);
+      }
+      #ls-detail-instant .mode-kicker {
+        color: rgba(170,180,220,0.62);
+        font: 900 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+      #ls-detail-instant .mode-state {
+        color: inherit;
+        font: 950 14px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      #ls-detail-instant .mode-help {
+        color: rgba(205,214,246,0.70);
+        font: 750 9px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.04em;
       }
       #ls-detail-body {
         flex: 1;
@@ -3043,6 +3081,18 @@
         flex-shrink: 0;
         flex-wrap: wrap;
       }
+      .filter-group {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+        padding: 3px;
+        border-radius: 6px;
+        border: 1px solid rgba(255,255,255,0.055);
+        background: rgba(0,0,0,0.20);
+      }
+      .primary-filters { border-color: rgba(80,230,220,0.10); }
+      .mode-filters { border-color: rgba(255,210,96,0.11); }
+      .element-filters { border-color: rgba(255,255,255,0.055); }
       #ls-pool-title {
         padding: 12px 16px 0;
         color: rgba(226,232,250,0.92);
@@ -3163,7 +3213,8 @@
       .pool-card.equipped::after {
         content: 'EQUIPPED';
         position: absolute;
-        top: 9px;
+        top: auto;
+        bottom: 10px;
         right: 10px;
         color: rgba(145,255,170,0.82);
         border: 1px solid rgba(68,221,102,0.30);
@@ -3173,25 +3224,39 @@
         font: 900 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
         letter-spacing: 0.10em;
       }
+      .pool-card.equipped .pool-bars {
+        padding-right: 76px;
+      }
       .instant-toggle {
         position: absolute;
         top: 9px;
         right: 10px;
         z-index: 3;
         display: inline-flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        min-width: 64px;
-        height: 20px;
-        border-radius: 999px;
+        gap: 2px;
+        min-width: 72px;
+        min-height: 34px;
+        padding: 5px 7px;
+        border-radius: 7px;
         border: 1px solid rgba(125,190,255,0.26);
         background: rgba(80,150,255,0.075);
         color: rgba(170,215,255,0.88);
-        font: 900 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.10em;
-        text-transform: uppercase;
         cursor: pointer;
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+      }
+      .instant-toggle span {
+        font: 950 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.10em;
+        text-transform: uppercase;
+      }
+      .instant-toggle small {
+        color: rgba(205,214,246,0.56);
+        font: 800 7px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
       }
       .instant-toggle.on {
         border-color: rgba(255,210,96,0.36);
@@ -3203,7 +3268,7 @@
         color: #fff;
       }
       .pool-card.equipped .instant-toggle {
-        right: 86px;
+        right: 10px;
       }
       .pool-icon-box {
         position: absolute;
@@ -3231,9 +3296,9 @@
         display: flex;
         align-items: center;
         gap: 7px;
-        min-height: 22px;
+        min-height: 34px;
         margin-bottom: 5px;
-        padding-right: 82px;
+        padding-right: 92px;
       }
       .pool-role-icon {
         width: 22px;
@@ -4256,8 +4321,12 @@
         <div id="ls-center">
           <div id="ls-detail-header">
             <div id="ls-detail-name">Select an ability</div>
-            <button id="ls-detail-instant" type="button">PREVIEW</button>
             <div id="ls-detail-meta">SLOT</div>
+            <button id="ls-detail-instant" type="button">
+              <span class="mode-kicker">Cast mode</span>
+              <span class="mode-state">Preview</span>
+              <span class="mode-help">Key primes · LMB confirms</span>
+            </button>
           </div>
           <div id="ls-detail-body">
             <div id="ls-detail-desc">Pick a slot and choose a compatible ability.</div>
@@ -4269,18 +4338,24 @@
         <div id="ls-right">
           <div id="ls-filter-bar">
             <input id="ls-search" type="text" placeholder="Search abilities, states, effects" autocomplete="off" spellcheck="false">
-            <button class="filter-btn smart" data-filter="recommended">SMART</button>
-            <button class="filter-btn starter"   data-filter="starter">STARTER</button>
-            <button class="filter-btn" data-filter="control">CONTROL</button>
-            <button class="filter-btn" data-filter="instant">INSTANT</button>
-            <button class="filter-btn" data-filter="preview">PREVIEW</button>
-            <button class="filter-btn" data-filter="all">ALL</button>
-            <button class="filter-btn fire"      data-filter="fire">FIRE</button>
-            <button class="filter-btn ice"       data-filter="ice">ICE</button>
-            <button class="filter-btn lightning" data-filter="lightning">LIGHTNING</button>
-            <button class="filter-btn dark"      data-filter="dark">DARK</button>
-            <button class="filter-btn nature"    data-filter="nature">NATURE</button>
-            <button class="filter-btn" data-filter="none">PHYSICAL</button>
+            <div class="filter-group primary-filters" aria-label="Build filters">
+              <button class="filter-btn smart" data-filter="recommended">SMART</button>
+              <button class="filter-btn starter" data-filter="starter">STARTER</button>
+              <button class="filter-btn" data-filter="control">CONTROL</button>
+            </div>
+            <div class="filter-group mode-filters" aria-label="Cast mode filters">
+              <button class="filter-btn" data-filter="instant">INSTANT</button>
+              <button class="filter-btn" data-filter="preview">PREVIEW</button>
+            </div>
+            <div class="filter-group element-filters" aria-label="Element filters">
+              <button class="filter-btn" data-filter="all">ALL</button>
+              <button class="filter-btn fire" data-filter="fire">FIRE</button>
+              <button class="filter-btn ice" data-filter="ice">ICE</button>
+              <button class="filter-btn lightning" data-filter="lightning">LIGHTNING</button>
+              <button class="filter-btn dark" data-filter="dark">DARK</button>
+              <button class="filter-btn nature" data-filter="nature">NATURE</button>
+              <button class="filter-btn" data-filter="none">PHYSICAL</button>
+            </div>
           </div>
           <div id="ls-pool-title">Ability Pool</div>
           <div id="ls-pool-subtitle">Choose a compatible card for the selected slot</div>

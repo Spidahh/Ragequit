@@ -197,9 +197,9 @@ describe('loadout station smoke', () => {
     expect(document.querySelectorAll('.pool-card.recommended').length).toBeGreaterThan(0)
 
     document.querySelector<HTMLButtonElement>('[data-filter="preview"]')?.click()
-    expect(Array.from(document.querySelectorAll('.pool-card .instant-toggle')).every((el) => el.textContent === 'PREVIEW')).toBe(true)
+    expect(Array.from(document.querySelectorAll('.pool-card .instant-toggle')).every((el) => el.getAttribute('aria-checked') === 'false')).toBe(true)
 
     document.querySelector<HTMLButtonElement>('[data-filter="instant"]')?.click()
-    expect(Array.from(document.querySelectorAll('.pool-card .instant-toggle')).every((el) => el.textContent === 'INSTANT')).toBe(true)
+    expect(Array.from(document.querySelectorAll('.pool-card .instant-toggle')).every((el) => el.getAttribute('aria-checked') === 'true')).toBe(true)
   })
 })
