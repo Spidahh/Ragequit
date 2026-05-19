@@ -3108,6 +3108,8 @@ function onAbilityFailed(msg: ServerAbilityFailedMessage): void {
     if (def) {
       if (def.costMana > 0) flashResourceBar('mana')
       if (def.costStamina > 0) flashResourceBar('stam')
+    } else if (msg.abilityId === 'staff_m1') {
+      flashResourceBar('mana')
     }
   }
 
@@ -3122,6 +3124,8 @@ function onAbilityFailed(msg: ServerAbilityFailedMessage): void {
     gcdRingEl?.classList.add('pulse')
     setTimeout(() => gcdRingEl?.classList.remove('pulse'), 300)
   }
+
+  showAbilityFailNote(msg)
 }
 
 function flashResourceBar(which: 'mana' | 'stam'): void {
@@ -3133,6 +3137,50 @@ function flashResourceBar(which: 'mana' | 'stam'): void {
 
 // Server notices (loadout rejection warnings, info messages from the room).
 let serverToastTimer: ReturnType<typeof setTimeout> | null = null
+let lastAbilityFailToastAt = 0
+let lastAbilityFailToastKey = ''
+
+function getAbilityFailText(msg: ServerAbilityFailedMessage): string {
+  const abilityName = ABILITY_DEFS[msg.abilityId]?.name ?? (msg.abilityId === 'staff_m1' ? 'Staff Shot' : 'Ability')
+  switch (msg.reason) {
+    case 'cost':
+      return `${abilityName}: not enough resources`
+    case 'cooldown':
+      return `${abilityName}: cooling down`
+    case 'gcd':
+      return 'Global cooldown'
+    case 'cc':
+      return 'Cannot cast while controlled'
+    case 'casting':
+      return 'Already casting'
+    case 'airborne':
+      return 'Cannot cast while airborne'
+    case 'parrying':
+      return 'Cannot cast while parrying'
+    case 'wrong_weapon':
+      return `${abilityName}: wrong weapon`
+    case 'not_in_loadout':
+      return `${abilityName}: not in loadout`
+    case 'range':
+      return `${abilityName}: target out of range`
+    case 'unreachable':
+      return `${abilityName}: no clear path`
+    case 'dead':
+      return 'Cannot cast while dead'
+    case 'unknown_ability':
+      return 'Unknown ability'
+  }
+}
+
+function showAbilityFailNote(msg: ServerAbilityFailedMessage): void {
+  const now = performance.now()
+  const key = `${msg.abilityId}:${msg.reason}`
+  if (key === lastAbilityFailToastKey && now - lastAbilityFailToastAt < 700) return
+  lastAbilityFailToastKey = key
+  lastAbilityFailToastAt = now
+  showServerNote({ kind: 'warn', text: getAbilityFailText(msg) })
+}
+
 function showServerNote(msg: ServerNoteMessage): void {
   serverToast.textContent = msg.text
   serverToast.className = msg.kind // 'warn' or 'info'
