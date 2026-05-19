@@ -9,7 +9,6 @@ import {
   CAPSULE_HEIGHT_M,
   CAPSULE_RADIUS_M,
   HP_MAX,
-  INTERPOLATION_DELAY_MS,
   MessageTypes,
   PROJECTILE_MUZZLE_Y_OFFSET_M,
   ROUND_TIMER_SEC,
@@ -64,10 +63,11 @@ import { initLoadoutStation } from './loadout-station.js'
 import { initMenu } from './menu.js'
 import { sendLoadout } from './net/loadout-sync.js'
 import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
-import { makeCharacter, applyWeaponProp, makeCastRing } from './render/characters.js'
+import { makeCharacter, applyWeaponProp } from './render/characters.js'
 import { initZoneVisuals, zoneColorForElement } from './render/zone-visuals.js'
 import { initProjectileVisuals, type SchemaProjectile } from './render/projectile-visuals.js'
 import { initPlacementPreview } from './render/placement-preview.js'
+import { initRemotePlayers, type RemotePlayerSchema } from './render/remote-players.js'
 import { SoundEngine } from './audio/sound-engine.js'
 import { buildArena, PARTICLE_COUNT, MAGIC_COUNT } from './world/arena.js'
 import { ImpactPool } from './vfx/impact-pool.js'
@@ -358,6 +358,14 @@ const projectileVfx = initProjectileVisuals({
   spawnImpact,
   zoneColorForElement,
 })
+const remotePlayerSystem = initRemotePlayers({
+  scene,
+  toonGradient,
+  nameplateContainer,
+  isWeapon,
+  capsuleHeightM: CAPSULE_HEIGHT_M,
+  capsuleHalfHeightM: CAPSULE_HALF_HEIGHT_M,
+})
 
 // -----------------------------------------------------------------------
 // Input capture — keyboard + mouse
@@ -496,29 +504,6 @@ interface SelfState {
   bowChargeServerAcked: boolean
 }
 
-interface RemoteSnapshot {
-  at: number
-  x: number
-  y: number
-  z: number
-  yaw: number
-}
-
-interface RemoteState {
-  mesh: THREE.Group
-  snapshots: RemoteSnapshot[]
-  arc: THREE.Mesh
-  arcExpiresAt: number
-  lastSwingStartTick: number
-  castRing: THREE.Mesh
-  nameplate: HTMLDivElement
-  hpFill: HTMLDivElement
-  hp: number
-  alive: boolean
-  lastWeapon: string
-}
-
-const remotePlayers = new Map<string, RemoteState>()
 let self: SelfState | null = null
 
 // Hitmarker — briefly flashes the crosshair red when a hit lands.
@@ -536,8 +521,6 @@ function triggerDamageBlink(): void {
   selfDamageBlinkUntilMs = performance.now() + 160
 }
 
-// Remote character damage blink — same effect driven per remote player sid.
-const remoteDamageBlinkUntil = new Map<string, number>()
 
 // Flash one of the 4 directional hit indicators based on the attacker's screen
 // direction relative to the player's current facing yaw.
@@ -1090,7 +1073,7 @@ function onHit(msg: ServerHitMessage): void {
   }
   // Trigger white blink on the victim's remote character mesh so hits feel impactful.
   if (!amISelf && msg.damage > 0 && !msg.didParry) {
-    remoteDamageBlinkUntil.set(msg.victimId, performance.now() + 160)
+    remotePlayerSystem.setDamageBlink(msg.victimId, performance.now() + 160)
   }
 }
 
@@ -1298,20 +1281,6 @@ function disposeObject3D(obj: THREE.Object3D): void {
   })
 }
 
-function clearRemotePlayers(): void {
-  remotePlayers.forEach((r) => {
-    scene.remove(r.mesh)
-    disposeObject3D(r.mesh)
-    scene.remove(r.arc)
-    r.arc.geometry.dispose()
-    ;(r.arc.material as THREE.Material).dispose()
-    scene.remove(r.castRing)
-    r.castRing.geometry.dispose()
-    ;(r.castRing.material as THREE.Material).dispose()
-    r.nameplate.remove()
-  })
-  remotePlayers.clear()
-}
 
 function clearSelfVisuals(): void {
   if (selfMesh) {
@@ -1382,7 +1351,7 @@ function clearLocalMatchState(): void {
   clearGameplayUi()
   projectileVfx.clear()
   zoneVfx.clear()
-  clearRemotePlayers()
+  remotePlayerSystem.clear()
   clearSelfVisuals()
 }
 
@@ -1546,9 +1515,7 @@ function getPlayerWorldPos(sid: string): THREE.Vector3 | null {
   if (sid === self?.sessionId && selfMesh) {
     return selfMesh.position.clone().add(new THREE.Vector3(0, CAPSULE_HALF_HEIGHT_M, 0))
   }
-  const r = remotePlayers.get(sid)
-  if (r) return r.mesh.position.clone().add(new THREE.Vector3(0, CAPSULE_HALF_HEIGHT_M, 0))
-  return null
+  return remotePlayerSystem.getWorldPos(sid)
 }
 
 // Element → popup accent colour (outbound hits only).
@@ -1830,127 +1797,19 @@ function simStep(): void {
   const now = performance.now()
   const players = getSchemaPlayers()
   if (players) {
-    players.forEach((p, sid) => {
-      if (sid === self?.sessionId) {
-        if (selfArc && p.lastSwingStartTick > 0 && p.lastSwingStartTick !== cachedSelfSwingTick) {
-          cachedSelfSwingTick = p.lastSwingStartTick
+    remotePlayerSystem.updateFromSchema(
+      players as unknown as Map<string, RemotePlayerSchema>,
+      self.sessionId,
+      now,
+      schemaTick,
+      (tick) => {
+        if (selfArc && tick !== cachedSelfSwingTick) {
+          cachedSelfSwingTick = tick
           selfArc.visible = true
           selfArcExpiresAt = now + 400
         }
-        return
-      }
-      let r = remotePlayers.get(sid)
-      if (!r) {
-        const mesh = makeCharacter(0xe04a4a, toonGradient) // enemy = red
-        scene.add(mesh)
-        const arc = makeSwingArcMesh()
-        scene.add(arc)
-        const castRing = makeCastRing()
-        scene.add(castRing)
-        const nameplate = document.createElement('div')
-        nameplate.style.cssText = [
-          'position:absolute',
-          'transform:translate(-50%,-100%)',
-          'text-align:center',
-          'pointer-events:none',
-          'padding:4px 8px 5px',
-          'background:rgba(8,10,18,0.72)',
-          'border:1px solid rgba(255,255,255,0.10)',
-          'border-radius:6px',
-          'backdrop-filter:blur(2px)',
-        ].join(';')
-        const nameLabel = document.createElement('div')
-        nameLabel.textContent = p.name || `#${sid.slice(0, 4)}`
-        nameLabel.style.cssText = [
-          'color:#ffb0b0',
-          'font:700 12px/1 ui-monospace,monospace',
-          'text-shadow:0 1px 4px #000,0 0 6px rgba(255,60,60,0.5)',
-          'margin-bottom:4px',
-          'letter-spacing:0.06em',
-          'white-space:nowrap',
-        ].join(';')
-        const barRow = document.createElement('div')
-        barRow.style.cssText = 'display:flex;align-items:center;gap:5px'
-        const barBg = document.createElement('div')
-        barBg.style.cssText = [
-          'width:80px',
-          'height:7px',
-          'background:rgba(0,0,0,0.75)',
-          'border-radius:4px',
-          'overflow:hidden',
-          'border:1px solid rgba(255,255,255,0.12)',
-          'flex-shrink:0',
-        ].join(';')
-        const hpFill = document.createElement('div')
-        hpFill.style.cssText = [
-          'height:100%',
-          'width:100%',
-          'background:linear-gradient(90deg,#c82020,#f04040,#ff7070)',
-          'transition:width 0.12s linear,background 0.25s',
-          'border-radius:4px',
-        ].join(';')
-        barBg.appendChild(hpFill)
-        barRow.appendChild(barBg)
-        nameplate.appendChild(nameLabel)
-        nameplate.appendChild(barRow)
-        nameplateContainer.appendChild(nameplate)
-        r = {
-          mesh, snapshots: [], arc, arcExpiresAt: 0, lastSwingStartTick: 0,
-          castRing, nameplate, hpFill, hp: HP_MAX, alive: true, lastWeapon: '',
-        }
-        remotePlayers.set(sid, r)
-      }
-      r.hp = p.hp
-      // When a player respawns (alive flips false → true), clear stale
-      // snapshots so they don't teleport from their death position to spawn.
-      if (!r.alive && p.alive) {
-        r.snapshots.length = 0
-      }
-      r.alive = p.alive
-      // Update weapon prop if it changed.
-      const remoteWeapon = isWeapon(p.activeWeapon) ? p.activeWeapon : 'sword'
-      if (r.lastWeapon !== remoteWeapon) {
-        r.lastWeapon = remoteWeapon
-        applyWeaponProp(r.mesh, remoteWeapon, toonGradient)
-      }
-      r.snapshots.push({
-        at: now,
-        x: p.transform.x,
-        y: p.transform.y,
-        z: p.transform.z,
-        yaw: p.transform.yaw,
-      })
-      if (r.snapshots.length > 60) r.snapshots.shift()
-
-      if (p.lastSwingStartTick > 0 && p.lastSwingStartTick !== r.lastSwingStartTick) {
-        r.lastSwingStartTick = p.lastSwingStartTick
-        r.arc.visible = true
-        r.arcExpiresAt = now + 400
-      }
-      // Cast ring follows the player; visibility driven by schema.casting.
-      r.castRing.visible = !!p.casting && p.castEndsAtTick > schemaTick
-    })
-    remotePlayers.forEach((r, sid) => {
-      if (!players.has(sid)) {
-        scene.remove(r.mesh)
-        // Capsule is a Group — traverse to dispose every child mesh.
-        r.mesh.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            child.geometry.dispose()
-            if (Array.isArray(child.material)) child.material.forEach((m) => m.dispose())
-            else (child.material as THREE.Material).dispose()
-          }
-        })
-        scene.remove(r.arc)
-        r.arc.geometry.dispose()
-        ;(r.arc.material as THREE.Material).dispose()
-        scene.remove(r.castRing)
-        r.castRing.geometry.dispose()
-        ;(r.castRing.material as THREE.Material).dispose()
-        r.nameplate.remove()
-        remotePlayers.delete(sid)
-      }
-    })
+      },
+    )
   }
 
   heartbeatAccum += TICK_MS
@@ -2228,87 +2087,7 @@ function render(now: number): void {
     }
   }
 
-  // Remote players — interpolated render.
-  const renderAt = now - INTERPOLATION_DELAY_MS
-  remotePlayers.forEach((r) => {
-    // Hide dead players entirely — no capsule, no nameplate.
-    if (!r.alive) {
-      r.mesh.visible = false
-      r.arc.visible = false
-      r.castRing.visible = false
-      r.nameplate.style.display = 'none'
-      return
-    }
-    r.mesh.visible = true
-
-    const snaps = r.snapshots
-    if (snaps.length === 0) return
-    let a = snaps[0]!
-    let b = snaps[snaps.length - 1]!
-    for (let i = 0; i < snaps.length - 1; i++) {
-      const s1 = snaps[i]!
-      const s2 = snaps[i + 1]!
-      if (s1.at <= renderAt && s2.at >= renderAt) {
-        a = s1
-        b = s2
-        break
-      }
-    }
-    const span = b.at - a.at
-    const t = span <= 0 ? 1 : Math.max(0, Math.min(1, (renderAt - a.at) / span))
-    const x = a.x + (b.x - a.x) * t
-    const y = a.y + (b.y - a.y) * t
-    const z = a.z + (b.z - a.z) * t
-    // Idle breathing bob — unique phase per player via mesh.id (golden ratio).
-    const rIdleBob = Math.sin(now * 0.0028 + r.mesh.id * 0.618) * 0.014
-    r.mesh.position.set(x, y + rIdleBob, z)
-    let dyaw = b.yaw - a.yaw
-    if (dyaw > Math.PI) dyaw -= 2 * Math.PI
-    if (dyaw < -Math.PI) dyaw += 2 * Math.PI
-    const yawNow = a.yaw + dyaw * t
-    r.mesh.rotation.y = yawNow
-
-    if (r.arc.visible && now < r.arcExpiresAt) {
-      const life = 1 - (r.arcExpiresAt - now) / 400
-      r.arc.position.set(x, y, z)
-      r.arc.rotation.set(Math.PI / 2, yawNow + SWING_ARC_YAW_OFFSET, 0, 'YXZ')
-      ;(r.arc.material as THREE.MeshBasicMaterial).opacity = 0.8 * (1 - life)
-    } else {
-      r.arc.visible = false
-    }
-    // Cast ring hovers above the capsule head when casting.
-    if (r.castRing.visible) {
-      r.castRing.position.set(x, y + CAPSULE_HEIGHT_M + 0.1, z)
-    }
-
-    // Nameplate — project head position to screen coords.
-    const npWorld = new THREE.Vector3(x, y + CAPSULE_HEIGHT_M + 0.4, z)
-    npWorld.project(camera)
-    if (npWorld.z <= 1) {
-      const sx = (npWorld.x * 0.5 + 0.5) * renderer.domElement.clientWidth
-      const sy = (-npWorld.y * 0.5 + 0.5) * renderer.domElement.clientHeight
-      r.nameplate.style.left = `${sx}px`
-      r.nameplate.style.top = `${sy}px`
-      r.nameplate.style.display = ''
-      const pct = Math.max(0, Math.min(1, r.hp / HP_MAX))
-      r.hpFill.style.width = `${pct * 100}%`
-      if (pct > 0.55) {
-        r.hpFill.style.background = 'linear-gradient(90deg,#1a8a3a,#2ec850,#70f090)'
-        r.nameplate.style.boxShadow = ''
-      } else if (pct > 0.28) {
-        r.hpFill.style.background = 'linear-gradient(90deg,#a87010,#d4a020,#f0c840)'
-        r.nameplate.style.boxShadow = ''
-      } else {
-        r.hpFill.style.background = 'linear-gradient(90deg,#c82020,#f04040,#ff7070)'
-        // Low-HP nameplate gets a pulsing red glow to draw attention.
-        const pulse = 0.5 + 0.5 * Math.sin(now * 0.007)
-        const gAlpha = (0.25 + pulse * 0.35).toFixed(2)
-        r.nameplate.style.boxShadow = `0 0 ${10 + pulse * 14}px rgba(220,30,30,${gAlpha}), 0 2px 12px rgba(0,0,0,0.6)`
-      }
-    } else {
-      r.nameplate.style.display = 'none'
-    }
-  })
+  remotePlayerSystem.renderFrame(now, camera, renderer.domElement)
 
   const proj = getSchemaProjectiles()
   if (proj) projectileVfx.renderFrame(proj as Map<string, SchemaProjectile>, now, dbgProj)
@@ -2482,44 +2261,12 @@ function render(now: number): void {
     }
   }
 
-  // Remote player status emissive tints + spawn-invuln gold pulse.
-  remotePlayers.forEach((r, sid) => {
-    const p = getSchemaPlayers()?.get(sid)
-    if (!p || !r.alive) return
-    const mat = r.mesh.userData['armorMat'] as THREE.MeshToonMaterial | undefined
-    if (!mat?.emissive) return
-    let tR = 0, tG = 0, tB = 0
-    for (const st of Array.from(p.statuses ?? [])) {
-      const hex = STATUS_EMISSIVE[st.kind]
-      if (hex !== undefined) {
-        tR = Math.max(tR, ((hex >> 16) & 0xff) / 255)
-        tG = Math.max(tG, ((hex >> 8)  & 0xff) / 255)
-        tB = Math.max(tB, ( hex        & 0xff) / 255)
-      }
-    }
-    if (p.invulnUntilTick > tickNow) {
-      const pulse = 0.45 + 0.45 * Math.sin(now * 0.025)
-      tR = Math.max(tR, pulse * 1.0)
-      tG = Math.max(tG, pulse * 0.85)
-      tB = Math.max(tB, pulse * 0.2)
-    }
-    // Remote damage blink — white flash on hit.
-    const rBlinkUntil = remoteDamageBlinkUntil.get(sid) ?? 0
-    if (now < rBlinkUntil) {
-      const bf = 1 - (rBlinkUntil - now) / 160
-      const bs = bf < 0.5 ? bf * 2 : (1 - bf) * 2
-      tR = Math.max(tR, bs * 0.95)
-      tG = Math.max(tG, bs * 0.95)
-      tB = Math.max(tB, bs * 0.95)
-    } else if (rBlinkUntil > 0) {
-      remoteDamageBlinkUntil.delete(sid)
-    }
-    const LERP = 0.12
-    mat.emissive.r += (tR - mat.emissive.r) * LERP
-    mat.emissive.g += (tG - mat.emissive.g) * LERP
-    mat.emissive.b += (tB - mat.emissive.b) * LERP
-    mat.emissiveIntensity = 0.70
-  })
+  remotePlayerSystem.renderEmissives(
+    now,
+    tickNow,
+    STATUS_EMISSIVE,
+    () => getSchemaPlayers() as unknown as Map<string, RemotePlayerSchema> | null,
+  )
 
   selfHud.update({
     selfSchema,
