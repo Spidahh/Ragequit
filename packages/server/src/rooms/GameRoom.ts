@@ -1504,15 +1504,30 @@ export class GameRoom extends Room<GameState> {
   private handleParryPress(sid: string, _msg: ClientParryPressMessage): void {
     const player = this.state.players.get(sid)
     if (!player || !player.alive) return
-    if (player.casting) return
-    if (this.state.tick < player.airborneUntilTick) return
+    if (player.casting) {
+      this.sendAbilityFailed(sid, 'parry', 'casting')
+      return
+    }
+    if (this.state.tick < player.airborneUntilTick) {
+      this.sendAbilityFailed(sid, 'parry', 'airborne')
+      return
+    }
     // Can't open a new parry while one is already in progress.
-    if (player.parrying) return
+    if (player.parrying) {
+      this.sendAbilityFailed(sid, 'parry', 'parrying')
+      return
+    }
     // Tap CD only gates NEW taps; hold requires no CD. At press-time we
     // don't know yet if it'll be a tap, so gate by CD up front. If stamina is
     // too low even for a tap, the press is a no-op.
-    if (this.state.tick < player.parryCooldownReadyAtTick) return
-    if (player.stamina < PARRY_TAP_COST_STAMINA) return
+    if (this.state.tick < player.parryCooldownReadyAtTick) {
+      this.sendAbilityFailed(sid, 'parry', 'cooldown')
+      return
+    }
+    if (player.stamina < PARRY_TAP_COST_STAMINA) {
+      this.sendAbilityFailed(sid, 'parry', 'cost')
+      return
+    }
 
     const now = this.state.tick
     // Parry is a defensive commitment. Starting it cancels a bow draw so the

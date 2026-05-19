@@ -3147,7 +3147,13 @@ let lastAbilityFailToastKey = ''
 
 function getAbilityFailText(msg: ServerAbilityFailedMessage): string {
   const abilityName = ABILITY_DEFS[msg.abilityId]?.name
-    ?? (msg.abilityId === 'staff_m1' ? 'Staff Shot' : msg.abilityId === 'bow_m1' ? 'Bow Shot' : 'Ability')
+    ?? (msg.abilityId === 'staff_m1'
+      ? 'Staff Shot'
+      : msg.abilityId === 'bow_m1'
+        ? 'Bow Shot'
+        : msg.abilityId === 'parry'
+          ? 'Parry'
+          : 'Ability')
   switch (msg.reason) {
     case 'cost':
       return `${abilityName}: not enough resources`
