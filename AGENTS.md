@@ -54,6 +54,9 @@ Before changing gameplay, UI, VFX, input, loadout, networking, or docs, read:
 - Resource HUD bars are flat rectangles, draggable and resizable. Do not use skew/trapezoid styling for resource bars.
 - Weapon strip uses readable 60x60-style slots, clear active state, and must not overlap the hotbar.
 - Avoid HTML-page-looking menus. Menus, loadout, pause, and settings must feel like game UI.
+- Follow `01_DESIGN/11_ui_redesign_plan.md` before adding, moving, or redesigning HUD/menu/loadout surfaces.
+- Do not add persistent center-screen HUD panels for explanations. Reuse hotbar, crosshair, castbar, status, or menu surfaces; if a new HUD layer is unavoidable, first remove or consolidate an existing layer and document why.
+- Prefer subtraction and consolidation over adding more UI. The live combat view must stay clear enough for aim, projectiles, VFX, and enemy silhouettes to remain dominant.
 - Prefer `transform` and `opacity` animations. Avoid long-running animation of `filter`, `border-color`, heavy `box-shadow`, or large `backdrop-filter` blur.
 - Use cheap materials for projectiles, previews, zone walls, and short-lived VFX. Do not add heavier lit materials unless they clearly improve gameplay readability.
 

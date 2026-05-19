@@ -27,6 +27,7 @@ read_order:
   - 07_modes.md
   - 08_progression.md
   - 09_visual.md
+  - 11_ui_redesign_plan.md
   - 10_tech_stack.md
   - 10_tech_netcode.md
   - 10_tech_assets.md
@@ -53,6 +54,7 @@ files:
   07_modes.md: { section: meta, status: final, tags: [modes, win_conditions] }
   08_progression.md: { section: meta, status: final, tags: [elo, quests, talents] }
   09_visual.md: { section: art, status: final, tags: [style, vfx] }
+  11_ui_redesign_plan.md: { section: art, status: active, tags: [ui, ux, hud, menus, loadout, readability] }
   10_tech_stack.md: { section: tech, status: final, tags: [frameworks, versions] }
   10_tech_netcode.md: { section: tech, status: final, tags: [multiplayer, server_auth] }
   10_tech_assets.md: { section: tech, status: final, tags: [assets, pipeline] }
@@ -72,7 +74,7 @@ sections:
       05_abilities_utility.md,
     ]
   meta: [06_loadout_build.md, 07_modes.md, 08_progression.md, 99_resolved_ambiguities.md]
-  art: [09_visual.md]
+  art: [09_visual.md, 11_ui_redesign_plan.md]
   tech: [10_tech_stack.md, 10_tech_netcode.md, 10_tech_assets.md]
 
 query_hints:
@@ -86,7 +88,7 @@ query_hints:
   build_crafting: [06_loadout_build.md, 05_abilities_philosophy.md]
   game_modes: [07_modes.md]
   progression_and_elo: [08_progression.md]
-  art_style: [09_visual.md, 10_tech_assets.md]
+  art_style: [09_visual.md, 11_ui_redesign_plan.md, 10_tech_assets.md]
   tech_stack: [10_tech_stack.md, 10_tech_netcode.md]
   ttk_and_damage: [01_combat_fundamentals.md, 01_stats.md]
   decision_history: [99_resolved_ambiguities.md]

@@ -90,7 +90,7 @@ status: target
 - Bottom center: weapon strip, 60x60 slots, active slot scales up and lifts slightly with a gold bottom border. The 7 combat slots mirror the E wheel; the 4 utility slots mirror the Q wheel with fixed Z/X/F transfers plus V flex utility.
 - Top right: minimap (small, overhead)
 - Top center: kill feed + scoreboard ticker (in team modes)
-- Around crosshair: GCD pip indicator; cast bar on active abilities; parry charge indicator; action intent HUD showing what LMB/RMB will do now, including primed ability, placement preview, bow draw, parry, and control locks
+- Around crosshair: only gameplay-critical state: GCD pip, cast/charge feedback, parry charge/ring, placement preview, hit confirmation, and short failed-action flashes. Do not add persistent explanatory panels in the play view; primed/blocked states should be shown through hotbar/crosshair states or brief contextual pulses.
 - Crosshair HUD: parry ring is a 60px circle with 2px stroke; normal parry uses Mana cyan, hold/block uses Stamina green. Bow charge sits 40px below the crosshair, 120x6px, progressing from Stamina green to gold/orange.
 
 ### Wheels (Q / E)

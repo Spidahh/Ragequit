@@ -1,6 +1,6 @@
 # RAGEQUIT — Roadmap / Stato Reale
 
-Ultimo riallineamento documentale: 2026-05-17.
+Ultimo riallineamento documentale: 2026-05-19.
 
 Questo file non descrive più il bootstrap iniziale come se dovesse ancora partire. Il progetto ha già una vertical slice giocabile con server autoritativo, client Three.js, abilità data-driven, loadout, mastery, bot/training e match flow.
 
@@ -43,6 +43,7 @@ Implementato:
 
 ### 2. Loadout Station / UX
 
+- Seguire `01_DESIGN/11_ui_redesign_plan.md` prima di altri interventi HUD/menu/loadout: prima togliere rumore e definire gerarchia, poi rifare superfici.
 - Continuare polish visivo AAA-style: più leggibilità, meno HTML panel feel.
 - Rendere chiarissima la distinzione:
   - E = ability palette
@@ -97,7 +98,10 @@ DoD:
 
 DoD:
 
+- HUD subtraction pass completato: niente pannelli esplicativi persistenti in centro visuale durante il live gameplay.
+- Bottom combat console coerente: risorse, weapon strip, combat slots, utility/transfer e cooldown leggibili senza sovrapporsi.
 - Loadout Station comprensibile in 10 secondi.
+- Loadout Station v2 centrata su build equipaggiata, abilità selezionata, combo flow e cast mode.
 - Transfer fissi visibili e non sostituibili.
 - Wheel behavior documentato e verificato.
 - Nessuna categoria/passiva/runa fantasma.
@@ -122,6 +126,7 @@ DoD:
 
 DoD:
 
+- Main menu, pause, settings e lobby condividono un linguaggio da gioco, non da pagina HTML.
 - Arena e personaggi smettono di sembrare blockout.
 - VFX elementali leggibili.
 - Hit/parry/death/channel interrupt hanno feedback chiaro.
