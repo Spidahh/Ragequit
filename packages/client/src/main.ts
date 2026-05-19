@@ -11,10 +11,8 @@ import {
   HP_MAX,
   MessageTypes,
   PROJECTILE_MUZZLE_Y_OFFSET_M,
-  ROUND_TIMER_SEC,
   getMap,
   TICK_MS,
-  TICK_RATE_HZ,
   WEAPON_IDS,
   makePlayerSimState,
   movementCapsFromStatuses,
@@ -54,6 +52,7 @@ import { createHudFlash } from './hud/flash.js'
 import { initDraggableHud } from './hud/hud-drag.js'
 import { initSelfHud } from './hud/self-hud.js'
 import { initAbilityFailHud } from './hud/ability-fail-hud.js'
+import { initCombatOverlayHud } from './hud/combat-overlay-hud.js'
 import { initHitFeedback } from './hud/hit-feedback.js'
 import { initTransmuteHud } from './hud/transmute-hud.js'
 import { ensureIconSprite, weaponIcon } from './icons.js'
@@ -383,6 +382,12 @@ const hitFeedback = initHitFeedback({
   getCamYaw: () => camera.rotation.y,
 })
 
+const combatOverlayHud = initCombatOverlayHud({
+  bowCharge, bowChargeFill, crosshairEl,
+  parryRing, roundTimer,
+  lowHpVignette, blindVignette, deathOverlay, healFlash,
+})
+
 // -----------------------------------------------------------------------
 // Input capture — keyboard + mouse
 // -----------------------------------------------------------------------
@@ -557,8 +562,6 @@ function applyDirectionalShake(attackerWorldPos: THREE.Vector3 | null, intensity
 let livePhaseStartTick = -1
 let currentMatchPhase: ServerMatchPhaseMessage['phase'] = 'lobby'
 let lastKillerName = ''
-// Previous self HP — used to detect heals for the green edge flash.
-let prevSelfHp = -1
 // Timestamps of self kills for streak detection (ms).
 const recentKillTimes: number[] = []
 let selfMesh: THREE.Group | null = null
@@ -1803,79 +1806,20 @@ function render(now: number): void {
     weaponSlots[w].classList.toggle('active', w === activeWeapon)
   }
 
-  // Bow charge bar — driven by local press time so it starts immediately on
-  // LMB down, then validated against schema (server cancels on damage).
-  const serverCharging = !!selfSchema && selfSchema.bowChargeStartTick > 0
-  if (self && self.bowChargeStartMs > 0 && activeWeapon === 'bow' && !dead) {
-    const ratio = bowChargeRatio // pre-computed in outer scope
-    bowCharge.classList.add('active')
-    bowCharge.classList.toggle('full', ratio >= 1)
-    bowCharge.classList.toggle('mid', ratio >= 0.4 && ratio < 1)
-    bowChargeFill.style.width = `${ratio * 100}%`
-    // Tint the charge fill dynamically with the HUD/VFX palette.
-    if (ratio < 0.4) {
-      bowChargeFill.style.background = 'linear-gradient(90deg,#00ff88,#ffd260)'
-    } else if (ratio < 0.75) {
-      bowChargeFill.style.background = 'linear-gradient(90deg,#ffd260,#ffe600)'
-    } else {
-      bowChargeFill.style.background = 'linear-gradient(90deg,#ffd260,#ff4500)'
-    }
-    // Crosshair charge tint — drives CSS via data-charge attribute.
-    if (ratio >= 1) {
-      crosshairEl.dataset['charge'] = 'full'
-    } else if (ratio >= 0.5) {
-      crosshairEl.dataset['charge'] = 'high'
-    } else if (ratio > 0) {
-      crosshairEl.dataset['charge'] = 'low'
-    } else {
-      delete crosshairEl.dataset['charge']
-    }
-    // If the server cancelled an already-acknowledged charge (e.g. damage),
-    // clear locally. Do not clear a pending draw before the schema ack arrives:
-    // that drops the later LMB release and makes bow feel locked for ~1s.
-    if (!serverCharging && self.bowChargeServerAcked) {
-      self.bowChargeStartMs = 0
-      self.bowChargeServerAcked = false
-    }
-  } else {
-    bowCharge.classList.remove('active', 'full', 'mid')
-    bowChargeFill.style.width = '0%'
-    delete crosshairEl.dataset['charge']
-  }
-
-  // Parry ring — visible while schema says we're parrying.
-  if (selfSchema && selfSchema.parrying) {
-    parryRing.classList.add('active')
-    parryRing.classList.toggle('hold', selfSchema.parryIsHold)
-  } else {
-    parryRing.classList.remove('active')
-    parryRing.classList.remove('hold')
-  }
-
-  // Round live timer (duel modes only — hidden for FFA/5v5 which use kill counter).
-  if (livePhaseStartTick >= 0 && tickNow > 0) {
-    const elapsed = (tickNow - livePhaseStartTick) / TICK_RATE_HZ
-    const secsLeft = Math.max(0, ROUND_TIMER_SEC - elapsed)
-    roundTimer.textContent = secsLeft.toFixed(0) + 's'
-    roundTimer.classList.toggle('urgent', secsLeft <= 15)
-  }
-
-  // Low-HP vignette + death overlay + heal flash + body death class.
-  if (selfSchema) {
-    const hpFrac = selfSchema.hp / HP_MAX
-    lowHpVignette.classList.toggle('active', selfSchema.alive && hpFrac < 0.25)
-    const blinded = selfSchema.alive && Array.from(selfSchema.statuses).some((s) => s.kind === 'blind')
-    blindVignette.classList.toggle('active', blinded)
-    deathOverlay.classList.toggle('active', !selfSchema.alive)
-    document.body.classList.toggle('player-dead', !selfSchema.alive)
-    // Heal flash: green edge glow when HP increases noticeably (not on respawn).
-    if (prevSelfHp > 0 && selfSchema.hp > prevSelfHp + 3 && selfSchema.alive) {
-      healFlash.classList.add('active')
-      void healFlash.offsetHeight
-      healFlash.classList.remove('active')
-    }
-    prevSelfHp = selfSchema.hp
-  }
+  combatOverlayHud.update({
+    now, tickNow,
+    bowChargeRatio,
+    activeWeapon,
+    dead,
+    selfBowChargeStartMs: self?.bowChargeStartMs ?? 0,
+    selfBowChargeServerAcked: self?.bowChargeServerAcked ?? false,
+    serverCharging: !!selfSchema && selfSchema.bowChargeStartTick > 0,
+    selfSchema: selfSchema ?? null,
+    livePhaseStartTick,
+    clearBowCharge: () => {
+      if (self) { self.bowChargeStartMs = 0; self.bowChargeServerAcked = false }
+    },
+  })
 
   zoneVfx.animateFrame(now)
 
