@@ -5,7 +5,7 @@ import importPlugin from 'eslint-plugin-import'
 
 export default [
   {
-    ignores: ['**/dist/**', '**/node_modules/**', '_archive/**', '**/*.d.ts'],
+    ignores: ['**/dist/**', '**/node_modules/**', '.claude/**', '_archive/**', '**/*.d.ts'],
   },
   {
     files: ['**/*.ts'],

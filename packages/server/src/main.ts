@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { fileURLToPath } from 'node:url'
@@ -11,11 +12,14 @@ import {
   validateBalance,
   type BalanceConfig,
 } from '@ragequit/shared'
-import express from 'express'
+import express, { type RequestHandler } from 'express'
 
 import { GameRoom } from './rooms/GameRoom.js'
 
 const PORT = Number(process.env['PORT'] ?? 2567)
+const MONITOR_ENABLED = process.env['COLYSEUS_MONITOR_ENABLED'] === 'true'
+const MONITOR_USER = process.env['COLYSEUS_MONITOR_USER']
+const MONITOR_PASSWORD = process.env['COLYSEUS_MONITOR_PASSWORD']
 
 // Read the balance overrides file at boot. The path is configurable
 // (BALANCE_FILE env), defaulting to the JSON shipped in the shared package.
@@ -54,8 +58,56 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', ts: Date.now() })
 })
 
-// Colyseus monitor — dev-only surface. Protect before production deploy.
-app.use('/colyseus', monitor())
+function constantTimeEquals(a: string, b: string): boolean {
+  const left = Buffer.from(a)
+  const right = Buffer.from(b)
+  return left.length === right.length && timingSafeEqual(left, right)
+}
+
+function requireBasicAuth(user: string, password: string): RequestHandler {
+  return (req, res, next) => {
+    const header = req.headers.authorization ?? ''
+    const [scheme, encoded] = header.split(' ')
+    if (scheme !== 'Basic' || !encoded) {
+      res.setHeader('WWW-Authenticate', 'Basic realm="RAGEQUIT Colyseus Monitor"')
+      res.status(401).send('Authentication required')
+      return
+    }
+
+    let decoded = ''
+    try {
+      decoded = Buffer.from(encoded, 'base64').toString('utf8')
+    } catch {
+      res.setHeader('WWW-Authenticate', 'Basic realm="RAGEQUIT Colyseus Monitor"')
+      res.status(401).send('Invalid authentication')
+      return
+    }
+
+    const separatorIdx = decoded.indexOf(':')
+    const requestUser = separatorIdx >= 0 ? decoded.slice(0, separatorIdx) : ''
+    const requestPassword = separatorIdx >= 0 ? decoded.slice(separatorIdx + 1) : ''
+    if (
+      constantTimeEquals(requestUser, user) &&
+      constantTimeEquals(requestPassword, password)
+    ) {
+      next()
+      return
+    }
+
+    res.setHeader('WWW-Authenticate', 'Basic realm="RAGEQUIT Colyseus Monitor"')
+    res.status(401).send('Authentication required')
+  }
+}
+
+// Colyseus monitor — opt-in admin surface. Never expose it without auth.
+if (MONITOR_ENABLED) {
+  if (!MONITOR_USER || !MONITOR_PASSWORD) {
+    throw new Error(
+      'COLYSEUS_MONITOR_ENABLED=true requires COLYSEUS_MONITOR_USER and COLYSEUS_MONITOR_PASSWORD',
+    )
+  }
+  app.use('/colyseus', requireBasicAuth(MONITOR_USER, MONITOR_PASSWORD), monitor())
+}
 
 const httpServer = createServer(app)
 
@@ -72,5 +124,9 @@ httpServer.listen(PORT, () => {
   console.info(`[ragequit-server] listening on http://localhost:${PORT}`)
   console.info(`[ragequit-server]   ws endpoint:  ws://localhost:${PORT}`)
   console.info(`[ragequit-server]   health:       http://localhost:${PORT}/health`)
-  console.info(`[ragequit-server]   monitor:      http://localhost:${PORT}/colyseus`)
+  console.info(
+    MONITOR_ENABLED
+      ? `[ragequit-server]   monitor:      http://localhost:${PORT}/colyseus (basic auth)`
+      : '[ragequit-server]   monitor:      disabled',
+  )
 })

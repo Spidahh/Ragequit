@@ -15,7 +15,7 @@ Installa (se non li hai già):
 Apri un terminale dentro la cartella della repo clonata. Sul workspace locale attuale:
 
 ```powershell
-cd E:\GIOCHI\RAGEQUIT_NEW_REPO
+cd E:\GIOCHI\RAGEQUIT
 ```
 
 ## Passo 2 — installare le dipendenze
@@ -61,8 +61,18 @@ Output atteso:
 [ragequit-server] listening on http://localhost:2567
 [ragequit-server]   ws endpoint:  ws://localhost:2567
 [ragequit-server]   health:       http://localhost:2567/health
-[ragequit-server]   monitor:      http://localhost:2567/colyseus
+[ragequit-server]   monitor:      disabled
 ```
+
+Il monitor admin Colyseus è disabilitato di default. Per usarlo in locale, metti in `.env`:
+
+```bash
+COLYSEUS_MONITOR_ENABLED=true
+COLYSEUS_MONITOR_USER=admin
+COLYSEUS_MONITOR_PASSWORD=una-password-locale
+```
+
+Quando è abilitato, `/colyseus` richiede Basic Auth. Non esporlo mai senza credenziali.
 
 **Terminale 2** — client Vite:
 
