@@ -61,6 +61,7 @@ import { Client, type Room } from 'colyseus.js'
 import * as THREE from 'three'
 
 import { createHudFlash } from './hud/flash.js'
+import { initDraggableHud } from './hud/hud-drag.js'
 import { abilityIcon, abilityIconMarkup, ensureIconSprite, statusIcon, weaponIcon } from './icons.js'
 import {
   actionCode,
@@ -2407,227 +2408,11 @@ let camFovBase = 90
 // settings panel; persisted by menu.ts via localStorage.
 let settingsFovBase = 90
 let pendingLaunchMode: string | null = null
-const HUD_POS_KEY = 'ragequit.hud.position.v2'
-const HUD_SIZE_KEY = 'ragequit.hud.size.v2'
-const HUD_MIN_WIDTH = 250
-const HUD_MAX_WIDTH = 520
-const HUD_MIN_BAR_H = 18
-const HUD_MAX_BAR_H = 26
-
-function clampHudPosition(left: number, top: number): { left: number; top: number } {
-  const rect = hudPanel.getBoundingClientRect()
-  const margin = 8
-  const maxLeft = Math.max(margin, window.innerWidth - rect.width - margin)
-  const maxTop = Math.max(margin, window.innerHeight - rect.height - margin)
-  return {
-    left: Math.max(margin, Math.min(maxLeft, left)),
-    top: Math.max(margin, Math.min(maxTop, top)),
-  }
-}
-
-function clampHudSize(width: number, barHeight: number): { width: number; barHeight: number } {
-  const margin = 12
-  const maxWidth = Math.min(HUD_MAX_WIDTH, Math.max(HUD_MIN_WIDTH, window.innerWidth - margin * 2))
-  return {
-    width: Math.max(HUD_MIN_WIDTH, Math.min(maxWidth, width)),
-    barHeight: Math.max(HUD_MIN_BAR_H, Math.min(HUD_MAX_BAR_H, barHeight)),
-  }
-}
-
-function setHudSize(width: number, barHeight: number, persist = true): void {
-  const size = clampHudSize(width, barHeight)
-  hudPanel.style.width = `${size.width}px`
-  hudPanel.style.setProperty('--hud-bar-h', `${size.barHeight}px`)
-  if (persist) {
-    try {
-      localStorage.setItem(HUD_SIZE_KEY, JSON.stringify(size))
-    } catch {
-      // Local storage can be disabled by privacy settings.
-    }
-  }
-  if (hudPanel.style.left && hudPanel.style.top) {
-    setHudPosition(parseFloat(hudPanel.style.left), parseFloat(hudPanel.style.top), false)
-  }
-}
-
-function setHudPosition(left: number, top: number, persist = true): void {
-  const pos = clampHudPosition(left, top)
-  hudPanel.style.left = `${pos.left}px`
-  hudPanel.style.top = `${pos.top}px`
-  hudPanel.style.right = 'auto'
-  hudPanel.style.bottom = 'auto'
-  if (persist) {
-    try {
-      localStorage.setItem(HUD_POS_KEY, JSON.stringify(pos))
-    } catch {
-      // Local storage can be disabled by privacy settings.
-    }
-  }
-}
-
-function resetHudPosition(): void {
-  hudPanel.style.left = ''
-  hudPanel.style.top = ''
-  hudPanel.style.right = ''
-  hudPanel.style.bottom = ''
-  hudPanel.style.width = ''
-  hudPanel.style.removeProperty('--hud-bar-h')
-  try {
-    localStorage.removeItem(HUD_POS_KEY)
-    localStorage.removeItem(HUD_SIZE_KEY)
-  } catch {
-    // Storage is optional.
-  }
-}
-
-function initDraggableHud(): void {
-  try {
-    const raw = localStorage.getItem(HUD_POS_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw) as { left?: number; top?: number }
-      if (Number.isFinite(parsed.left) && Number.isFinite(parsed.top)) {
-        setHudPosition(parsed.left!, parsed.top!, false)
-      }
-    }
-    const rawSize = localStorage.getItem(HUD_SIZE_KEY)
-    if (rawSize) {
-      const parsed = JSON.parse(rawSize) as { width?: number; barHeight?: number }
-      if (Number.isFinite(parsed.width) && Number.isFinite(parsed.barHeight)) {
-        setHudSize(parsed.width!, parsed.barHeight!, false)
-      }
-    }
-  } catch {
-    resetHudPosition()
-  }
-
-  let dragging = false
-  let resizing = false
-  let offsetX = 0
-  let offsetY = 0
-  let resizeStartX = 0
-  let resizeStartY = 0
-  let resizeStartWidth = 0
-  let resizeStartBarH = 0
-  let activePointer = -1
-  let resizePointer = -1
-
-  const beginDrag = (clientX: number, clientY: number): void => {
-    if (resizing) return
-    dragging = true
-    const rect = hudPanel.getBoundingClientRect()
-    offsetX = clientX - rect.left
-    offsetY = clientY - rect.top
-    hudPanel.classList.add('dragging')
-  }
-
-  const moveDrag = (clientX: number, clientY: number): void => {
-    if (!dragging) return
-    setHudPosition(clientX - offsetX, clientY - offsetY)
-  }
-
-  const endDrag = (): void => {
-    if (!dragging) return
-    dragging = false
-    activePointer = -1
-    hudPanel.classList.remove('dragging')
-  }
-
-  const beginResize = (clientX: number, clientY: number): void => {
-    resizing = true
-    const rect = hudPanel.getBoundingClientRect()
-    resizeStartX = clientX
-    resizeStartY = clientY
-    resizeStartWidth = rect.width
-    resizeStartBarH = parseFloat(getComputedStyle(hudPanel).getPropertyValue('--hud-bar-h')) || 22
-    hudPanel.classList.add('resizing')
-  }
-
-  const moveResize = (clientX: number, clientY: number): void => {
-    if (!resizing) return
-    setHudSize(
-      resizeStartWidth + (clientX - resizeStartX),
-      resizeStartBarH + (clientY - resizeStartY) / 3,
-    )
-  }
-
-  const endResize = (): void => {
-    if (!resizing) return
-    resizing = false
-    resizePointer = -1
-    hudPanel.classList.remove('resizing')
-  }
-
-  hudDragHandle.addEventListener('pointerdown', (e) => {
-    activePointer = e.pointerId
-    beginDrag(e.clientX, e.clientY)
-    hudDragHandle.setPointerCapture(e.pointerId)
-    e.preventDefault()
-  })
-
-  hudDragHandle.addEventListener('pointermove', (e) => {
-    if (!dragging || e.pointerId !== activePointer) return
-    moveDrag(e.clientX, e.clientY)
-  })
-
-  const stopDrag = (e: PointerEvent): void => {
-    if (!dragging || e.pointerId !== activePointer) return
-    endDrag()
-    hudDragHandle.releasePointerCapture(e.pointerId)
-  }
-  hudDragHandle.addEventListener('pointerup', stopDrag)
-  hudDragHandle.addEventListener('pointercancel', stopDrag)
-  hudDragHandle.addEventListener('mousedown', (e) => {
-    if (dragging) return
-    beginDrag(e.clientX, e.clientY)
-    e.preventDefault()
-  })
-
-  hudResizeHandle.addEventListener('pointerdown', (e) => {
-    resizePointer = e.pointerId
-    beginResize(e.clientX, e.clientY)
-    hudResizeHandle.setPointerCapture(e.pointerId)
-    e.preventDefault()
-    e.stopPropagation()
-  })
-  hudResizeHandle.addEventListener('pointermove', (e) => {
-    if (!resizing || e.pointerId !== resizePointer) return
-    moveResize(e.clientX, e.clientY)
-  })
-  const stopResize = (e: PointerEvent): void => {
-    if (!resizing || e.pointerId !== resizePointer) return
-    endResize()
-    hudResizeHandle.releasePointerCapture(e.pointerId)
-  }
-  hudResizeHandle.addEventListener('pointerup', stopResize)
-  hudResizeHandle.addEventListener('pointercancel', stopResize)
-
-  document.addEventListener('mousemove', (e) => {
-    if (activePointer !== -1) return
-    moveDrag(e.clientX, e.clientY)
-  })
-  document.addEventListener('mouseup', () => {
-    if (activePointer !== -1) return
-    endDrag()
-  })
-  document.addEventListener('pointermove', (e) => {
-    if (resizePointer === -1 || e.pointerId !== resizePointer) return
-    moveResize(e.clientX, e.clientY)
-  })
-  document.addEventListener('pointerup', (e) => {
-    if (resizePointer === -1 || e.pointerId !== resizePointer) return
-    endResize()
-  })
-  document.addEventListener('pointercancel', (e) => {
-    if (resizePointer === -1 || e.pointerId !== resizePointer) return
-    endResize()
-  })
-  hudDragHandle.addEventListener('dblclick', (e) => {
-    e.preventDefault()
-    resetHudPosition()
-  })
-}
-
-initDraggableHud()
+const draggableHud = initDraggableHud({
+  panel: hudPanel,
+  dragHandle: hudDragHandle,
+  resizeHandle: hudResizeHandle,
+})
 
 function setStatus(text: string, color: string): void {
   dbgStatus.textContent = text
@@ -5132,14 +4917,7 @@ addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight
   camera.updateProjectionMatrix()
   renderer.setSize(window.innerWidth, window.innerHeight)
-  const currentHudWidth = parseFloat(hudPanel.style.width)
-  if (Number.isFinite(currentHudWidth)) {
-    const currentBarHeight = parseFloat(getComputedStyle(hudPanel).getPropertyValue('--hud-bar-h')) || 22
-    setHudSize(currentHudWidth, currentBarHeight, false)
-  }
-  if (hudPanel.style.left && hudPanel.style.top) {
-    setHudPosition(parseFloat(hudPanel.style.left), parseFloat(hudPanel.style.top), false)
-  }
+  draggableHud.refreshBounds()
 })
 
 addEventListener('beforeunload', () => {
