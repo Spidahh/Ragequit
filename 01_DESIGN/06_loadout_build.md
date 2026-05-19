@@ -58,14 +58,26 @@ Direct hotkeys may mirror wheel sectors, but they do not replace the wheels. Def
 - **Current vertical slice**: all abilities are available in the Loadout Station for testing.
 - **Future progression**: unlock filtering can be added later via quest/account state (`08_progression.md`).
 
-## Build metadata shown in Loadout Station
+## Loadout Station UI contract
 
-When hovering a build preview:
+The Loadout Station is the actual build editor, not a generic HTML form. It must keep these readable surfaces visible:
 
-- Mastery status (active / inactive and which element)
-- Estimated playstyle tag: "Burst / Sustain / Zone / Mobility" (purely informational, computed from loadout composition)
-- Damage budget preview (relative bar per element; visualization only)
-- Warning if 0/5 or 1/5 magic are empty/mismatched
+- **Slot column**: every slot shows key, icon, ability name, role, cost/cooldown, and cast mode (`INSTANT` or `PREVIEW`). Fixed transfers are visibly locked.
+- **Selected ability panel**: shows role, cast mode behavior, effect tags, quick-stat bars, player-facing description, build coach, and mini-malus.
+- **Build flow strip**: `Opener / Control / Cashout / Reset` states summarize whether the build has the basic combo skeleton.
+- **Mastery pills**: Fire/Ice/Lightning/Dark/Nature counts show whether the 5 magic slots are building toward elemental mastery.
+- **Ability pool**: cards show icon, role, cast mode toggle, description, effect tags, and quick stat bars. Search and filters must remain visible.
+
+Required pool filters:
+
+- `SMART`: abilities recommended for the currently selected slot/build gap.
+- `STARTER`: launch, root, freeze, stun, blind, or other opener role.
+- `CONTROL`: abilities with hard control or meaningful zone control.
+- `INSTANT`: abilities whose direct key casts immediately.
+- `PREVIEW`: placement abilities that arm a preview and confirm with LMB.
+- `ALL`, element filters, and `PHYSICAL`.
+
+The station must be responsive. On narrow widths, the ability pool should move below the slot/details panels instead of being squeezed off-screen.
 
 ## Build saving
 

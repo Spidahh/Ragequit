@@ -34,6 +34,7 @@ Before changing gameplay, UI, VFX, input, loadout, networking, or docs, read:
   - Direct hotkeys still cast immediately when intended by their cast mode.
 - Placement abilities must show a preview first unless they are explicitly configured as instant cast.
 - Ability descriptions must be player-facing: explain what the ability does, what state it applies, and what it costs. Do not write comparison notes, internal suggestions, or design commentary inside ability descriptions.
+- The Loadout Station must remain a game UI: slot column, selected ability panel, build flow strip, mastery pills, searchable/filterable ability pool, and visible cast mode toggles. Preserve `SMART`, `CONTROL`, `INSTANT`, and `PREVIEW` filtering when changing loadout code.
 
 ## Visual / UI Rules
 

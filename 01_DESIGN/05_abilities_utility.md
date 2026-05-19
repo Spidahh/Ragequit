@@ -33,12 +33,12 @@ The Q wheel must exist even if direct hotkeys are available. Hotkeys mirror the 
 | --- | --------------------- | ---------------------------------------------------- | ------------------------------------------------------ |
 | F1  | **Self-Heal Potion**  | Restore 40 HP over 2 s while moving                  | 20 s CD and delayed healing window                     |
 | F2  | **Quick Dash**        | Dash 4 m in current movement direction               | 6 s CD; no iframes, walls stop the dash                |
-| F3  | **Mark Target**       | Aim-tag one target for 8 damage and a 5 s visible mark | Audio cue tells the enemy they were marked             |
-| F4  | **Cleanse Surge**     | Remove debuffs from yourself                         | Costs mana and does not heal by itself                 |
+| F3  | **Mark Target**       | Aim-tag one target for 6 damage, 5 s mark, and 12 stamina drain | Low damage; line of sight required                     |
+| F4  | **Cleanse Surge**     | Remove debuffs from yourself and gain 2 s haste      | Costs stamina and does not heal by itself              |
 | F5  | **Barrier**           | Gain a temporary shield                              | Defensive only; no damage or crowd control             |
 | F6  | **Energize**          | Restore stamina immediately                          | Does not restore HP or mana                            |
 | F7  | **Phase Shift**       | Brief invulnerability while unable to attack or cast | Short duration; cannot be used offensively while phased |
-| F8  | **Smoke Screen**      | Drop a smoke zone that repeatedly blinds enemies     | Position is fixed at cast point                        |
+| F8  | **Smoke Screen**      | Create a forward smoke zone that repeatedly blinds enemies | No damage; zone is visible                             |
 
 ## Key design choices
 
