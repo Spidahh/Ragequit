@@ -61,6 +61,7 @@ Implementato:
 - Hotbar/cooldown strip estratta in `packages/client/src/hud/cd-strip.ts`.
 - Kill feed, kill splash, combo popup e streak banner estratti in `packages/client/src/hud/combat-feed.ts`.
 - Radial wheel controller Q/E estratto in `packages/client/src/input/radial-wheels.ts`.
+- Sensibilità mouse e overlay di regolazione estratti in `packages/client/src/input/sensitivity.ts`.
 - cast/fire/weapon input dispatcher
 - HUD cooldown/status/mastery renderer
 - projectile/zone/player render systems
