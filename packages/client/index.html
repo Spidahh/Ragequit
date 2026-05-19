@@ -3054,13 +3054,48 @@
       /* Filter bar */
       #ls-filter-bar {
         display: flex;
-        gap: 6px;
-        align-items: center;
-        padding: 12px 16px;
+        flex-direction: column;
+        gap: 0;
         border-bottom: 1px solid rgba(255,255,255,0.06);
         background: linear-gradient(90deg, rgba(0,0,0,0.38), rgba(12,15,28,0.26));
         flex-shrink: 0;
+      }
+      .filter-bar-row {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        padding: 10px 16px;
+        flex-wrap: nowrap;
+      }
+      #ls-filter-toggle {
+        flex-shrink: 0;
+        padding: 7px 11px;
+        border-radius: 3px;
+        border: 1px solid rgba(255,255,255,0.10);
+        background: rgba(255,255,255,0.04);
+        color: rgba(155,165,210,0.60);
+        font: 700 9px/1 ui-monospace, monospace;
+        letter-spacing: 0.10em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: color 0.14s, border-color 0.14s, background-color 0.14s;
+        white-space: nowrap;
+      }
+      #ls-filter-toggle:hover { border-color: rgba(255,255,255,0.22); color: #dde0f5; background: rgba(255,255,255,0.08); }
+      #ls-filter-toggle[aria-expanded="true"] {
+        border-color: rgba(255,210,96,0.38);
+        color: #ffd260;
+        background: rgba(255,210,96,0.07);
+      }
+      #ls-filter-toggle[aria-expanded="true"]::after { content: ' ↑'; }
+      #ls-filter-drawer {
+        display: none;
         flex-wrap: wrap;
+        gap: 6px;
+        padding: 0 16px 10px;
+      }
+      #ls-filter-drawer.open {
+        display: flex;
       }
       .filter-group {
         display: flex;
@@ -4319,24 +4354,29 @@
 
         <div id="ls-right">
           <div id="ls-filter-bar">
-            <input id="ls-search" type="text" placeholder="Search abilities, states, effects" autocomplete="off" spellcheck="false">
-            <div class="filter-group primary-filters" aria-label="Build filters">
-              <button class="filter-btn smart" data-filter="recommended">SMART</button>
-              <button class="filter-btn starter" data-filter="starter">STARTER</button>
-              <button class="filter-btn" data-filter="control">CONTROL</button>
+            <div class="filter-bar-row">
+              <input id="ls-search" type="text" placeholder="Search abilities…" autocomplete="off" spellcheck="false">
+              <div class="filter-group primary-filters" aria-label="Build filters">
+                <button class="filter-btn smart" data-filter="recommended">SMART</button>
+                <button class="filter-btn starter" data-filter="starter">STARTER</button>
+                <button class="filter-btn" data-filter="control">CONTROL</button>
+              </div>
+              <button id="ls-filter-toggle" type="button" aria-expanded="false" aria-controls="ls-filter-drawer">FILTERS ↓</button>
             </div>
-            <div class="filter-group mode-filters" aria-label="Cast mode filters">
-              <button class="filter-btn" data-filter="instant">INSTANT</button>
-              <button class="filter-btn" data-filter="preview">PREVIEW</button>
-            </div>
-            <div class="filter-group element-filters" aria-label="Element filters">
-              <button class="filter-btn" data-filter="all">ALL</button>
-              <button class="filter-btn fire" data-filter="fire">FIRE</button>
-              <button class="filter-btn ice" data-filter="ice">ICE</button>
-              <button class="filter-btn lightning" data-filter="lightning">LIGHTNING</button>
-              <button class="filter-btn dark" data-filter="dark">DARK</button>
-              <button class="filter-btn nature" data-filter="nature">NATURE</button>
-              <button class="filter-btn" data-filter="none">PHYSICAL</button>
+            <div id="ls-filter-drawer" aria-hidden="true">
+              <div class="filter-group mode-filters" aria-label="Cast mode filters">
+                <button class="filter-btn" data-filter="instant">INSTANT</button>
+                <button class="filter-btn" data-filter="preview">PREVIEW</button>
+              </div>
+              <div class="filter-group element-filters" aria-label="Element filters">
+                <button class="filter-btn" data-filter="all">ALL</button>
+                <button class="filter-btn fire" data-filter="fire">FIRE</button>
+                <button class="filter-btn ice" data-filter="ice">ICE</button>
+                <button class="filter-btn lightning" data-filter="lightning">LIGHTNING</button>
+                <button class="filter-btn dark" data-filter="dark">DARK</button>
+                <button class="filter-btn nature" data-filter="nature">NATURE</button>
+                <button class="filter-btn" data-filter="none">PHYSICAL</button>
+              </div>
             </div>
           </div>
           <div id="ls-pool-title">Ability Pool</div>

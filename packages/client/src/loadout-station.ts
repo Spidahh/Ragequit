@@ -71,6 +71,8 @@ export function initLoadoutStation(
   const btnConfirm = document.getElementById('ls-confirm') as HTMLButtonElement
   const searchInput = document.getElementById('ls-search') as HTMLInputElement | null
   const filterBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-filter]'))
+  const filterToggle = document.getElementById('ls-filter-toggle') as HTMLButtonElement | null
+  const filterDrawer = document.getElementById('ls-filter-drawer')
 
   const detailsName = document.getElementById('ls-detail-name')
   const detailsMeta = document.getElementById('ls-detail-meta')
@@ -381,6 +383,12 @@ export function initLoadoutStation(
     })
   })
   filterBtns.find((b) => b.dataset['filter'] === 'all')?.classList.add('active-filter')
+
+  filterToggle?.addEventListener('click', () => {
+    const open = filterDrawer?.classList.toggle('open') ?? false
+    filterToggle.setAttribute('aria-expanded', String(open))
+    filterToggle.textContent = open ? 'FILTERS' : 'FILTERS ↓'
+  })
 
   searchInput?.addEventListener('input', () => {
     poolSearch = searchInput.value.trim().toLowerCase()
