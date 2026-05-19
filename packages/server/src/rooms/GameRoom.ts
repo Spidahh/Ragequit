@@ -1329,14 +1329,26 @@ export class GameRoom extends Room<GameState> {
   private handleChargeStart(sid: string, _msg: ClientChargeStartMessage): void {
     const player = this.state.players.get(sid)
     if (!player || !player.alive) return
-    if (player.activeWeapon !== 'bow') return
-    if (player.parrying) return
-    if (this.statuses.hasStatus(player, 'invulnerable')) return
+    if (player.activeWeapon !== 'bow') {
+      this.sendAbilityFailed(sid, 'bow_m1', 'wrong_weapon')
+      return
+    }
+    if (player.parrying) {
+      this.sendAbilityFailed(sid, 'bow_m1', 'parrying')
+      return
+    }
+    if (this.statuses.hasStatus(player, 'invulnerable')) {
+      this.sendAbilityFailed(sid, 'bow_m1', 'cc')
+      return
+    }
     // airborne is allowed — bow can fire during airborne per 02_weapon_bow.md.
     if (player.bowChargeStartTick > 0) return
     // Bow cannot fire while parrying — already covered above; also disallow
     // while a casting windup is active.
-    if (player.casting) return
+    if (player.casting) {
+      this.sendAbilityFailed(sid, 'bow_m1', 'casting')
+      return
+    }
     // Anchor charge start to the server tick at time of receipt — eliminates
     // RTT bias where client's reported atTick is always N ticks behind server.
     player.bowChargeStartTick = this.state.tick
