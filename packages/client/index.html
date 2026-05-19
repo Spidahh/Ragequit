@@ -2042,25 +2042,29 @@
       }
       .pause-btn {
         width: 100%;
-        min-height: 50px;
-        padding: 0 16px;
-        background: linear-gradient(90deg, rgba(255,255,255,0.055), rgba(255,255,255,0.025));
+        min-height: 52px;
+        padding: 0 16px 0 20px;
+        background: linear-gradient(90deg, rgba(18,23,36,0.92), rgba(12,15,24,0.76));
         border: 1px solid rgba(255,255,255,0.10);
+        border-left: 3px solid rgba(255,255,255,0.14);
         border-radius: 6px;
         color: #d6dbea;
         cursor: pointer;
+        font-family: ui-sans-serif, system-ui, sans-serif;
         font-size: 13px;
         font-weight: 800;
         letter-spacing: 0.10em;
         text-align: left;
         text-transform: uppercase;
-        transition: border-color 0.12s, background 0.12s, color 0.12s, transform 0.10s;
+        transition: border-color 0.12s, background 0.12s, color 0.12s, transform 0.10s, box-shadow 0.12s;
       }
       .pause-btn:hover {
-        border-color: rgba(255,210,96,0.70);
-        background: rgba(255,210,96,0.10);
+        border-color: rgba(255,210,96,0.65);
+        border-left-color: #ffd260;
+        background: linear-gradient(90deg, rgba(60,42,10,0.92), rgba(20,18,20,0.82));
         color: #ffd260;
-        transform: translateX(3px);
+        transform: translateX(4px);
+        box-shadow: 0 4px 14px rgba(255,210,96,0.10), 0 2px 8px rgba(0,0,0,0.5);
       }
       .pause-btn:disabled {
         cursor: not-allowed;
@@ -2070,30 +2074,37 @@
       }
       .pause-btn:disabled:hover {
         border-color: rgba(255,255,255,0.10);
-        background: linear-gradient(90deg, rgba(255,255,255,0.055), rgba(255,255,255,0.025));
+        border-left-color: rgba(255,255,255,0.14);
+        background: linear-gradient(90deg, rgba(18,23,36,0.92), rgba(12,15,24,0.76));
         color: #7d8498;
         transform: none;
+        box-shadow: none;
       }
       .pause-btn.primary {
-        background: rgba(60,40,8,0.82);
-        border-color: rgba(255,210,96,0.58);
+        background: linear-gradient(90deg, rgba(98,64,8,0.96), rgba(30,22,12,0.90));
+        border-color: rgba(255,210,96,0.62);
+        border-left-color: #ffd260;
         color: #ffd260;
+        box-shadow: 0 0 14px rgba(255,210,96,0.10);
       }
       .pause-btn.danger {
         margin-top: 10px;
         color: #ff9a9a;
-        border-color: rgba(255,110,110,0.22);
+        border-left-color: rgba(255,110,110,0.22);
+        border-color: rgba(255,110,110,0.16);
       }
       .pause-btn.danger:hover {
         color: #ffc0c0;
         border-color: rgba(255,110,110,0.70);
+        border-left-color: #ff8080;
         background: rgba(120,20,20,0.22);
       }
       .pause-note {
-        margin-top: 16px;
-        color: #6f7890;
-        font-size: 11px;
+        margin-top: 14px;
+        color: rgba(100,110,135,0.72);
+        font-size: 10px;
         line-height: 1.5;
+        letter-spacing: 0.04em;
       }
       .pause-controls {
         margin-top: 18px;
