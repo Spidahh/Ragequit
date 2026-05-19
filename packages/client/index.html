@@ -61,9 +61,7 @@
         display: none;
       }
       body.main-menu-active #hud,
-      body.main-menu-active #hud-combo,
-      body.main-menu-active #weapons,
-      body.main-menu-active #cd-strip,
+      body.main-menu-active #combat-console,
       body.main-menu-active #crosshair,
       body.main-menu-active #status-strip,
       body.main-menu-active #cast-bar,
@@ -73,9 +71,7 @@
       body.main-menu-active #streak-display,
       body.main-menu-active #round-hud,
       body.loadout-active #hud,
-      body.loadout-active #hud-combo,
-      body.loadout-active #weapons,
-      body.loadout-active #cd-strip,
+      body.loadout-active #combat-console,
       body.loadout-active #crosshair,
       body.loadout-active #status-strip,
       body.loadout-active #cast-bar,
@@ -556,18 +552,15 @@
 
       /* Combo dots — sword chain indicator, 14 px for readability */
       #hud-combo {
-        position: fixed;
-        left: 50%;
-        bottom: 96px;
-        transform: translateX(-50%);
         display: flex;
-        gap: 7px;
+        gap: 6px;
+        align-items: center;
+        padding: 0 10px 0 2px;
+        margin-right: 4px;
+        border-right: 1px solid rgba(255,255,255,0.10);
         pointer-events: none;
         user-select: none;
-        background: rgba(0,0,0,0.38);
-        padding: 5px 10px;
-        border-radius: 20px;
-        border: 1px solid rgba(255,255,255,0.06);
+        flex-shrink: 0;
       }
       #hud-combo .dot {
         width: 12px;
@@ -595,28 +588,37 @@
         box-shadow: 0 0 14px #ffd260, 0 0 6px #fffaaa;
       }
 
-      /* Weapon wheel — bottom-right sidecar with 3 icons + hotkey hint. */
-      #weapons {
+      /* Combined bottom combat console — weapons row + ability hotbar in one surface. */
+      #combat-console {
         position: fixed;
         left: 50%;
-        bottom: 132px;
+        bottom: 18px;
         transform: translateX(-50%);
         display: flex;
-        gap: 8px;
-        pointer-events: none;
-        user-select: none;
-        font-family: var(--font-hud);
-        align-items: flex-end;
-        padding: 8px 10px 10px;
+        flex-direction: column;
+        align-items: stretch;
+        z-index: 600;
         background:
           linear-gradient(180deg, var(--ui-panel), rgba(4,6,12,0.86)),
-          radial-gradient(circle at 50% 0%, rgba(120,170,255,0.07), transparent 56%);
+          radial-gradient(circle at 50% 0%, rgba(120,170,255,0.06), transparent 56%);
         border: 1px solid rgba(180,210,255,0.14);
         border-bottom: 2px solid rgba(255,210,96,0.30);
         border-radius: 8px;
         backdrop-filter: blur(3px);
         box-shadow: 0 9px 24px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07);
-        z-index: 600;
+      }
+
+      /* Weapon row — top section of combat console. */
+      #weapons {
+        display: flex;
+        gap: 8px;
+        pointer-events: none;
+        user-select: none;
+        font-family: var(--font-hud);
+        align-items: center;
+        padding: 8px 10px 8px;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        border-radius: 8px 8px 0 0;
       }
       .wslot {
         width: 60px;
@@ -1296,27 +1298,15 @@
         box-shadow: 2px 0 10px rgba(255,60,60,0.4);
       }
 
-      /* ── Cooldown pips — bottom-centre ability hotbar ─────────────────── */
+      /* ── Cooldown pips — bottom section of combat console ─────────────── */
       #cd-strip {
-        position: fixed;
-        left: 50%;
-        bottom: 18px;
-        transform: translateX(-50%);
         display: flex;
         align-items: flex-end;
         gap: 10px;
         pointer-events: auto;
         user-select: none;
-        z-index: 600;
-        background:
-          linear-gradient(180deg, rgba(12,16,30,0.90), rgba(4,6,12,0.84)),
-          radial-gradient(circle at 50% 0%, rgba(255,210,96,0.08), transparent 50%);
-        border: 1px solid rgba(180,210,255,0.14);
-        border-bottom: 2px solid rgba(255,210,96,0.30);
-        border-radius: 8px;
         padding: 7px 9px 8px;
-        backdrop-filter: blur(3px);
-        box-shadow: 0 12px 32px rgba(0,0,0,0.64), inset 0 1px 0 rgba(255,255,255,0.07);
+        border-radius: 0 0 8px 8px;
       }
       .hotbar-section {
         display: grid;
@@ -1422,37 +1412,26 @@
       .cd-pip.primed {
         border-color: rgba(255,210,96,0.92);
         border-bottom-color: #ffd260;
-        transform: translateY(-4px) scale(1.06);
-        box-shadow: 0 0 18px rgba(255,210,96,0.50), 0 0 0 1px rgba(255,210,96,0.28), inset 0 0 18px rgba(255,210,96,0.12);
+        transform: translateY(-5px) scale(1.08);
+        box-shadow:
+          0 0 22px rgba(255,210,96,0.65),
+          0 0 0 2px rgba(255,210,96,0.35),
+          inset 0 0 22px rgba(255,210,96,0.18);
+        animation: primed-pulse 0.8s ease-in-out infinite alternate;
       }
-      .cd-pip.primed::after {
-        content: 'PRIMED';
-        position: absolute;
-        top: 22px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 4;
-        color: #ffe58a;
-        font: 900 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.10em;
-        text-shadow: 0 0 8px #000;
+      @keyframes primed-pulse {
+        from { box-shadow: 0 0 18px rgba(255,210,96,0.55), 0 0 0 1px rgba(255,210,96,0.28), inset 0 0 16px rgba(255,210,96,0.14); }
+        to   { box-shadow: 0 0 28px rgba(255,210,96,0.80), 0 0 0 2px rgba(255,210,96,0.42), inset 0 0 24px rgba(255,210,96,0.22); }
       }
       .cd-pip.placing {
         border-color: rgba(255,210,96,0.88);
-        box-shadow: 0 0 18px rgba(255,210,96,0.40), 0 2px 0 0 #ffd260, inset 0 0 18px rgba(255,210,96,0.10);
+        box-shadow: 0 0 20px rgba(255,210,96,0.50), 0 2px 0 0 #ffd260, inset 0 0 18px rgba(255,210,96,0.14);
         transform: translateY(-3px) scale(1.04);
+        animation: placing-pulse 0.6s ease-in-out infinite alternate;
       }
-      .cd-pip.placing::after {
-        content: 'PLACE';
-        position: absolute;
-        top: 22px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 4;
-        color: #ffe58a;
-        font: 900 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-        letter-spacing: 0.12em;
-        text-shadow: 0 0 8px #000;
+      @keyframes placing-pulse {
+        from { border-color: rgba(255,210,96,0.70); }
+        to   { border-color: rgba(255,255,160,1.00); }
       }
       .cd-pip.fail-flash {
         animation: pip-fail 0.4s ease-out forwards;
@@ -4033,12 +4012,6 @@
     <div id="death-overlay"></div>
     <div id="popups"></div>
 
-    <div id="hud-combo">
-      <div class="dot" id="combo-0"></div>
-      <div class="dot" id="combo-1"></div>
-      <div class="dot" id="combo-2"></div>
-    </div>
-
     <div id="hud">
       <div id="hud-drag-handle" title="Drag to move HUD. Double-click to reset.">
         <span class="grip"></span>
@@ -4091,22 +4064,30 @@
       <div id="hud-resize-handle" title="Resize HUD"></div>
     </div>
 
-    <div id="weapons">
-      <div class="wslot" id="wslot-sword" data-weapon="sword">
-        <span class="icon">&#x2694;&#xFE0F;</span>
-        <span class="wname">SWORD</span>
-        <span class="key" data-keybind-label="swapWeapon">Tab</span>
+    <div id="combat-console">
+      <div id="weapons">
+        <div id="hud-combo">
+          <div class="dot" id="combo-0"></div>
+          <div class="dot" id="combo-1"></div>
+          <div class="dot" id="combo-2"></div>
+        </div>
+        <div class="wslot" id="wslot-sword" data-weapon="sword">
+          <span class="icon">&#x2694;&#xFE0F;</span>
+          <span class="wname">SWORD</span>
+          <span class="key" data-keybind-label="swapWeapon">Tab</span>
+        </div>
+        <div class="wslot" id="wslot-bow" data-weapon="bow">
+          <span class="icon">&#x1F3F9;</span>
+          <span class="wname">BOW</span>
+          <span class="key" data-keybind-label="swapWeapon">Tab</span>
+        </div>
+        <div class="wslot" id="wslot-staff" data-weapon="staff">
+          <span class="icon">&#x1FA84;</span>
+          <span class="wname">STAFF</span>
+          <span class="key" data-keybind-label="swapWeapon">Tab</span>
+        </div>
       </div>
-      <div class="wslot" id="wslot-bow" data-weapon="bow">
-        <span class="icon">&#x1F3F9;</span>
-        <span class="wname">BOW</span>
-        <span class="key" data-keybind-label="swapWeapon">Tab</span>
-      </div>
-      <div class="wslot" id="wslot-staff" data-weapon="staff">
-        <span class="icon">&#x1FA84;</span>
-        <span class="wname">STAFF</span>
-        <span class="key" data-keybind-label="swapWeapon">Tab</span>
-      </div>
+      <div id="cd-strip"></div>
     </div>
 
     <div id="respawn">
@@ -4120,7 +4101,6 @@
 
     <div id="cast-bar"><div class="fill"></div><div class="label">CAST</div></div>
     <div id="status-strip"></div>
-    <div id="cd-strip"></div>
 
     <div id="kill-feed"></div>
     <div id="ping-hud">● <span id="ping-val">-</span> ms</div>
