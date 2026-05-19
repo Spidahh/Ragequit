@@ -88,7 +88,7 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
   midRing.position.y = 0.004
   scene.add(midRing)
 
-  const centreGlowMat = new THREE.MeshBasicMaterial({ color: 0x1028a0, transparent: true, opacity: 0.20, side: THREE.DoubleSide })
+  const centreGlowMat = new THREE.MeshBasicMaterial({ color: 0x1832c0, transparent: true, opacity: 0.28, side: THREE.DoubleSide })
   const centreGlow = new THREE.Mesh(new THREE.CircleGeometry(6.0, 48), centreGlowMat)
   centreGlow.rotation.x = -Math.PI / 2
   centreGlow.position.y = 0.005
@@ -167,7 +167,7 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
       const bowlMat = new THREE.MeshToonMaterial({ color: 0x5a3a1a, gradientMap: toonGradient })
       const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.18, 8), bowlMat)
       bowl.position.set(px, 7.47, pz); scene.add(bowl)
-      const torch = new THREE.PointLight(0xff8830, 0.55, 14, 2)
+      const torch = new THREE.PointLight(0xff8830, 0.80, 18, 2)
       torch.position.set(px, 7.80, pz); scene.add(torch); torchLights.push(torch)
     }
   }
@@ -228,10 +228,10 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
       new THREE.MeshBasicMaterial({ color: 0x3050a0, transparent: true, opacity: 0.38 }),
     )
     ceilingRing2.rotation.x = Math.PI / 2; ceilingRing2.position.y = 15; scene.add(ceilingRing2)
-    const spotCols = [0x2050a0, 0x901818, 0x2050a0, 0x901818]
+    const spotCols = [0x2060c0, 0xb02020, 0x2060c0, 0xb02020]
     for (let i = 0; i < 4; i++) {
       const angle = (i / 4) * Math.PI * 2
-      const spot = new THREE.PointLight(spotCols[i]!, 0.35, 28, 2)
+      const spot = new THREE.PointLight(spotCols[i]!, 0.50, 32, 2)
       spot.position.set(Math.sin(angle) * 20, 13, Math.cos(angle) * 20); scene.add(spot)
     }
   }

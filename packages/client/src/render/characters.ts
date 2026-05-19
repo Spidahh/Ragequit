@@ -7,9 +7,9 @@ import * as THREE from 'three'
 export function makeCharacter(teamColor: number, toonGradient: THREE.DataTexture): THREE.Group {
   const g = new THREE.Group()
 
-  const armorMat = new THREE.MeshToonMaterial({ color: teamColor, gradientMap: toonGradient })
+  const armorMat = new THREE.MeshToonMaterial({ color: teamColor, gradientMap: toonGradient, emissive: teamColor, emissiveIntensity: 0.10 })
   const darkMat  = new THREE.MeshToonMaterial({ color: 0x1a1e2e, gradientMap: toonGradient })
-  const visorMat = new THREE.MeshBasicMaterial({ color: 0x50d8ff, transparent: true, opacity: 0.92, side: THREE.DoubleSide })
+  const visorMat = new THREE.MeshBasicMaterial({ color: 0x70e8ff, transparent: true, opacity: 0.95, side: THREE.DoubleSide })
 
   g.userData['armorMat'] = armorMat
   g.userData['darkMat']  = darkMat
@@ -48,8 +48,8 @@ export function makeCharacter(teamColor: number, toonGradient: THREE.DataTexture
   addPart(new THREE.BoxGeometry(0.17, 0.10, 0.30), darkMat,  0.12, -0.88, 0.04)
 
   const shadow = new THREE.Mesh(
-    new THREE.CircleGeometry(CAPSULE_RADIUS_M * 1.10, 24),
-    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.45, depthWrite: false }),
+    new THREE.CircleGeometry(CAPSULE_RADIUS_M * 1.15, 24),
+    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.55, depthWrite: false }),
   )
   shadow.rotation.x = -Math.PI / 2
   shadow.position.y = -CAPSULE_HEIGHT_M / 2 + 0.015
@@ -99,8 +99,8 @@ export function applyWeaponProp(charGroup: THREE.Group, weapon: string, toonGrad
     addProp(new THREE.CylinderGeometry(0.005, 0.005, 0.68, 4), stringMat, 0, 0, 0)
   } else if (weapon === 'staff') {
     const woodMat = new THREE.MeshToonMaterial({ color: 0x2e2048, gradientMap: toonGradient })
-    const orbMat = new THREE.MeshBasicMaterial({ color: 0x80c8ff })
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0x60a8ff, transparent: true, opacity: 0.75 })
+    const orbMat = new THREE.MeshStandardMaterial({ color: 0x90d8ff, emissive: 0x4090ff, emissiveIntensity: 0.80, roughness: 0.2, metalness: 0.1 })
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x70b8ff, transparent: true, opacity: 0.85 })
     addProp(new THREE.CylinderGeometry(0.028, 0.022, 1.20, 8), woodMat, 0, 0.60, 0)
     addProp(new THREE.SphereGeometry(0.078, 12, 8), orbMat, 0, 1.28, 0)
     const orbRing = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.012, 6, 20), ringMat)
