@@ -64,13 +64,8 @@ import { createCombatFeedHud } from './hud/combat-feed.js'
 import { createHudFlash } from './hud/flash.js'
 import { initDraggableHud } from './hud/hud-drag.js'
 import { ensureIconSprite, statusIcon, weaponIcon } from './icons.js'
-import {
-  actionCode,
-  actionLabel,
-  matchesAction,
-  onKeybindsChanged,
-  slotKeybindEntries,
-} from './input/keybinds.js'
+import { actionLabel, onKeybindsChanged } from './input/keybinds.js'
+import { initGameInput, makeGameInputState } from './input/game-input.js'
 import { initRadialWheels } from './input/radial-wheels.js'
 import { initMouseSensitivity } from './input/sensitivity.js'
 import { initLoadoutStation } from './loadout-station.js'
@@ -250,14 +245,13 @@ function activateAbilitySlot(slotIdx: number, fromWheel: boolean): void {
 }
 
 const mouseSensitivity = initMouseSensitivity()
-let mouseSens = mouseSensitivity.value
 
 // -----------------------------------------------------------------------
 // Camera pitch limits — asymmetric for 3rd-person feel
 // -----------------------------------------------------------------------
 
-// Positive mousePitch → camera.rotation.x > 0 → looking UP (Three.js convention).
-// Mouse-up increments mousePitch; mouse-down decrements it.
+// Positive inp.mousePitch → camera.rotation.x > 0 → looking UP (Three.js convention).
+// Mouse-up increments inp.mousePitch; mouse-down decrements it.
 // Cap looking UP at 75° and looking DOWN at 65° to avoid ground/sky clipping.
 const PITCH_UP_LIMIT   =  Math.PI * 0.415 //  +75° — max look-up angle
 const PITCH_DOWN_LIMIT = -Math.PI * 0.360 //  -65° — max look-down angle
@@ -410,26 +404,10 @@ scene.add(impactVfx.mesh)
 // Input capture — keyboard + mouse
 // -----------------------------------------------------------------------
 
-const keys = new Set<string>()
-let mouseYaw = 0
-let mousePitch = 0
-let jumpEdgeQueued = false
-// LMB edges — the handler decides what to do based on the active weapon.
-let lmbPressEdge = false
-let lmbReleaseEdge = false
-let lmbDown = false
-// RMB edges — parry press/release.
-let rmbPressEdge = false
-let rmbReleaseEdge = false
-// Weapon swap queue — processed inside simStep so it's tick-aligned with other
-// input. Null when no swap queued this tick.
-let weaponSwapRequest: Weapon | null = null
-let optimisticWeapon: Weapon | null = null
-let pointerLocked = false
-let canvasInputEngaged = false
-let pointerLookActive = false
-let lastPointerClientX = 0
-let lastPointerClientY = 0
+// Pure input state — owned by initGameInput; main.ts reads/writes directly.
+const inp = makeGameInputState()
+
+// Game / UI state that lives here (cleared alongside input edges).
 let loadoutReturnsToPause = false
 // Local cast-bar start timestamp — set when casting becomes true, cleared on reset.
 let castStartedAtMs = 0
@@ -443,106 +421,8 @@ let lastStaffFireMs = 0
 // Cooldown on staff clicks while LMB is held: send one on edge + auto at cadence.
 const STAFF_FIRE_THROTTLE_MS = STAFF_M1_CADENCE_SEC * 1000
 
-function clearCombatInputEdges(): void {
-  keys.clear()
-  jumpEdgeQueued = false
-  lmbPressEdge = false
-  lmbReleaseEdge = false
-  lmbDown = false
-  rmbPressEdge = false
-  rmbReleaseEdge = false
-  weaponSwapRequest = null
-  optimisticWeapon = null
-  abilityCastQueue.length = 0
-  primedSlotIdx = null
-  radialWheels.refreshAll()
-  cancelPlacementPreview()
-}
-
-function requestArenaPointerLock(): void {
-  if (document.pointerLockElement === renderer.domElement) return
-  try {
-    const result = renderer.domElement.requestPointerLock?.()
-    if (result && typeof result.catch === 'function') {
-      void result.catch(() => {
-        // Keep the non-lock fallback active if the browser refuses capture.
-        pointerLookActive = true
-      })
-    }
-  } catch {
-    pointerLookActive = true
-  }
-}
-
 function isPauseMenuOpen(): boolean {
   return !pauseMenu.classList.contains('hidden')
-}
-
-function engageCanvasInput(): void {
-  canvasInputEngaged = true
-  document.body.classList.add('input-locked')
-  renderer.domElement.focus({ preventScroll: true })
-}
-
-function disengageCanvasInput(): void {
-  canvasInputEngaged = false
-  pointerLookActive = false
-  document.body.classList.remove('input-locked')
-}
-
-function openPauseMenu(): void {
-  if (!room || isPauseMenuOpen()) return
-  if (radialWheels.isOpen()) radialWheels.close(false)
-  disengageCanvasInput()
-  clearCombatInputEdges()
-  loadoutStation.close()
-  menu.hideMain()
-  menu.hideScoreboard()
-  settingsOverlay.classList.add('hidden')
-  const loadoutLocked = currentMatchPhase === 'live'
-  pauseLoadoutBtn.disabled = loadoutLocked
-  pauseLoadoutBtn.textContent = loadoutLocked ? 'Loadout Locked' : 'Loadout'
-  pauseMenu.classList.remove('hidden')
-  if (document.pointerLockElement) document.exitPointerLock()
-}
-
-function closePauseMenu(lockPointer: boolean): void {
-  pauseMenu.classList.add('hidden')
-  clearCombatInputEdges()
-  if (lockPointer && room) {
-    engageCanvasInput()
-    requestArenaPointerLock()
-  }
-}
-
-pauseResumeBtn.addEventListener('click', () => closePauseMenu(true))
-pauseLoadoutBtn.addEventListener('click', () => {
-  if (currentMatchPhase === 'live') return
-  loadoutReturnsToPause = true
-  closePauseMenu(false)
-  if (room) loadoutStation.open()
-})
-pauseSettingsBtn.addEventListener('click', () => {
-  pauseMenu.classList.add('hidden')
-  settingsOverlay.dataset['returnTo'] = 'pause'
-  settingsOverlay.classList.remove('hidden')
-})
-pauseLobbyBtn.addEventListener('click', () => {
-  closePauseMenu(false)
-  returnToMainMenu({ leaveRoom: true, statusText: 'left match' })
-})
-
-function isWeapon(w: string): w is Weapon {
-  return (WEAPON_IDS as readonly string[]).includes(w)
-}
-
-function currentWeaponFromSchema(): Weapon {
-  const schemaWeapon = getSelfSchemaPlayer()?.activeWeapon
-  return schemaWeapon && isWeapon(schemaWeapon) ? schemaWeapon : 'sword'
-}
-
-function currentWeaponForInput(): Weapon {
-  return optimisticWeapon ?? currentWeaponFromSchema()
 }
 
 function isOverlayOpen(el: HTMLElement): boolean {
@@ -572,328 +452,76 @@ function canEngageGameplaySurface(): boolean {
     && !document.body.classList.contains('loadout-active')
 }
 
-function isTextEditingTarget(target: EventTarget | null): boolean {
-  const el = target as HTMLElement | null
-  if (!el) return false
-  const tag = el.tagName
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable
+function isWeapon(w: string): w is Weapon {
+  return (WEAPON_IDS as readonly string[]).includes(w)
 }
 
-function isGameplayKeyCode(code: string): boolean {
-  if (code === 'Escape' || code === 'Backquote') return true
-  const actionCodes = [
-    actionCode('moveForward'),
-    actionCode('moveBack'),
-    actionCode('moveLeft'),
-    actionCode('moveRight'),
-    actionCode('jump'),
-    actionCode('swapWeapon'),
-    actionCode('wheelUtility'),
-    actionCode('wheelAbility'),
-    actionCode('openLoadout'),
-    actionCode('sensDown'),
-    actionCode('sensUp'),
-  ]
-  if (actionCodes.includes(code)) return true
-  return slotKeybindEntries().some(([slotCode]) => slotCode === code)
+function currentWeaponFromSchema(): Weapon {
+  const schemaWeapon = getSelfSchemaPlayer()?.activeWeapon
+  return schemaWeapon && isWeapon(schemaWeapon) ? schemaWeapon : 'sword'
 }
 
-function closeSettingsOverlayToReturnTarget(): void {
-  settingsOverlay.classList.add('hidden')
-  if (settingsOverlay.dataset['returnTo'] === 'pause' && room) pauseMenu.classList.remove('hidden')
-  else if (room) openPauseMenu()
-  else menu.showMain()
-  settingsOverlay.dataset['returnTo'] = ''
+function currentWeaponForInput(): Weapon {
+  return (inp.optimisticWeapon && isWeapon(inp.optimisticWeapon) ? inp.optimisticWeapon : null) ?? currentWeaponFromSchema()
 }
 
-addEventListener('keydown', (e) => {
-  const k = e.code
-  const gameplaySurfaceKey = canEngageGameplaySurface() && !isTextEditingTarget(e.target) && isGameplayKeyCode(k)
-  if (gameplaySurfaceKey) {
-    e.preventDefault()
-    e.stopImmediatePropagation()
-    engageCanvasInput()
-  }
-  const fresh = !keys.has(k)
-  keys.add(k)
-  if (!fresh) return
-
-  if (k === 'Escape') {
-    e.preventDefault()
-    if (placementAbilityId) { cancelPlacementPreview(); return }
-    if (radialWheels.isOpen()) { radialWheels.close(false); return }
-    if (isOverlayOpen(settingsOverlay)) { closeSettingsOverlayToReturnTarget(); return }
-    if (!loadoutStationHidden()) {
-      loadoutStation.close()
-      if (loadoutReturnsToPause && room) {
-        loadoutReturnsToPause = false
-        pauseMenu.classList.remove('hidden')
-      } else if (room) {
-        openPauseMenu()
-      } else if (!pointerLocked) {
-        menu.showMain()
-      }
-      return
-    }
-    if (room) {
-      if (isPauseMenuOpen()) closePauseMenu(true)
-      else openPauseMenu()
-      return
-    }
-    if (!pointerLocked) menu.showMain()
-    return
-  }
-
-  if (isTextEditingTarget(e.target) || isOverlayOpen(settingsOverlay) || !loadoutStationHidden() || isPauseMenuOpen()) {
-    return
-  }
-
-  if (matchesAction(k, 'openLoadout')) {
-    e.preventDefault()
-    clearCombatInputEdges()
-    if (radialWheels.isOpen()) radialWheels.close(false)
-    if (room && currentMatchPhase === 'live') {
-      openPauseMenu()
-      return
-    }
-    pauseMenu.classList.add('hidden')
-    settingsOverlay.classList.add('hidden')
-    menu.hideMain()
-    if (document.pointerLockElement) document.exitPointerLock()
-    loadoutReturnsToPause = Boolean(room)
-    loadoutStation.open()
-    return
-  }
-
-  const gameplayInputActive = isGameplayInputAllowed()
-  if (!gameplayInputActive) return
-
-  if (matchesAction(k, 'jump')) jumpEdgeQueued = true
-
-  // Q — open utility/transfer wheel. E — open combat ability wheel.
-  if (matchesAction(k, 'wheelUtility')) {
-    e.preventDefault()
-    radialWheels.openUtility(k)
-  }
-  if (matchesAction(k, 'wheelAbility')) {
-    e.preventDefault()
-    radialWheels.openAbility(k)
-  }
-  if (k === 'Backquote') {
-    document.getElementById('debug')?.classList.toggle('hidden')
-  }
-
-  // Weapon swap — Tab cycles sword→bow→staff→sword. Scroll also works.
-  if (matchesAction(k, 'swapWeapon')) {
-    e.preventDefault()
-    const cur = currentWeaponForInput()
-    const idx = (WEAPON_IDS as readonly string[]).indexOf(cur)
-    weaponSwapRequest = WEAPON_IDS[(idx + 1) % WEAPON_IDS.length]!
-  }
-
-  // Ability binds — resolve ID from current loadout at press time.
-  // Slot map: R=melee, 1-5=magic, Z/X/F=fixed transfers, V=flex utility.
-  for (const [code, , slotIdx] of slotKeybindEntries()) {
-    if (k === code) {
-      activateAbilitySlot(slotIdx, false)
-      break
-    }
-  }
-
-
-  // Sensitivity — [ to lower, ] to raise (10 % steps, min/max clamped).
-  if (matchesAction(k, 'sensDown')) {
-    mouseSens = mouseSensitivity.scale(0.9)
-  }
-  if (matchesAction(k, 'sensUp')) {
-    mouseSens = mouseSensitivity.scale(1.1)
-  }
-}, { capture: true })
-addEventListener('keyup', (e) => {
-  const gameplaySurfaceKey = canEngageGameplaySurface() && !isTextEditingTarget(e.target) && isGameplayKeyCode(e.code)
-  if (gameplaySurfaceKey) {
-    e.preventDefault()
-    e.stopImmediatePropagation()
-    engageCanvasInput()
-  }
-  keys.delete(e.code)
-  // Wheel key release: close the radial menu and prime the selected slot.
-  // It does not cast. LMB fires the primed ability with the current crosshair.
-  if (radialWheels.isOpen() && e.code === radialWheels.activeKey()) {
-    radialWheels.close(true)
-  }
-}, { capture: true })
-
-renderer.domElement.addEventListener('contextmenu', (e) => {
-  // Suppress browser menu so RMB is ours for parry.
-  e.preventDefault()
-})
-
-function handleCombatPointerDown(button: number): void {
-  if (!canEngageGameplaySurface()) return
-  engageCanvasInput()
-  if (!isGameplayInputAllowed()) return
-  if (!pointerLocked) {
-    pointerLookActive = true
-    lastPointerClientX = 0
-    lastPointerClientY = 0
-  }
-  if (button === 0) {
-    if (!lmbDown) lmbPressEdge = true
-    lmbDown = true
-    requestArenaPointerLock()
-  } else if (button === 2) {
-    rmbPressEdge = true
-    requestArenaPointerLock()
-  }
+function clearCombatInputEdges(): void {
+  inp.keys.clear()
+  inp.jumpEdgeQueued = false
+  inp.lmbPressEdge = false
+  inp.lmbReleaseEdge = false
+  inp.lmbDown = false
+  inp.rmbPressEdge = false
+  inp.rmbReleaseEdge = false
+  inp.weaponSwapRequest = null
+  inp.optimisticWeapon = null
+  abilityCastQueue.length = 0
+  primedSlotIdx = null
+  radialWheels.refreshAll()
+  cancelPlacementPreview()
 }
 
-function handleCombatPointerUp(button: number): void {
-  if (button === 0) {
-    if (lmbDown) lmbReleaseEdge = true
-    lmbDown = false
-  } else if (button === 2) {
-    rmbReleaseEdge = true
-  }
-}
-
-function shouldIgnoreGameplayPointerTarget(target: EventTarget | null): boolean {
-  const el = target as HTMLElement | null
-  if (!el) return false
-  return Boolean(el.closest('button, input, textarea, select, [contenteditable="true"], #settings-overlay, #loadout-station, #pause-menu, #main-menu'))
-}
-
-function handleGameplayPointerMove(e: PointerEvent | MouseEvent): void {
-  // While a radial wheel is open, mouse movement keeps updating the highlighted
-  // sector until the wheel key is released. The wheel is a selector, not a cast.
-  if (radialWheels.isOpen()) {
-    if (pointerLocked) radialWheels.relativeMove(e.movementX, e.movementY)
-    else radialWheels.pointMove(e.clientX, e.clientY)
-    return
-  }
-  if (pointerLocked) {
-    mouseYaw   -= e.movementX * mouseSens
-    mousePitch -= e.movementY * mouseSens
-  } else if (canvasInputEngaged && pointerLookActive && isGameplayInputAllowed()) {
-    if (lastPointerClientX !== 0 || lastPointerClientY !== 0) {
-      mouseYaw   -= (e.clientX - lastPointerClientX) * mouseSens
-      mousePitch -= (e.clientY - lastPointerClientY) * mouseSens
-    }
-    lastPointerClientX = e.clientX
-    lastPointerClientY = e.clientY
-  } else {
-    return
-  }
-  if (mousePitch > PITCH_UP_LIMIT)   mousePitch = PITCH_UP_LIMIT
-  if (mousePitch < PITCH_DOWN_LIMIT) mousePitch = PITCH_DOWN_LIMIT
-}
-
-renderer.domElement.addEventListener('pointerdown', (e) => {
-  e.preventDefault()
-  handleCombatPointerDown(e.button)
-})
-renderer.domElement.addEventListener('pointerup', (e) => {
-  e.preventDefault()
-  handleCombatPointerUp(e.button)
-})
-renderer.domElement.addEventListener('mousedown', (e) => {
-  e.preventDefault()
-  handleCombatPointerDown(e.button)
-})
-renderer.domElement.addEventListener('mouseup', (e) => {
-  e.preventDefault()
-  handleCombatPointerUp(e.button)
-})
-
-document.addEventListener('pointerdown', (e) => {
-  if (!canEngageGameplaySurface() || shouldIgnoreGameplayPointerTarget(e.target)) return
-  e.preventDefault()
-  handleCombatPointerDown(e.button)
-}, { capture: true })
-
-document.addEventListener('pointerup', (e) => {
-  if (!canvasInputEngaged || shouldIgnoreGameplayPointerTarget(e.target)) return
-  e.preventDefault()
-  handleCombatPointerUp(e.button)
-}, { capture: true })
-
-document.addEventListener('pointermove', (e) => {
-  handleGameplayPointerMove(e)
-}, { capture: true })
-
-document.addEventListener('pointerlockchange', () => {
-  const wasPointerLocked = pointerLocked
-  pointerLocked = document.pointerLockElement === renderer.domElement
-  if (pointerLocked) {
-    canvasInputEngaged = true
-    pointerLookActive = true
-    lastPointerClientX = 0
-    lastPointerClientY = 0
-    document.body.classList.add('input-locked')
-  } else {
-    document.body.classList.toggle('input-locked', canvasInputEngaged)
-  }
-  hint.classList.toggle('hidden', pointerLocked)
-  pingHud.classList.toggle('ingame', pointerLocked && ping > 0)
-  if (wasPointerLocked && !pointerLocked) {
-    if (lmbDown) lmbReleaseEdge = true
-    lmbDown = false
-    // Clear held keys so the character stops moving when pointer lock is released
-    // (tab-out, ESC, loadout open). Without this, WASD stay "pressed" and the
-    // player keeps moving until each key is physically re-pressed and released.
-    keys.clear()
-    if (canEngageGameplaySurface() && currentMatchPhase === 'live') {
-      openPauseMenu()
-    }
-  }
-})
-
-addEventListener('blur', () => {
+function openPauseMenu(): void {
+  if (!room || isPauseMenuOpen()) return
+  if (radialWheels.isOpen()) radialWheels.close(false)
+  gameInput.disengageCanvasInput()
   clearCombatInputEdges()
-})
-
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) clearCombatInputEdges()
-})
-
-// Scroll wheel — cycle through weapons (standard arena-game convention).
-// Wheel down = next weapon (sword→bow→staff→sword), wheel up = prev.
-function handleGameplayWheel(e: WheelEvent): void {
-  if (!isGameplayInputAllowed()) return
-  if (shouldIgnoreGameplayPointerTarget(e.target)) return
-  e.preventDefault()
-  engageCanvasInput()
-  const idx = (WEAPON_IDS as readonly string[]).indexOf(currentWeaponForInput())
-  const dir = e.deltaY > 0 ? 1 : -1
-  const next = WEAPON_IDS[(idx + dir + WEAPON_IDS.length) % WEAPON_IDS.length]!
-  weaponSwapRequest = next
+  loadoutStation.close()
+  menu.hideMain()
+  menu.hideScoreboard()
+  settingsOverlay.classList.add('hidden')
+  const loadoutLocked = currentMatchPhase === 'live'
+  pauseLoadoutBtn.disabled = loadoutLocked
+  pauseLoadoutBtn.textContent = loadoutLocked ? 'Loadout Locked' : 'Loadout'
+  pauseMenu.classList.remove('hidden')
+  if (document.pointerLockElement) document.exitPointerLock()
 }
-document.addEventListener('wheel', handleGameplayWheel, { capture: true, passive: false })
 
-addEventListener('mousemove', (e) => {
-  if ('PointerEvent' in window) return
-  handleGameplayPointerMove(e)
-})
-
-function sampleInput(airborne: boolean, dead: boolean): SimInput {
-  if (dead) {
-    return { moveX: 0, moveZ: 0, yaw: mouseYaw, jump: false, jumpHold: false }
+function closePauseMenu(lockPointer: boolean): void {
+  pauseMenu.classList.add('hidden')
+  clearCombatInputEdges()
+  if (lockPointer && room) {
+    gameInput.engageCanvasInput()
+    gameInput.requestArenaPointerLock()
   }
-  const forward = (keys.has(actionCode('moveForward')) ? 1 : 0) - (keys.has(actionCode('moveBack')) ? 1 : 0)
-  const strafe = (keys.has(actionCode('moveRight')) ? 1 : 0) - (keys.has(actionCode('moveLeft')) ? 1 : 0)
-  // Airborne: full directional control (standard arena-game air-strafing).
-  // Jump edge only fires if not already airborne (coyote window handled in
-  // shared controller). JumpHold is always forwarded so hold-apex is respected.
-  const input: SimInput = {
-    moveX: strafe,
-    moveZ: -forward,
-    yaw: mouseYaw,
-    jump: airborne ? false : jumpEdgeQueued,
-    jumpHold: keys.has(actionCode('jump')),
-  }
-  jumpEdgeQueued = false
-  return input
 }
+
+pauseResumeBtn.addEventListener('click', () => closePauseMenu(true))
+pauseLoadoutBtn.addEventListener('click', () => {
+  if (currentMatchPhase === 'live') return
+  loadoutReturnsToPause = true
+  closePauseMenu(false)
+  if (room) loadoutStation.open()
+})
+pauseSettingsBtn.addEventListener('click', () => {
+  pauseMenu.classList.add('hidden')
+  settingsOverlay.dataset['returnTo'] = 'pause'
+  settingsOverlay.classList.remove('hidden')
+})
+pauseLobbyBtn.addEventListener('click', () => {
+  closePauseMenu(false)
+  returnToMainMenu({ leaveRoom: true, statusText: 'left match' })
+})
 
 // -----------------------------------------------------------------------
 // Networking
@@ -1221,7 +849,7 @@ const menu = initMenu({
     camFovBase = fov // snap immediately when changed from settings
   },
   onSensChange: (sens) => {
-    mouseSens = mouseSensitivity.set(sens)
+    mouseSensitivity.set(sens)
   },
   onVolumeChange: (vol) => {
     soundEngine.volume = vol
@@ -1231,6 +859,37 @@ const menu = initMenu({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelRatioMap[quality]))
   },
 })
+
+// Register all keyboard/mouse/pointer event handlers now that loadoutStation,
+// radialWheels, and menu are fully initialised.
+const gameInput = initGameInput(inp, {
+  rendererDomElement: renderer.domElement,
+  mouseSensitivity,
+  radialWheels,
+  pitchLimits: { up: PITCH_UP_LIMIT, down: PITCH_DOWN_LIMIT },
+  weaponIds: WEAPON_IDS,
+  hint,
+  pingHud,
+  settingsOverlay,
+  pauseMenu,
+  loadoutStation,
+  menu,
+  getRoom: () => room,
+  getCurrentMatchPhase: () => currentMatchPhase,
+  getPlacementAbilityId: () => placementAbilityId,
+  getLoadoutReturnsToPause: () => loadoutReturnsToPause,
+  setLoadoutReturnsToPause: (v) => { loadoutReturnsToPause = v },
+  getPing: () => ping,
+  getCurrentWeaponForInput: () => currentWeaponForInput(),
+  isGameplayInputAllowed: () => isGameplayInputAllowed(),
+  canEngageGameplaySurface: () => canEngageGameplaySurface(),
+  openPauseMenu: () => openPauseMenu(),
+  closePauseMenu: (lock) => closePauseMenu(lock),
+  cancelPlacementPreview: () => cancelPlacementPreview(),
+  activateAbilitySlot: (idx, fromWheel) => activateAbilitySlot(idx, fromWheel),
+  onClear: () => clearCombatInputEdges(),
+})
+const { engageCanvasInput, disengageCanvasInput, requestArenaPointerLock, sampleInput } = gameInput
 
 async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void> {
   const seq = ++connectSeq
@@ -1697,7 +1356,7 @@ function onProjectileExpired(msg: ServerProjectileExpiredMessage): void {
 
 function onWeaponSwapped(msg: ServerWeaponSwappedMessage): void {
   if (msg.playerId !== self?.sessionId) return
-  if (optimisticWeapon === msg.weapon) optimisticWeapon = null
+  if (inp.optimisticWeapon === msg.weapon) inp.optimisticWeapon = null
   // Highlight is driven from schema in render(), but we reset local input
   // state here so a charge straddling a swap is cleaned up.
   if (self) {
@@ -1815,15 +1474,15 @@ function clearGameplayUi(): void {
 
 function clearGameplayInputState(): void {
   if (radialWheels.isOpen()) radialWheels.close(false)
-  keys.clear()
-  jumpEdgeQueued = false
-  lmbPressEdge = false
-  lmbReleaseEdge = false
-  lmbDown = false
-  rmbPressEdge = false
-  rmbReleaseEdge = false
-  weaponSwapRequest = null
-  optimisticWeapon = null
+  inp.keys.clear()
+  inp.jumpEdgeQueued = false
+  inp.lmbPressEdge = false
+  inp.lmbReleaseEdge = false
+  inp.lmbDown = false
+  inp.rmbPressEdge = false
+  inp.rmbReleaseEdge = false
+  inp.weaponSwapRequest = null
+  inp.optimisticWeapon = null
   abilityCastQueue.length = 0
   primedSlotIdx = null
   radialWheels.refreshAll()
@@ -2163,7 +1822,7 @@ function initSelfIfNeeded(): void {
   scene.add(selfMesh)
   selfArc = makeSwingArcMesh()
   scene.add(selfArc)
-  mouseYaw = p.transform.yaw
+  inp.mouseYaw = p.transform.yaw
 }
 
 // -----------------------------------------------------------------------
@@ -2272,9 +1931,9 @@ function aimPointForAbility(abilityId: string): { x: number; y: number; z: numbe
 
   if (point.lengthSq() === 0) {
     point.set(
-      selfPos.x - Math.sin(mouseYaw) * def.range,
+      selfPos.x - Math.sin(inp.mouseYaw) * def.range,
       groundY,
-      selfPos.z - Math.cos(mouseYaw) * def.range,
+      selfPos.z - Math.cos(inp.mouseYaw) * def.range,
     )
   }
 
@@ -2299,9 +1958,9 @@ function previewPointForAbility(abilityId: string): { x: number; y: number; z: n
   const map = getMap(getActiveMapId() || getSchemaMapId())
   const dist = Math.max(1.5, Math.min(def.range || 6, 10))
   return {
-    x: selfPos.x - Math.sin(mouseYaw) * dist,
+    x: selfPos.x - Math.sin(inp.mouseYaw) * dist,
     y: map.groundY,
-    z: selfPos.z - Math.cos(mouseYaw) * dist,
+    z: selfPos.z - Math.cos(inp.mouseYaw) * dist,
   }
 }
 
@@ -2310,8 +1969,8 @@ function sendAbilityCast(abilityId: string, tick: number): void {
   const msg: ClientCastMessage = {
     abilityId,
     atTick: tick,
-    targetYaw: mouseYaw,
-    targetPitch: mousePitch,
+    targetYaw: inp.mouseYaw,
+    targetPitch: inp.mousePitch,
     targetPoint: aimPointForAbility(abilityId),
   }
   room.send(MessageTypes.Cast, msg)
@@ -2376,7 +2035,7 @@ function updatePlacementPreview(now: number): void {
   const pulse = 0.5 + 0.5 * Math.sin(now * 0.008)
   placementPreviewGroup.visible = true
   placementPreviewGroup.position.set(point.x, point.y + 0.035, point.z)
-  placementPreviewGroup.rotation.y = mouseYaw
+  placementPreviewGroup.rotation.y = inp.mouseYaw
   placementDisc.visible = !footprint.wall
   placementRing.visible = !footprint.wall
   placementWall.visible = footprint.wall
@@ -2412,7 +2071,7 @@ function simStep(): void {
   const airborne = !!selfSchema && selfSchema.airborneUntilTick > schemaTick
   const dead = !!selfSchema && !selfSchema.alive
   if ((dead || airborne) && placementAbilityId) cancelPlacementPreview()
-  if (optimisticWeapon && selfSchema?.activeWeapon === optimisticWeapon) optimisticWeapon = null
+  if (inp.optimisticWeapon && selfSchema?.activeWeapon === inp.optimisticWeapon) inp.optimisticWeapon = null
   const activeWeapon: Weapon = currentWeaponForInput()
   const combatLive = currentMatchPhase === 'live'
   if (!combatLive) {
@@ -2468,34 +2127,34 @@ function simStep(): void {
   if (self.pending.length > 240) self.pending.splice(0, self.pending.length - 240)
 
   // --- Weapon swap (tick-aligned) -----------------------------------------
-  if (weaponSwapRequest && combatLive && !dead) {
+  if (inp.weaponSwapRequest && combatLive && !dead) {
     const msg: ClientWeaponSwapMessage = {
-      weapon: weaponSwapRequest,
+      weapon: inp.weaponSwapRequest,
       atTick: schemaTick + 1,
     }
     room.send(MessageTypes.WeaponSwap, msg)
-    optimisticWeapon = weaponSwapRequest
+    inp.optimisticWeapon = inp.weaponSwapRequest
     // If we swapped away from bow mid-charge, close the local HUD draw so
     // the bar disappears immediately.
-    if (weaponSwapRequest !== 'bow') {
+    if (inp.weaponSwapRequest !== 'bow') {
       self.bowChargeStartMs = 0
       self.bowChargeServerAcked = false
     }
   }
-  weaponSwapRequest = null
+  inp.weaponSwapRequest = null
 
   // --- Primed ability fire -------------------------------------------------
   // Radial wheels are palettes: Q/E only select a slot. The next LMB press
   // fires that primed ability with the current crosshair and suppresses the
   // weapon's normal LMB action for this click.
-  if (combatLive && lmbPressEdge && placementAbilityId && !dead && !airborne) {
+  if (combatLive && inp.lmbPressEdge && placementAbilityId && !dead && !airborne) {
     sendAbilityCast(placementAbilityId, schemaTick + 1)
     cancelPlacementPreview()
-    lmbPressEdge = false
-    lmbDown = false
+    inp.lmbPressEdge = false
+    inp.lmbDown = false
   }
 
-  if (combatLive && lmbPressEdge && primedSlotIdx !== null && !dead && !airborne) {
+  if (combatLive && inp.lmbPressEdge && primedSlotIdx !== null && !dead && !airborne) {
     const loadout = currentLoadoutArray()
     const id = loadout[primedSlotIdx] ?? ''
     primedSlotIdx = null
@@ -2503,26 +2162,26 @@ function simStep(): void {
       if (loadoutStation.isInstantCast(id)) sendAbilityCast(id, schemaTick + 1)
       else beginPlacementPreview(id)
     }
-    lmbPressEdge = false
-    lmbDown = false
+    inp.lmbPressEdge = false
+    inp.lmbDown = false
   }
 
   // --- LMB behaviour by weapon --------------------------------------------
   // Bow charge release is allowed even while airborne (design: bow can fire mid-air).
   // Only dead players cannot act.
   if (combatLive && !dead && activeWeapon === 'bow') {
-    if (lmbPressEdge) {
+    if (inp.lmbPressEdge) {
       const msg: ClientChargeStartMessage = { atTick: schemaTick + 1 }
       room.send(MessageTypes.ChargeStart, msg)
       self.bowChargeStartMs = performance.now()
       self.bowChargeServerAcked = false
     }
     // Release is always sent regardless of airborne state.
-    if (lmbReleaseEdge && self.bowChargeStartMs > 0) {
+    if (inp.lmbReleaseEdge && self.bowChargeStartMs > 0) {
       const msg: ClientChargeReleaseMessage = {
         atTick: schemaTick + 1,
-        yaw: mouseYaw,
-        pitch: mousePitch,
+        yaw: inp.mouseYaw,
+        pitch: inp.mousePitch,
       }
       room.send(MessageTypes.ChargeRelease, msg)
       self.bowChargeStartMs = 0
@@ -2533,23 +2192,23 @@ function simStep(): void {
 
   if (combatLive && !dead && !airborne) {
     if (activeWeapon === 'sword') {
-      if (lmbPressEdge) {
-        // Swing yaw: use mouseYaw directly — it is the horizontal facing direction
+      if (inp.lmbPressEdge) {
+        // Swing yaw: use inp.mouseYaw directly — it is the horizontal facing direction
         // and equals the forward direction of both the character mesh and the server
         // hit cone. Deriving from camera.quaternion in TPS mode gave incorrect pitch
         // contamination when the camera orbited at an angle.
-        const msg: ClientSwingMessage = { atTick: schemaTick + 1, yaw: mouseYaw }
+        const msg: ClientSwingMessage = { atTick: schemaTick + 1, yaw: inp.mouseYaw }
         room.send(MessageTypes.Swing, msg)
         showShootFlash()
       }
     } else if (activeWeapon === 'staff') {
       const now = performance.now()
       const canFire = now - lastStaffFireMs >= STAFF_FIRE_THROTTLE_MS
-      if ((lmbPressEdge || (lmbDown && canFire)) && canFire) {
+      if ((inp.lmbPressEdge || (inp.lmbDown && canFire)) && canFire) {
         const msg: ClientFireStaffMessage = {
           atTick: schemaTick + 1,
-          yaw: mouseYaw,
-          pitch: mousePitch,
+          yaw: inp.mouseYaw,
+          pitch: inp.mousePitch,
         }
         room.send(MessageTypes.FireStaff, msg)
         lastStaffFireMs = now
@@ -2565,18 +2224,18 @@ function simStep(): void {
   }
 
   // --- Parry (RMB) --------------------------------------------------------
-  if (combatLive && rmbPressEdge && placementAbilityId) {
+  if (combatLive && inp.rmbPressEdge && placementAbilityId) {
     cancelPlacementPreview()
-    rmbPressEdge = false
-    rmbReleaseEdge = false
+    inp.rmbPressEdge = false
+    inp.rmbReleaseEdge = false
   }
 
   if (combatLive && !dead && !airborne) {
-    if (rmbPressEdge) {
+    if (inp.rmbPressEdge) {
       const msg: ClientParryPressMessage = { atTick: schemaTick + 1 }
       room.send(MessageTypes.ParryPress, msg)
     }
-    if (rmbReleaseEdge) {
+    if (inp.rmbReleaseEdge) {
       const msg: ClientParryReleaseMessage = { atTick: schemaTick + 1 }
       room.send(MessageTypes.ParryRelease, msg)
     }
@@ -2597,10 +2256,10 @@ function simStep(): void {
   while (abilityCastQueue.length > 2) abilityCastQueue.shift()
 
   // Clear per-tick edges.
-  lmbPressEdge = false
-  lmbReleaseEdge = false
-  rmbPressEdge = false
-  rmbReleaseEdge = false
+  inp.lmbPressEdge = false
+  inp.lmbReleaseEdge = false
+  inp.rmbPressEdge = false
+  inp.rmbReleaseEdge = false
 
   // --- Input message ------------------------------------------------------
   const inMsg: ClientInputMessage = {
@@ -2609,7 +2268,7 @@ function simStep(): void {
     moveX: input.moveX,
     moveZ: input.moveZ,
     yaw: input.yaw,
-    pitch: mousePitch,
+    pitch: inp.mousePitch,
     jump: input.jump,
     jumpHold: input.jumpHold,
     m1: false,
@@ -2926,7 +2585,7 @@ function render(now: number): void {
     // Idle breathing bob — tiny vertical sine when grounded, skipped airborne.
     const idleBob = (!airborne && !dead) ? Math.sin(now * 0.0028) * 0.014 : 0
     selfMesh.position.set(x, y + idleBob, z)
-    selfMesh.rotation.y = mouseYaw
+    selfMesh.rotation.y = inp.mouseYaw
     // Follow-light tracks the player's torso level.
     playerLight.position.set(x, y + 0.5 + idleBob, z)
 
@@ -2958,11 +2617,11 @@ function render(now: number): void {
 
     if (firstPersonWeapon) {
       camera.position.set(x, y + camUp, z)
-      camera.rotation.set(mousePitch, mouseYaw, 0, 'YXZ')
+      camera.rotation.set(inp.mousePitch, inp.mouseYaw, 0, 'YXZ')
     } else {
       // Stable third-person orbit. Yaw controls the shoulder/back position;
       // pitch controls only the look target so the camera never dives down.
-      const back = new THREE.Vector3(Math.sin(mouseYaw) * camBack, 0, Math.cos(mouseYaw) * camBack)
+      const back = new THREE.Vector3(Math.sin(inp.mouseYaw) * camBack, 0, Math.cos(inp.mouseYaw) * camBack)
       camera.position.set(x + back.x, y + camUp, z + back.z)
     }
 
@@ -2971,7 +2630,7 @@ function render(now: number): void {
     if (camera.position.y < groundFloor + 0.4) camera.position.y = groundFloor + 0.4
 
     if (!firstPersonWeapon) {
-      const aimForward = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(mousePitch, mouseYaw, 0, 'YXZ'))
+      const aimForward = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(inp.mousePitch, inp.mouseYaw, 0, 'YXZ'))
       const lookDistance = 10
       const lookY = y + CAPSULE_HALF_HEIGHT_M * 0.85
       camera.lookAt(
@@ -3013,7 +2672,7 @@ function render(now: number): void {
         // Derivation: arc centre at thetaLength/2 in local XY → after
         // rotation.set(PI/2, ry, 'YXZ') lands at (cos(ry−half), 0, −sin(ry−half)).
         // ry = yaw + π/2 + half makes that equal to forward. ✓
-        selfArc.rotation.set(Math.PI / 2, mouseYaw + SWING_ARC_YAW_OFFSET, 0, 'YXZ')
+        selfArc.rotation.set(Math.PI / 2, inp.mouseYaw + SWING_ARC_YAW_OFFSET, 0, 'YXZ')
         ;(selfArc.material as THREE.MeshBasicMaterial).opacity = 0.8 * (1 - life)
       } else {
         selfArc.visible = false
@@ -3170,7 +2829,7 @@ function render(now: number): void {
   }
 
   // Weapon wheel highlight + debug.
-  if (optimisticWeapon && selfSchema?.activeWeapon === optimisticWeapon) optimisticWeapon = null
+  if (inp.optimisticWeapon && selfSchema?.activeWeapon === inp.optimisticWeapon) inp.optimisticWeapon = null
   const activeWeapon: Weapon = currentWeaponForInput()
   dbgWeapon.textContent = activeWeapon
   for (const w of WEAPON_IDS) {
