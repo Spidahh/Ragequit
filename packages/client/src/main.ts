@@ -60,9 +60,10 @@ import {
 import { Client, type Room } from 'colyseus.js'
 import * as THREE from 'three'
 
+import { ELEMENT_COLOR, initCooldownStrip } from './hud/cd-strip.js'
 import { createHudFlash } from './hud/flash.js'
 import { initDraggableHud } from './hud/hud-drag.js'
-import { abilityIcon, abilityIconMarkup, ensureIconSprite, statusIcon, weaponIcon } from './icons.js'
+import { abilityIcon, ensureIconSprite, statusIcon, weaponIcon } from './icons.js'
 import {
   actionCode,
   actionLabel,
@@ -70,7 +71,6 @@ import {
   onKeybindsChanged,
   slotKeybindEntries,
 } from './input/keybinds.js'
-import { FIXED_TRANSFER_SLOTS, normalizeLoadoutSlots } from './input/loadout-slots.js'
 import { initLoadoutStation } from './loadout-station.js'
 import { initMenu } from './menu.js'
 import { sendLoadout } from './net/loadout-sync.js'
@@ -458,132 +458,12 @@ const RESPAWN_TIPS: readonly string[] = [
   'Collision stops dash abilities; walls are hard cover.',
 ]
 
-// Element accent colours used for ability pip backgrounds and status borders.
-const ELEMENT_COLOR: Record<string, string> = {
-  fire:      '#ff6a2a',
-  ice:       '#6dd6ff',
-  lightning: '#ffe244',
-  dark:      '#b870ff',
-  nature:    '#80e860',
-  none:      '#9ba0b4',
-}
-
-// Keyed by abilityId so CD lookup is O(1). Rebuilt whenever loadout changes.
-const cdPipEls = new Map<string, HTMLElement>()
-let cdStripLoadoutRef: ReadonlyArray<string> = []
-let cdStripLoadoutSig = ''
-
-// SVG arc circumference for the cooldown ring (r=18 px).
-const CD_ARC_R = 18
-const CD_ARC_CIRC = 2 * Math.PI * CD_ARC_R // ≈113.1
-
-function rebuildCdStrip(loadout: ReadonlyArray<string>): void {
-  cdStripLoadoutRef = Array.from(loadout)
-  cdStripLoadoutSig = loadoutSignature(cdStripLoadoutRef)
-  while (cdStrip.firstChild) cdStrip.removeChild(cdStrip.firstChild)
-  cdPipEls.clear()
-
-  const abilitySection = document.createElement('div')
-  abilitySection.className = 'hotbar-section ability-section'
-  abilitySection.innerHTML = '<div class="hotbar-title"><span>E</span><b>Ability Wheel</b></div>'
-  const abilityRail = document.createElement('div')
-  abilityRail.className = 'hotbar-rail'
-  abilitySection.appendChild(abilityRail)
-
-  const utilitySection = document.createElement('div')
-  utilitySection.className = 'hotbar-section utility-section'
-  utilitySection.innerHTML = '<div class="hotbar-title"><span>Q</span><b>Utility Wheel</b></div>'
-  const utilityRail = document.createElement('div')
-  utilityRail.className = 'hotbar-rail'
-  utilitySection.appendChild(utilityRail)
-
-  for (const [, label, slotIdx] of slotKeybindEntries()) {
-    const id = loadout[slotIdx] ?? ''
-    if (!id) continue
-    const def = ABILITY_DEFS[id]
-    const elemColor = ELEMENT_COLOR[def?.element ?? 'none'] ?? ELEMENT_COLOR['none']!
-    const hasMana    = (def?.costMana ?? 0) > 0
-    const hasStamina = (def?.costStamina ?? 0) > 0
-
-    // Tooltip content: name + cooldown + costs.
-    const costParts: string[] = []
-    if (hasMana)    costParts.push(`${def!.costMana}mp`)
-    if (hasStamina) costParts.push(`${def!.costStamina}sp`)
-    const costStr = costParts.length > 0 ? `  · ${costParts.join(' ')}` : ''
-    const tooltip = def
-      ? `${def.name}\nCD ${def.cooldownSec}s${costStr}\n${def.miniMalus ?? ''}`
-      : id
-
-    const elemLabel = (def?.element && def.element !== 'none') ? def.element.toUpperCase() : def?.slot.toUpperCase() ?? ''
-    const cdLabel   = def ? `${def.cooldownSec}s CD` : ''
-    const costLabel = costParts.length > 0 ? costParts.join(' · ') : 'free'
-    const malusHtml = def?.miniMalus ? `<div class="tt-malus">${def.miniMalus}</div>` : ''
-
-    const pip = document.createElement('div')
-    const isUtility = slotIdx >= 7
-    const isFixedTransfer = slotIdx in FIXED_TRANSFER_SLOTS
-    pip.className = `cd-pip ready ${isUtility ? 'utility-pip' : 'ability-pip'} ${isFixedTransfer ? 'transfer-pip' : ''}`
-    pip.dataset['abilityId'] = id
-    pip.dataset['slotIdx'] = String(slotIdx)
-    pip.title = tooltip
-    // Colour accent driven by element.
-    pip.style.setProperty('--elem-color', elemColor)
-    // SVG ring + rich hover tooltip.
-    const icon = abilityIconMarkup(id)
-    pip.innerHTML = `
-      <svg class="cd-arc" viewBox="0 0 44 44" width="44" height="44">
-        <circle class="cd-arc-bg" cx="22" cy="22" r="${CD_ARC_R}"/>
-        <circle class="cd-arc-fill" cx="22" cy="22" r="${CD_ARC_R}"
-          stroke-dasharray="${CD_ARC_CIRC}" stroke-dashoffset="${CD_ARC_CIRC}"
-          transform="rotate(-90 22 22)"/>
-      </svg>
-      <span class="label">${label}</span>
-      <span class="ability-icon">${icon}</span>
-      <span class="ability-name">${def?.name ?? id}</span>
-      <span class="cd-timer">-</span>
-      ${hasMana    ? `<span class="cost-dot mana"></span>` : ''}
-      ${hasStamina ? `<span class="cost-dot stam"></span>` : ''}
-      <div class="ability-tooltip">
-        <div class="tt-name">${icon} <span>${def?.name ?? id}</span></div>
-        <div class="tt-el">${elemLabel}${cdLabel ? ' · ' + cdLabel : ''}</div>
-        <div class="tt-cost">${costLabel}</div>
-        ${malusHtml}
-      </div>
-    `
-    pip.addEventListener('click', (e) => {
-      e.preventDefault()
-      e.stopPropagation()
-      activateAbilitySlot(slotIdx, true)
-    })
-    ;(isUtility ? utilityRail : abilityRail).appendChild(pip)
-    cdPipEls.set(id, pip)
-  }
-  cdStrip.appendChild(abilitySection)
-  cdStrip.appendChild(utilitySection)
-}
-
-function loadoutSignature(loadout: ReadonlyArray<string>): string {
-  return Array.from(loadout).join('|')
-}
-// Seed with default loadout until server schema arrives.
-rebuildCdStrip(normalizeLoadoutSlots([
-  'uppercut',
-  'piercing_shot',
-  'fireball',
-  'flame_wall',
-  'frost_bolt',
-  'chain_bolt',
-  'shadow_bolt',
-  '',
-  '',
-  '',
-  'quick_dash',
-]))
+const cooldownStrip = initCooldownStrip(cdStrip, (slotIdx) => activateAbilitySlot(slotIdx, true))
 
 onKeybindsChanged(() => {
   radialRefresh(utilityWheel)
   radialRefresh(abilityWheel)
-  rebuildCdStrip(currentLoadoutArray())
+  cooldownStrip.rebuild(currentLoadoutArray())
   refreshKeybindHudLabels()
 })
 
@@ -2883,13 +2763,7 @@ function onKillStreak(msg: ServerKillStreakMessage): void {
 }
 
 function onAbilityFailed(msg: ServerAbilityFailedMessage): void {
-  const pip = cdPipEls.get(msg.abilityId)
-  if (pip) {
-    // Flash the pip red to signal rejection.
-    pip.classList.remove('pending')
-    pip.classList.add('fail-flash')
-    setTimeout(() => pip.classList.remove('fail-flash'), 400)
-  }
+  cooldownStrip.flashFailed(msg.abilityId)
 
   // Extra feedback per rejection reason.
   if (msg.reason === 'cost') {
@@ -3330,7 +3204,6 @@ function updateTransmuteBar(): void {
         : dir === 'mana_stam'
           ? 'transfer_mana_stam'
           : 'transfer_stam_hp'
-    const pip = cdPipEls.get(abilityId)
     const expiry = transmuteCdExpiry[dir] ?? 0
     const remaining = expiry - now
     if (remaining > 0) {
@@ -3338,21 +3211,13 @@ function updateTransmuteBar(): void {
       el?.classList.add('cooling')
       const cdTextEl = el?.querySelector<HTMLElement>('.t-cd-text')
       if (cdTextEl) cdTextEl.textContent = `${(remaining / 1000).toFixed(1)}s`
-      pip?.classList.remove('ready')
-      pip?.classList.add('cooling')
-      const timerEl = pip?.querySelector<HTMLElement>('.cd-timer')
-      if (timerEl) timerEl.textContent = (remaining / 1000).toFixed(1)
+      cooldownStrip.setTransferCooldown(abilityId, remaining)
     } else {
       el?.classList.remove('cooling')
       el?.classList.add('ready')
       const cdTextEl = el?.querySelector<HTMLElement>('.t-cd-text')
       if (cdTextEl) cdTextEl.textContent = ''
-      if (pip?.classList.contains('transfer-pip')) {
-        pip.classList.remove('cooling')
-        pip.classList.add('ready')
-        const timerEl = pip.querySelector<HTMLElement>('.cd-timer')
-        if (timerEl) timerEl.textContent = ''
-      }
+      cooldownStrip.setTransferCooldown(abilityId, 0)
     }
   }
 }
@@ -3667,11 +3532,7 @@ function sendAbilityCast(abilityId: string, tick: number): void {
     targetPoint: aimPointForAbility(abilityId),
   }
   room.send(MessageTypes.Cast, msg)
-  const pip = cdPipEls.get(abilityId)
-  if (pip) {
-    pip.classList.add('pending')
-    setTimeout(() => pip.classList.remove('pending'), 400)
-  }
+  cooldownStrip.markPending(abilityId)
   showShootFlash()
 }
 
@@ -4812,9 +4673,9 @@ function render(now: number): void {
     // Colyseus ArraySchema can update in place, so reference comparison misses
     // loadout edits. Compare the slot contents instead.
     const currentLoadout = currentLoadoutArray()
-    const currentLoadoutSig = loadoutSignature(currentLoadout)
-    if (currentLoadoutSig !== cdStripLoadoutSig) {
-      rebuildCdStrip(currentLoadout)
+    const currentLoadoutSig = cooldownStrip.signature(currentLoadout)
+    if (currentLoadoutSig !== cooldownStrip.currentSignature()) {
+      cooldownStrip.rebuild(currentLoadout)
       primedSlotIdx = null
       cancelPlacementPreview()
     }
@@ -4856,45 +4717,12 @@ function render(now: number): void {
       castBarLabel.textContent = 'CAST'
     }
 
-    // --- Cooldown rings ---------------------------------------------------
-    for (const [, label, slotIdx] of slotKeybindEntries()) {
-      const id = cdStripLoadoutRef[slotIdx] ?? ''
-      const pip = cdPipEls.get(id)
-      if (!pip) continue
-      const readyTick = (selfSchema.abilityCooldowns?.get?.(id) ?? 0) as number
-      const arcEl    = pip.querySelector<SVGCircleElement>('.cd-arc-fill')
-      const labelEl  = pip.querySelector<HTMLElement>('.label')
-      const timerEl  = pip.querySelector<HTMLElement>('.cd-timer')
-      if (readyTick > tickNow) {
-        const left = (readyTick - tickNow) / TICK_RATE_HZ
-        const def = ABILITY_DEFS[id]
-        const totalSec = def?.cooldownSec ?? 1
-        const ratio = Math.min(1, left / totalSec) // 1 = full CD, 0 = ready
-        pip.classList.remove('ready', 'pending')
-        pip.classList.add('cooling')
-        if (labelEl) labelEl.textContent = label
-        // Big countdown number front-and-center.
-        if (timerEl) timerEl.textContent = left < 1 ? left.toFixed(1) : left.toFixed(0)
-        if (arcEl) arcEl.style.strokeDashoffset = String(CD_ARC_CIRC * ratio)
-      } else {
-        const wasCooling = pip.classList.contains('cooling')
-        pip.classList.add('ready')
-        pip.classList.remove('cooling', 'pending')
-        if (labelEl) labelEl.textContent = label
-        if (timerEl) timerEl.textContent = ''
-        if (arcEl) arcEl.style.strokeDashoffset = String(CD_ARC_CIRC)
-        // Flash burst when CD just came off cooldown this frame.
-        if (wasCooling) {
-          pip.classList.remove('cd-ready-flash')
-          void (pip as HTMLElement).offsetWidth // reflow for re-trigger
-          pip.classList.add('cd-ready-flash')
-          setTimeout(() => pip.classList.remove('cd-ready-flash'), 500)
-        }
-      }
-      // Primed highlight — the ability selected via radial wheel, fires on LMB.
-      pip.classList.toggle('primed', slotIdx === primedSlotIdx)
-      pip.classList.toggle('placing', id === placementAbilityId)
-    }
+    cooldownStrip.updateAbilityCooldowns({
+      abilityCooldowns: selfSchema.abilityCooldowns,
+      placementAbilityId,
+      primedSlotIdx,
+      tickNow,
+    })
 
     // --- GCD ring — small arc at crosshair base ---------------------------
     if (gcdRingEl) {
