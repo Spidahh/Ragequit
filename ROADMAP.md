@@ -65,7 +65,10 @@ Implementato:
 - Game input controller (keyboard/mouse/pointer event registration + mutable state bag) estratto in `packages/client/src/input/game-input.ts`.
 - HUD self-player status renderer (HP/mana/stamina/mastery/status strip/cast bar/GCD) estratto in `packages/client/src/hud/self-hud.ts`.
 - Cast/fire/weapon input dispatcher (primedSlot, castQueue, placementId, dispatch per tick) estratto in `packages/client/src/input/cast-dispatcher.ts`.
-- projectile/zone/player render systems
+- Projectile visual system (onSpawned, onExpired, renderFrame) estratto in `packages/client/src/render/projectile-visuals.ts`.
+- Zone visual system (onSpawned, onExpired, animateFrame, zoneColorForElement) estratto in `packages/client/src/render/zone-visuals.ts`.
+- Placement preview system (footprint, aimPoint, update) estratto in `packages/client/src/render/placement-preview.ts`.
+- Remote player visual system (snapshot capture, interpolated render, emissives, nameplate) estratto in `packages/client/src/render/remote-players.ts`.
 - menu/loadout orchestration
 
 ### 4. Content Consistency
