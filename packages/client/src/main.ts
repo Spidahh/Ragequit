@@ -24,7 +24,6 @@ import {
   makePlayerSimState,
   movementCapsFromStatuses,
   simulatePlayer,
-  type AABB,
   type ClientCastMessage,
   type MovementCaps,
   type ServerMatchPhaseMessage,
@@ -78,6 +77,9 @@ import { initLoadoutStation } from './loadout-station.js'
 import { initMenu } from './menu.js'
 import { sendLoadout } from './net/loadout-sync.js'
 import { makeProjectileMesh, makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
+import { makeCharacter, applyWeaponProp, makeCastRing } from './render/characters.js'
+import { SoundEngine } from './audio/sound-engine.js'
+import { buildArena, PARTICLE_COUNT, MAGIC_COUNT } from './world/arena.js'
 import { ImpactPool } from './vfx/impact-pool.js'
 
 // -----------------------------------------------------------------------
@@ -276,441 +278,6 @@ onKeybindsChanged(() => {
   refreshKeybindHudLabels()
 })
 
-// -----------------------------------------------------------------------
-// Sound Engine — WebAudio API, procedural, zero external files.
-// AudioContext is created lazily on the first call so we satisfy the
-// "must be triggered by a user gesture" browser requirement.
-// -----------------------------------------------------------------------
-
-class SoundEngine {
-  private ctx: AudioContext | null = null
-  private masterGain: GainNode | null = null
-  private _muted = false
-
-  /** Lazily initialise (and resume) the AudioContext. */
-  private get ac(): AudioContext {
-    if (!this.ctx) {
-      this.ctx = new AudioContext()
-      this.masterGain = this.ctx.createGain()
-      this.masterGain.gain.value = this._volume
-      this.masterGain.connect(this.ctx.destination)
-    }
-    if (this.ctx.state === 'suspended') void this.ctx.resume()
-    return this.ctx
-  }
-  private get out(): AudioNode {
-    void this.ac
-    return this.masterGain!
-  }
-
-  get muted(): boolean { return this._muted }
-  set muted(v: boolean) {
-    this._muted = v
-    if (this.masterGain) this.masterGain.gain.value = v ? 0 : this._volume
-  }
-
-  private _volume = 0.55
-  get volume(): number { return this._volume }
-  set volume(v: number) {
-    this._volume = Math.max(0, Math.min(1, v))
-    if (this.masterGain && !this._muted) this.masterGain.gain.value = this._volume
-  }
-
-  /** Short noise burst — sword/arrow/melee impact. power 0‒1. */
-  playHit(power = 1): void {
-    if (this._muted) return
-    const ac = this.ac, out = this.out
-    const len = Math.floor(ac.sampleRate * 0.06)
-    const buf = ac.createBuffer(1, len, ac.sampleRate)
-    const d = buf.getChannelData(0)
-    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len)
-    const src = ac.createBufferSource()
-    src.buffer = buf
-    const filt = ac.createBiquadFilter()
-    filt.type = 'bandpass'
-    filt.frequency.value = 700 + power * 500
-    filt.Q.value = 0.5
-    const gain = ac.createGain()
-    gain.gain.setValueAtTime(0.3 + power * 0.45, ac.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.09)
-    src.connect(filt)
-    filt.connect(gain)
-    gain.connect(out)
-    src.start()
-  }
-
-  // ─── Impact sounds ───────────────────────────────────────────────────────
-
-  /** Attacker: physical melee thud — low sine body + high metallic click. */
-  playMeleeThud(power = 1): void {
-    if (this._muted) return
-    const ac = this.ac, out = this.out
-    // Body: low-frequency sine punch.
-    const osc = ac.createOscillator()
-    const oscGain = ac.createGain()
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(90 + power * 30, ac.currentTime)
-    osc.frequency.exponentialRampToValueAtTime(40, ac.currentTime + 0.08)
-    oscGain.gain.setValueAtTime(0.5 * power, ac.currentTime)
-    oscGain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.1)
-    osc.connect(oscGain); oscGain.connect(out)
-    osc.start(); osc.stop(ac.currentTime + 0.12)
-    // Metallic click: short hi-freq noise burst.
-    const len = Math.floor(ac.sampleRate * 0.022)
-    const buf = ac.createBuffer(1, len, ac.sampleRate)
-    const d = buf.getChannelData(0)
-    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (len * 0.18))
-    const src = ac.createBufferSource(); src.buffer = buf
-    const filt = ac.createBiquadFilter(); filt.type = 'bandpass'
-    filt.frequency.value = 2200; filt.Q.value = 1.5
-    const ng = ac.createGain(); ng.gain.value = 0.18 * power
-    src.connect(filt); filt.connect(ng); ng.connect(out); src.start()
-  }
-
-  /** Attacker: heavy melee thud — amplified for combo hit 2. */
-  playHeavyHit(power = 1): void {
-    if (this._muted) return
-    const ac = this.ac, out = this.out
-    const osc = ac.createOscillator()
-    const oscGain = ac.createGain()
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(100 + power * 40, ac.currentTime)
-    osc.frequency.exponentialRampToValueAtTime(38, ac.currentTime + 0.11)
-    oscGain.gain.setValueAtTime(0.75 * power, ac.currentTime)
-    oscGain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.14)
-    osc.connect(oscGain); oscGain.connect(out)
-    osc.start(); osc.stop(ac.currentTime + 0.16)
-    // Sub bass reinforcement.
-    const osc2 = ac.createOscillator(); const g2 = ac.createGain()
-    osc2.type = 'sine'; osc2.frequency.value = 180
-    g2.gain.setValueAtTime(0.28 * power, ac.currentTime)
-    g2.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.08)
-    osc2.connect(g2); g2.connect(out); osc2.start(); osc2.stop(ac.currentTime + 0.10)
-    // Metallic click.
-    const len = Math.floor(ac.sampleRate * 0.028)
-    const buf = ac.createBuffer(1, len, ac.sampleRate)
-    const data = buf.getChannelData(0)
-    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (len * 0.16))
-    const src = ac.createBufferSource(); src.buffer = buf
-    const filt = ac.createBiquadFilter(); filt.type = 'bandpass'; filt.frequency.value = 2400; filt.Q.value = 1.2
-    const ng = ac.createGain(); ng.gain.value = 0.28 * power
-    src.connect(filt); filt.connect(ng); ng.connect(out); src.start()
-  }
-
-  /** Attacker: CRACK — combo hit 3 — hard transient + distorted punch. */
-  playCrack(power = 1): void {
-    if (this._muted) return
-    const ac = this.ac, out = this.out
-    // Distorted oscillator punch.
-    const osc = ac.createOscillator(); const oscGain = ac.createGain()
-    osc.type = 'sawtooth'
-    osc.frequency.setValueAtTime(110, ac.currentTime)
-    osc.frequency.exponentialRampToValueAtTime(55, ac.currentTime + 0.045)
-    // WaveShaper for hard distortion.
-    const ws = ac.createWaveShaper()
-    const curve = new Float32Array(256)
-    for (let i = 0; i < 256; i++) {
-      const x = (i * 2) / 256 - 1
-      curve[i] = Math.max(-1, Math.min(1, x * 3.5))
-    }
-    ws.curve = curve
-    oscGain.gain.setValueAtTime(0.9 * power, ac.currentTime)
-    oscGain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.07)
-    osc.connect(ws); ws.connect(oscGain); oscGain.connect(out)
-    osc.start(); osc.stop(ac.currentTime + 0.08)
-    // Noise transient.
-    const len = Math.floor(ac.sampleRate * 0.04)
-    const buf = ac.createBuffer(1, len, ac.sampleRate)
-    const data = buf.getChannelData(0)
-    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (len * 0.25))
-    const src = ac.createBufferSource(); src.buffer = buf
-    const filt = ac.createBiquadFilter(); filt.type = 'allpass'; filt.frequency.value = 600
-    const ng = ac.createGain(); ng.gain.value = 0.65 * power
-    src.connect(filt); filt.connect(ng); ng.connect(out); src.start()
-  }
-
-  /** Attacker: projectile (arrow/bolt) impact — thwack noise + body resonance. */
-  playProjectileImpact(power = 1): void {
-    if (this._muted) return
-    const ac = this.ac, out = this.out
-    // Noise burst BPF — sharp "thwack".
-    const len = Math.floor(ac.sampleRate * 0.065)
-    const buf = ac.createBuffer(1, len, ac.sampleRate)
-    const d = buf.getChannelData(0)
-    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len)
-    const src = ac.createBufferSource(); src.buffer = buf
-    const filt = ac.createBiquadFilter(); filt.type = 'bandpass'
-    filt.frequency.value = 800 + power * 400; filt.Q.value = 2
-    const ng = ac.createGain()
-    ng.gain.setValueAtTime(0.4 * power, ac.currentTime)
-    ng.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.07)
-    src.connect(filt); filt.connect(ng); ng.connect(out); src.start()
-    // Body resonance.
-    const osc = ac.createOscillator(); const og = ac.createGain()
-    osc.type = 'sine'; osc.frequency.value = 140
-    og.gain.setValueAtTime(0.22 * power, ac.currentTime)
-    og.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.06)
-    osc.connect(og); og.connect(out); osc.start(); osc.stop(ac.currentTime + 0.07)
-  }
-
-  /** Attacker: AoE zone impact — low boom + rumble. */
-  playAoeImpact(power = 1): void {
-    if (this._muted) return
-    const ac = this.ac, out = this.out
-    const osc = ac.createOscillator(); const og = ac.createGain()
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(55, ac.currentTime)
-    osc.frequency.exponentialRampToValueAtTime(30, ac.currentTime + 0.22)
-    og.gain.setValueAtTime(0.45 * power, ac.currentTime)
-    og.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.32)
-    const lpf = ac.createBiquadFilter(); lpf.type = 'lowpass'; lpf.frequency.value = 400
-    osc.connect(lpf); lpf.connect(og); og.connect(out)
-    osc.start(); osc.stop(ac.currentTime + 0.35)
-  }
-
-  /** Renamed original — used as fallback for unknown ability hits. */
-  playAbilityHit(power = 1): void {
-    this.playHit(power)
-  }
-
-  // ─── Dispatcher: attacker side ───────────────────────────────────────────
-
-  /**
-   * Play the attacker-side impact sound for a given PendingDamage cause string.
-   * Call this INSTEAD of playHit() for combo hit 1 (hits 2 and 3 are handled
-   * by the combo escalation path which calls playHeavyHit / playCrack directly).
-   */
-  playHitByType(cause: string, power = 1): void {
-    if (cause === 'sword_m1' || cause === 'uppercut') return this.playMeleeThud(power)
-    if (cause === 'bow' || cause === 'staff') return this.playProjectileImpact(power)
-    if (cause.startsWith('zone:') || cause.startsWith('combo:')) return this.playAoeImpact(power)
-    return this.playAbilityHit(power)
-  }
-
-  // ─── Victim-side impact sounds ───────────────────────────────────────────
-
-  /** Victim: received melee — dull grunt + low thud. */
-  playHurtMelee(power = 1): void {
-    if (this._muted) return
-    const ac = this.ac, out = this.out
-    const osc = ac.createOscillator(); const og = ac.createGain()
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(120, ac.currentTime)
-    osc.frequency.exponentialRampToValueAtTime(60, ac.currentTime + 0.065)
-    og.gain.setValueAtTime(0.45 * power, ac.currentTime)
-    og.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.09)
-    osc.connect(og); og.connect(out); osc.start(); osc.stop(ac.currentTime + 0.1)
-    // Noise body thump.
-    const len = Math.floor(ac.sampleRate * 0.04)
-    const buf = ac.createBuffer(1, len, ac.sampleRate)
-    const d = buf.getChannelData(0)
-    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (len * 0.3))
-    const src = ac.createBufferSource(); src.buffer = buf
-    const lpf = ac.createBiquadFilter(); lpf.type = 'lowpass'; lpf.frequency.value = 350
-    const ng = ac.createGain(); ng.gain.value = 0.3 * power
-    src.connect(lpf); lpf.connect(ng); ng.connect(out); src.start()
-  }
-
-  /** Victim: received arrow/bolt — sharp "thwack" at point of impact. */
-  playHurtProjectile(power = 1): void {
-    if (this._muted) return
-    const ac = this.ac, out = this.out
-    const len = Math.floor(ac.sampleRate * 0.055)
-    const buf = ac.createBuffer(1, len, ac.sampleRate)
-    const d = buf.getChannelData(0)
-    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (len * 0.22))
-    const src = ac.createBufferSource(); src.buffer = buf
-    const filt = ac.createBiquadFilter(); filt.type = 'bandpass'
-    filt.frequency.value = 1200; filt.Q.value = 4
-    const ng = ac.createGain()
-    ng.gain.setValueAtTime(0.38 * power, ac.currentTime)
-    ng.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.06)
-    src.connect(filt); filt.connect(ng); ng.connect(out); src.start()
-    // Soft resonance.
-    const osc = ac.createOscillator(); const og = ac.createGain()
-    osc.type = 'sine'; osc.frequency.value = 220
-    og.gain.setValueAtTime(0.18 * power, ac.currentTime)
-    og.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.035)
-    osc.connect(og); og.connect(out); osc.start(); osc.stop(ac.currentTime + 0.04)
-  }
-
-  /** Victim: received zone/AoE — muffled explosion boom. */
-  playHurtAoe(power = 1): void {
-    if (this._muted) return
-    const ac = this.ac, out = this.out
-    const len = Math.floor(ac.sampleRate * 0.20)
-    const buf = ac.createBuffer(1, len, ac.sampleRate)
-    const d = buf.getChannelData(0)
-    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (len * 0.55))
-    const src = ac.createBufferSource(); src.buffer = buf
-    const lpf = ac.createBiquadFilter(); lpf.type = 'lowpass'; lpf.frequency.value = 500
-    const ng = ac.createGain(); ng.gain.value = 0.55 * power
-    src.connect(lpf); lpf.connect(ng); ng.connect(out); src.start()
-  }
-
-  /** Victim: received ability hit — magic "zap" sweep. */
-  playHurtAbility(power = 1): void {
-    if (this._muted) return
-    const ac = this.ac, out = this.out
-    const osc = ac.createOscillator(); const og = ac.createGain()
-    osc.type = 'sawtooth'
-    osc.frequency.setValueAtTime(880, ac.currentTime)
-    osc.frequency.exponentialRampToValueAtTime(220, ac.currentTime + 0.085)
-    og.gain.setValueAtTime(0.28 * power, ac.currentTime)
-    og.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.10)
-    const lpf = ac.createBiquadFilter(); lpf.type = 'lowpass'; lpf.frequency.value = 3000
-    osc.connect(lpf); lpf.connect(og); og.connect(out); osc.start(); osc.stop(ac.currentTime + 0.12)
-  }
-
-  // ─── Dispatcher: victim side ─────────────────────────────────────────────
-
-  /** Play the victim-side "received damage" sound based on damage source. */
-  playHurtByType(cause: string, power = 1): void {
-    if (cause === 'sword_m1' || cause === 'uppercut') return this.playHurtMelee(power)
-    if (cause === 'bow' || cause === 'staff') return this.playHurtProjectile(power)
-    if (cause.startsWith('zone:') || cause.startsWith('combo:')) return this.playHurtAoe(power)
-    return this.playHurtAbility(power)
-  }
-
-  /** Element-themed tone sweep on ability cast. */
-  playCast(element = 'none'): void {
-    if (this._muted) return
-    const ac = this.ac, out = this.out
-    const osc = ac.createOscillator()
-    const gain = ac.createGain()
-    const freqMap: Record<string, [number, number]> = {
-      fire:      [310, 700],
-      ice:       [600, 1100],
-      lightning: [900, 2400],
-      dark:      [200, 80],
-      nature:    [440, 660],
-      none:      [280, 480],
-    }
-    const [f0, f1] = freqMap[element] ?? freqMap['none']!
-    osc.type = element === 'lightning' ? 'sawtooth' : element === 'dark' ? 'sine' : 'triangle'
-    osc.frequency.setValueAtTime(f0, ac.currentTime)
-    osc.frequency.linearRampToValueAtTime(f1, ac.currentTime + 0.18)
-    gain.gain.setValueAtTime(0.16, ac.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.22)
-    osc.connect(gain)
-    gain.connect(out)
-    osc.start()
-    osc.stop(ac.currentTime + 0.25)
-  }
-
-  /** Ascending arpeggio — kill confirm. */
-  playKill(): void {
-    if (this._muted) return
-    const ac = this.ac, out = this.out
-    for (const [i, freq] of ([523, 659, 784] as const).entries()) {
-      const osc = ac.createOscillator()
-      const gain = ac.createGain()
-      const t = ac.currentTime + i * 0.065
-      osc.type = 'sine'
-      osc.frequency.value = freq
-      gain.gain.setValueAtTime(0, t)
-      gain.gain.linearRampToValueAtTime(0.22, t + 0.02)
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.2)
-      osc.connect(gain)
-      gain.connect(out)
-      osc.start(t)
-      osc.stop(t + 0.22)
-    }
-  }
-
-  /** Descending whomp — self death. */
-  playDeath(): void {
-    if (this._muted) return
-    const ac = this.ac, out = this.out
-    const osc = ac.createOscillator()
-    const gain = ac.createGain()
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(220, ac.currentTime)
-    osc.frequency.exponentialRampToValueAtTime(38, ac.currentTime + 0.7)
-    gain.gain.setValueAtTime(0.42, ac.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.75)
-    osc.connect(gain)
-    gain.connect(out)
-    osc.start()
-    osc.stop(ac.currentTime + 0.8)
-  }
-
-  /** Short upward frequency sweep — jump. */
-  playJump(): void {
-    if (this._muted) return
-    const ac = this.ac, out = this.out
-    const osc = ac.createOscillator()
-    const gain = ac.createGain()
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(170, ac.currentTime)
-    osc.frequency.linearRampToValueAtTime(360, ac.currentTime + 0.11)
-    gain.gain.setValueAtTime(0.11, ac.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.13)
-    osc.connect(gain)
-    gain.connect(out)
-    osc.start()
-    osc.stop(ac.currentTime + 0.14)
-  }
-
-  /** Mechanical click — weapon swap. */
-  playSwap(): void {
-    if (this._muted) return
-    const ac = this.ac, out = this.out
-    const len = Math.floor(ac.sampleRate * 0.028)
-    const buf = ac.createBuffer(1, len, ac.sampleRate)
-    const d = buf.getChannelData(0)
-    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (len * 0.22))
-    const src = ac.createBufferSource()
-    src.buffer = buf
-    const filt = ac.createBiquadFilter()
-    filt.type = 'highpass'
-    filt.frequency.value = 1100
-    const gain = ac.createGain()
-    gain.gain.value = 0.3
-    src.connect(filt)
-    filt.connect(gain)
-    gain.connect(out)
-    src.start()
-  }
-
-  /** Metallic ring — parry / block. */
-  playParry(): void {
-    if (this._muted) return
-    const ac = this.ac, out = this.out
-    const osc = ac.createOscillator()
-    const gain = ac.createGain()
-    osc.type = 'triangle'
-    osc.frequency.value = 1380
-    gain.gain.setValueAtTime(0.32, ac.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.38)
-    osc.connect(gain)
-    gain.connect(out)
-    osc.start()
-    osc.stop(ac.currentTime + 0.42)
-  }
-
-  /** Short tone — status applied notification. */
-  playStatus(element = 'none'): void {
-    if (this._muted) return
-    const ac = this.ac, out = this.out
-    const osc = ac.createOscillator()
-    const gain = ac.createGain()
-    osc.type = 'sine'
-    osc.frequency.value =
-      element === 'fire'      ? 440 :
-      element === 'ice'       ? 900 :
-      element === 'lightning' ? 1200 :
-      element === 'dark'      ? 220 :
-      element === 'nature'    ? 550 : 360
-    gain.gain.setValueAtTime(0.12, ac.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.18)
-    osc.connect(gain)
-    gain.connect(out)
-    osc.start()
-    osc.stop(ac.currentTime + 0.2)
-  }
-}
-
 const soundEngine = new SoundEngine()
 soundEngine.muted = true
 
@@ -814,526 +381,17 @@ placementPreviewGroup.add(placementLine)
 
 const toonGradient = makeToonGradient()
 
-// -----------------------------------------------------------------------
-// Map geometry — swapped at runtime when server schema reports mapId change
-// -----------------------------------------------------------------------
-
-const GROUND_SIZE = 80
-// Arena floor — two-tone stone with a subtle grid inset.
-const groundMesh = new THREE.Mesh(
-  new THREE.PlaneGeometry(GROUND_SIZE, GROUND_SIZE, 1, 1),
-  new THREE.MeshToonMaterial({ color: 0x1e2838, gradientMap: toonGradient }),
-)
-groundMesh.rotation.x = -Math.PI / 2
-groundMesh.receiveShadow = true
-scene.add(groundMesh)
-
-// Inner play-zone marker — a subtle darker inset circle.
-const innerFloor = new THREE.Mesh(
-  new THREE.CircleGeometry(30, 40),
-  new THREE.MeshBasicMaterial({ color: 0x232e40, transparent: true, opacity: 0.70 }),
-)
-innerFloor.rotation.x = -Math.PI / 2
-innerFloor.position.y = 0.003
-scene.add(innerFloor)
-
-// Glowing arena border ring — red kill-zone edge.
-const arenaRing = new THREE.Mesh(
-  new THREE.TorusGeometry(GROUND_SIZE / 2 - 1, 0.38, 8, 72),
-  new THREE.MeshBasicMaterial({ color: 0xff3310, transparent: true, opacity: 0.75 }),
-)
-arenaRing.rotation.x = Math.PI / 2
-arenaRing.position.y = 0.06
-scene.add(arenaRing)
-// Soft outer halo ring — wider torus slightly outside the main ring.
-const arenaRingHaloMat = new THREE.MeshBasicMaterial({ color: 0xff2200, transparent: true, opacity: 0.18 })
-const arenaRingHalo = new THREE.Mesh(
-  new THREE.TorusGeometry(GROUND_SIZE / 2 - 0.2, 1.20, 6, 72),
-  arenaRingHaloMat,
-)
-arenaRingHalo.rotation.x = Math.PI / 2
-arenaRingHalo.position.y = 0.04
-scene.add(arenaRingHalo)
-
-// Secondary inner ring — decorative at 30 m, matches the inner floor.
-const innerRing = new THREE.Mesh(
-  new THREE.TorusGeometry(30, 0.15, 6, 60),
-  new THREE.MeshBasicMaterial({ color: 0x3a5080, transparent: true, opacity: 0.50 }),
-)
-innerRing.rotation.x = Math.PI / 2
-innerRing.position.y = 0.004
-scene.add(innerRing)
-
-// Mid-radius accent ring — subtle azure, halfway between centre and colosseum wall.
-const midRing = new THREE.Mesh(
-  new THREE.TorusGeometry(15, 0.10, 6, 48),
-  new THREE.MeshBasicMaterial({ color: 0x2a4880, transparent: true, opacity: 0.42 }),
-)
-midRing.rotation.x = Math.PI / 2
-midRing.position.y = 0.004
-scene.add(midRing)
-
-// Centre floor glow disc — subtle pulse drives the arena atmosphere.
-const centreGlowMat = new THREE.MeshBasicMaterial({ color: 0x1028a0, transparent: true, opacity: 0.20, side: THREE.DoubleSide })
-const centreGlow = new THREE.Mesh(new THREE.CircleGeometry(6.0, 48), centreGlowMat)
-centreGlow.rotation.x = -Math.PI / 2
-centreGlow.position.y = 0.005
-scene.add(centreGlow)
-
-// 8 spawn-pad markers — small diamond chevrons on the floor at ~22 m radius.
-// Placed between the mid ring and colosseum wall so players have clear spawn indicators.
-{
-  const spawnMat  = new THREE.MeshBasicMaterial({ color: 0x406090, transparent: true, opacity: 0.55 })
-  const spawnMat2 = new THREE.MeshBasicMaterial({ color: 0x2a4870, transparent: true, opacity: 0.38 })
-  for (let i = 0; i < 8; i++) {
-    const angle = (i / 8) * Math.PI * 2
-    const r2 = 22
-    const cx = Math.sin(angle) * r2, cz = Math.cos(angle) * r2
-    // Outer diamond ring (1.2 m across).
-    const outer = new THREE.Mesh(
-      new THREE.RingGeometry(0.48, 0.60, 4),
-      spawnMat,
-    )
-    outer.rotation.x = -Math.PI / 2
-    outer.rotation.z = angle + Math.PI / 4
-    outer.position.set(cx, 0.008, cz)
-    scene.add(outer)
-    // Inner solid diamond.
-    const inner = new THREE.Mesh(
-      new THREE.CircleGeometry(0.30, 4),
-      spawnMat2,
-    )
-    inner.rotation.x = -Math.PI / 2
-    inner.rotation.z = angle + Math.PI / 4
-    inner.position.set(cx, 0.009, cz)
-    scene.add(inner)
-  }
-}
-
-const grid = new THREE.GridHelper(GROUND_SIZE - 4, 24, 0x2a3a58, 0x1a2438)
-;(grid.material as THREE.Material).transparent = true
-;(grid.material as THREE.Material).opacity = 0.38
-scene.add(grid)
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Arena colosseum — pillars + battlemented walls + torch lights + combat floor crest
-// ═══════════════════════════════════════════════════════════════════════════
-const ARENA_R   = 30   // inner ring radius (matches inner ring torus)
-const ARENA_N   = 8    // number of pillar/wall segments
-const torchLights: THREE.PointLight[] = []
-
-{
-  const pillarMat   = new THREE.MeshToonMaterial({ color: 0x28384e, gradientMap: toonGradient })
-  const wallMat     = new THREE.MeshToonMaterial({ color: 0x1c2a3a, gradientMap: toonGradient })
-  const capMat      = new THREE.MeshToonMaterial({ color: 0x374d66, gradientMap: toonGradient })
-  const pillarGeo   = new THREE.CylinderGeometry(0.40, 0.46, 7.0, 12)
-  const capGeo      = new THREE.CylinderGeometry(0.60, 0.40, 0.40, 12)
-  const baseGeo     = new THREE.CylinderGeometry(0.62, 0.70, 0.32, 12)
-  const bandMat     = new THREE.MeshBasicMaterial({ color: 0x2090b8, transparent: true, opacity: 0.75 })
-
-  for (let i = 0; i < ARENA_N; i++) {
-    const a1 = (i       / ARENA_N) * Math.PI * 2
-    const a2 = ((i + 1) / ARENA_N) * Math.PI * 2
-    const px = Math.sin(a1) * ARENA_R,  pz = Math.cos(a1) * ARENA_R
-    const qx = Math.sin(a2) * ARENA_R,  qz = Math.cos(a2) * ARENA_R
-    const mx = (px + qx) / 2,           mz = (pz + qz) / 2
-    const wallLen = Math.hypot(qx - px, qz - pz) - 1.1
-    const wallYaw = Math.atan2(qx - px, qz - pz)
-
-    // ── Pillar shaft + cap + base ────────────────────────────────────────
-    const shaft = new THREE.Mesh(pillarGeo, pillarMat)
-    shaft.position.set(px, 3.5, pz)
-    shaft.castShadow = true; shaft.receiveShadow = true
-    scene.add(shaft)
-    const cap = new THREE.Mesh(capGeo, capMat)
-    cap.position.set(px, 7.20, pz)
-    scene.add(cap)
-    const base = new THREE.Mesh(baseGeo, capMat)
-    base.position.set(px, 0.16, pz)
-    scene.add(base)
-    // Glowing band at mid-height
-    const band = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.048, 6, 26), bandMat)
-    band.position.set(px, 3.2, pz)
-    band.rotation.x = Math.PI / 2
-    scene.add(band)
-
-    // ── Battlement wall ──────────────────────────────────────────────────
-    const wall = new THREE.Mesh(new THREE.BoxGeometry(wallLen, 2.2, 0.52), wallMat)
-    wall.position.set(mx, 1.1, mz)
-    wall.rotation.y = wallYaw
-    wall.castShadow = true; wall.receiveShadow = true
-    scene.add(wall)
-    // Crenels (3 per wall segment)
-    for (let c = -1; c <= 1; c++) {
-      const cOff = c * wallLen * 0.28
-      const crenel = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.45, 0.58), capMat)
-      crenel.position.set(
-        mx + Math.sin(wallYaw) * cOff,
-        2.42,
-        mz + Math.cos(wallYaw) * cOff,
-      )
-      crenel.rotation.y = wallYaw
-      scene.add(crenel)
-    }
-
-    // ── Torch flame + point light atop each pillar ───────────────────────
-    // Flame mesh (cone + inner glow cone)
-    const flameMat = new THREE.MeshBasicMaterial({ color: 0xff9930, transparent: true, opacity: 0.9 })
-    const flame = new THREE.Mesh(new THREE.ConeGeometry(0.10, 0.35, 8), flameMat)
-    flame.position.set(px, 7.65, pz)
-    scene.add(flame)
-    const innerFlameMat = new THREE.MeshBasicMaterial({ color: 0xffee80, transparent: true, opacity: 0.8 })
-    const innerFlame = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.22, 8), innerFlameMat)
-    innerFlame.position.set(px, 7.72, pz)
-    scene.add(innerFlame)
-    // Bowl
-    const bowlMat = new THREE.MeshToonMaterial({ color: 0x5a3a1a, gradientMap: toonGradient })
-    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.18, 8), bowlMat)
-    bowl.position.set(px, 7.47, pz)
-    scene.add(bowl)
-    // Flickering point light
-    const torch = new THREE.PointLight(0xff8830, 0.55, 14, 2)
-    torch.position.set(px, 7.80, pz)
-    scene.add(torch)
-    torchLights.push(torch)
-  }
-}
-
-// ── Cardinal floor compass rose ───────────────────────────────────────────
-{
-  const lineMat = new THREE.MeshBasicMaterial({ color: 0x3a5070, transparent: true, opacity: 0.38 })
-  for (let i = 0; i < 4; i++) {
-    const lineMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.13, 28), lineMat)
-    lineMesh.rotation.x = -Math.PI / 2
-    lineMesh.rotation.z = (i / 4) * Math.PI * 2
-    lineMesh.position.y = 0.006
-    scene.add(lineMesh)
-  }
-}
-
-// ── Central combat crest — subtle rotating floor marker ───────────────────
-const floorCrestGroup = new THREE.Group()
-floorCrestGroup.position.y = 0.007
-scene.add(floorCrestGroup)
-{
-  // Inner disc glow
-  const discMat = new THREE.MeshBasicMaterial({ color: 0x1830a0, transparent: true, opacity: 0.18, side: THREE.DoubleSide })
-  const disc = new THREE.Mesh(new THREE.CircleGeometry(5.5, 48), discMat)
-  disc.rotation.x = -Math.PI / 2
-  floorCrestGroup.add(disc)
-  // Concentric glowing rings
-  const rings: [number, number, number, number][] = [
-    [5.2, 0.12, 0x4060d8, 0.55],
-    [3.8, 0.08, 0x3050c0, 0.45],
-    [2.2, 0.07, 0x5070e0, 0.42],
-    [0.8, 0.06, 0x6080f0, 0.50],
-  ]
-  for (const [r, w, col, op] of rings) {
-    const ring = new THREE.Mesh(
-      new THREE.RingGeometry(r - w / 2, r + w / 2, 52),
-      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: op, side: THREE.DoubleSide }),
-    )
-    ring.rotation.x = -Math.PI / 2
-    floorCrestGroup.add(ring)
-  }
-  // 6 crest spoke lines
-  const spokeMat = new THREE.MeshBasicMaterial({ color: 0x4060d0, transparent: true, opacity: 0.38, side: THREE.DoubleSide })
-  for (let i = 0; i < 6; i++) {
-    const spoke = new THREE.Mesh(new THREE.PlaneGeometry(0.07, 5.0), spokeMat)
-    spoke.rotation.x = -Math.PI / 2
-    spoke.rotation.z = (i / 6) * Math.PI * 2
-    floorCrestGroup.add(spoke)
-  }
-  // 6 outer diamond marks on the outer ring
-  const markMat = new THREE.MeshBasicMaterial({ color: 0x6090ff, transparent: true, opacity: 0.60 })
-  for (let i = 0; i < 6; i++) {
-    const angle = (i / 6) * Math.PI * 2
-    const mark = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 0.18), markMat)
-    mark.rotation.x = -Math.PI / 2
-    mark.rotation.z = angle + Math.PI / 4  // 45° diamond
-    mark.position.set(Math.sin(angle) * 5.2, 0, Math.cos(angle) * 5.2)
-    floorCrestGroup.add(mark)
-  }
-}
-
-// ── Ceiling canopy ring + overhead accent lights ──────────────────────────
-{
-  const ceilingRing = new THREE.Mesh(
-    new THREE.TorusGeometry(24, 0.22, 6, 64),
-    new THREE.MeshBasicMaterial({ color: 0x2a4060, transparent: true, opacity: 0.50 }),
-  )
-  ceilingRing.rotation.x = Math.PI / 2
-  ceilingRing.position.y = 15
-  scene.add(ceilingRing)
-  // Inner ceiling ring
-  const ceilingRing2 = new THREE.Mesh(
-    new THREE.TorusGeometry(12, 0.12, 6, 48),
-    new THREE.MeshBasicMaterial({ color: 0x3050a0, transparent: true, opacity: 0.38 }),
-  )
-  ceilingRing2.rotation.x = Math.PI / 2
-  ceilingRing2.position.y = 15
-  scene.add(ceilingRing2)
-  // Coloured overhead spots per quadrant
-  const spotCols = [0x2050a0, 0x901818, 0x2050a0, 0x901818]
-  for (let i = 0; i < 4; i++) {
-    const angle = (i / 4) * Math.PI * 2
-    const spot = new THREE.PointLight(spotCols[i]!, 0.35, 28, 2)
-    spot.position.set(Math.sin(angle) * 20, 13, Math.cos(angle) * 20)
-    scene.add(spot)
-  }
-}
-
-// Ambient arena particles — magical upward motes in two layers for depth.
-const PARTICLE_COUNT = 260
-const particlePositions = new Float32Array(PARTICLE_COUNT * 3)
-const particleVels = new Float32Array(PARTICLE_COUNT * 3)
-for (let i = 0; i < PARTICLE_COUNT; i++) {
-  const ring = i < 140   // inner ring: small embers near ground
-  const spread = ring ? 28 : 52
-  particlePositions[i * 3]     = (Math.random() - 0.5) * spread
-  particlePositions[i * 3 + 1] = Math.random() * (ring ? 8 : 22)
-  particlePositions[i * 3 + 2] = (Math.random() - 0.5) * spread
-  particleVels[i * 3]     = (Math.random() - 0.5) * 0.003
-  particleVels[i * 3 + 1] = (ring ? 0.006 : 0.003) + Math.random() * 0.007
-  particleVels[i * 3 + 2] = (Math.random() - 0.5) * 0.003
-}
-const particleGeo = new THREE.BufferGeometry()
-particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3))
-const particleMat = new THREE.PointsMaterial({
-  color: 0xff8866, size: 0.09, transparent: true, opacity: 0.42, sizeAttenuation: true,
-})
-const ambientParticles = new THREE.Points(particleGeo, particleMat)
-scene.add(ambientParticles)
-
-// Wall-mounted ground accent lights — 4 dim blue-violet glows at the colosseum base.
-// These create ambient fill between torch columns for more atmospheric depth.
-for (let i = 0; i < 4; i++) {
-  const angle = (i / 4) * Math.PI * 2 + Math.PI / 8
-  const wl = new THREE.PointLight(0x3040c0, 0.22, 20, 2)
-  wl.position.set(Math.sin(angle) * 28, 0.8, Math.cos(angle) * 28)
-  scene.add(wl)
-}
-
-// Second particle layer: blue/violet magic dust — slower, higher, smaller.
-const MAGIC_COUNT = 110
-const magicPositions = new Float32Array(MAGIC_COUNT * 3)
-const magicVels      = new Float32Array(MAGIC_COUNT * 3)
-for (let i = 0; i < MAGIC_COUNT; i++) {
-  const r = 8 + Math.random() * 28
-  const a = Math.random() * Math.PI * 2
-  magicPositions[i * 3]     = Math.cos(a) * r
-  magicPositions[i * 3 + 1] = Math.random() * 20
-  magicPositions[i * 3 + 2] = Math.sin(a) * r
-  // Swirl: tangential velocity + upward drift
-  magicVels[i * 3]     = -Math.sin(a) * 0.0018 + (Math.random() - 0.5) * 0.001
-  magicVels[i * 3 + 1] = 0.0015 + Math.random() * 0.003
-  magicVels[i * 3 + 2] =  Math.cos(a) * 0.0018 + (Math.random() - 0.5) * 0.001
-}
-const magicGeo = new THREE.BufferGeometry()
-magicGeo.setAttribute('position', new THREE.BufferAttribute(magicPositions, 3))
-const magicMat = new THREE.PointsMaterial({
-  color: 0x60a8ff, size: 0.065, transparent: true, opacity: 0.32, sizeAttenuation: true,
-})
-const magicParticles = new THREE.Points(magicGeo, magicMat)
-scene.add(magicParticles)
-
-function makeBoxMesh(box: AABB, color: number): THREE.Mesh {
-  const sx = box.maxX - box.minX
-  const sy = box.maxY - box.minY
-  const sz = box.maxZ - box.minZ
-  const m = new THREE.Mesh(
-    new THREE.BoxGeometry(sx, sy, sz),
-    new THREE.MeshToonMaterial({ color, gradientMap: toonGradient }),
-  )
-  m.position.set((box.minX + box.maxX) / 2, (box.minY + box.maxY) / 2, (box.minZ + box.maxZ) / 2)
-  m.castShadow = true
-  m.receiveShadow = true
-  return m
-}
-
-let activeMapId = ''
-const mapBoxMeshes: THREE.Mesh[] = []
-
-function loadMapGeometry(mapId: string): void {
-  if (mapId === activeMapId) return
-  activeMapId = mapId
-  for (const m of mapBoxMeshes) {
-    scene.remove(m)
-    m.geometry.dispose()
-    ;(m.material as THREE.Material).dispose()
-  }
-  mapBoxMeshes.length = 0
-  const map = getMap(mapId)
-  groundMesh.position.y = map.groundY
-  grid.position.y = map.groundY + 0.001
-  for (const b of map.boxes) {
-    // Taller boxes (height > 1.5) get a slightly lighter accent so they read as
-    // cover/pillars at a glance; low cover is darker stone.
-    const height = b.maxY - b.minY
-    const color = height > 2.5 ? 0x4a78b0 : height > 1.4 ? 0x385e8a : 0x2e4a70
-    const m = makeBoxMesh(b, color)
-    scene.add(m)
-    mapBoxMeshes.push(m)
-  }
-}
-
-// Seed with blockout (default) until server schema arrives.
-loadMapGeometry('blockout')
-
-// -----------------------------------------------------------------------
-// Character factory — humanoid figure that fills the capsule hitbox.
-// Group origin = capsule centre (transform.y = CAPSULE_HALF_HEIGHT_M above ground).
-// All child mesh positions are relative to that centre.
-// userData['armorMat'] → the primary team-colour material (used for emissive).
-// -----------------------------------------------------------------------
-
-function makeCharacter(teamColor: number): THREE.Group {
-  const g = new THREE.Group()
-
-  const armorMat = new THREE.MeshToonMaterial({ color: teamColor, gradientMap: toonGradient })
-  const darkMat  = new THREE.MeshToonMaterial({ color: 0x1a1e2e, gradientMap: toonGradient })
-  const visorMat = new THREE.MeshBasicMaterial({ color: 0x50d8ff, transparent: true, opacity: 0.92, side: THREE.DoubleSide })
-
-  g.userData['armorMat'] = armorMat
-  g.userData['darkMat']  = darkMat
-
-  const addPart = (
-    geo: THREE.BufferGeometry,
-    mat: THREE.Material,
-    px: number, py: number, pz: number,
-    rx = 0, ry = 0, rz = 0,
-  ): THREE.Mesh => {
-    const m = new THREE.Mesh(geo, mat)
-    m.position.set(px, py, pz)
-    if (rx || ry || rz) m.rotation.set(rx, ry, rz)
-    m.castShadow = true
-    g.add(m)
-    return m
-  }
-
-  // Head
-  addPart(new THREE.SphereGeometry(0.195, 14, 10),    armorMat, 0, 0.71, 0)
-  // Visor — two eye-lens discs on the front face (-Z), showing facing direction.
-  addPart(new THREE.CircleGeometry(0.068, 10),  visorMat, -0.072, 0.73, -0.19)
-  addPart(new THREE.CircleGeometry(0.068, 10),  visorMat,  0.072, 0.73, -0.19)
-  // Neck
-  addPart(new THREE.CylinderGeometry(0.068, 0.068, 0.12, 8), darkMat, 0, 0.53, 0)
-  // Torso
-  addPart(new THREE.BoxGeometry(0.50, 0.58, 0.26), armorMat, 0, 0.16, 0)
-  // Shoulder guards (team-colour pauldrons)
-  addPart(new THREE.BoxGeometry(0.14, 0.08, 0.20), armorMat, -0.34, 0.46, 0)
-  addPart(new THREE.BoxGeometry(0.14, 0.08, 0.20), armorMat,  0.34, 0.46, 0)
-  // Upper arms
-  addPart(new THREE.CylinderGeometry(0.072, 0.065, 0.30, 8), darkMat, -0.32, 0.22, 0, 0, 0,  0.24)
-  addPart(new THREE.CylinderGeometry(0.072, 0.065, 0.30, 8), darkMat,  0.32, 0.22, 0, 0, 0, -0.24)
-  // Forearms
-  addPart(new THREE.CylinderGeometry(0.062, 0.056, 0.26, 8), darkMat, -0.34, -0.07, 0.03, 0.22, 0,  0.10)
-  addPart(new THREE.CylinderGeometry(0.062, 0.056, 0.26, 8), darkMat,  0.34, -0.07, 0.03, 0.22, 0, -0.10)
-  // Belt/waist detail
-  addPart(new THREE.BoxGeometry(0.46, 0.09, 0.23), armorMat, 0, -0.12, 0)
-  // Upper legs
-  addPart(new THREE.CylinderGeometry(0.093, 0.082, 0.35, 8), darkMat, -0.13, -0.38, 0)
-  addPart(new THREE.CylinderGeometry(0.093, 0.082, 0.35, 8), darkMat,  0.13, -0.38, 0)
-  // Lower legs (slight forward lean)
-  addPart(new THREE.CylinderGeometry(0.080, 0.068, 0.30, 8), darkMat, -0.12, -0.70, 0.02, 0.07, 0, 0)
-  addPart(new THREE.CylinderGeometry(0.080, 0.068, 0.30, 8), darkMat,  0.12, -0.70, 0.02, 0.07, 0, 0)
-  // Boots
-  addPart(new THREE.BoxGeometry(0.17, 0.10, 0.30), darkMat, -0.12, -0.88, 0.04)
-  addPart(new THREE.BoxGeometry(0.17, 0.10, 0.30), darkMat,  0.12, -0.88, 0.04)
-
-  // Blob shadow (always-on, hardware shadows may not reach flat ground)
-  const shadow = new THREE.Mesh(
-    new THREE.CircleGeometry(CAPSULE_RADIUS_M * 1.10, 24),
-    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.45, depthWrite: false }),
-  )
-  shadow.rotation.x = -Math.PI / 2
-  shadow.position.y = -CAPSULE_HEIGHT_M / 2 + 0.015
-  g.add(shadow)
-
-  // Weapon prop group — attached at right-hand position.
-  // applyWeaponProp() swaps mesh children when the active weapon changes.
-  const weaponGroup = new THREE.Group()
-  weaponGroup.position.set(0.38, -0.22, -0.08)
-  weaponGroup.rotation.set(0.25, 0, -0.18) // slight forward/inward tilt
-  g.userData['weaponGroup'] = weaponGroup
-  g.add(weaponGroup)
-
-  return g
-}
-
-// Alias retained so any future code can call makeCapsule without searching.
-const makeCapsule = makeCharacter
-
-// -----------------------------------------------------------------------
-// Weapon prop — builds and swaps the visible weapon mesh inside the
-// weaponGroup attached to the character.  Call whenever activeWeapon changes.
-// -----------------------------------------------------------------------
-function applyWeaponProp(charGroup: THREE.Group, weapon: string): void {
-  const wg = charGroup.userData['weaponGroup'] as THREE.Group | undefined
-  if (!wg) return
-  // Dispose old props — geometry AND material must both be released to avoid GPU leak.
-  while (wg.children.length > 0) {
-    const child = wg.children[0] as THREE.Mesh
-    child.geometry?.dispose()
-    const mat = child.material as THREE.Material | THREE.Material[] | undefined
-    if (Array.isArray(mat)) mat.forEach((m) => m.dispose())
-    else mat?.dispose()
-    wg.remove(child)
-  }
-  const addProp = (geo: THREE.BufferGeometry, mat: THREE.Material, px = 0, py = 0, pz = 0, rx = 0, ry = 0, rz = 0) => {
-    const m = new THREE.Mesh(geo, mat)
-    m.position.set(px, py, pz); m.rotation.set(rx, ry, rz)
-    m.castShadow = true; wg.add(m)
-  }
-  if (weapon === 'sword') {
-    const bladeMat  = new THREE.MeshToonMaterial({ color: 0xc8daf0, gradientMap: toonGradient })
-    const edgeMat   = new THREE.MeshBasicMaterial({ color: 0xe8f4ff, transparent: true, opacity: 0.85 })
-    const guardMat  = new THREE.MeshToonMaterial({ color: 0x9a8c38, gradientMap: toonGradient })
-    const handleMat = new THREE.MeshToonMaterial({ color: 0x4a2c10, gradientMap: toonGradient })
-    addProp(new THREE.BoxGeometry(0.042, 0.74, 0.060), bladeMat,  0, 0.48, 0)   // blade
-    addProp(new THREE.BoxGeometry(0.010, 0.74, 0.014), edgeMat,   0, 0.48, 0.034)  // edge highlight
-    addProp(new THREE.BoxGeometry(0.24,  0.046, 0.060), guardMat, 0, 0.10, 0)   // cross-guard
-    addProp(new THREE.CylinderGeometry(0.028, 0.024, 0.22, 8), handleMat, 0, -0.06, 0)  // handle
-    addProp(new THREE.SphereGeometry(0.038, 8, 6), guardMat, 0, -0.18, 0)       // pommel
-  } else if (weapon === 'bow') {
-    const woodMat   = new THREE.MeshToonMaterial({ color: 0x7a5428, gradientMap: toonGradient })
-    const stringMat = new THREE.MeshBasicMaterial({ color: 0xc8c090 })
-    // Arc — open torus, rotated so the opening faces forward
-    const arc = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.024, 8, 22, Math.PI * 1.48), woodMat)
-    arc.rotation.set(-Math.PI * 0.25, 0, 0)
-    arc.castShadow = true; wg.add(arc)
-    addProp(new THREE.CylinderGeometry(0.005, 0.005, 0.68, 4), stringMat, 0, 0, 0)  // string
-  } else if (weapon === 'staff') {
-    const woodMat = new THREE.MeshToonMaterial({ color: 0x2e2048, gradientMap: toonGradient })
-    const orbMat = new THREE.MeshBasicMaterial({ color: 0x80c8ff })
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0x60a8ff, transparent: true, opacity: 0.75 })
-    addProp(new THREE.CylinderGeometry(0.028, 0.022, 1.20, 8), woodMat, 0, 0.60, 0)  // shaft
-    addProp(new THREE.SphereGeometry(0.078, 12, 8), orbMat, 0, 1.28, 0)               // orb
-    // Orbiting ring around the orb
-    const orbRing = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.012, 6, 20), ringMat)
-    orbRing.position.set(0, 1.28, 0)
-    orbRing.rotation.x = Math.PI / 3
-    orbRing.castShadow = false; wg.add(orbRing)
-  }
-}
+const {
+  arenaRing, arenaRingHaloMat, torchLights,
+  ambientParticles, particleVels,
+  magicParticles, magicVels,
+  floorCrestGroup, centreGlowMat,
+  groundMesh, grid,
+  loadMapGeometry, getActiveMapId,
+} = buildArena(scene, toonGradient)
 
 function spawnImpact(pos: THREE.Vector3, color: number): void {
   impactVfx.spawn(pos, color)
-}
-
-// Flat ring hovering over a remote player's head to signal they are casting.
-function makeCastRing(): THREE.Mesh {
-  const geo = new THREE.RingGeometry(0.28, 0.38, 24)
-  geo.rotateX(-Math.PI / 2)
-  const mat = new THREE.MeshBasicMaterial({
-    color: 0xffd060,
-    transparent: true,
-    opacity: 0.85,
-    side: THREE.DoubleSide,
-  })
-  const m = new THREE.Mesh(geo, mat)
-  m.visible = false
-  return m
 }
 
 const impactVfx = new ImpactPool()
@@ -3085,7 +2143,7 @@ function initSelfIfNeeded(): void {
     bowChargeStartMs: 0,
     bowChargeServerAcked: false,
   }
-  selfMesh = makeCapsule(0x3a8fde) // self = blue (standard: I am blue)
+  selfMesh = makeCharacter(0x3a8fde, toonGradient) // self = blue (standard: I am blue)
   scene.add(selfMesh)
   selfArc = makeSwingArcMesh()
   scene.add(selfArc)
@@ -3186,7 +2244,7 @@ function aimPointForAbility(abilityId: string): { x: number; y: number; z: numbe
   const selfPos = self?.sim.pos
   if (!selfPos) return undefined
 
-  const map = getMap(activeMapId || getSchemaMapId())
+  const map = getMap(getActiveMapId() || getSchemaMapId())
   const groundY = map.groundY
   const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).normalize()
   const point = new THREE.Vector3()
@@ -3222,7 +2280,7 @@ function previewPointForAbility(abilityId: string): { x: number; y: number; z: n
   const def = ABILITY_DEFS[abilityId]
   const selfPos = self?.sim.pos
   if (!def || !selfPos) return undefined
-  const map = getMap(activeMapId || getSchemaMapId())
+  const map = getMap(getActiveMapId() || getSchemaMapId())
   const dist = Math.max(1.5, Math.min(def.range || 6, 10))
   return {
     x: selfPos.x - Math.sin(mouseYaw) * dist,
@@ -3388,7 +2446,7 @@ function simStep(): void {
   // Jump sound — fire exactly once per jump edge (not every tick).
   if (input.jump) soundEngine.playJump()
 
-  simulatePlayer(self.sim, input, DT, getMap(activeMapId || 'blockout'), caps)
+  simulatePlayer(self.sim, input, DT, getMap(getActiveMapId() || 'blockout'), caps)
 
   self.pending.push({ seq: seqCounter, input, dt: DT, caps })
   if (self.pending.length > 240) self.pending.splice(0, self.pending.length - 240)
@@ -3560,7 +2618,7 @@ function simStep(): void {
       }
       let r = remotePlayers.get(sid)
       if (!r) {
-        const mesh = makeCapsule(0xe04a4a) // enemy = red
+        const mesh = makeCharacter(0xe04a4a, toonGradient) // enemy = red
         scene.add(mesh)
         const arc = makeSwingArcMesh()
         scene.add(arc)
@@ -3630,7 +2688,7 @@ function simStep(): void {
       const remoteWeapon = isWeapon(p.activeWeapon) ? p.activeWeapon : 'sword'
       if (r.lastWeapon !== remoteWeapon) {
         r.lastWeapon = remoteWeapon
-        applyWeaponProp(r.mesh, remoteWeapon)
+        applyWeaponProp(r.mesh, remoteWeapon, toonGradient)
       }
       r.snapshots.push({
         at: now,
@@ -3716,7 +2774,7 @@ function reconcileSelf(): void {
   self.sim = serverState
   // Replay only the unacknowledged in-flight inputs, each with the caps that
   // were active at send time so root/slow/stun match the server's computation.
-  for (const e of self.pending) simulatePlayer(self.sim, e.input, e.dt, getMap(activeMapId || 'blockout'), e.caps)
+  for (const e of self.pending) simulatePlayer(self.sim, e.input, e.dt, getMap(getActiveMapId() || 'blockout'), e.caps)
 
   const dx = self.sim.pos.x - predictedBefore.x
   const dy = self.sim.pos.y - predictedBefore.y
@@ -3863,7 +2921,7 @@ function render(now: number): void {
     // Update weapon prop if weapon changed.
     if (wSchema !== selfLastWeapon) {
       selfLastWeapon = wSchema
-      applyWeaponProp(selfMesh, wSchema)
+      applyWeaponProp(selfMesh, wSchema, toonGradient)
     }
     const firstPersonWeapon = wSchema === 'bow' || wSchema === 'staff'
     const wBackTarget = firstPersonWeapon ? 0 : 5.5
@@ -3893,7 +2951,7 @@ function render(now: number): void {
     }
 
     // Clamp camera above ground so it never clips underground.
-    const groundFloor = getMap(activeMapId || 'blockout').groundY
+    const groundFloor = getMap(getActiveMapId() || 'blockout').groundY
     if (camera.position.y < groundFloor + 0.4) camera.position.y = groundFloor + 0.4
 
     if (!firstPersonWeapon) {
