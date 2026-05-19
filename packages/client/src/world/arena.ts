@@ -15,6 +15,7 @@ export interface ArenaObjects {
   grid: THREE.GridHelper
   loadMapGeometry: (mapId: string) => void
   getActiveMapId: () => string
+  animateArena: (now: number, dt: number, inHitStop: boolean) => void
 }
 
 const GROUND_SIZE = 80
@@ -309,6 +310,57 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
 
   loadMapGeometry('blockout')
 
+  function animateArena(now: number, dt: number, inHitStop: boolean): void {
+    const ringPulse = 0.5 + 0.5 * Math.sin(now * 0.001)
+    const arenaRingMat = arenaRing.material as THREE.MeshBasicMaterial
+    arenaRingMat.opacity = 0.32 + ringPulse * 0.40
+    arenaRingMat.color.setRGB(1.0, 0.12 + ringPulse * 0.18, 0.03 + ringPulse * 0.08)
+    const haloPulse = 0.5 + 0.5 * Math.sin(now * 0.001 + 1.2)
+    arenaRingHaloMat.opacity = 0.08 + haloPulse * 0.16
+
+    if (!inHitStop) {
+      const pAttr = ambientParticles.geometry.attributes['position'] as THREE.BufferAttribute
+      const pArr = pAttr.array as Float32Array
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const i0 = i * 3, i1 = i0 + 1, i2 = i0 + 2
+        pArr[i0] = (pArr[i0] ?? 0) + (particleVels[i0] ?? 0)
+        pArr[i1] = (pArr[i1] ?? 0) + (particleVels[i1] ?? 0)
+        pArr[i2] = (pArr[i2] ?? 0) + (particleVels[i2] ?? 0)
+        if ((pArr[i1] ?? 0) > 18) {
+          pArr[i1] = 0
+          pArr[i0] = (Math.random() - 0.5) * 56
+          pArr[i2] = (Math.random() - 0.5) * 56
+        }
+      }
+      ;(ambientParticles.geometry.attributes['position'] as THREE.BufferAttribute).needsUpdate = true
+
+      for (let i = 0; i < torchLights.length; i++) {
+        const t = torchLights[i]!
+        const f = 0.44 + 0.30 * Math.sin(now * 0.0024 + i * 1.57)
+                + 0.14 * Math.sin(now * 0.0097 + i * 0.82)
+                + 0.06 * Math.sin(now * 0.0213 + i * 2.10)
+        t.intensity = Math.max(0.08, f)
+      }
+
+      const mAttr = magicParticles.geometry.attributes['position'] as THREE.BufferAttribute
+      const mArr = mAttr.array as Float32Array
+      for (let i = 0; i < MAGIC_COUNT; i++) {
+        const i0 = i * 3, i1 = i0 + 1, i2 = i0 + 2
+        mArr[i0] = (mArr[i0] ?? 0) + (magicVels[i0] ?? 0)
+        mArr[i1] = (mArr[i1] ?? 0) + (magicVels[i1] ?? 0)
+        mArr[i2] = (mArr[i2] ?? 0) + (magicVels[i2] ?? 0)
+        if ((mArr[i1] ?? 0) > 22) {
+          const r2 = 8 + Math.random() * 28, a2 = Math.random() * Math.PI * 2
+          mArr[i0] = Math.cos(a2) * r2; mArr[i1] = 0; mArr[i2] = Math.sin(a2) * r2
+        }
+      }
+      ;(magicParticles.geometry.attributes['position'] as THREE.BufferAttribute).needsUpdate = true
+
+      floorCrestGroup.rotation.y += 0.00012 * dt
+      centreGlowMat.opacity = 0.12 + 0.10 * Math.sin(now * 0.0012)
+    }
+  }
+
   return {
     arenaRing,
     arenaRingHaloMat,
@@ -323,5 +375,6 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
     grid,
     loadMapGeometry,
     getActiveMapId: () => activeMapId,
+    animateArena,
   }
 }

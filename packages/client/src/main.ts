@@ -72,7 +72,7 @@ import { initProjectileVisuals, type SchemaProjectile } from './render/projectil
 import { initPlacementPreview } from './render/placement-preview.js'
 import { initRemotePlayers, type RemotePlayerSchema } from './render/remote-players.js'
 import { SoundEngine } from './audio/sound-engine.js'
-import { buildArena, PARTICLE_COUNT, MAGIC_COUNT } from './world/arena.js'
+import { buildArena } from './world/arena.js'
 import { ImpactPool } from './vfx/impact-pool.js'
 import {
   initTelemetry,
@@ -336,12 +336,9 @@ scene.add(playerLight)
 const toonGradient = makeToonGradient()
 
 const {
-  arenaRing, arenaRingHaloMat, torchLights,
-  ambientParticles, particleVels,
-  magicParticles, magicVels,
-  floorCrestGroup, centreGlowMat,
   groundMesh, grid,
   loadMapGeometry, getActiveMapId,
+  animateArena,
 } = buildArena(scene, toonGradient)
 
 const placementPreview = initPlacementPreview({
@@ -1635,16 +1632,6 @@ function render(now: number): void {
   loadMapGeometry(getSchemaMapId())
   placementPreview.update(now)
 
-  // Arena ring slow pulse — opacity and slight colour shift for dramatic boundary.
-  const ringPulse = 0.5 + 0.5 * Math.sin(now * 0.001)
-  const arenaRingMat = arenaRing.material as THREE.MeshBasicMaterial
-  arenaRingMat.opacity = 0.32 + ringPulse * 0.40
-  // Shift from deep red at low pulse to orange-red at peak.
-  arenaRingMat.color.setRGB(1.0, 0.12 + ringPulse * 0.18, 0.03 + ringPulse * 0.08)
-  // Halo ring pulses slightly out-of-phase for a breathing "danger zone" feel.
-  const haloPulse = 0.5 + 0.5 * Math.sin(now * 0.001 + 1.2)
-  arenaRingHaloMat.opacity = 0.08 + haloPulse * 0.16
-
   // Hit-stop flag — particle animation and camera lerp are frozen during it.
   // Covers both attacker-side (landed a hit) and victim-side (received a hit).
   const inHitStop = now < hitStopUntilMs || now < victimHitStopUntilMs
@@ -1652,55 +1639,7 @@ function render(now: number): void {
   const targetExposure = inHitStop ? 1.45 : 1.1
   renderer.toneMappingExposure += (targetExposure - renderer.toneMappingExposure) * 0.28
 
-  // Animate ambient particles — skip during hit-stop for "weight" feel.
-  if (!inHitStop) {
-    const pAttr = ambientParticles.geometry.attributes['position'] as THREE.BufferAttribute
-    const pArr = pAttr.array as Float32Array
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-      const i0 = i * 3
-      const i1 = i0 + 1
-      const i2 = i0 + 2
-      pArr[i0] = (pArr[i0] ?? 0) + (particleVels[i0] ?? 0)
-      pArr[i1] = (pArr[i1] ?? 0) + (particleVels[i1] ?? 0)
-      pArr[i2] = (pArr[i2] ?? 0) + (particleVels[i2] ?? 0)
-      if ((pArr[i1] ?? 0) > 18) {
-        pArr[i1] = 0
-        pArr[i0] = (Math.random() - 0.5) * 56
-        pArr[i2] = (Math.random() - 0.5) * 56
-      }
-    }
-    ;(ambientParticles.geometry.attributes['position'] as THREE.BufferAttribute).needsUpdate = true
-
-    // ── Torch flicker — organic multi-frequency modulation ───────────────
-    for (let i = 0; i < torchLights.length; i++) {
-      const t = torchLights[i]!
-      const f = 0.44 + 0.30 * Math.sin(now * 0.0024 + i * 1.57)
-              + 0.14 * Math.sin(now * 0.0097 + i * 0.82)
-              + 0.06 * Math.sin(now * 0.0213 + i * 2.10)
-      t.intensity = Math.max(0.08, f)
-    }
-
-    // ── Magic dust particles — swirl and drift upward ────────────────────
-    const mAttr = magicParticles.geometry.attributes['position'] as THREE.BufferAttribute
-    const mArr = mAttr.array as Float32Array
-    for (let i = 0; i < MAGIC_COUNT; i++) {
-      const i0 = i * 3, i1 = i0 + 1, i2 = i0 + 2
-      mArr[i0] = (mArr[i0] ?? 0) + (magicVels[i0] ?? 0)
-      mArr[i1] = (mArr[i1] ?? 0) + (magicVels[i1] ?? 0)
-      mArr[i2] = (mArr[i2] ?? 0) + (magicVels[i2] ?? 0)
-      if ((mArr[i1] ?? 0) > 22) {
-        const r2 = 8 + Math.random() * 28, a2 = Math.random() * Math.PI * 2
-        mArr[i0] = Math.cos(a2) * r2; mArr[i1] = 0; mArr[i2] = Math.sin(a2) * r2
-      }
-    }
-    ;(magicParticles.geometry.attributes['position'] as THREE.BufferAttribute).needsUpdate = true
-
-    // ── Combat floor crest — very slow clockwise drift ───────────────────
-    floorCrestGroup.rotation.y += 0.00012 * dt
-
-    // ── Centre glow pulse — gentle sine breath ────────────────────────────
-    centreGlowMat.opacity = 0.12 + 0.10 * Math.sin(now * 0.0012)
-  }
+  animateArena(now, dt, inHitStop)
 
   const selfSchema = getSelfSchemaPlayer()
   const tickNow = getSchemaTick()
