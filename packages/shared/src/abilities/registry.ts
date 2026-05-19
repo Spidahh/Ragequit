@@ -42,7 +42,7 @@ export const ABILITY_M1_WHIRLWIND: AbilityDef = {
     },
   ],
   description: 'Spin for 1.0s. Three 4m cleave ticks for 7 damage each. Self Slow 20% while spinning.',
-  miniMalus: 'Committed channel; enemies can back out or punish the slow.',
+  miniMalus: 'Committed channel; movement is reduced during the spin.',
 }
 
 export const ABILITY_M2_GAP_CLOSER: AbilityDef = {
@@ -85,7 +85,7 @@ export const ABILITY_M3_UPPERCUT: AbilityDef = {
     { at: 'onCast', kind: 'damage', amount: 16 },
     { at: 'onCast', kind: 'knockup', airborneSec: 1.0, knockbackDistance: 0.8 },
   ],
-  description: '16 damage. Launches Airborne 1.0s with a small 0.8m pop for aerial follow-up shots.',
+  description: '16 damage. Launches the target Airborne 1.0s with a small 0.8m pop.',
   miniMalus: '0.4s windup. Parryable.',
   canParry: true,
   isKnockup: true,
@@ -131,7 +131,7 @@ export const ABILITY_M5_GUARD_BREAK: AbilityDef = {
     { at: 'onCast', kind: 'applyStatus', status: 'stun', durationSec: 0.55, stacks: 1 },
     { at: 'onCast', kind: 'knockup', airborneSec: 0.45, knockbackDistance: 1.2 },
   ],
-  description: '10 damage. Stun 0.55s plus a short 0.45s pop to interrupt guards and start close combos.',
+  description: '10 damage. Applies Stun 0.55s plus a short 0.45s pop.',
   miniMalus: 'Very short 2.2m reach and fully parryable.',
   canParry: true,
 }
@@ -185,7 +185,7 @@ export const ABILITY_B1_PIERCING_SHOT: AbilityDef = {
       damage: 28,
     },
   ],
-  description: 'Fast line shot. 28 damage with 150 m/s travel for clean airborne punish windows.',
+  description: 'Fast line shot. 28 damage with 150 m/s projectile speed.',
   miniMalus: 'Narrow shot; misses hard against lateral movement.',
 }
 
@@ -214,7 +214,7 @@ export const ABILITY_B2_VOLLEY: AbilityDef = {
     },
   ],
   description: 'Arcing arrow rain on a 3.5m point zone. Three waves deal 11 damage and Slow 25%.',
-  miniMalus: 'Telegraphed landing zone; strongest after root, freeze or knockup.',
+  miniMalus: 'Telegraphed landing zone; targets can leave before waves land.',
 }
 
 export const ABILITY_B3_PIN_SHOT: AbilityDef = {
@@ -240,8 +240,8 @@ export const ABILITY_B3_PIN_SHOT: AbilityDef = {
       onHitStatus: { status: 'root', durationSec: 1.1, stacks: 1 },
     },
   ],
-  description: 'Setup arrow. 14 damage and Root 1.1s on hit, built to line up a spell or precision shot.',
-  miniMalus: '0.8s windup; missing wastes the combo window.',
+  description: 'Control arrow. 14 damage and Root 1.1s on hit.',
+  miniMalus: '0.8s windup. Requires clear aim and line of sight.',
 }
 
 export const ABILITY_B4_SNARE_TRAP: AbilityDef = {
@@ -297,7 +297,7 @@ export const ABILITY_B5_MARKSMAN_SHOT: AbilityDef = {
       damage: 38,
     },
   ],
-  description: 'Near-hitscan finisher. 38 damage at 500 m/s, ideal after launch, root or freeze.',
+  description: 'Precision shot. 38 damage at 500 m/s after a 1.0s windup.',
   miniMalus: '1.0s exposed aim; damage can interrupt before release.',
 }
 
@@ -351,7 +351,7 @@ export const ABILITY_B7_BROADHEAD: AbilityDef = {
       onHitStatus: { status: 'bleed', durationSec: 4, stacks: 1 },
     },
   ],
-  description: 'Heavy arrow. 14 damage and Bleed for 4.0s to force cleanse or resource transfer decisions.',
+  description: 'Heavy arrow. 14 damage and Bleed for 4.0s on hit.',
   miniMalus: 'Arc drop makes long shots require lead.',
 }
 
@@ -381,7 +381,7 @@ export const ABILITY_B8_BLAST_ARROW: AbilityDef = {
     },
   ],
   description: 'Palombella explosive arrow. 22 splash damage in 3m and Burn x2 on impact.',
-  miniMalus: 'Slow heavy arc; best after CC or against predictable movement.',
+  miniMalus: 'Slow heavy arc; distant targets can dodge the impact point.',
 }
 
 // ============================================================================
@@ -414,7 +414,7 @@ export const ABILITY_F1_FIREBALL: AbilityDef = {
     },
   ],
   description: 'Arcing fire orb. 24 splash damage in 2.6m and Burn x1 on impact.',
-  miniMalus: 'Visible travel arc; aim ahead or use after control.',
+  miniMalus: 'Visible travel arc; lateral movement can dodge it.',
 }
 
 export const ABILITY_F2_FLAME_WALL: AbilityDef = {
@@ -443,8 +443,8 @@ export const ABILITY_F2_FLAME_WALL: AbilityDef = {
       applyStatus: { status: 'burn', durationSec: 3, stacks: 1 },
     },
   ],
-  description: 'Point wall, 7m wide for 3.5s. Ticks 6 damage and Burn x1 to cut routes and trap rooted targets.',
-  miniMalus: 'Wall is visible and punishable if placed without setup.',
+  description: 'Point wall, 7m wide for 3.5s. Ticks 6 damage and applies Burn x1.',
+  miniMalus: 'Visible wall. No instant burst on cast.',
 }
 
 export const ABILITY_F3_IGNITE: AbilityDef = {
@@ -490,7 +490,7 @@ export const ABILITY_F4_METEOR: AbilityDef = {
     },
   ],
   description: 'Heavy palombella impact. 44 damage in 3.5m and Burn x1 after a visible windup.',
-  miniMalus: 'Slow and telegraphed; use after launch/root/freeze.',
+  miniMalus: 'Long windup and visible impact point.',
 }
 
 export const ABILITY_F5_ERUPTION: AbilityDef = {
@@ -511,7 +511,7 @@ export const ABILITY_F5_ERUPTION: AbilityDef = {
     { at: 'onCast', kind: 'knockup', airborneSec: 0.9, radius: 2.4, knockbackDistance: 1.0 },
   ],
   description: 'Instant ray detonates under the aimed enemy. 8 damage in 2.4m and Airborne 0.9s.',
-  miniMalus: 'Low damage; value is the aerial combo window.',
+  miniMalus: 'Low direct damage and short detonation range.',
   isKnockup: true,
 }
 
@@ -633,7 +633,7 @@ export const ABILITY_I3_BLIZZARD: AbilityDef = {
       applyStatus: { status: 'slow', durationSec: 1.5, stacks: 1, slowFraction: 0.4 },
     },
   ],
-  description: 'Large 7m storm for 5.0s. Ticks 4 damage and Slow 40% to hold enemies inside follow-up zones.',
+  description: 'Large 7m storm for 5.0s. Ticks 4 damage and applies Slow 40%.',
   miniMalus: 'No hard lock; enemies can still shoot or dash out.',
 }
 
@@ -654,7 +654,7 @@ export const ABILITY_I4_FREEZE_TARGET: AbilityDef = {
     { at: 'onCast', kind: 'damage', amount: 8, element: 'ice' },
     { at: 'onCast', kind: 'applyStatus', status: 'freeze', durationSec: 1.2, stacks: 1 },
   ],
-  description: 'Instant ray within 12m. 8 damage and Freeze 1.2s for a guaranteed punish window.',
+  description: 'Instant ray within 12m. 8 damage and Freeze 1.2s.',
   miniMalus: '0.5s windup. Parryable. Requires clear line of sight.',
   canParry: true,
 }
@@ -676,7 +676,7 @@ export const ABILITY_I5_FROST_PILLAR: AbilityDef = {
     { at: 'onCast', kind: 'damage', amount: 12, element: 'ice' },
     { at: 'onCast', kind: 'knockup', airborneSec: 1.0, knockbackDistance: 0.6 },
   ],
-  description: 'Ray pillar within 10m. 12 damage and Airborne 1.0s with minimal shove for vertical combos.',
+  description: 'Ray pillar within 10m. 12 damage and Airborne 1.0s with minimal shove.',
   miniMalus: '1.0s windup gives enemies time to dodge or interrupt.',
   isKnockup: true,
 }
@@ -723,7 +723,7 @@ export const ABILITY_L2_THUNDER_CLAP: AbilityDef = {
     { at: 'onCast', kind: 'damage', amount: 16, radius: 3.2, element: 'lightning' },
     { at: 'onCast', kind: 'applyStatus', status: 'stun', durationSec: 0.6, stacks: 1, radius: 3.2 },
   ],
-  description: 'Self shockwave in 3.2m. 16 damage and Stun 0.6s to break melee pressure.',
+  description: 'Self shockwave in 3.2m. 16 damage and Stun 0.6s.',
   miniMalus: 'Short range; whiffs if used before contact.',
 }
 
@@ -752,7 +752,7 @@ export const ABILITY_L3_STORM_FIELD: AbilityDef = {
       applyStatus: { status: 'slow', durationSec: 0.5, stacks: 1, slowFraction: 0.2 },
     },
   ],
-  description: '4.5m storm field for 3.2s. Ticks 4 damage and micro-Slow 20% to keep pressure live.',
+  description: '4.5m storm field for 3.2s. Ticks 4 damage and applies Slow 20%.',
   miniMalus: 'Zone is visible.',
 }
 
@@ -794,7 +794,7 @@ export const ABILITY_L5_ARC_LIFT: AbilityDef = {
     { at: 'onCast', kind: 'damage', amount: 8, element: 'lightning' },
     { at: 'onCast', kind: 'knockup', airborneSec: 0.8, knockbackDistance: 1.4 },
   ],
-  description: 'Instant ray within 15m. 8 damage, Airborne 0.8s and backward jolt for quick aerial shots.',
+  description: 'Instant ray within 15m. 8 damage, Airborne 0.8s and backward jolt.',
   miniMalus: 'Requires line of sight.',
   isKnockup: true,
 }
@@ -827,7 +827,7 @@ export const ABILITY_D1_SHADOW_BOLT: AbilityDef = {
       lifestealFraction: 0.25,
     },
   ],
-  description: 'Dark projectile. 18 damage and 25% lifesteal to reward accurate sustain pressure.',
+  description: 'Dark projectile. 18 damage and 25% lifesteal on hit.',
   miniMalus: 'Projectile can be dodged or blocked by cover.',
 }
 
@@ -906,7 +906,7 @@ export const ABILITY_D4_DARK_BARRIER: AbilityDef = {
       stacks: 38,
     },
   ],
-  description: 'Self barrier. Absorbs 38 damage for up to 5.0s and buys time to reset a combo.',
+  description: 'Self barrier. Absorbs 38 damage for up to 5.0s.',
   miniMalus: 'No damage, cleanse or movement.',
 }
 
@@ -929,7 +929,7 @@ export const ABILITY_D5_VOID_SPIKE: AbilityDef = {
     { at: 'onCast', kind: 'resourceDrain', resource: 'mana', amount: 12, gainFraction: 0.5 },
   ],
   description: 'Void ray within 10m. 14 damage, Airborne 0.9s and drains 12 Mana.',
-  miniMalus: 'Short range; strongest as a close combo starter.',
+  miniMalus: 'Short range and clear line of sight required.',
   isKnockup: true,
 }
 
@@ -961,8 +961,8 @@ export const ABILITY_N1_POISON_DART: AbilityDef = {
       onHitStatus: { status: 'poison', durationSec: 4, stacks: 1 },
     },
   ],
-  description: 'Fast dart. 8 damage and Poison for 4.0s to keep pressure ticking through movement.',
-  miniMalus: 'Poison is delayed value and can be cleansed.',
+  description: 'Fast dart. 8 damage and Poison for 4.0s on hit.',
+  miniMalus: 'Poison damage is delayed and can be cleansed.',
 }
 
 export const ABILITY_N2_THORN_FIELD: AbilityDef = {
@@ -990,7 +990,7 @@ export const ABILITY_N2_THORN_FIELD: AbilityDef = {
       applyStatus: { status: 'slow', durationSec: 1, stacks: 1, slowFraction: 0.25 },
     },
   ],
-  description: '3.5m thorn zone for 5.0s. Ticks 4 damage and Slow 25% to hold enemies for follow-up.',
+  description: '3.5m thorn zone for 5.0s. Ticks 4 damage and applies Slow 25%.',
   miniMalus: 'Visible zone; no instant burst.',
 }
 
@@ -1011,7 +1011,7 @@ export const ABILITY_N3_ENTANGLE: AbilityDef = {
     { at: 'onCast', kind: 'damage', amount: 4, element: 'nature' },
     { at: 'onCast', kind: 'applyStatus', status: 'root', durationSec: 1.7, stacks: 1 },
   ],
-  description: 'Instant root ray within 10m. 4 damage and Root 1.7s to guarantee a placed follow-up.',
+  description: 'Instant root ray within 10m. 4 damage and Root 1.7s.',
   miniMalus: '0.5s windup. Requires clear line of sight.',
 }
 
@@ -1059,7 +1059,7 @@ export const ABILITY_N5_ROOT_UPTHROW: AbilityDef = {
     { at: 'onCast', kind: 'damage', amount: 8, element: 'nature' },
     { at: 'onCast', kind: 'knockup', airborneSec: 1.1, requiresGroundedTarget: true },
   ],
-  description: 'Grounded target ray. 8 damage and Airborne 1.1s, the longest vertical setup.',
+  description: 'Grounded target ray. 8 damage and Airborne 1.1s.',
   miniMalus: 'Fails against already airborne targets.',
   isKnockup: true,
 }

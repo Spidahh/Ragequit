@@ -739,14 +739,14 @@ function renderEffectTags(def: AbilityDef): HTMLDivElement {
 }
 
 const COMBO_ROLE_INFO: Record<AbilityDef['comboRole'], AbilityRoleInfo> = {
-  starter: { icon: '^', title: 'Combo Starter', line: 'Launches, roots, freezes, blinds or stuns to open a punish window.' },
-  extender: { icon: '[]', title: 'Combo Extender', line: 'Controls space so a started combo keeps paying off.' },
+  starter: { icon: '^', title: 'Combo Starter', line: 'Applies launch, root, freeze, blind or stun.' },
+  extender: { icon: '[]', title: 'Combo Extender', line: 'Controls space with zones, slows or repeated ticks.' },
   finisher: { icon: '!', title: 'Finisher', line: 'High-value hit that gains +25% damage against airborne targets.' },
   ray: { icon: '|', title: 'Instant Ray', line: 'Instant line-of-sight hit if the target is under the crosshair.' },
-  pressure: { icon: '*', title: 'Pressure', line: 'Keeps damage, DoT, or threat active while both players move.' },
+  pressure: { icon: '*', title: 'Pressure', line: 'Applies direct damage, bleed, burn, poison or fast threat.' },
   survival: { icon: '+', title: 'Survival Tool', line: 'Keeps you alive through healing, shield, sustain, or recovery.' },
   counter: { icon: '<>', title: 'Counter Tool', line: 'Breaks pressure, cleanses, phases, disengages, or interrupts.' },
-  mobility: { icon: '>>', title: 'Mobility', line: 'Moves you in, out, or around a punish window.' },
+  mobility: { icon: '>>', title: 'Mobility', line: 'Moves, dashes, teleports or repositions the player.' },
   drain: { icon: '-', title: 'Resource Drain', line: 'Attacks enemy Mana or Stamina while creating tempo.' },
   resource: { icon: '=', title: 'Resource Tool', line: 'Converts or restores resources on a fixed utility rhythm.' },
 }
@@ -798,10 +798,10 @@ function abilityRole(def: AbilityDef): AbilityRoleInfo {
 
   if (def.id.startsWith('transfer_')) return { icon: '↔', title: 'Resource Swap', line: 'Converts one resource into another on a fixed utility key.' }
   if (hasSustain && !hasHardCc && !hasPersistentZone) return { icon: '+', title: 'Survival Tool', line: 'Keeps you alive, cleansed, mobile or stocked on resources.' }
-  if (hasMove) return { icon: '↗', title: hasHardCc ? 'Engage Setup' : 'Mobility Hit', line: 'Moves you in, out, or through a punish window.' }
-  if (hasHardCc && (hasPersistentZone || hasAreaHit)) return { icon: '⌖', title: 'Area Control', line: 'Controls space and sets up follow-up hits.' }
-  if (hasHardCc) return { icon: '↑', title: 'Combo Starter', line: 'Disables or launches the target for a follow-up.' }
-  if (hasPersistentZone) return { icon: '□', title: 'Zone Pressure', line: 'Controls an area and punishes bad movement.' }
+  if (hasMove) return { icon: '↗', title: hasHardCc ? 'Engage Setup' : 'Mobility Hit', line: 'Moves the player and may apply control or damage.' }
+  if (hasHardCc && (hasPersistentZone || hasAreaHit)) return { icon: '⌖', title: 'Area Control', line: 'Controls space with AoE and status effects.' }
+  if (hasHardCc) return { icon: '↑', title: 'Combo Starter', line: 'Applies a disabling or airborne status.' }
+  if (hasPersistentZone) return { icon: '□', title: 'Zone Pressure', line: 'Controls an area with damage or status ticks.' }
   if (hasAreaHit || hasChannel) return { icon: '◇', title: 'Area Damage', line: 'Hits a space or repeated window instead of one clean shot.' }
   if (hasProjectile) return { icon: '➤', title: 'Skill Shot', line: 'Ranged aim tool fired toward the crosshair.' }
   if (hasDot) return { icon: '✦', title: 'Status Pressure', line: 'Applies damage or debuffs over time.' }
