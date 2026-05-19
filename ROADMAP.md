@@ -59,6 +59,7 @@ Implementato:
 
 - HUD drag/resize controller estratto in `packages/client/src/hud/hud-drag.ts`.
 - Hotbar/cooldown strip estratta in `packages/client/src/hud/cd-strip.ts`.
+- Kill feed, kill splash, combo popup e streak banner estratti in `packages/client/src/hud/combat-feed.ts`.
 - input + radial wheel controller
 - cast/fire/weapon input dispatcher
 - HUD cooldown/status/mastery renderer
