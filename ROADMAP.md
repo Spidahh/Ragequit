@@ -62,6 +62,7 @@ Implementato:
 - Kill feed, kill splash, combo popup e streak banner estratti in `packages/client/src/hud/combat-feed.ts`.
 - Radial wheel controller Q/E estratto in `packages/client/src/input/radial-wheels.ts`.
 - Sensibilità mouse e overlay di regolazione estratti in `packages/client/src/input/sensitivity.ts`.
+- Game input controller (keyboard/mouse/pointer event registration + mutable state bag) estratto in `packages/client/src/input/game-input.ts`.
 - cast/fire/weapon input dispatcher
 - HUD cooldown/status/mastery renderer
 - projectile/zone/player render systems
