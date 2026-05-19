@@ -4989,7 +4989,11 @@ function render(now: number): void {
     // loadout edits. Compare the slot contents instead.
     const currentLoadout = currentLoadoutArray()
     const currentLoadoutSig = loadoutSignature(currentLoadout)
-    if (currentLoadoutSig !== cdStripLoadoutSig) rebuildCdStrip(currentLoadout)
+    if (currentLoadoutSig !== cdStripLoadoutSig) {
+      rebuildCdStrip(currentLoadout)
+      primedSlotIdx = null
+      cancelPlacementPreview()
+    }
 
     // --- Cast bar during windup -------------------------------------------
     if (selfSchema.casting && selfSchema.castEndsAtTick > tickNow) {
