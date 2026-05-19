@@ -54,6 +54,7 @@ import { createHudFlash } from './hud/flash.js'
 import { initDraggableHud } from './hud/hud-drag.js'
 import { initSelfHud } from './hud/self-hud.js'
 import { initAbilityFailHud } from './hud/ability-fail-hud.js'
+import { initTransmuteHud } from './hud/transmute-hud.js'
 import { ensureIconSprite, weaponIcon } from './icons.js'
 import { actionLabel, onKeybindsChanged } from './input/keybinds.js'
 import { initCastDispatcher } from './input/cast-dispatcher.js'
@@ -184,9 +185,6 @@ function refreshKeybindHudLabels(): void {
   weaponSlots.bow.querySelector<HTMLElement>('.key')!.textContent = actionLabel('swapWeapon')
   weaponSlots.staff.querySelector<HTMLElement>('.key')!.textContent = actionLabel('swapWeapon')
 }
-// Client-side transmute cooldown tracking (ms timestamp when CD expires).
-const transmuteCdExpiry: Record<string, number> = { hp_mana: 0, mana_stam: 0, stam_hp: 0 }
-const TRANSMUTE_CD_MS = 5000
 refreshKeybindHudLabels()
 
 // -----------------------------------------------------------------------
@@ -253,6 +251,14 @@ const selfHud = initSelfHud({
 })
 
 const abilityFailHud = initAbilityFailHud({ statusStrip, gcdRingEl, serverToast, cooldownStrip })
+
+const transmuteHud = initTransmuteHud({
+  hudHpFill, hudManaFill, hudStamFill,
+  transmuteSlotEls,
+  cooldownStrip,
+  onWarn: (text) => abilityFailHud.onServerNote({ kind: 'warn', text }),
+  getSelfId: () => self?.sessionId,
+})
 
 onKeybindsChanged(() => {
   radialWheels.refreshAll()
@@ -893,7 +899,7 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
     },
     )
     joinedRoom.onMessage(MessageTypes.TransmuteResult, (msg: ServerTransmuteResultMessage) => {
-      if (isCurrentRoom()) onTransmuteResult(msg)
+      if (isCurrentRoom()) transmuteHud.onTransmuteResult(msg)
     },
     )
     joinedRoom.onMessage(MessageTypes.ZoneSpawned, (msg: ServerZoneSpawnedMessage) => {
@@ -1244,7 +1250,7 @@ function clearLocalMatchState(): void {
   victimHitStopUntilMs = 0
   shakeOffset.set(0, 0, 0)
   shakeDecay = 0
-  for (const dir of ['hp_mana', 'mana_stam', 'stam_hp'] as const) transmuteCdExpiry[dir] = 0
+  transmuteHud.reset()
   clearGameplayInputState()
   clearGameplayUi()
   projectileVfx.clear()
@@ -1326,87 +1332,6 @@ function onStatusExpired(_msg: ServerStatusExpiredMessage): void {
   // No-op — render() reads the schema each frame.
 }
 
-function onTransmuteResult(msg: ServerTransmuteResultMessage): void {
-  if (msg.playerId !== self?.sessionId) return
-  // Briefly flash the targeted bar by adding a CSS class.
-  const target =
-    msg.direction === 'hp_mana'
-      ? hudHpFill
-      : msg.direction === 'mana_stam'
-        ? hudManaFill
-        : hudStamFill
-  if (msg.ok) {
-    target.classList.add('pulse')
-    setTimeout(() => target.classList.remove('pulse'), 350)
-    // Start client-side cooldown tracking.
-    transmuteCdExpiry[msg.direction] = performance.now() + TRANSMUTE_CD_MS
-    updateTransmuteBar()
-  } else {
-    // Shake the slot to indicate failure.
-    const el = transmuteSlotEls[msg.direction]
-    if (el) {
-      el.style.animation = 'none'
-      void el.offsetWidth
-      el.style.animation = 'shake 0.25s ease'
-    }
-    abilityFailHud.onServerNote({ kind: 'warn', text: getTransmuteFailText(msg) })
-  }
-}
-
-function getTransmuteLabel(direction: ServerTransmuteResultMessage['direction']): string {
-  if (direction === 'hp_mana') return 'HP to Mana'
-  if (direction === 'mana_stam') return 'Mana to Stamina'
-  return 'Stamina to HP'
-}
-
-function getTransmuteFailText(msg: ServerTransmuteResultMessage): string {
-  const label = getTransmuteLabel(msg.direction)
-  switch (msg.reason) {
-    case 'cooldown':
-      return `${label}: cooling down`
-    case 'cost':
-      return `${label}: not enough resources`
-    case 'parrying':
-      return `${label}: cannot transfer while parrying`
-    case 'casting':
-      return `${label}: cannot transfer while casting`
-    case 'airborne':
-      return `${label}: cannot transfer while airborne`
-    case 'dead':
-      return `${label}: cannot transfer while dead`
-    default:
-      return `${label}: transfer failed`
-  }
-}
-
-/** Refresh transmute bar — call every frame while in-game. */
-function updateTransmuteBar(): void {
-  const now = performance.now()
-  for (const dir of ['hp_mana', 'mana_stam', 'stam_hp'] as const) {
-    const el = transmuteSlotEls[dir]
-    const abilityId =
-      dir === 'hp_mana'
-        ? 'transfer_hp_mana'
-        : dir === 'mana_stam'
-          ? 'transfer_mana_stam'
-          : 'transfer_stam_hp'
-    const expiry = transmuteCdExpiry[dir] ?? 0
-    const remaining = expiry - now
-    if (remaining > 0) {
-      el?.classList.remove('ready')
-      el?.classList.add('cooling')
-      const cdTextEl = el?.querySelector<HTMLElement>('.t-cd-text')
-      if (cdTextEl) cdTextEl.textContent = `${(remaining / 1000).toFixed(1)}s`
-      cooldownStrip.setTransferCooldown(abilityId, remaining)
-    } else {
-      el?.classList.remove('cooling')
-      el?.classList.add('ready')
-      const cdTextEl = el?.querySelector<HTMLElement>('.t-cd-text')
-      if (cdTextEl) cdTextEl.textContent = ''
-      cooldownStrip.setTransferCooldown(abilityId, 0)
-    }
-  }
-}
 
 
 function getPlayerWorldPos(sid: string): THREE.Vector3 | null {
@@ -2176,7 +2101,7 @@ function render(now: number): void {
     lastKillerName,
     selfMesh,
     getCurrentLoadout: currentLoadoutArray,
-    updateTransmuteBar,
+    updateTransmuteBar: transmuteHud.updateBar,
     setCastStartedAt: (ms) => { castStartedAtMs = ms },
     clearPrimedSlot:  () =>  { castDispatcher.clearQueue() },
     cancelPlacementPreview: () => castDispatcher.cancelPlacementPreview(),
