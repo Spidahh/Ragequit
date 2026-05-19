@@ -1171,7 +1171,7 @@
       #status-strip {
         position: fixed;
         left: 50%;
-        bottom: 204px; /* above hud bars: 108px + ~78px hud height + 18px gap */
+        bottom: 204px; /* sits above the combat console (~173px top) with a ~30px gap */
         transform: translateX(-50%);
         display: flex;
         gap: 7px;
@@ -1180,23 +1180,41 @@
       }
       .status-icon {
         --s-color: #8090b0;
-        width: 36px;
-        height: 36px;
+        width: 40px;
+        height: 40px;
         border: 1px solid rgba(255,255,255,0.14);
         border-bottom: 3px solid var(--s-color);
-        border-radius: 7px 7px 4px 4px;
-        background: rgba(6, 6, 16, 0.90);
+        border-radius: 8px 8px 4px 4px;
+        background: rgba(6, 6, 16, 0.92);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 19px;
+        font-size: 20px;
         color: var(--s-color);
         position: relative;
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.65), 0 3px 0 var(--s-color), inset 0 1px 0 rgba(255,255,255,0.06);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.65), 0 3px 0 var(--s-color), inset 0 1px 0 rgba(255,255,255,0.07);
         backdrop-filter: blur(3px);
         transition: box-shadow 0.2s, transform 0.15s;
         animation: status-pop 0.22s cubic-bezier(0.22, 0.68, 0, 1.3) both;
+      }
+      /* High-urgency statuses get an outer glow ring to demand attention */
+      .status-icon[data-kind="freeze"],
+      .status-icon[data-kind="stun"],
+      .status-icon[data-kind="root"],
+      .status-icon[data-kind="blind"] {
+        border-width: 1.5px;
+        box-shadow:
+          0 0 14px var(--s-color),
+          0 0 0 1px var(--s-color),
+          0 3px 0 var(--s-color),
+          inset 0 1px 0 rgba(255,255,255,0.10);
+        animation: status-pop 0.22s cubic-bezier(0.22, 0.68, 0, 1.3) both,
+                   status-urgent-pulse 1.2s ease-in-out infinite alternate;
+      }
+      @keyframes status-urgent-pulse {
+        from { box-shadow: 0 0 10px var(--s-color), 0 0 0 1px var(--s-color), 0 3px 0 var(--s-color), inset 0 1px 0 rgba(255,255,255,0.10); }
+        to   { box-shadow: 0 0 22px var(--s-color), 0 0 0 2px var(--s-color), 0 3px 0 var(--s-color), inset 0 1px 0 rgba(255,255,255,0.14); }
       }
       @keyframes status-pop {
         0%  { transform: scale(0.6); opacity: 0; }
