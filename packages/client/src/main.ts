@@ -61,6 +61,7 @@ import { Client, type Room } from 'colyseus.js'
 import * as THREE from 'three'
 
 import { ELEMENT_COLOR, initCooldownStrip } from './hud/cd-strip.js'
+import { createCombatFeedHud } from './hud/combat-feed.js'
 import { createHudFlash } from './hud/flash.js'
 import { initDraggableHud } from './hud/hud-drag.js'
 import { abilityIcon, ensureIconSprite, statusIcon, weaponIcon } from './icons.js'
@@ -192,6 +193,14 @@ refreshKeybindHudLabels()
 const hudFlash = createHudFlash(shootFlashEl, weaponBannerEl)
 const showShootFlash = hudFlash.showShootFlash
 const showWeaponBanner = hudFlash.showWeaponBanner
+const combatFeedHud = createCombatFeedHud({
+  comboFlash,
+  comboPopup,
+  killFeed,
+  streakBonus: streakBonusEl,
+  streakCount: streakCountEl,
+  streakDisplay,
+})
 
 // -----------------------------------------------------------------------
 // Radial wheels — Q for fixed transfers/flex utility, E for combat abilities
@@ -2081,45 +2090,6 @@ const remotePlayers = new Map<string, RemoteState>()
 const projectileVisuals = new Map<string, ProjectileVisual>()
 let self: SelfState | null = null
 
-// Kill feed helper — adds a floating line that fades after 5.2 s.
-function addKillFeedEntry(killerName: string, victimName: string, isSelfKill: boolean, isSelfDied: boolean): void {
-  const entry = document.createElement('div')
-  const cls = ['kill-entry']
-  if (isSelfKill) cls.push('self-kill')
-  if (isSelfDied) cls.push('self-died')
-  entry.className = cls.join(' ')
-  // Weapon icon pill
-  const iconSpan = document.createElement('span')
-  iconSpan.className = 'k-icon'
-  iconSpan.textContent = isSelfKill ? '⚔️' : isSelfDied ? '💀' : '⚔️'
-  const killerSpan = document.createElement('span')
-  killerSpan.className = `kname${isSelfKill ? ' you' : ' enemy'}`
-  killerSpan.textContent = killerName
-  const arrow = document.createElement('span')
-  arrow.style.cssText = 'color:#50587a;margin:0 2px'
-  arrow.textContent = '›'
-  const victimSpan = document.createElement('span')
-  victimSpan.className = `kname${isSelfDied ? ' you' : ' enemy'}`
-  victimSpan.textContent = victimName
-  entry.appendChild(iconSpan)
-  entry.appendChild(killerSpan)
-  entry.appendChild(arrow)
-  entry.appendChild(victimSpan)
-  killFeed.appendChild(entry)
-  // Keep at most 6 entries visible; remove oldest.
-  while (killFeed.children.length > 6) killFeed.removeChild(killFeed.firstChild!)
-  setTimeout(() => entry.remove(), 5200)
-}
-
-// Big centred kill / death splash text.
-function showKillSplash(text: string, kind: 'kill' | 'died'): void {
-  const el = document.createElement('div')
-  el.className = `kill-splash ${kind}`
-  el.textContent = text
-  document.body.appendChild(el)
-  setTimeout(() => el.remove(), 1600)
-}
-
 // Hitmarker — briefly flashes the crosshair red when a hit lands.
 let hitmarkerTimeout = 0
 function showHitmarker(): void {
@@ -2542,29 +2512,6 @@ function pushPersistedLoadout(): void {
 // Hit / death feedback + projectile events
 // -----------------------------------------------------------------------
 
-function triggerComboFlash(): void {
-  comboFlash.classList.add('active')
-  void comboFlash.offsetHeight
-  comboFlash.classList.remove('active')
-}
-
-let comboPopupTimer: ReturnType<typeof setTimeout> | null = null
-function showComboPopupLabel(text: string): void {
-  if (comboPopupTimer !== null) clearTimeout(comboPopupTimer)
-  comboPopup.textContent = text
-  comboPopup.classList.remove('pop')
-  void comboPopup.offsetHeight
-  comboPopup.classList.add('pop')
-  comboPopupTimer = setTimeout(() => {
-    comboPopup.classList.remove('pop')
-    comboPopupTimer = null
-  }, 900)
-}
-
-function showComboPopupText(count: number): void {
-  showComboPopupLabel(`COMBO! ×${count}`)
-}
-
 function onHit(msg: ServerHitMessage): void {
   const amISelf = msg.victimId === self?.sessionId
   const amIAttacker = msg.attackerId === self?.sessionId
@@ -2587,16 +2534,16 @@ function onHit(msg: ServerHitMessage): void {
 
     if (isAirPunish) {
       soundEngine.playCrack(Math.max(power, 0.85))
-      triggerComboFlash()
-      showComboPopupLabel('AIR PUNISH')
+      combatFeedHud.triggerComboFlash()
+      combatFeedHud.showComboPopupLabel('AIR PUNISH')
       hitStopUntilMs = now + hitstopAttacker(msg.cause)
       applyDirectionalShake(getPlayerWorldPos(msg.victimId), 1.0)
       localComboCount = 0
     } else if (localComboCount >= 3) {
       // ── CRACK ── strong hit, golden flash, COMBO popup, max shake.
       soundEngine.playCrack(power)
-      triggerComboFlash()
-      showComboPopupText(localComboCount)
+      combatFeedHud.triggerComboFlash()
+      combatFeedHud.showComboPopupText(localComboCount)
       hitStopUntilMs = now + 80  // longer stop for crack
       applyDirectionalShake(getPlayerWorldPos(msg.victimId), 0.9)
       localComboCount = 0  // reset after crack
@@ -2685,14 +2632,14 @@ function onDeath(msg: ServerDeathMessage): void {
   const killerName = players?.get(msg.killerId)?.name || msg.killerId.slice(0, 6)
   const victimName = players?.get(msg.victimId)?.name || msg.victimId.slice(0, 6)
 
-  addKillFeedEntry(killerName, victimName, isSelfKill, isSelfDied)
+  combatFeedHud.addKillFeedEntry(killerName, victimName, isSelfKill, isSelfDied)
 
   if (isSelfDied) {
     lastKillerName = killerName
     soundEngine.playDeath()
     applyDirectionalShake(null, 1.4) // max intensity on death
     showDirectionalHit(null)
-    showKillSplash('ELIMINATO', 'died')
+    combatFeedHud.showKillSplash('ELIMINATO', 'died')
     damageFlash.classList.add('active')
     void damageFlash.offsetHeight
     damageFlash.classList.remove('active')
@@ -2712,54 +2659,16 @@ function onDeath(msg: ServerDeathMessage): void {
     // Keep only kills within the last 8 seconds.
     while (recentKillTimes.length > 0 && now - recentKillTimes[0]! > 8000) recentKillTimes.shift()
     const streak = recentKillTimes.length
-    if (streak >= 4) showKillSplash('ULTRA KILL!', 'kill')
-    else if (streak === 3) showKillSplash('TRIPLE KILL!', 'kill')
-    else if (streak === 2) showKillSplash('DOUBLE KILL!', 'kill')
-    else showKillSplash('KILL!', 'kill')
+    if (streak >= 4) combatFeedHud.showKillSplash('ULTRA KILL!', 'kill')
+    else if (streak === 3) combatFeedHud.showKillSplash('TRIPLE KILL!', 'kill')
+    else if (streak === 2) combatFeedHud.showKillSplash('DOUBLE KILL!', 'kill')
+    else combatFeedHud.showKillSplash('KILL!', 'kill')
   }
 }
 
-let streakHideTimer: ReturnType<typeof setTimeout> | null = null
-
 function onKillStreak(msg: ServerKillStreakMessage): void {
   const selfId = self?.sessionId ?? ''
-  if (msg.playerId !== selfId) return // only self streak shown
-
-  if (msg.streak === 0) {
-    // Streak broken — hide counter
-    streakDisplay.classList.add('hidden')
-    return
-  }
-
-  // Update counter
-  const label =
-    msg.streak >= 5 ? `UNSTOPPABLE  ×${msg.streak}` :
-    msg.streak === 4 ? `DOMINATING   ×4` :
-    msg.streak === 3 ? `TRIPLE KILL  ×3` :
-    msg.streak === 2 ? `DOUBLE KILL  ×2` :
-    `KILL  ×${msg.streak}`
-
-  streakCountEl.textContent = label
-  // Re-trigger CSS pulse by cloning the node trick
-  const fresh = streakCountEl.cloneNode(true) as HTMLElement
-  streakCountEl.replaceWith(fresh)
-  fresh.id = 'streak-count'
-  // Update bonus label
-  if (msg.damageBonus > 0) {
-    streakBonusEl.textContent = `+${Math.round(msg.damageBonus * 100)}% damage`
-    streakBonusEl.style.display = ''
-  } else {
-    streakBonusEl.style.display = 'none'
-  }
-
-  streakDisplay.classList.remove('hidden')
-
-  // Auto-hide after 6 s if no further kills
-  if (streakHideTimer !== null) clearTimeout(streakHideTimer)
-  streakHideTimer = setTimeout(() => {
-    streakDisplay.classList.add('hidden')
-    streakHideTimer = null
-  }, 6000)
+  combatFeedHud.updateKillStreak(msg, selfId)
 }
 
 function onAbilityFailed(msg: ServerAbilityFailedMessage): void {
