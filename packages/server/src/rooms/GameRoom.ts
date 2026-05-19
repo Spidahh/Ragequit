@@ -1392,11 +1392,31 @@ export class GameRoom extends Room<GameState> {
   private handleFireStaff(sid: string, msg: ClientFireStaffMessage): void {
     const player = this.state.players.get(sid)
     if (!player || !player.alive) return
-    if (player.activeWeapon !== 'staff') return
-    if (player.parrying) return
-    if (this.statuses.hasStatus(player, 'invulnerable')) return
+    if (player.activeWeapon !== 'staff') {
+      this.sendAbilityFailed(sid, 'staff_m1', 'wrong_weapon')
+      return
+    }
+    if (this.state.tick < player.airborneUntilTick) {
+      this.sendAbilityFailed(sid, 'staff_m1', 'airborne')
+      return
+    }
+    if (player.casting) {
+      this.sendAbilityFailed(sid, 'staff_m1', 'casting')
+      return
+    }
+    if (player.parrying) {
+      this.sendAbilityFailed(sid, 'staff_m1', 'parrying')
+      return
+    }
+    if (this.statuses.hasStatus(player, 'invulnerable')) {
+      this.sendAbilityFailed(sid, 'staff_m1', 'cc')
+      return
+    }
     const now = this.state.tick
-    if (now < player.staffNextFireTick) return
+    if (now < player.staffNextFireTick) {
+      this.sendAbilityFailed(sid, 'staff_m1', 'cooldown')
+      return
+    }
     if (player.mana < STAFF_M1_MANA_COST) {
       this.sendAbilityFailed(sid, 'staff_m1', 'cost')
       return
