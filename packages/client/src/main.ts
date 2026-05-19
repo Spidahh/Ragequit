@@ -3504,6 +3504,33 @@ function onTransmuteResult(msg: ServerTransmuteResultMessage): void {
       void el.offsetWidth
       el.style.animation = 'shake 0.25s ease'
     }
+    showServerNote({ kind: 'warn', text: getTransmuteFailText(msg) })
+  }
+}
+
+function getTransmuteLabel(direction: ServerTransmuteResultMessage['direction']): string {
+  if (direction === 'hp_mana') return 'HP to Mana'
+  if (direction === 'mana_stam') return 'Mana to Stamina'
+  return 'Stamina to HP'
+}
+
+function getTransmuteFailText(msg: ServerTransmuteResultMessage): string {
+  const label = getTransmuteLabel(msg.direction)
+  switch (msg.reason) {
+    case 'cooldown':
+      return `${label}: cooling down`
+    case 'cost':
+      return `${label}: not enough resources`
+    case 'parrying':
+      return `${label}: cannot transfer while parrying`
+    case 'casting':
+      return `${label}: cannot transfer while casting`
+    case 'airborne':
+      return `${label}: cannot transfer while airborne`
+    case 'dead':
+      return `${label}: cannot transfer while dead`
+    default:
+      return `${label}: transfer failed`
   }
 }
 
