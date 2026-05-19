@@ -28,6 +28,7 @@ Implementato:
 - Status runtime: burn, chill, bleed, poison, slow, root, stun, freeze, curse, mark, shield, haste, invulnerable.
 - Zone/projectile runtime, damage queue centrale, shield/parry/lifesteal/death nello stesso path.
 - Bot training, match phases, replay scaffolding, rate limiter.
+- Colyseus monitor admin opt-in: disabled by default and protected by Basic Auth when enabled.
 - Combat actions are accepted only during the live phase; loadout changes are locked during live combat.
 - Free For All / 5v5 remain product targets; FFA is visibly disabled in the client until the mode is real.
 - Smoke/unit coverage su shared/server/client.
@@ -56,6 +57,7 @@ Implementato:
 
 `packages/client/src/main.ts` è ancora troppo grande. Sono già presenti moduli `input`, `hud`, `net`, `render`, `vfx`, ma serve continuare l’estrazione:
 
+- HUD drag/resize controller estratto in `packages/client/src/hud/hud-drag.ts`.
 - input + radial wheel controller
 - cast/fire/weapon input dispatcher
 - HUD cooldown/status/mastery renderer
