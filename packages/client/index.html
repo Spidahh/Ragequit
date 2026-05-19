@@ -67,7 +67,6 @@
       body.main-menu-active #crosshair,
       body.main-menu-active #status-strip,
       body.main-menu-active #cast-bar,
-      body.main-menu-active #action-intent,
       body.main-menu-active #bow-charge,
       body.main-menu-active #kill-feed,
       body.main-menu-active #ping-hud,
@@ -80,7 +79,6 @@
       body.loadout-active #crosshair,
       body.loadout-active #status-strip,
       body.loadout-active #cast-bar,
-      body.loadout-active #action-intent,
       body.loadout-active #bow-charge,
       body.loadout-active #kill-feed,
       body.loadout-active #ping-hud,
@@ -297,13 +295,14 @@
       /* ── Resource bar container ─────────────────────────────────────────── */
       #hud {
         position: fixed;
-        left: 40px;
-        bottom: 40px;
+        left: 28px;
+        bottom: clamp(136px, 18vh, 176px);
         transform: none;
         --hud-bar-h: 22px;
-        width: min(320px, 38vw);
+        width: min(300px, 34vw);
         min-width: 250px;
         max-width: min(520px, calc(100vw - 24px));
+        box-sizing: border-box;
         display: flex;
         flex-direction: column;
         gap: 6px;
@@ -321,6 +320,7 @@
         backdrop-filter: blur(3px);
         opacity: 0.97;
         touch-action: none;
+        z-index: 610;
       }
       #hud.dragging,
       #hud.resizing {
@@ -1294,92 +1294,6 @@
       #cast-bar.interrupted .fill {
         background: linear-gradient(90deg, #882020, #d04040);
         box-shadow: 2px 0 10px rgba(255,60,60,0.4);
-      }
-
-      #action-intent {
-        position: fixed;
-        left: 50%;
-        top: calc(50% + 78px);
-        transform: translateX(-50%);
-        min-width: 230px;
-        max-width: min(520px, calc(100vw - 48px));
-        display: grid;
-        grid-template-columns: auto 1fr;
-        gap: 3px 10px;
-        align-items: center;
-        padding: 7px 13px 8px;
-        border-radius: 7px;
-        border: 1px solid rgba(255,255,255,0.10);
-        border-left: 3px solid rgba(255,210,96,0.48);
-        background:
-          linear-gradient(180deg, rgba(16,20,34,0.82), rgba(5,7,14,0.72)),
-          rgba(0,0,0,0.34);
-        color: rgba(232,238,255,0.90);
-        pointer-events: none;
-        user-select: none;
-        z-index: 620;
-        box-shadow: 0 8px 22px rgba(0,0,0,0.46), inset 0 1px 0 rgba(255,255,255,0.06);
-        backdrop-filter: blur(2px);
-        opacity: 0.82;
-        transition: opacity 0.12s, border-color 0.12s, transform 0.12s;
-      }
-      #action-intent.hidden {
-        opacity: 0;
-        transform: translateX(-50%) translateY(4px);
-      }
-      #action-intent .intent-dot {
-        grid-row: 1 / span 2;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #ffd260;
-        box-shadow: 0 0 12px rgba(255,210,96,0.60);
-      }
-      #action-intent .intent-title {
-        font: 950 11px/1 var(--font-code);
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: #f6f1ff;
-      }
-      #action-intent .intent-detail {
-        font: 800 9px/1.25 var(--font-code);
-        letter-spacing: 0.07em;
-        text-transform: uppercase;
-        color: rgba(188,200,238,0.72);
-      }
-      #action-intent.armed {
-        opacity: 1;
-        border-color: rgba(255,210,96,0.42);
-        border-left-color: #ffd260;
-        background:
-          linear-gradient(180deg, rgba(70,52,16,0.86), rgba(20,15,8,0.78)),
-          rgba(0,0,0,0.34);
-      }
-      #action-intent.place {
-        opacity: 1;
-        border-color: rgba(125,190,255,0.36);
-        border-left-color: #80c8ff;
-      }
-      #action-intent.place .intent-dot {
-        background: #80c8ff;
-        box-shadow: 0 0 12px rgba(120,200,255,0.62);
-      }
-      #action-intent.blocked {
-        opacity: 1;
-        border-color: rgba(255,90,70,0.34);
-        border-left-color: #ff6048;
-      }
-      #action-intent.blocked .intent-dot {
-        background: #ff6048;
-        box-shadow: 0 0 12px rgba(255,96,72,0.55);
-      }
-      #action-intent.charge .intent-dot,
-      #action-intent.casting .intent-dot {
-        animation: intent-pulse 0.5s ease-in-out infinite alternate;
-      }
-      @keyframes intent-pulse {
-        from { transform: scale(0.82); opacity: 0.62; }
-        to   { transform: scale(1.18); opacity: 1; }
       }
 
       /* ── Cooldown pips — bottom-centre ability hotbar ─────────────────── */
@@ -4205,7 +4119,6 @@
     </div>
 
     <div id="cast-bar"><div class="fill"></div><div class="label">CAST</div></div>
-    <div id="action-intent" class="hidden"><span class="intent-dot"></span><span class="intent-title"></span><span class="intent-detail"></span></div>
     <div id="status-strip"></div>
     <div id="cd-strip"></div>
 

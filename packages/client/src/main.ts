@@ -135,9 +135,6 @@ const respawnSec = document.getElementById('respawn-sec')!
 const castBar = document.getElementById('cast-bar')!
 const castBarFill = document.querySelector<HTMLElement>('#cast-bar .fill')!
 const castBarLabel = document.querySelector<HTMLElement>('#cast-bar .label')!
-const actionIntent = document.getElementById('action-intent')!
-const actionIntentTitle = document.querySelector<HTMLElement>('#action-intent .intent-title')!
-const actionIntentDetail = document.querySelector<HTMLElement>('#action-intent .intent-detail')!
 const masteryBadge = document.getElementById('mastery-badge')!
 const respawnKillerEl = document.getElementById('respawn-killer')!
 const lowHpVignette = document.getElementById('low-hp-vignette')!
@@ -343,89 +340,6 @@ function activateAbilitySlot(slotIdx: number, fromWheel: boolean): void {
   }
   beginPlacementPreview(id)
   primedSlotIdx = null
-}
-
-function setActionIntent(kind: string, title: string, detail: string): void {
-  actionIntent.className = kind
-  actionIntentTitle.textContent = title
-  actionIntentDetail.textContent = detail
-}
-
-function updateActionIntentHud(
-  selfSchema: SchemaPlayer | null,
-  tickNow: number,
-  activeWeapon: Weapon,
-  combatLive: boolean,
-  dead: boolean,
-  airborne: boolean,
-): void {
-  if (!combatLive || !selfSchema || dead) {
-    actionIntent.classList.add('hidden')
-    return
-  }
-
-  if (placementAbilityId) {
-    const def = ABILITY_DEFS[placementAbilityId]
-    setActionIntent('place', `Place ${def?.name ?? 'ability'}`, 'LMB confirm · RMB cancel')
-    return
-  }
-
-  if (primedSlotIdx !== null) {
-    const loadout = currentLoadoutArray()
-    const id = loadout[primedSlotIdx] ?? ''
-    const def = ABILITY_DEFS[id]
-    const key = slotBindLabel(primedSlotIdx)
-    const direct = id && loadoutStation.isInstantCast(id)
-    setActionIntent(
-      'armed',
-      `Primed ${def?.name ?? 'ability'}`,
-      direct ? `LMB fire at crosshair · ${key}` : `LMB opens preview · ${key}`,
-    )
-    return
-  }
-
-  if (airborne) {
-    setActionIntent('blocked', 'Airborne', 'No cast or parry until recovery')
-    return
-  }
-
-  const statusCaps = movementCapsFromStatuses(
-    Array.from(selfSchema.statuses).map((s) => ({
-      kind: s.kind as StatusKind,
-      stacks: s.stacks,
-      remainingSec: s.remainingSec,
-      slowFractionOverride: s.slowFractionOverride > 0 ? s.slowFractionOverride : undefined,
-    })),
-  )
-  if (statusCaps.castLocked || statusCaps.movementLocked) {
-    const lock = Array.from(selfSchema.statuses).find((s) => ['stun', 'freeze', 'root'].includes(s.kind))
-    setActionIntent('blocked', lock ? `${lock.kind} locked` : 'Controlled', 'Movement or casting restricted')
-    return
-  }
-
-  if (selfSchema.casting && selfSchema.castEndsAtTick > tickNow) {
-    const def = ABILITY_DEFS[selfSchema.castAbilityId]
-    setActionIntent('casting', `Casting ${def?.name ?? 'ability'}`, `${((selfSchema.castEndsAtTick - tickNow) / TICK_RATE_HZ).toFixed(1)}s remaining`)
-    return
-  }
-
-  if (selfSchema.parrying) {
-    setActionIntent('armed', selfSchema.parryIsHold ? 'Guard holding' : 'Parry window', 'Release RMB to drop guard')
-    return
-  }
-
-  if (activeWeapon === 'bow' && self && self.bowChargeStartMs > 0) {
-    setActionIntent('charge', 'Bow draw', 'Release LMB to fire')
-    return
-  }
-
-  if (activeWeapon === 'sword') {
-    setActionIntent('idle', 'Sword ready', 'LMB strike · RMB parry')
-  } else if (activeWeapon === 'bow') {
-    setActionIntent('idle', 'Bow ready', 'Hold LMB draw · release fire')
-  } else {
-    setActionIntent('idle', 'Staff ready', 'LMB staff bolt · spells on wheel')
-  }
 }
 
 function radialMouseMove(dx: number, dy: number): void {
@@ -2493,8 +2407,8 @@ let camFovBase = 90
 // settings panel; persisted by menu.ts via localStorage.
 let settingsFovBase = 90
 let pendingLaunchMode: string | null = null
-const HUD_POS_KEY = 'ragequit.hud.position.v1'
-const HUD_SIZE_KEY = 'ragequit.hud.size.v1'
+const HUD_POS_KEY = 'ragequit.hud.position.v2'
+const HUD_SIZE_KEY = 'ragequit.hud.size.v2'
 const HUD_MIN_WIDTH = 250
 const HUD_MAX_WIDTH = 520
 const HUD_MIN_BAR_H = 18
@@ -4882,8 +4796,6 @@ function render(now: number): void {
     parryRing.classList.remove('active')
     parryRing.classList.remove('hold')
   }
-
-  updateActionIntentHud(selfSchema, tickNow, activeWeapon, currentMatchPhase === 'live', dead, airborne)
 
   // Round live timer (duel modes only — hidden for FFA/5v5 which use kill counter).
   if (livePhaseStartTick >= 0 && tickNow > 0) {
