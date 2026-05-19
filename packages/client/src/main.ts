@@ -54,6 +54,7 @@ import { initAbilityFailHud } from './hud/ability-fail-hud.js'
 import { initCombatOverlayHud } from './hud/combat-overlay-hud.js'
 import { initHitFeedback } from './hud/hit-feedback.js'
 import { initTransmuteHud } from './hud/transmute-hud.js'
+import { initStatusOverlay } from './hud/status-overlay.js'
 import { ensureIconSprite, weaponIcon } from './icons.js'
 import { actionLabel, onKeybindsChanged } from './input/keybinds.js'
 import { initCastDispatcher } from './input/cast-dispatcher.js'
@@ -269,6 +270,10 @@ onKeybindsChanged(() => {
 const soundEngine = new SoundEngine()
 soundEngine.muted = true
 initTelemetry()
+const statusOverlay = initStatusOverlay({
+  getSelfId: () => self?.sessionId,
+  playStatus: (el) => soundEngine.playStatus(el),
+})
 
 // -----------------------------------------------------------------------
 // Three.js scene
@@ -867,11 +872,11 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
 
     // Status / transmute / zone event listeners.
     joinedRoom.onMessage(MessageTypes.StatusApplied, (msg: ServerStatusAppliedMessage) => {
-      if (isCurrentRoom()) onStatusApplied(msg)
+      if (isCurrentRoom()) statusOverlay.onStatusApplied(msg)
     },
     )
     joinedRoom.onMessage(MessageTypes.StatusExpired, (msg: ServerStatusExpiredMessage) => {
-      if (isCurrentRoom()) onStatusExpired(msg)
+      if (isCurrentRoom()) statusOverlay.onStatusExpired(msg)
     },
     )
     joinedRoom.onMessage(MessageTypes.TransmuteResult, (msg: ServerTransmuteResultMessage) => {
@@ -1253,44 +1258,6 @@ function returnToMainMenu(opts: { leaveRoom: boolean; statusText?: string }): vo
   if (opts.leaveRoom && leavingRoom) void leavingRoom.leave()
 }
 
-
-
-// Status effect colors for the flash overlay.
-const STATUS_FLASH_COLOR: Record<string, string> = {
-  burn: 'rgba(255,100,30,0.3)',
-  bleed: 'rgba(180,30,30,0.3)',
-  chill: 'rgba(80,180,255,0.25)',
-  poison: 'rgba(80,220,60,0.25)',
-  slow: 'rgba(120,60,220,0.2)',
-  root: 'rgba(120,80,0,0.3)',
-  stun: 'rgba(255,230,60,0.3)',
-  freeze: 'rgba(120,220,255,0.35)',
-  curse: 'rgba(160,60,255,0.25)',
-  blind: 'rgba(0,0,0,0.45)',
-  mark: 'rgba(255,60,60,0.2)',
-}
-
-function onStatusApplied(msg: ServerStatusAppliedMessage): void {
-  if (msg.playerId !== self?.sessionId) return
-  // Infer element from the status kind for the tone.
-  const statusElementMap: Record<string, string> = {
-    burn: 'fire', bleed: 'none', chill: 'ice', poison: 'nature',
-    slow: 'dark', root: 'nature', stun: 'lightning', freeze: 'ice',
-    curse: 'dark', blind: 'dark', mark: 'none', shield: 'none', haste: 'lightning',
-  }
-  soundEngine.playStatus(statusElementMap[msg.status] ?? 'none')
-  // Brief coloured screen-edge vignette matching the status element.
-  const color = STATUS_FLASH_COLOR[msg.status]
-  if (!color) return
-  const flash = document.createElement('div')
-  flash.style.cssText = `position:fixed;inset:0;background:radial-gradient(circle at center,transparent 40%,${color} 100%);pointer-events:none;z-index:800;animation:kill-fade 0.7s forwards`
-  document.body.appendChild(flash)
-  setTimeout(() => flash.remove(), 700)
-}
-
-function onStatusExpired(_msg: ServerStatusExpiredMessage): void {
-  // No-op — render() reads the schema each frame.
-}
 
 
 
