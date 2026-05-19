@@ -67,6 +67,7 @@ import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './rend
 import { makeCharacter, applyWeaponProp, makeCastRing } from './render/characters.js'
 import { initZoneVisuals, zoneColorForElement } from './render/zone-visuals.js'
 import { initProjectileVisuals, type SchemaProjectile } from './render/projectile-visuals.js'
+import { initPlacementPreview } from './render/placement-preview.js'
 import { SoundEngine } from './audio/sound-engine.js'
 import { buildArena, PARTICLE_COUNT, MAGIC_COUNT } from './world/arena.js'
 import { ImpactPool } from './vfx/impact-pool.js'
@@ -231,7 +232,7 @@ const PITCH_DOWN_LIMIT = -Math.PI * 0.360 //  -65° — max look-down angle
 const castDispatcher = initCastDispatcher({
   getLoadout: currentLoadoutArray,
   isInstantCast: (id) => loadoutStation.isInstantCast(id),
-  hidePlacementVisual: () => { placementPreviewGroup.visible = false },
+  hidePlacementVisual: () => { placementPreview.group.visible = false },
   sendCast: (id, tick) => sendAbilityCast(id, tick),
   showShootFlash,
 })
@@ -322,42 +323,6 @@ scene.add(bounce)
 const playerLight = new THREE.PointLight(0xaaccff, 0.45, 8, 2)
 scene.add(playerLight)
 
-const placementPreviewGroup = new THREE.Group()
-placementPreviewGroup.visible = false
-scene.add(placementPreviewGroup)
-const placementDiscMat = new THREE.MeshBasicMaterial({
-  color: 0xffd260,
-  transparent: true,
-  opacity: 0.24,
-  depthWrite: false,
-  side: THREE.DoubleSide,
-})
-const placementRingMat = new THREE.MeshBasicMaterial({
-  color: 0xffd260,
-  transparent: true,
-  opacity: 0.92,
-  depthWrite: false,
-  side: THREE.DoubleSide,
-})
-const placementDisc = new THREE.Mesh(new THREE.CircleGeometry(1, 64), placementDiscMat)
-placementDisc.rotation.x = -Math.PI / 2
-placementPreviewGroup.add(placementDisc)
-const placementRing = new THREE.Mesh(new THREE.RingGeometry(0.96, 1, 64), placementRingMat)
-placementRing.rotation.x = -Math.PI / 2
-placementPreviewGroup.add(placementRing)
-const placementWall = new THREE.Mesh(
-  new THREE.PlaneGeometry(1, 1),
-  new THREE.MeshBasicMaterial({ color: 0xff8a30, transparent: true, opacity: 0.38, depthWrite: false, side: THREE.DoubleSide }),
-)
-placementWall.rotation.x = -Math.PI / 2
-placementPreviewGroup.add(placementWall)
-const placementLineGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()])
-const placementLine = new THREE.Line(
-  placementLineGeom,
-  new THREE.LineBasicMaterial({ color: 0xffd260, transparent: true, opacity: 0.78 }),
-)
-placementPreviewGroup.add(placementLine)
-
 const toonGradient = makeToonGradient()
 
 const {
@@ -368,6 +333,17 @@ const {
   groundMesh, grid,
   loadMapGeometry, getActiveMapId,
 } = buildArena(scene, toonGradient)
+
+const placementPreview = initPlacementPreview({
+  camera,
+  getMouseYaw: () => inp.mouseYaw,
+  getSelfPos: () => self?.sim.pos ?? null,
+  getPlacementAbilityId: () => castDispatcher.getPlacementAbilityId(),
+  getMapGroundY: (mapId) => getMap(mapId || 'blockout').groundY,
+  getActiveMapId,
+  getSchemaMapId,
+})
+scene.add(placementPreview.group)
 
 function spawnImpact(pos: THREE.Vector3, color: number): void {
   impactVfx.spawn(pos, color)
@@ -1729,58 +1705,6 @@ function getSchemaMapId(): string {
   return (room.state as { mapId?: string }).mapId ?? 'blockout'
 }
 
-function aimPointForAbility(abilityId: string): { x: number; y: number; z: number } | undefined {
-  const def = ABILITY_DEFS[abilityId]
-  if (!def || def.targeting !== 'point') return undefined
-
-  const selfPos = self?.sim.pos
-  if (!selfPos) return undefined
-
-  const map = getMap(getActiveMapId() || getSchemaMapId())
-  const groundY = map.groundY
-  const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).normalize()
-  const point = new THREE.Vector3()
-
-  if (Math.abs(dir.y) > 1e-5) {
-    const t = (groundY - camera.position.y) / dir.y
-    if (t > 0) point.copy(camera.position).addScaledVector(dir, t)
-  }
-
-  if (point.lengthSq() === 0) {
-    point.set(
-      selfPos.x - Math.sin(inp.mouseYaw) * def.range,
-      groundY,
-      selfPos.z - Math.cos(inp.mouseYaw) * def.range,
-    )
-  }
-
-  const dx = point.x - selfPos.x
-  const dz = point.z - selfPos.z
-  const dist = Math.hypot(dx, dz)
-  if (dist > def.range && dist > 1e-5) {
-    const scale = def.range / dist
-    point.x = selfPos.x + dx * scale
-    point.z = selfPos.z + dz * scale
-  }
-  point.y = groundY
-  return { x: point.x, y: point.y, z: point.z }
-}
-
-function previewPointForAbility(abilityId: string): { x: number; y: number; z: number } | undefined {
-  const point = aimPointForAbility(abilityId)
-  if (point) return point
-  const def = ABILITY_DEFS[abilityId]
-  const selfPos = self?.sim.pos
-  if (!def || !selfPos) return undefined
-  const map = getMap(getActiveMapId() || getSchemaMapId())
-  const dist = Math.max(1.5, Math.min(def.range || 6, 10))
-  return {
-    x: selfPos.x - Math.sin(inp.mouseYaw) * dist,
-    y: map.groundY,
-    z: selfPos.z - Math.cos(inp.mouseYaw) * dist,
-  }
-}
-
 function sendAbilityCast(abilityId: string, tick: number): void {
   if (!room) return
   const msg: ClientCastMessage = {
@@ -1788,77 +1712,13 @@ function sendAbilityCast(abilityId: string, tick: number): void {
     atTick: tick,
     targetYaw: inp.mouseYaw,
     targetPitch: inp.mousePitch,
-    targetPoint: aimPointForAbility(abilityId),
+    targetPoint: placementPreview.aimPoint(abilityId),
   }
   room.send(MessageTypes.Cast, msg)
   cooldownStrip.markPending(abilityId)
   showShootFlash()
 }
 
-function placementFootprint(abilityId: string): { radius: number; width: number; depth: number; wall: boolean } {
-  const def = ABILITY_DEFS[abilityId]
-  let radius = 0.85
-  let width = 0
-  let depth = 0
-  let wall = false
-  if (!def) return { radius, width, depth, wall }
-
-  for (const e of def.effects) {
-    if (e.kind === 'zone') {
-      if (e.width && e.width > 0) {
-        wall = true
-        width = Math.max(width, e.width)
-        depth = Math.max(depth, Math.max(0.55, e.radius || 0.8))
-      } else {
-        radius = Math.max(radius, e.radius)
-      }
-    } else if (e.kind === 'damage') {
-      radius = Math.max(radius, e.radius ?? 0)
-    } else if (e.kind === 'projectile') {
-      radius = Math.max(radius, e.splashRadius ?? 0)
-    } else if (e.kind === 'knockup') {
-      radius = Math.max(radius, e.radius ?? 0)
-    } else if (e.kind === 'applyStatus') {
-      radius = Math.max(radius, e.radius ?? 0)
-    }
-  }
-  return { radius: Math.max(0.65, radius), width, depth, wall }
-}
-
-function updatePlacementPreview(now: number): void {
-  const placementAbilityId = castDispatcher.getPlacementAbilityId()
-  if (!placementAbilityId || !self) {
-    placementPreviewGroup.visible = false
-    return
-  }
-  const def = ABILITY_DEFS[placementAbilityId]
-  const point = previewPointForAbility(placementAbilityId)
-  if (!def || !point) {
-    placementPreviewGroup.visible = false
-    return
-  }
-  const footprint = placementFootprint(placementAbilityId)
-  const pulse = 0.5 + 0.5 * Math.sin(now * 0.008)
-  placementPreviewGroup.visible = true
-  placementPreviewGroup.position.set(point.x, point.y + 0.035, point.z)
-  placementPreviewGroup.rotation.y = inp.mouseYaw
-  placementDisc.visible = !footprint.wall
-  placementRing.visible = !footprint.wall
-  placementWall.visible = footprint.wall
-  if (footprint.wall) {
-    placementWall.scale.set(footprint.width, footprint.depth, 1)
-    ;(placementWall.material as THREE.MeshBasicMaterial).opacity = 0.32 + pulse * 0.14
-  } else {
-    placementDisc.scale.setScalar(footprint.radius)
-    placementRing.scale.setScalar(footprint.radius)
-    placementDiscMat.opacity = 0.18 + pulse * 0.10
-    placementRingMat.opacity = 0.72 + pulse * 0.22
-  }
-  const attr = placementLineGeom.attributes['position'] as THREE.BufferAttribute
-  attr.setXYZ(0, self.sim.pos.x, point.y + 0.08, self.sim.pos.z)
-  attr.setXYZ(1, point.x, point.y + 0.08, point.z)
-  attr.needsUpdate = true
-}
 
 // -----------------------------------------------------------------------
 // Sim loop — 60 Hz
@@ -2169,7 +2029,7 @@ function render(now: number): void {
 
   // Swap map geometry when the server schema reports a different mapId.
   loadMapGeometry(getSchemaMapId())
-  updatePlacementPreview(now)
+  placementPreview.update(now)
 
   // Arena ring slow pulse — opacity and slight colour shift for dramatic boundary.
   const ringPulse = 0.5 + 0.5 * Math.sin(now * 0.001)
