@@ -75,6 +75,7 @@ export function initLoadoutStation(
   const detailsName = document.getElementById('ls-detail-name')
   const detailsMeta = document.getElementById('ls-detail-meta')
   const detailsDesc = document.getElementById('ls-detail-desc')
+  const buildCoach = document.getElementById('ls-build-coach')
   const detailsMalus = document.getElementById('ls-detail-malus')
   const detailsInstant = document.getElementById('ls-detail-instant') as HTMLButtonElement | null
   const poolTitle = document.getElementById('ls-pool-title')
@@ -293,6 +294,7 @@ export function initLoadoutStation(
       const empty = document.createElement('p')
       empty.textContent = 'Pick a compatible ability. Transfer slots are fixed and always stay on Z, X and F.'
       detailsDesc.appendChild(empty)
+      rebuildBuildCoach()
       detailsMalus.textContent = ''
       if (detailsInstant) detailsInstant.hidden = true
       return
@@ -317,7 +319,48 @@ export function initLoadoutStation(
       def.range > 0 ? `${def.range}m` : 'self',
     ].join(' · ')
     detailsDesc.replaceChildren(roleBlock(role), renderEffectTags(def), quickStatBlock(quickStats), textBlock(def.description))
+    rebuildBuildCoach()
     detailsMalus.textContent = def.miniMalus
+  }
+
+  function rebuildBuildCoach(): void {
+    if (!buildCoach) return
+    const report = analyzeBuild(slots)
+    buildCoach.replaceChildren()
+
+    const head = document.createElement('div')
+    head.className = 'coach-head'
+    const title = document.createElement('div')
+    title.className = 'coach-title'
+    title.textContent = 'Build Coach'
+    const rating = document.createElement('div')
+    rating.className = 'coach-rating'
+    rating.textContent = `${report.score}/6`
+    head.append(title, rating)
+
+    const grid = document.createElement('div')
+    grid.className = 'coach-grid'
+    for (const item of report.pills) {
+      const pill = document.createElement('div')
+      pill.className = `coach-pill ${item.ok ? 'good' : 'warn'}`
+      const label = document.createElement('span')
+      label.textContent = item.label
+      const value = document.createElement('b')
+      value.textContent = item.value
+      pill.append(label, value)
+      grid.appendChild(pill)
+    }
+
+    const lines = document.createElement('div')
+    lines.className = 'coach-lines'
+    for (const item of report.lines) {
+      const line = document.createElement('div')
+      line.className = `coach-line ${item.kind}`
+      line.textContent = item.text
+      lines.appendChild(line)
+    }
+
+    buildCoach.append(head, grid, lines)
   }
 
   filterBtns.forEach((btn) => {
@@ -372,6 +415,9 @@ export function initLoadoutStation(
           .includes(poolSearch)
       })
       .sort((a, b) => {
+        const aRec = recommendationTags(a, activeIdx, slots).length
+        const bRec = recommendationTags(b, activeIdx, slots).length
+        if (aRec !== bRec) return bRec - aRec
         if (a.element !== b.element) return String(a.element).localeCompare(String(b.element))
         return a.name.localeCompare(b.name)
       })
@@ -383,7 +429,8 @@ export function initLoadoutStation(
       const role = abilityRole(def)
       const quickStats = abilityQuickStats(def)
       const instant = isInstantCast(def)
-      card.className = `pool-card el-${def.element} ${isActive ? 'equipped' : ''} ${locked ? 'locked' : ''}`
+      const recTags = recommendationTags(def, activeIdx, slots)
+      card.className = `pool-card el-${def.element} ${isActive ? 'equipped' : ''} ${recTags.length > 0 ? 'recommended' : ''} ${locked ? 'locked' : ''}`
       card.disabled = locked
       card.title = def.description
       card.setAttribute(
@@ -392,7 +439,7 @@ export function initLoadoutStation(
       )
       card.innerHTML = [
         `<span class="pool-icon-box">${abilityIconMarkup(def.id)}</span>`,
-        `<span class="pool-topline"><span class="pool-role-icon">${role.icon}</span><span class="pool-role-text">${escapeHtml(role.title)}</span>${def.comboRole === 'starter' ? ' <span class="starter-tag">STARTER</span>' : ''}</span>`,
+        `<span class="pool-topline"><span class="pool-role-icon">${role.icon}</span><span class="pool-role-text">${escapeHtml(role.title)}</span>${recTags.length > 0 ? ` <span class="recommend-tag">${escapeHtml(recTags[0]!)}</span>` : def.comboRole === 'starter' ? ' <span class="starter-tag">STARTER</span>' : ''}</span>`,
         `<span class="instant-toggle ${instant ? 'on' : ''}" role="switch" aria-checked="${instant}" title="${instant ? 'Instant cast: key casts immediately' : 'Preview cast: key arms placement, LMB confirms'}">${instant ? 'INSTANT' : 'PREVIEW'}</span>`,
         `<span class="pool-name">${escapeHtml(def.name)}</span>`,
         `<span class="pool-meta">${def.element !== 'none' ? def.element.toUpperCase() : 'PHYSICAL'} · ${formatCost(def)} · ${def.cooldownSec}s CD</span>`,
@@ -531,6 +578,119 @@ interface AbilityQuickStat {
   label: string
   value: number
   className: string
+}
+
+interface BuildCoachReport {
+  score: number
+  pills: Array<{ label: string; value: string; ok: boolean }>
+  lines: Array<{ text: string; kind: 'good' | 'warn' }>
+}
+
+function analyzeBuild(slotIds: readonly string[]): BuildCoachReport {
+  const defs = slotIds.map((id) => ABILITY_DEFS[id]).filter((def): def is AbilityDef => Boolean(def))
+  const magicDefs = slotIds.slice(2, 7).map((id) => ABILITY_DEFS[id]).filter((def): def is AbilityDef => Boolean(def))
+  const mastery = computeLoadoutMastery(slotIds.map((id) => ABILITY_DEFS[id]))
+  const roleCount = (role: AbilityDef['comboRole']): number => defs.filter((def) => def.comboRole === role).length
+  const starters = roleCount('starter')
+  const extenders = roleCount('extender')
+  const finishers = roleCount('finisher') + roleCount('ray')
+  const survival = roleCount('survival') + roleCount('counter') + roleCount('mobility')
+  const controls = defs.filter((def) => abilityHasControl(def)).length
+  const pointPreviews = defs.filter((def) => def.targeting === 'point').length
+  const instantHits = defs.filter((def) => def.targeting === 'forward' || def.comboRole === 'ray').length
+  const hasAirPunish = defs.some((def) => def.comboRole === 'finisher')
+
+  let score = 0
+  if (starters > 0) score++
+  if (extenders > 0 || controls >= 2) score++
+  if (finishers > 0) score++
+  if (survival > 0) score++
+  if (mastery.level > 0) score++
+  if (pointPreviews > 0 && instantHits > 0) score++
+
+  const lines: BuildCoachReport['lines'] = []
+  if (starters === 0) lines.push({ kind: 'warn', text: 'Missing opener: add a launch, root, freeze, stun, or blind to start real combos.' })
+  else lines.push({ kind: 'good', text: 'Opener online: use the wheel to prime a setup, then confirm with LMB.' })
+  if (finishers === 0) lines.push({ kind: 'warn', text: 'Missing finisher: add an air punish, instant ray, or precision shot to cash out CC.' })
+  else lines.push({ kind: 'good', text: hasAirPunish ? 'Air punish available: launch into finisher for the damage bonus.' : 'Direct punish available: ray/projectile can cash out roots and freezes.' })
+  if (pointPreviews > 0 && instantHits === 0) lines.push({ kind: 'warn', text: 'You have placed previews but few instant hits; add a ray or fast shot for follow-up speed.' })
+  if (mastery.level === 0) lines.push({ kind: 'warn', text: masteryHint(magicDefs) })
+  else lines.push({ kind: 'good', text: `${capitalize(mastery.element ?? 'magic')} mastery active: your magic deck has a readable element identity.` })
+  if (survival === 0) lines.push({ kind: 'warn', text: 'No reset tool: consider shield, cleanse, dash, phase, or heal in the utility slot.' })
+
+  return {
+    score,
+    pills: [
+      { label: 'Opener', value: starters > 0 ? String(starters) : 'MISS', ok: starters > 0 },
+      { label: 'Control', value: controls > 0 ? String(controls) : 'LOW', ok: controls > 0 },
+      { label: 'Cashout', value: finishers > 0 ? String(finishers) : 'MISS', ok: finishers > 0 },
+      { label: 'Reset', value: survival > 0 ? String(survival) : 'MISS', ok: survival > 0 },
+      { label: 'Preview', value: pointPreviews > 0 ? String(pointPreviews) : 'NONE', ok: pointPreviews > 0 },
+      { label: 'Mastery', value: mastery.level > 0 ? `T${mastery.level}` : 'OFF', ok: mastery.level > 0 },
+    ],
+    lines: lines.slice(0, 5),
+  }
+}
+
+function abilityHasControl(def: AbilityDef): boolean {
+  if (['starter', 'extender', 'counter'].includes(def.comboRole)) return true
+  return def.effects.some((effect) => {
+    if (effect.kind === 'knockup') return true
+    if (effect.kind === 'applyStatus') return statusControlScore(effect.status) >= 2
+    if (effect.kind === 'projectile' && effect.onHitStatus) return statusControlScore(effect.onHitStatus.status) >= 2
+    if (effect.kind === 'zone' && effect.applyStatus) return statusControlScore(effect.applyStatus.status) >= 2
+    if (effect.kind === 'channel' && effect.perTick.kind === 'applyStatus') return statusControlScore(effect.perTick.status) >= 2
+    return false
+  })
+}
+
+function recommendationTags(candidate: AbilityDef, activeIdx: number, slotIds: readonly string[]): string[] {
+  if (activeIdx in FIXED_TRANSFER_SLOTS) return []
+  const otherDefs = slotIds
+    .map((id, idx) => (idx === activeIdx ? undefined : ABILITY_DEFS[id]))
+    .filter((def): def is AbilityDef => Boolean(def))
+  const tags: string[] = []
+  const hasStarter = otherDefs.some((def) => def.comboRole === 'starter' || abilityHasControl(def))
+  const hasFinisher = otherDefs.some((def) => def.comboRole === 'finisher' || def.comboRole === 'ray')
+  const hasReset = otherDefs.some((def) => ['survival', 'counter', 'mobility'].includes(def.comboRole))
+  const hasPointPreview = otherDefs.some((def) => def.targeting === 'point')
+  const hasInstantHit = otherDefs.some((def) => def.targeting === 'forward' || def.comboRole === 'ray')
+  const masteryTarget = closestMasteryElement(slotIds, activeIdx)
+
+  if (!hasStarter && (candidate.comboRole === 'starter' || abilityHasControl(candidate))) tags.push('OPENER')
+  if (!hasFinisher && (candidate.comboRole === 'finisher' || candidate.comboRole === 'ray')) tags.push('CASHOUT')
+  if (!hasReset && ['survival', 'counter', 'mobility'].includes(candidate.comboRole)) tags.push('RESET')
+  if (hasPointPreview && !hasInstantHit && (candidate.targeting === 'forward' || candidate.comboRole === 'ray')) tags.push('FOLLOWUP')
+  if (masteryTarget && candidate.slot === 'magic' && candidate.element === masteryTarget) tags.push('MASTERY')
+  return Array.from(new Set(tags)).slice(0, 2)
+}
+
+function closestMasteryElement(slotIds: readonly string[], activeIdx: number): ElementId | undefined {
+  if (LOADOUT_SLOT_ORDER[activeIdx] !== 'magic') return undefined
+  const counts: Partial<Record<ElementId, number>> = {}
+  for (let idx = 2; idx < 7; idx++) {
+    if (idx === activeIdx) continue
+    const def = ABILITY_DEFS[slotIds[idx] ?? '']
+    if (!def || def.element === 'none') continue
+    counts[def.element as ElementId] = (counts[def.element as ElementId] ?? 0) + 1
+  }
+  const best = (Object.entries(counts) as Array<[ElementId, number]>).sort((a, b) => b[1] - a[1])[0]
+  if (!best || best[1] < 1) return undefined
+  return best[0]
+}
+
+function masteryHint(magicDefs: readonly AbilityDef[]): string {
+  const counts: Partial<Record<ElementId, number>> = {}
+  for (const def of magicDefs) {
+    if (def.element === 'none') continue
+    counts[def.element as ElementId] = (counts[def.element as ElementId] ?? 0) + 1
+  }
+  const best = (Object.entries(counts) as Array<[ElementId, number]>).sort((a, b) => b[1] - a[1])[0]
+  if (!best) return 'No mastery path yet: stack 4 or 5 magic spells of one element.'
+  const needed = Math.max(0, 4 - best[1])
+  return needed === 0
+    ? `${capitalize(best[0])} mastery is one clean pick away from feeling complete.`
+    : `${capitalize(best[0])} is closest to mastery: add ${needed} more matching magic spell${needed > 1 ? 's' : ''}.`
 }
 
 function roleBlock(role: AbilityRoleInfo): HTMLDivElement {

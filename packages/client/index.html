@@ -2652,6 +2652,86 @@
       #ls-detail-desc p {
         margin: 0;
       }
+      #ls-build-coach {
+        border: 1px solid rgba(125,190,255,0.14);
+        border-radius: 8px;
+        background:
+          linear-gradient(135deg, rgba(80,150,255,0.08), transparent 58%),
+          rgba(0,0,0,0.26);
+        padding: 12px;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+      }
+      .coach-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .coach-title {
+        color: rgba(235,240,255,0.92);
+        font: 900 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      .coach-rating {
+        min-width: 72px;
+        text-align: center;
+        padding: 5px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,210,96,0.26);
+        color: #ffe28a;
+        background: rgba(255,210,96,0.08);
+        font: 900 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.08em;
+      }
+      .coach-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 7px;
+        margin-bottom: 10px;
+      }
+      .coach-pill {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 7px;
+        min-height: 28px;
+        padding: 6px 8px;
+        border-radius: 6px;
+        border: 1px solid rgba(255,255,255,0.08);
+        background: rgba(255,255,255,0.035);
+        color: rgba(220,228,255,0.74);
+        font: 800 9px/1.15 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+      .coach-pill.good {
+        border-color: rgba(80,220,140,0.22);
+        background: rgba(60,210,135,0.07);
+        color: rgba(165,250,205,0.94);
+      }
+      .coach-pill.warn {
+        border-color: rgba(255,210,96,0.24);
+        background: rgba(255,210,96,0.065);
+        color: rgba(255,230,160,0.94);
+      }
+      .coach-pill b {
+        color: rgba(255,255,255,0.88);
+        font-weight: 900;
+      }
+      .coach-lines {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+      .coach-line {
+        color: rgba(205,214,246,0.76);
+        font: 700 10px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.04em;
+      }
+      .coach-line.good { color: rgba(160,245,205,0.88); }
+      .coach-line.warn { color: rgba(255,205,135,0.88); }
       .ability-role {
         display: grid;
         grid-template-columns: 48px 1fr;
@@ -2934,6 +3014,13 @@
       }
       .pool-card.equipped { background: linear-gradient(180deg, rgba(68,221,102,0.12), rgba(255,255,255,0.022)); --ec: #44dd66; --eg: rgba(40,180,70,0.10); border-color: rgba(68,221,102,0.55); box-shadow: 0 0 0 1px rgba(68,221,102,0.18) inset, 0 10px 28px rgba(0,0,0,0.34); }
       .pool-card.equipped::before { opacity: 0.8; }
+      .pool-card.recommended {
+        border-color: rgba(255,210,96,0.46);
+        box-shadow: 0 0 0 1px rgba(255,210,96,0.12) inset, 0 12px 26px rgba(0,0,0,0.36), 0 0 20px rgba(255,210,96,0.07);
+      }
+      .pool-card.recommended::before {
+        opacity: 0.9;
+      }
       .pool-card.equipped::after {
         content: 'EQUIPPED';
         position: absolute;
@@ -3087,6 +3174,19 @@
         background: rgba(255,210,96,0.12);
         border: 1px solid rgba(255,210,96,0.30);
         color: rgba(255,210,96,0.75);
+        margin-left: 5px;
+        vertical-align: middle;
+        text-transform: uppercase;
+      }
+      .recommend-tag {
+        display: inline-block;
+        font: 900 7px/1 ui-monospace, monospace;
+        letter-spacing: 0.10em;
+        padding: 2px 5px;
+        border-radius: 2px;
+        background: rgba(255,210,96,0.14);
+        border: 1px solid rgba(255,210,96,0.42);
+        color: rgba(255,226,138,0.92);
         margin-left: 5px;
         vertical-align: middle;
         text-transform: uppercase;
@@ -3929,6 +4029,7 @@
           </div>
           <div id="ls-detail-body">
             <div id="ls-detail-desc">Pick a slot and choose a compatible ability.</div>
+            <div id="ls-build-coach"></div>
             <div id="ls-detail-malus"></div>
           </div>
         </div>
