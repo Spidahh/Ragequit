@@ -63,8 +63,10 @@ import { initMouseSensitivity } from './input/sensitivity.js'
 import { initLoadoutStation } from './loadout-station.js'
 import { initMenu } from './menu.js'
 import { sendLoadout } from './net/loadout-sync.js'
-import { makeProjectileMesh, makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
+import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
 import { makeCharacter, applyWeaponProp, makeCastRing } from './render/characters.js'
+import { initZoneVisuals, zoneColorForElement } from './render/zone-visuals.js'
+import { initProjectileVisuals, type SchemaProjectile } from './render/projectile-visuals.js'
 import { SoundEngine } from './audio/sound-engine.js'
 import { buildArena, PARTICLE_COUNT, MAGIC_COUNT } from './world/arena.js'
 import { ImpactPool } from './vfx/impact-pool.js'
@@ -374,6 +376,13 @@ function spawnImpact(pos: THREE.Vector3, color: number): void {
 const impactVfx = new ImpactPool()
 scene.add(impactVfx.mesh)
 
+const zoneVfx = initZoneVisuals({ scene })
+const projectileVfx = initProjectileVisuals({
+  scene,
+  spawnImpact,
+  zoneColorForElement,
+})
+
 // -----------------------------------------------------------------------
 // Input capture — keyboard + mouse
 // -----------------------------------------------------------------------
@@ -533,15 +542,7 @@ interface RemoteState {
   lastWeapon: string
 }
 
-interface ProjectileVisual {
-  mesh: THREE.Mesh
-  lastPos: THREE.Vector3
-  lastAt: number
-  kind: 'arrow' | 'bolt'
-}
-
 const remotePlayers = new Map<string, RemoteState>()
-const projectileVisuals = new Map<string, ProjectileVisual>()
 let self: SelfState | null = null
 
 // Hitmarker — briefly flashes the crosshair red when a hit lands.
@@ -901,11 +902,11 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
       if (isCurrentRoom()) onDeath(msg)
     })
     joinedRoom.onMessage(MessageTypes.ProjectileSpawned, (msg: ServerProjectileSpawnedMessage) => {
-      if (isCurrentRoom()) onProjectileSpawned(msg)
+      if (isCurrentRoom()) projectileVfx.onSpawned(msg)
     },
     )
     joinedRoom.onMessage(MessageTypes.ProjectileExpired, (msg: ServerProjectileExpiredMessage) => {
-      if (isCurrentRoom()) onProjectileExpired(msg)
+      if (isCurrentRoom()) projectileVfx.onExpired(msg)
     },
     )
     joinedRoom.onMessage(MessageTypes.WeaponSwapped, (msg: ServerWeaponSwappedMessage) => {
@@ -934,10 +935,10 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
     },
     )
     joinedRoom.onMessage(MessageTypes.ZoneSpawned, (msg: ServerZoneSpawnedMessage) => {
-      if (isCurrentRoom()) onZoneSpawned(msg)
+      if (isCurrentRoom()) zoneVfx.onSpawned(msg)
     })
     joinedRoom.onMessage(MessageTypes.ZoneExpired, (msg: ServerZoneExpiredMessage) => {
-      if (isCurrentRoom()) onZoneExpired(msg)
+      if (isCurrentRoom()) zoneVfx.onExpired(msg)
     })
     joinedRoom.onMessage(MessageTypes.AbilityCasted, (msg: { casterId: string; abilityId: string; atTick: number }) => {
       if (!isCurrentRoom()) return
@@ -1286,37 +1287,6 @@ function onChannelInterrupted(msg: ServerChannelInterruptedMessage): void {
   setTimeout(() => castBar.classList.remove('interrupted'), 600)
 }
 
-function onProjectileSpawned(msg: ServerProjectileSpawnedMessage): void {
-  // The schema map also carries the projectile, but we spawn the mesh eagerly
-  // here so the origin->origin+vel*dt segment starts rendering immediately
-  // without waiting for the first state patch.
-  if (projectileVisuals.has(msg.id)) return
-  const mesh = makeProjectileMesh(msg.kind)
-  mesh.position.set(msg.origin.x, msg.origin.y, msg.origin.z)
-  scene.add(mesh)
-  projectileVisuals.set(msg.id, {
-    mesh,
-    lastPos: new THREE.Vector3(msg.origin.x, msg.origin.y, msg.origin.z),
-    lastAt: performance.now(),
-    kind: msg.kind,
-  })
-}
-
-function onProjectileExpired(msg: ServerProjectileExpiredMessage): void {
-  const vis = projectileVisuals.get(msg.id)
-  if (vis) {
-    scene.remove(vis.mesh)
-    vis.mesh.geometry.dispose()
-    ;(vis.mesh.material as THREE.Material).dispose()
-    projectileVisuals.delete(msg.id)
-  }
-  // Element-tinted impact: prefer projectile element, fall back to reason-based.
-  const elemColor = msg.element ? zoneColorForElement(msg.element) : null
-  const color =
-    elemColor ??
-    (msg.reason === 'victim' ? 0xff6060 : msg.reason === 'terrain' ? 0xaabbcc : 0x80d0ff)
-  spawnImpact(new THREE.Vector3(msg.pos.x, msg.pos.y, msg.pos.z), color)
-}
 
 function onWeaponSwapped(msg: ServerWeaponSwappedMessage): void {
   if (msg.playerId !== self?.sessionId) return
@@ -1342,12 +1312,6 @@ function onWeaponSwapped(msg: ServerWeaponSwappedMessage): void {
 
 // --- Event handlers --------------------------------------------------------
 
-interface ZoneVisual {
-  mesh: THREE.Mesh
-  extra?: THREE.Mesh // secondary decal mesh (floor ring for circle zones)
-}
-const zoneVisuals = new Map<string, ZoneVisual>()
-
 function disposeObject3D(obj: THREE.Object3D): void {
   obj.traverse((child) => {
     if (child instanceof THREE.Mesh) {
@@ -1356,29 +1320,6 @@ function disposeObject3D(obj: THREE.Object3D): void {
       else (child.material as THREE.Material).dispose()
     }
   })
-}
-
-function clearProjectileVisuals(): void {
-  projectileVisuals.forEach((vis) => {
-    scene.remove(vis.mesh)
-    vis.mesh.geometry.dispose()
-    ;(vis.mesh.material as THREE.Material).dispose()
-  })
-  projectileVisuals.clear()
-}
-
-function clearZoneVisuals(): void {
-  zoneVisuals.forEach((vis) => {
-    scene.remove(vis.mesh)
-    vis.mesh.geometry.dispose()
-    ;(vis.mesh.material as THREE.Material).dispose()
-    if (vis.extra) {
-      scene.remove(vis.extra)
-      vis.extra.geometry.dispose()
-      ;(vis.extra.material as THREE.Material).dispose()
-    }
-  })
-  zoneVisuals.clear()
 }
 
 function clearRemotePlayers(): void {
@@ -1463,8 +1404,8 @@ function clearLocalMatchState(): void {
   for (const dir of ['hp_mana', 'mana_stam', 'stam_hp'] as const) transmuteCdExpiry[dir] = 0
   clearGameplayInputState()
   clearGameplayUi()
-  clearProjectileVisuals()
-  clearZoneVisuals()
+  projectileVfx.clear()
+  zoneVfx.clear()
   clearRemotePlayers()
   clearSelfVisuals()
 }
@@ -1624,77 +1565,6 @@ function updateTransmuteBar(): void {
   }
 }
 
-function onZoneSpawned(msg: ServerZoneSpawnedMessage): void {
-  if (zoneVisuals.has(msg.id)) return
-  let mesh: THREE.Mesh
-  if (msg.shape === 'wall' && msg.width > 0) {
-    // A simple wall: a tall box centered on the placement point, oriented
-    // along the caster's yaw. Length = width (designer's term), thickness
-    // is fixed and visual only — server geometry uses a 0.6 m perp range.
-    const geo = new THREE.BoxGeometry(msg.width, 1.6, 0.4)
-    const mat = new THREE.MeshBasicMaterial({
-      color: 0xff6a32,
-      transparent: true,
-      opacity: 0.7,
-    })
-    mesh = new THREE.Mesh(geo, mat)
-    mesh.position.set(msg.pos.x, msg.pos.y + 0.8, msg.pos.z)
-    mesh.rotation.y = msg.yaw
-  } else {
-    // Circle zone — open cylinder + floor disc so the zone reads in 3D.
-    const zColor = zoneColorForElement(msg.element)
-    const cylinderGeo = new THREE.CylinderGeometry(msg.radius, msg.radius, 1.8, 28, 1, true)
-    const cylinderMat = new THREE.MeshBasicMaterial({
-      color: zColor, transparent: true, opacity: 0.28, side: THREE.DoubleSide,
-    })
-    mesh = new THREE.Mesh(cylinderGeo, cylinderMat)
-    mesh.position.set(msg.pos.x, msg.pos.y + 0.9, msg.pos.z)
-    scene.add(mesh)
-
-    // Floor decal ring inside the cylinder — bolder colour.
-    const floorGeo = new THREE.RingGeometry(Math.max(0.1, msg.radius - 0.18), msg.radius, 28)
-    floorGeo.rotateX(-Math.PI / 2)
-    const floorMat = new THREE.MeshBasicMaterial({ color: zColor, transparent: true, opacity: 0.55, side: THREE.DoubleSide })
-    const floorMesh = new THREE.Mesh(floorGeo, floorMat)
-    floorMesh.position.set(msg.pos.x, msg.pos.y + 0.018, msg.pos.z)
-    scene.add(floorMesh)
-    zoneVisuals.set(msg.id, { mesh, extra: floorMesh })
-    return
-  }
-  scene.add(mesh)
-  zoneVisuals.set(msg.id, { mesh })
-}
-
-function onZoneExpired(msg: ServerZoneExpiredMessage): void {
-  const vis = zoneVisuals.get(msg.id)
-  if (!vis) return
-  scene.remove(vis.mesh)
-  vis.mesh.geometry.dispose()
-  ;(vis.mesh.material as THREE.Material).dispose()
-  if (vis.extra) {
-    scene.remove(vis.extra)
-    vis.extra.geometry.dispose()
-    ;(vis.extra.material as THREE.Material).dispose()
-  }
-  zoneVisuals.delete(msg.id)
-}
-
-function zoneColorForElement(element: string): number {
-  switch (element) {
-    case 'fire':
-      return 0xff6a32
-    case 'ice':
-      return 0x9adfff
-    case 'lightning':
-      return 0xfff066
-    case 'dark':
-      return 0x9060c0
-    case 'nature':
-      return 0x7adf6a
-    default:
-      return 0xc0c0c0
-  }
-}
 
 function getPlayerWorldPos(sid: string): THREE.Vector3 | null {
   if (sid === self?.sessionId && selfMesh) {
@@ -1829,19 +1699,6 @@ interface SchemaPlayer {
   masteryLevel: number
   masteryTier: number
   gcdReadyAtTick: number
-}
-
-interface SchemaProjectile {
-  id: string
-  ownerId: string
-  kind: string
-  x: number
-  y: number
-  z: number
-  vx: number
-  vy: number
-  vz: number
-  expired: boolean
 }
 
 function getSchemaPlayers(): Map<string, SchemaPlayer> | null {
@@ -2593,52 +2450,8 @@ function render(now: number): void {
     }
   })
 
-  // Projectiles — read schema map; snap mesh to replicated (x,y,z) and orient
-  // arrows along their velocity. Any visual whose id isn't in the schema map
-  // is cleaned up (covers disconnect / state resets).
   const proj = getSchemaProjectiles()
-  if (proj) {
-    proj.forEach((p, id) => {
-      let vis = projectileVisuals.get(id)
-      if (!vis) {
-        const kind: 'arrow' | 'bolt' = p.kind === 'bolt' ? 'bolt' : 'arrow'
-        const mesh = makeProjectileMesh(kind)
-        mesh.position.set(p.x, p.y, p.z)
-        scene.add(mesh)
-        vis = {
-          mesh,
-          lastPos: new THREE.Vector3(p.x, p.y, p.z),
-          lastAt: now,
-          kind,
-        }
-        projectileVisuals.set(id, vis)
-      }
-      vis.mesh.position.set(p.x, p.y, p.z)
-      const sp = Math.hypot(p.vx, p.vy, p.vz)
-      if (vis.kind === 'arrow' && sp > 0.01) {
-        // Aim the cylinder along the velocity. Cylinder axis is +Z after
-        // rotateX in factory; lookAt(x,y,z) makes local +Z face the target.
-        // Pass scalars directly to avoid allocating a Vector3 per frame.
-        vis.mesh.lookAt(p.x + p.vx, p.y + p.vy, p.z + p.vz)
-      } else if (vis.kind === 'bolt') {
-        // Pulse scale/rotation only; the material stays unlit and cheap.
-        vis.mesh.rotation.y += 0.06
-        vis.mesh.scale.setScalar(1.0 + 0.08 * Math.sin(now * 0.022))
-      }
-      vis.lastPos.set(p.x, p.y, p.z)
-      vis.lastAt = now
-    })
-    // Drop meshes for ids no longer present (state snapshot / reset).
-    projectileVisuals.forEach((vis, id) => {
-      if (!proj.has(id)) {
-        scene.remove(vis.mesh)
-        vis.mesh.geometry.dispose()
-        ;(vis.mesh.material as THREE.Material).dispose()
-        projectileVisuals.delete(id)
-      }
-    })
-  }
-  dbgProj.textContent = String(projectileVisuals.size)
+  if (proj) projectileVfx.renderFrame(proj as Map<string, SchemaProjectile>, now, dbgProj)
 
   impactVfx.update(now)
 
@@ -2741,18 +2554,7 @@ function render(now: number): void {
     prevSelfHp = selfSchema.hp
   }
 
-  // Animate zone visuals — cylinder rotates slowly, opacity pulses.
-  zoneVisuals.forEach((vis) => {
-    const pulse = 0.5 + 0.5 * Math.sin(now * 0.0035)
-    const mat = vis.mesh.material as THREE.MeshBasicMaterial
-    if ('opacity' in mat) mat.opacity = 0.18 + pulse * 0.18
-    // Slowly rotate the cylinder for a magical "field" feel.
-    vis.mesh.rotation.y += 0.006
-    if (vis.extra) {
-      const eMat = vis.extra.material as THREE.MeshBasicMaterial
-      if ('opacity' in eMat) eMat.opacity = 0.35 + pulse * 0.22
-    }
-  })
+  zoneVfx.animateFrame(now)
 
   // Self character — colour + emissive effects driven by HP / status / invuln.
   if (selfMesh && selfSchema) {
