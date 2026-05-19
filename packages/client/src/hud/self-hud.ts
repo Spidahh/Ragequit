@@ -1,0 +1,241 @@
+import {
+  ABILITY_DEFS,
+  MASTERY_BONUSES,
+  HP_MAX,
+  MANA_MAX,
+  STAMINA_MAX,
+  TICK_RATE_HZ,
+} from '@ragequit/shared'
+import * as THREE from 'three'
+
+import { ELEMENT_COLOR, type CooldownStripController } from './cd-strip.js'
+import { statusIcon } from '../icons.js'
+
+const RESPAWN_TIPS: readonly string[] = [
+  'RMB: tap for a parry window, hold to block repeated hits.',
+  'Coyote time: jump remains valid for 83 ms after leaving a ledge.',
+  'Mastery: 4+ magic abilities of one element activates elemental bonuses.',
+  'Burn + Chill: Steam explosion combo.',
+  'Poison + Bleed: Festering doubles damage-over-time effects.',
+  'Space: hold for a higher jump, release early for a short hop.',
+  'Sprint momentum: sustained running grants a small speed boost.',
+  'Staff M1: instant low-cost projectile pressure.',
+  'Airborne targets cannot parry or cast until they recover.',
+  'Collision stops dash abilities; walls are hard cover.',
+]
+
+// Minimal schema shape consumed by this module.
+export interface SelfHudSchema {
+  hp: number
+  mana: number
+  stamina: number
+  comboIndex: number
+  lastSwingStartTick: number
+  alive: boolean
+  respawnAtTick: number
+  masteryLevel: number
+  masteryElement: string
+  statuses: ReadonlyArray<{ kind: string; stacks: number; remainingSec: number }>
+  casting: boolean
+  castAbilityId: string
+  castEndsAtTick: number
+  abilityCooldowns: Map<string, number>
+  gcdReadyAtTick: number
+}
+
+export interface SelfHudOptions {
+  hudHpFill: HTMLElement
+  hudManaFill: HTMLElement
+  hudStamFill: HTMLElement
+  hudHpNum: HTMLElement
+  hudManaNum: HTMLElement
+  hudStamNum: HTMLElement
+  comboDots: readonly (HTMLElement | null)[]
+  hudComboEl: HTMLElement
+  respawnOverlay: HTMLElement
+  respawnSec: HTMLElement
+  respawnKillerEl: HTMLElement
+  respawnTipEl: HTMLElement | null
+  masteryBadge: HTMLElement
+  statusStrip: HTMLElement
+  castBar: HTMLElement
+  castBarFill: HTMLElement
+  castBarLabel: HTMLElement
+  gcdRingEl: HTMLElement | null
+  cooldownStrip: CooldownStripController
+}
+
+export interface SelfHudUpdateParams {
+  selfSchema: SelfHudSchema | null
+  now: number
+  tickNow: number
+  castStartedAtMs: number
+  placementAbilityId: string | null
+  primedSlotIdx: number | null
+  lastKillerName: string
+  selfMesh: THREE.Group | null
+  getCurrentLoadout: () => string[]
+  updateTransmuteBar: () => void
+  setCastStartedAt: (ms: number) => void
+  clearPrimedSlot: () => void
+  cancelPlacementPreview: () => void
+}
+
+export interface SelfHudController {
+  update: (params: SelfHudUpdateParams) => void
+}
+
+export function initSelfHud({
+  hudHpFill, hudManaFill, hudStamFill,
+  hudHpNum, hudManaNum, hudStamNum,
+  comboDots, hudComboEl,
+  respawnOverlay, respawnSec, respawnKillerEl, respawnTipEl,
+  masteryBadge, statusStrip,
+  castBar, castBarFill, castBarLabel,
+  gcdRingEl, cooldownStrip,
+}: SelfHudOptions): SelfHudController {
+  const hudHpBar   = document.getElementById('hud-hp')
+  const hudManaBar = document.getElementById('hud-mana')
+  const hudStamBar = document.getElementById('hud-stam')
+
+  function update({
+    selfSchema, now, tickNow,
+    castStartedAtMs, placementAbilityId, primedSlotIdx,
+    lastKillerName, selfMesh,
+    getCurrentLoadout, updateTransmuteBar,
+    setCastStartedAt, clearPrimedSlot, cancelPlacementPreview,
+  }: SelfHudUpdateParams): void {
+    if (!selfSchema) return
+
+    const hpPct = Math.max(0, Math.min(1, selfSchema.hp / HP_MAX))
+    const mpPct = Math.max(0, Math.min(1, selfSchema.mana / MANA_MAX))
+    const spPct = Math.max(0, Math.min(1, selfSchema.stamina / STAMINA_MAX))
+    hudHpFill.style.width   = `${(hpPct * 100).toFixed(1)}%`
+    hudManaFill.style.width = `${(mpPct * 100).toFixed(1)}%`
+    hudStamFill.style.width = `${(spPct * 100).toFixed(1)}%`
+    hudHpNum.textContent   = `${Math.round(selfSchema.hp)} / ${HP_MAX}`
+    hudManaNum.textContent = `${Math.round(selfSchema.mana)} / ${MANA_MAX}`
+    hudStamNum.textContent = `${Math.round(selfSchema.stamina)} / ${STAMINA_MAX}`
+    hudHpBar?.classList.toggle('warn', hpPct < 0.25)
+    hudManaBar?.classList.toggle('warn', mpPct < 0.2)
+    hudStamBar?.classList.toggle('warn', spPct < 0.15)
+
+    updateTransmuteBar()
+
+    const nextIdx    = selfSchema.comboIndex
+    const elapsedSec = (tickNow - selfSchema.lastSwingStartTick) / TICK_RATE_HZ
+    const live       = elapsedSec < 1.0 && selfSchema.lastSwingStartTick > 0
+    // comboIndex wraps 0→1→2→0. When live and nextIdx===0 the 3rd swing just
+    // completed (index wrapped back to start), so all 3 dots should light up.
+    const delivered = live && nextIdx === 0 ? 3 : nextIdx
+    for (let i = 0; i < 3; i++) {
+      comboDots[i]?.classList.toggle('on', live && i < delivered)
+    }
+    hudComboEl.classList.toggle('full', live && delivered === 3)
+
+    if (!selfSchema.alive && selfSchema.respawnAtTick > 0) {
+      const secLeft = Math.max(0, (selfSchema.respawnAtTick - tickNow) / TICK_RATE_HZ)
+      if (!respawnOverlay.classList.contains('active')) {
+        if (respawnTipEl) respawnTipEl.textContent = RESPAWN_TIPS[Math.floor(Math.random() * RESPAWN_TIPS.length)] ?? ''
+      }
+      respawnOverlay.classList.add('active')
+      respawnSec.textContent = secLeft.toFixed(1)
+      respawnKillerEl.textContent = lastKillerName ? `⚔ killed by ${lastKillerName}` : ''
+    } else {
+      respawnOverlay.classList.remove('active')
+    }
+
+    const mLevel = selfSchema.masteryLevel ?? 0
+    const mel    = selfSchema.masteryElement
+    if (mLevel > 0 && mel && mel !== 'none' && mel !== '') {
+      const bonus = MASTERY_BONUSES[mel as keyof typeof MASTERY_BONUSES]
+      const label = mLevel >= 2 ? 'PERFECT MASTERY' : 'MASTERY'
+      masteryBadge.textContent = `✦ ${mel.toUpperCase()} · ${label} ✦`
+      masteryBadge.style.color = bonus?.color ?? (ELEMENT_COLOR[mel] ?? '#ffd260')
+    } else {
+      masteryBadge.textContent = ''
+    }
+
+    const liveStatuses = Array.from(selfSchema.statuses ?? [])
+    while (statusStrip.firstChild) statusStrip.removeChild(statusStrip.firstChild)
+    for (const st of liveStatuses) {
+      const icon = document.createElement('div')
+      icon.className = 'status-icon'
+      icon.dataset['kind'] = st.kind
+      icon.appendChild(statusIcon(st.kind, 22))
+      icon.title = `${st.kind} x${st.stacks} (${st.remainingSec.toFixed(1)}s)`
+      const stack = document.createElement('span')
+      stack.className = 'stack'
+      stack.textContent = st.stacks > 1 ? String(st.stacks) : ''
+      if (st.stacks > 1) icon.appendChild(stack)
+      const tm   = document.createElement('div')
+      tm.className = 'timer'
+      const fill = document.createElement('div')
+      fill.className = 'fill'
+      const total = Math.max(0.1, st.remainingSec)
+      // Cap at 5 s → 100% for visual display; scales linearly above.
+      const ratio = Math.min(1, total / 5)
+      fill.style.width = `${ratio * 100}%`
+      tm.appendChild(fill)
+      icon.appendChild(tm)
+      statusStrip.appendChild(icon)
+    }
+
+    // Rebuild CD strip if loadout changed. Colyseus ArraySchema can update in
+    // place so reference comparison misses edits — compare slot contents instead.
+    const currentLoadout    = getCurrentLoadout()
+    const currentLoadoutSig = cooldownStrip.signature(currentLoadout)
+    if (currentLoadoutSig !== cooldownStrip.currentSignature()) {
+      cooldownStrip.rebuild(currentLoadout)
+      clearPrimedSlot()
+      cancelPlacementPreview()
+    }
+
+    if (selfSchema.casting && selfSchema.castEndsAtTick > tickNow) {
+      if (castStartedAtMs === 0) setCastStartedAt(now)
+      const secLeft  = (selfSchema.castEndsAtTick - tickNow) / TICK_RATE_HZ
+      const elapsed  = (now - castStartedAtMs) / 1000
+      const total    = elapsed + secLeft
+      const ratio    = total > 0 ? Math.max(0, Math.min(1, elapsed / total)) : 0
+      castBar.classList.add('active')
+      castBarFill.style.width = `${(ratio * 100).toFixed(1)}%`
+      const castDef   = ABILITY_DEFS[selfSchema.castAbilityId]
+      const castName  = castDef?.name ?? selfSchema.castAbilityId.toUpperCase()
+      castBarLabel.textContent = `${castName}  ${secLeft.toFixed(1)}s`
+      const castElemColor = ELEMENT_COLOR[castDef?.element ?? 'none'] ?? '#4a90d8'
+      const castElemDim   = castElemColor + '44' // ~27% alpha
+      castBarFill.style.background  = `linear-gradient(90deg, ${castElemDim} 0%, ${castElemColor} 80%, #fff 100%)`
+      castBarFill.style.boxShadow   = `2px 0 14px ${castElemColor}88`
+      if (selfMesh) {
+        const mat = selfMesh.userData['armorMat'] as THREE.MeshToonMaterial | undefined
+        if (mat) {
+          const elemHex = parseInt((ELEMENT_COLOR[castDef?.element ?? 'none'] ?? '#9ba0b4').replace('#', ''), 16)
+          const pulse   = 0.5 + 0.5 * Math.sin(now * 0.012)
+          mat.emissiveIntensity = 0.70 + pulse * 1.1
+          mat.emissive.setHex(elemHex)
+        }
+      }
+    } else {
+      setCastStartedAt(0)
+      castBar.classList.remove('active', 'interrupted')
+      castBarFill.style.width      = '0%'
+      castBarFill.style.background = ''
+      castBarFill.style.boxShadow  = ''
+      castBarLabel.textContent     = 'CAST'
+    }
+
+    cooldownStrip.updateAbilityCooldowns({
+      abilityCooldowns: selfSchema.abilityCooldowns,
+      placementAbilityId,
+      primedSlotIdx,
+      tickNow,
+    })
+
+    if (gcdRingEl) {
+      const gcdReady = selfSchema.gcdReadyAtTick ?? 0
+      gcdRingEl.classList.toggle('active', gcdReady > tickNow)
+    }
+  }
+
+  return { update }
+}

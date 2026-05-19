@@ -3,7 +3,6 @@
 
 import {
   ABILITY_DEFS,
-  MASTERY_BONUSES,
   BOW_CHARGE_FULL_SEC,
   BOW_CHARGE_MIN_SEC,
   CAPSULE_HALF_HEIGHT_M,
@@ -11,7 +10,6 @@ import {
   CAPSULE_RADIUS_M,
   HP_MAX,
   INTERPOLATION_DELAY_MS,
-  MANA_MAX,
   MessageTypes,
   PROJECTILE_MUZZLE_Y_OFFSET_M,
   ROUND_TIMER_SEC,
@@ -59,11 +57,12 @@ import {
 import { Client, type Room } from 'colyseus.js'
 import * as THREE from 'three'
 
-import { ELEMENT_COLOR, initCooldownStrip } from './hud/cd-strip.js'
+import { initCooldownStrip } from './hud/cd-strip.js'
 import { createCombatFeedHud } from './hud/combat-feed.js'
 import { createHudFlash } from './hud/flash.js'
 import { initDraggableHud } from './hud/hud-drag.js'
-import { ensureIconSprite, statusIcon, weaponIcon } from './icons.js'
+import { initSelfHud } from './hud/self-hud.js'
+import { ensureIconSprite, weaponIcon } from './icons.js'
 import { actionLabel, onKeybindsChanged } from './input/keybinds.js'
 import { initGameInput, makeGameInputState } from './input/game-input.js'
 import { initRadialWheels } from './input/radial-wheels.js'
@@ -258,21 +257,17 @@ const PITCH_DOWN_LIMIT = -Math.PI * 0.360 //  -65° — max look-down angle
 
 // --- HUD helpers -----------------------------------------------------------
 
-// Tips shown on the respawn screen — rotated randomly on each death.
-const RESPAWN_TIPS: readonly string[] = [
-  'RMB: tap for a parry window, hold to block repeated hits.',
-  'Coyote time: jump remains valid for 83 ms after leaving a ledge.',
-  'Mastery: 4+ magic abilities of one element activates elemental bonuses.',
-  'Burn + Chill: Steam explosion combo.',
-  'Poison + Bleed: Festering doubles damage-over-time effects.',
-  'Space: hold for a higher jump, release early for a short hop.',
-  'Sprint momentum: sustained running grants a small speed boost.',
-  'Staff M1: instant low-cost projectile pressure.',
-  'Airborne targets cannot parry or cast until they recover.',
-  'Collision stops dash abilities; walls are hard cover.',
-]
-
 const cooldownStrip = initCooldownStrip(cdStrip, (slotIdx) => activateAbilitySlot(slotIdx, true))
+
+const selfHud = initSelfHud({
+  hudHpFill, hudManaFill, hudStamFill,
+  hudHpNum, hudManaNum, hudStamNum,
+  comboDots, hudComboEl,
+  respawnOverlay, respawnSec, respawnKillerEl, respawnTipEl,
+  masteryBadge, statusStrip,
+  castBar, castBarFill, castBarLabel,
+  gcdRingEl, cooldownStrip,
+})
 
 onKeybindsChanged(() => {
   radialWheels.refreshAll()
@@ -3028,154 +3023,21 @@ function render(now: number): void {
     mat.emissiveIntensity = 0.70
   })
 
-  if (selfSchema) {
-    const hpPct = Math.max(0, Math.min(1, selfSchema.hp / HP_MAX))
-    const mpPct = Math.max(0, Math.min(1, selfSchema.mana / MANA_MAX))
-    const spPct = Math.max(0, Math.min(1, selfSchema.stamina / STAMINA_MAX))
-    hudHpFill.style.width = `${(hpPct * 100).toFixed(1)}%`
-    hudManaFill.style.width = `${(mpPct * 100).toFixed(1)}%`
-    hudStamFill.style.width = `${(spPct * 100).toFixed(1)}%`
-    hudHpNum.textContent = `${Math.round(selfSchema.hp)} / ${HP_MAX}`
-    hudManaNum.textContent = `${Math.round(selfSchema.mana)} / ${MANA_MAX}`
-    hudStamNum.textContent = `${Math.round(selfSchema.stamina)} / ${STAMINA_MAX}`
-    // Low-resource pulsing warnings.
-    document.getElementById('hud-hp')?.classList.toggle('warn', hpPct < 0.25)
-    document.getElementById('hud-mana')?.classList.toggle('warn', mpPct < 0.2)
-    document.getElementById('hud-stam')?.classList.toggle('warn', spPct < 0.15)
-
-    // Transmute bar cooldown ticks.
-    updateTransmuteBar()
-
-    const nextIdx = selfSchema.comboIndex
-    const elapsedSec = (tickNow - selfSchema.lastSwingStartTick) / TICK_RATE_HZ
-    const live = elapsedSec < 1.0 && selfSchema.lastSwingStartTick > 0
-    // comboIndex wraps 0→1→2→0. When live and nextIdx===0 the 3rd swing just
-    // completed (index wrapped back to start), so all 3 dots should light up.
-    // When not live and nextIdx===0 no combo is active — 0 dots.
-    const delivered = live && nextIdx === 0 ? 3 : nextIdx
-    for (let i = 0; i < 3; i++) {
-      comboDots[i]?.classList.toggle('on', live && i < delivered)
-    }
-    // Full combo accent — all 3 dots active.
-    hudComboEl.classList.toggle('full', live && delivered === 3)
-
-    if (!selfSchema.alive && selfSchema.respawnAtTick > 0) {
-      const secLeft = Math.max(0, (selfSchema.respawnAtTick - tickNow) / TICK_RATE_HZ)
-      if (!respawnOverlay.classList.contains('active')) {
-        // Show a new random tip each time you die
-        if (respawnTipEl) respawnTipEl.textContent = RESPAWN_TIPS[Math.floor(Math.random() * RESPAWN_TIPS.length)] ?? ''
-      }
-      respawnOverlay.classList.add('active')
-      respawnSec.textContent = secLeft.toFixed(1)
-      respawnKillerEl.textContent = lastKillerName ? `⚔ killed by ${lastKillerName}` : ''
-    } else {
-      respawnOverlay.classList.remove('active')
-    }
-
-    // Mastery badge — show active level + element.
-    const mLevel = selfSchema.masteryLevel ?? 0
-    const mel    = selfSchema.masteryElement
-    if (mLevel > 0 && mel && mel !== 'none' && mel !== '') {
-      const bonus  = MASTERY_BONUSES[mel as keyof typeof MASTERY_BONUSES]
-      const label  = mLevel >= 2 ? 'PERFECT MASTERY' : 'MASTERY'
-      masteryBadge.textContent = `✦ ${mel.toUpperCase()} · ${label} ✦`
-      masteryBadge.style.color = bonus?.color ?? (ELEMENT_COLOR[mel] ?? '#ffd260')
-    } else {
-      masteryBadge.textContent = ''
-    }
-
-    // --- Status icons HUD ----------------------------------------------
-    const liveStatuses = Array.from(selfSchema.statuses ?? [])
-    while (statusStrip.firstChild) statusStrip.removeChild(statusStrip.firstChild)
-    for (const st of liveStatuses) {
-      const icon = document.createElement('div')
-      icon.className = 'status-icon'
-      icon.dataset['kind'] = st.kind
-      icon.appendChild(statusIcon(st.kind, 22))
-      icon.title = `${st.kind} x${st.stacks} (${st.remainingSec.toFixed(1)}s)`
-      const stack = document.createElement('span')
-      stack.className = 'stack'
-      stack.textContent = st.stacks > 1 ? String(st.stacks) : ''
-      if (st.stacks > 1) icon.appendChild(stack)
-      const tm = document.createElement('div')
-      tm.className = 'timer'
-      const fill = document.createElement('div')
-      fill.className = 'fill'
-      const total = Math.max(0.1, st.remainingSec)
-      // Visual: full bar then drains; we don't know the original duration so cap
-      // at a sensible max for display (5 s → 100%, scales linearly above).
-      const ratio = Math.min(1, total / 5)
-      fill.style.width = `${ratio * 100}%`
-      tm.appendChild(fill)
-      icon.appendChild(tm)
-      statusStrip.appendChild(icon)
-    }
-
-    // --- Rebuild CD strip if loadout changed ------------------------------
-    // Colyseus ArraySchema can update in place, so reference comparison misses
-    // loadout edits. Compare the slot contents instead.
-    const currentLoadout = currentLoadoutArray()
-    const currentLoadoutSig = cooldownStrip.signature(currentLoadout)
-    if (currentLoadoutSig !== cooldownStrip.currentSignature()) {
-      cooldownStrip.rebuild(currentLoadout)
-      primedSlotIdx = null
-      cancelPlacementPreview()
-    }
-
-    // --- Cast bar during windup -------------------------------------------
-    if (selfSchema.casting && selfSchema.castEndsAtTick > tickNow) {
-      if (castStartedAtMs === 0) castStartedAtMs = now // fallback if ack missed
-      const secLeft = (selfSchema.castEndsAtTick - tickNow) / TICK_RATE_HZ
-      const elapsed = (now - castStartedAtMs) / 1000
-      const total = elapsed + secLeft
-      const ratio = total > 0 ? Math.max(0, Math.min(1, elapsed / total)) : 0
-      castBar.classList.add('active')
-      castBarFill.style.width = `${(ratio * 100).toFixed(1)}%`
-      const castDef = ABILITY_DEFS[selfSchema.castAbilityId]
-      const castName = castDef?.name ?? selfSchema.castAbilityId.toUpperCase()
-      castBarLabel.textContent = `${castName}  ${secLeft.toFixed(1)}s`
-      // Tint the fill to the ability's element colour.
-      const castElemColor = ELEMENT_COLOR[castDef?.element ?? 'none'] ?? '#4a90d8'
-      const castElemDim   = castElemColor + '44' // ~27% alpha
-      castBarFill.style.background = `linear-gradient(90deg, ${castElemDim} 0%, ${castElemColor} 80%, #fff 100%)`
-      castBarFill.style.boxShadow = `2px 0 14px ${castElemColor}88`
-
-      // Caster emissive glow — character glows with element colour during windup.
-      if (selfMesh) {
-        const mat = selfMesh.userData['armorMat'] as THREE.MeshToonMaterial | undefined
-        if (mat) {
-          const elemHex = parseInt((ELEMENT_COLOR[castDef?.element ?? 'none'] ?? '#9ba0b4').replace('#', ''), 16)
-          const pulse = 0.5 + 0.5 * Math.sin(now * 0.012)
-          mat.emissiveIntensity = 0.70 + pulse * 1.1
-          mat.emissive.setHex(elemHex)
-        }
-      }
-    } else {
-      castStartedAtMs = 0
-      castBar.classList.remove('active', 'interrupted')
-      castBarFill.style.width = '0%'
-      castBarFill.style.background = ''
-      castBarFill.style.boxShadow = ''
-      castBarLabel.textContent = 'CAST'
-    }
-
-    cooldownStrip.updateAbilityCooldowns({
-      abilityCooldowns: selfSchema.abilityCooldowns,
-      placementAbilityId,
-      primedSlotIdx,
-      tickNow,
-    })
-
-    // --- GCD ring — small arc at crosshair base ---------------------------
-    if (gcdRingEl) {
-      const gcdReady = selfSchema.gcdReadyAtTick ?? 0
-      if (gcdReady > tickNow) {
-        gcdRingEl.classList.add('active')
-      } else {
-        gcdRingEl.classList.remove('active')
-      }
-    }
-  }
+  selfHud.update({
+    selfSchema,
+    now,
+    tickNow,
+    castStartedAtMs,
+    placementAbilityId,
+    primedSlotIdx,
+    lastKillerName,
+    selfMesh,
+    getCurrentLoadout: currentLoadoutArray,
+    updateTransmuteBar,
+    setCastStartedAt: (ms) => { castStartedAtMs = ms },
+    clearPrimedSlot:  () =>  { primedSlotIdx = null },
+    cancelPlacementPreview,
+  })
 
   renderer.render(scene, camera)
   // Update draw call counter every frame (shown in debug panel, ` key).

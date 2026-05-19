@@ -64,7 +64,7 @@ Rule: **damage, cooldowns, resource spend, status application, loadout validatio
 | Projectile math | `packages/shared/src/sim/projectile.ts` |
 | Protocol | `packages/shared/src/protocol/messages.ts` |
 | Player/projectile/zone schemas | `packages/shared/src/schema/` |
-| Client app/input/render/HUD | `packages/client/src/`; game input controller (keyboard/mouse/pointer state) in `packages/client/src/input/game-input.ts`, radial wheel controller in `packages/client/src/input/radial-wheels.ts`, mouse sensitivity in `packages/client/src/input/sensitivity.ts`, HUD drag/resize in `packages/client/src/hud/hud-drag.ts`, hotbar/cooldown strip in `packages/client/src/hud/cd-strip.ts`, combat feed in `packages/client/src/hud/combat-feed.ts` |
+| Client app/input/render/HUD | `packages/client/src/`; game input controller (keyboard/mouse/pointer state) in `packages/client/src/input/game-input.ts`, radial wheel controller in `packages/client/src/input/radial-wheels.ts`, mouse sensitivity in `packages/client/src/input/sensitivity.ts`, HUD drag/resize in `packages/client/src/hud/hud-drag.ts`, hotbar/cooldown strip in `packages/client/src/hud/cd-strip.ts`, combat feed in `packages/client/src/hud/combat-feed.ts`, self-player HUD (HP/mana/stamina/mastery/status/cast bar/GCD) in `packages/client/src/hud/self-hud.ts` |
 
 The Colyseus monitor is an admin surface, not public gameplay API. It is disabled unless `COLYSEUS_MONITOR_ENABLED=true`; when enabled, the server requires `COLYSEUS_MONITOR_USER` and `COLYSEUS_MONITOR_PASSWORD` and protects `/colyseus` with Basic Auth.
 
