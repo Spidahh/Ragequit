@@ -15,6 +15,7 @@ import {
 import express, { type RequestHandler } from 'express'
 
 import { GameRoom } from './rooms/GameRoom.js'
+import { initServerTelemetry, shutdownServerTelemetry } from './telemetry.js'
 
 const PORT = Number(process.env['PORT'] ?? 2567)
 const MONITOR_ENABLED = process.env['COLYSEUS_MONITOR_ENABLED'] === 'true'
@@ -119,6 +120,10 @@ const gameServer = new Server({
 // Without this, `joinOrCreate('game', { mode: 'training' })` could reuse an
 // existing duel room and training would wait in lobby without its bot.
 gameServer.define('game', GameRoom).filterBy(['mode'])
+
+initServerTelemetry()
+process.on('SIGTERM', () => { shutdownServerTelemetry(); process.exit(0) })
+process.on('SIGINT',  () => { shutdownServerTelemetry(); process.exit(0) })
 
 httpServer.listen(PORT, () => {
   console.info(`[ragequit-server] listening on http://localhost:${PORT}`)

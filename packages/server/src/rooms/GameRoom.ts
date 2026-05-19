@@ -1,5 +1,11 @@
 import { Room, type Client } from '@colyseus/core'
 import {
+  trackMatchStarted,
+  trackMatchEnded,
+  trackPlayerConnected,
+  trackPlayerDisconnected,
+} from '../telemetry.js'
+import {
   type ClientTransmuteMessage,
   type AbilityComboRole,
   type ServerZoneExpiredMessage,
@@ -212,6 +218,7 @@ export class GameRoom extends Room<GameState> {
   override maxClients = Number(process.env['MAX_CLIENTS'] ?? 2)
 
   private tickTimer: NodeJS.Timeout | null = null
+  private roomCreatedAt = Date.now()
 
   private readonly sim = new Map<string, PlayerSimState>()
   private readonly inputQueues = new Map<string, ClientInputMessage[]>()
@@ -590,6 +597,8 @@ export class GameRoom extends Room<GameState> {
     this.prevJumpHeld.set(client.sessionId, false)
     this.positionHistory.set(client.sessionId, [])
 
+    trackPlayerConnected(this.roomId, this.state.mode)
+    if (this.state.players.size === 1) trackMatchStarted(this.roomId, this.state.mode, this.maxClients)
     console.info(
       `[GameRoom ${this.roomId}] join ${client.sessionId} (${player.name}) at spawn ${spawnIndex}`,
     )
@@ -618,6 +627,7 @@ export class GameRoom extends Room<GameState> {
       if (meta.ownerId === sid) toRemove.push(pid)
     }
     for (const pid of toRemove) this.removeProjectile(pid)
+    trackPlayerDisconnected(this.roomId, this.state.mode)
     console.info(`[GameRoom ${this.roomId}] leave ${sid}`)
   }
 
@@ -627,6 +637,7 @@ export class GameRoom extends Room<GameState> {
       const path = this.replay.finalize()
       if (path) console.info(`[GameRoom ${this.roomId}] replay → ${path}`)
     }
+    trackMatchEnded(this.roomId, this.state.mode, (Date.now() - this.roomCreatedAt) / 1000, this.state.players.size)
     console.info(`[GameRoom ${this.roomId}] disposed`)
   }
 

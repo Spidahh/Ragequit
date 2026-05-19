@@ -81,6 +81,14 @@ import { makeCharacter, applyWeaponProp, makeCastRing } from './render/character
 import { SoundEngine } from './audio/sound-engine.js'
 import { buildArena, PARTICLE_COUNT, MAGIC_COUNT } from './world/arena.js'
 import { ImpactPool } from './vfx/impact-pool.js'
+import {
+  initTelemetry,
+  trackMatchJoined,
+  trackMatchLeft,
+  trackKill,
+  trackDeath,
+  trackAbilityCast,
+} from './telemetry.js'
 
 // -----------------------------------------------------------------------
 // DOM refs
@@ -280,6 +288,7 @@ onKeybindsChanged(() => {
 
 const soundEngine = new SoundEngine()
 soundEngine.muted = true
+initTelemetry()
 
 // -----------------------------------------------------------------------
 // Three.js scene
@@ -1030,6 +1039,7 @@ let selfLastWeapon = ''
 let room: Room | null = null
 let connectSeq = 0
 let ping = 0
+let matchStartMs = 0
 
 function isMatchPhase(value: unknown): value is ServerMatchPhaseMessage['phase'] {
   return value === 'lobby'
@@ -1235,8 +1245,10 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
       return
     }
     room = joinedRoom
+    matchStartMs = performance.now()
     soundEngine.muted = false
     setStatus('connected', '#9be39b')
+    trackMatchJoined(mode)
     console.info(
       `[ragequit-client] connected ${SERVER_URL} room=${joinedRoom.roomId} session=${joinedRoom.sessionId} mode=${mode}`,
     )
@@ -1310,6 +1322,7 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
       if (msg.casterId === self?.sessionId) {
         const def = ABILITY_DEFS[msg.abilityId]
         soundEngine.playCast(def?.element ?? 'none')
+        trackAbilityCast(msg.abilityId, def?.element ?? 'none')
         // Anchor cast bar to server ack time — eliminates RTT-induced desync.
         if (def && def.windupSec > 0) castStartedAtMs = performance.now()
       }
@@ -1493,7 +1506,9 @@ function onDeath(msg: ServerDeathMessage): void {
 
   combatFeedHud.addKillFeedEntry(killerName, victimName, isSelfKill, isSelfDied)
 
+  if (isSelfKill && !isSelfDied) trackKill(msg.cause ?? 'unknown')
   if (isSelfDied) {
+    trackDeath(msg.cause ?? 'unknown')
     lastKillerName = killerName
     soundEngine.playDeath()
     applyDirectionalShake(null, 1.4) // max intensity on death
@@ -1838,6 +1853,7 @@ function clearLocalMatchState(): void {
 function returnToMainMenu(opts: { leaveRoom: boolean; statusText?: string }): void {
   connectSeq++
   const leavingRoom = room
+  if (leavingRoom) trackMatchLeft(leavingRoom.state?.['mode'] as string ?? 'unknown', (performance.now() - matchStartMs) / 1000)
   room = null
   self = null
   clearLocalMatchState()
