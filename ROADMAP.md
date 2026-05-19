@@ -58,6 +58,7 @@ Implementato:
 `packages/client/src/main.ts` è ancora troppo grande. Sono già presenti moduli `input`, `hud`, `net`, `render`, `vfx`, ma serve continuare l’estrazione:
 
 - HUD drag/resize controller estratto in `packages/client/src/hud/hud-drag.ts`.
+- Hotbar/cooldown strip estratta in `packages/client/src/hud/cd-strip.ts`.
 - input + radial wheel controller
 - cast/fire/weapon input dispatcher
 - HUD cooldown/status/mastery renderer
