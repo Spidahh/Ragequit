@@ -41,11 +41,15 @@ function _fetchWeaponGlb(weapon: string): Promise<THREE.Group> {
 
 function _clearWeaponGroup(wg: THREE.Group): void {
   while (wg.children.length > 0) {
-    const c = wg.children[0] as THREE.Mesh
-    c.geometry?.dispose()
-    const m = c.material
-    if (Array.isArray(m)) m.forEach((x) => x.dispose())
-    else (m as THREE.Material | undefined)?.dispose()
+    const c = wg.children[0]!
+    // Traverse into nested groups (weapon GLBs may be Group → Mesh)
+    c.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return
+      node.geometry?.dispose()
+      const m = node.material
+      if (Array.isArray(m)) m.forEach((x) => (x as THREE.Material).dispose())
+      else (m as THREE.Material | undefined)?.dispose()
+    })
     wg.remove(c)
   }
 }
@@ -135,6 +139,8 @@ function _crossfade(store: _MixerStore, next: _AnimName, fadeSec: number): void 
   if (store.current === next) return
   const from = store.actions[store.current]
   const to = store.actions[next]
+  // Always update current — avoids busy-loop retrying a missing clip every frame
+  store.current = next
   if (!to) return
   to.reset()
   if (next === 'Dagger_Attack' || next === 'Death') {
@@ -146,7 +152,6 @@ function _crossfade(store: _MixerStore, next: _AnimName, fadeSec: number): void 
   }
   to.play()
   if (from) from.crossFadeTo(to, fadeSec, true)
-  store.current = next
 }
 
 /** Describes the character's current gameplay state for animation selection. */
@@ -184,8 +189,10 @@ export function loadCharacterGlb(
       const bbox1 = new THREE.Box3().setFromObject(model)
       model.position.y = -(CAPSULE_HALF_HEIGHT_M + bbox1.min.y)
 
-      // Apply toon shading; team colour bleeds in via low-intensity emissive
-      let primaryMat: THREE.MeshToonMaterial | null = null
+      // Apply toon shading; team colour bleeds in via low-intensity emissive.
+      // Collect ALL mesh materials so the emissive-blink system can illuminate
+      // the full character, not just the first mesh.
+      const glbMaterials: THREE.MeshToonMaterial[] = []
       model.traverse((child) => {
         if (!(child instanceof THREE.Mesh)) return
         const orig = child.material as THREE.MeshStandardMaterial
@@ -198,12 +205,15 @@ export function loadCharacterGlb(
         })
         child.material = mat
         child.castShadow = true
-        primaryMat ??= mat
+        glbMaterials.push(mat)
       })
 
-      // Expose first mesh's material as 'armorMat' so the emissive-blink
-      // system in remote-players.ts can still drive hit flashes.
-      if (primaryMat) charGroup.userData['armorMat'] = primaryMat
+      // 'armorMat' → primary material read by emissive-blink logic
+      // 'glbMaterials' → full list so ALL meshes receive the flash
+      if (glbMaterials.length > 0) {
+        charGroup.userData['armorMat'] = glbMaterials[0]
+        charGroup.userData['glbMaterials'] = glbMaterials
+      }
 
       // Hide procedural parts (keep weaponGroup so weapon GLBs still appear)
       const wg = charGroup.userData['weaponGroup'] as THREE.Group | undefined
@@ -221,8 +231,13 @@ export function loadCharacterGlb(
         if (clip) actions[name] = mixer.clipAction(clip)
       }
 
-      const initial: _AnimName = 'Attacking_Idle'
-      const initAction = actions[initial] ?? actions['Idle']
+      // Pick the best available initial clip; track whichever actually plays
+      const initial: _AnimName = actions['Attacking_Idle']
+        ? 'Attacking_Idle'
+        : actions['Idle']
+          ? 'Idle'
+          : 'Run'
+      const initAction = actions[initial]
       if (initAction) {
         initAction.setLoop(THREE.LoopRepeat, Infinity)
         initAction.play()
@@ -256,6 +271,21 @@ export function setCharAnimState(charGroup: THREE.Group, state: CharAnimState): 
         : 'Attacking_Idle'
   const fadeSec = target === 'Death' ? 0.3 : target === 'Dagger_Attack' ? 0.1 : 0.2
   _crossfade(store, target, fadeSec)
+}
+
+/**
+ * Stop and release the AnimationMixer for charGroup.
+ * Call before removing the group from the scene to prevent memory leaks.
+ */
+export function disposeCharacterMixer(charGroup: THREE.Group): void {
+  const store = charGroup.userData['mixerStore'] as _MixerStore | undefined
+  if (!store) return
+  store.mixer.stopAllAction()
+  const model = charGroup.userData['charModel'] as THREE.Object3D | undefined
+  if (model) store.mixer.uncacheRoot(model)
+  delete charGroup.userData['mixerStore']
+  delete charGroup.userData['charModel']
+  delete charGroup.userData['glbMaterials']
 }
 
 // ---------------------------------------------------------------------------

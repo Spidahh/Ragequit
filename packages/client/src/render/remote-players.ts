@@ -8,6 +8,7 @@ import {
   loadCharacterGlb,
   tickCharacterMixer,
   setCharAnimState,
+  disposeCharacterMixer,
 } from './characters.js'
 import { SWING_ARC_YAW_OFFSET, makeSwingArcMesh } from './factories.js'
 
@@ -88,6 +89,7 @@ export function initRemotePlayers({
 }: RemotePlayersOptions): RemotePlayersController {
   const remotePlayers = new Map<string, RemoteState>()
   const remoteDamageBlinkUntil = new Map<string, number>()
+  let _prevFrameNow = 0 // used to compute real frame delta for AnimationMixer
 
   function spawnRemote(p: RemotePlayerSchema, sid: string): RemoteState {
     const mesh = makeCharacter(0xe04a4a, toonGradient)
@@ -163,6 +165,7 @@ export function initRemotePlayers({
 
   function disposeRemote(r: RemoteState): void {
     r.mesh.userData['disposed'] = true
+    disposeCharacterMixer(r.mesh)
     scene.remove(r.mesh)
     r.mesh.traverse((child) => {
       if (child instanceof THREE.Mesh) {
@@ -229,6 +232,8 @@ export function initRemotePlayers({
   }
 
   function renderFrame(now: number, camera: THREE.Camera, domElement: HTMLElement): void {
+    const animDt = _prevFrameNow > 0 ? Math.min((now - _prevFrameNow) / 1000, 0.1) : 1 / 60
+    _prevFrameNow = now
     const renderAt = now - INTERPOLATION_DELAY_MS
     remotePlayers.forEach((r) => {
       if (!r.alive) {
@@ -266,7 +271,7 @@ export function initRemotePlayers({
       const moving = dx * dx + dz * dz > 1e-4
       r.prevX = x
       r.prevZ = z
-      tickCharacterMixer(r.mesh, 1 / 60) // steady 60 Hz step; mixer clamps internally
+      tickCharacterMixer(r.mesh, animDt)
       setCharAnimState(r.mesh, {
         moving,
         attacking: r.arc.visible && now < r.arcExpiresAt,
@@ -357,6 +362,17 @@ export function initRemotePlayers({
       mat.emissive.g += (tG - mat.emissive.g) * LERP
       mat.emissive.b += (tB - mat.emissive.b) * LERP
       mat.emissiveIntensity = 0.7
+      // Propagate emissive to all GLB mesh materials so the full character flashes
+      const glbMats = r.mesh.userData['glbMaterials'] as THREE.MeshToonMaterial[] | undefined
+      if (glbMats) {
+        for (const m of glbMats) {
+          if (m === mat) continue // already updated above
+          m.emissive.r += (tR - m.emissive.r) * LERP
+          m.emissive.g += (tG - m.emissive.g) * LERP
+          m.emissive.b += (tB - m.emissive.b) * LERP
+          m.emissiveIntensity = 0.7
+        }
+      }
     })
   }
 

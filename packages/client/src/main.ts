@@ -72,6 +72,7 @@ import {
   loadCharacterGlb,
   tickCharacterMixer,
   setCharAnimState,
+  disposeCharacterMixer,
 } from './render/characters.js'
 import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
 import { initPlacementPreview } from './render/placement-preview.js'
@@ -1321,6 +1322,7 @@ function disposeObject3D(obj: THREE.Object3D): void {
 
 function clearSelfVisuals(): void {
   if (selfMesh) {
+    disposeCharacterMixer(selfMesh) // stop AnimationMixer before geo dispose
     scene.remove(selfMesh)
     disposeObject3D(selfMesh)
     selfMesh = null
