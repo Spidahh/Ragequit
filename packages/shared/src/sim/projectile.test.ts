@@ -29,7 +29,9 @@ import type { ProjectileState } from './projectile.js'
 describe('bowChargeRatio', () => {
   it('returns 0 when below the minimum charge time', () => {
     // Use a value safely below the current BOW_CHARGE_MIN_SEC (0.05 s).
-    expect(bowChargeRatio(BOW_CHARGE_MIN_SEC * 0.5, BOW_CHARGE_MIN_SEC, BOW_CHARGE_FULL_SEC)).toBe(0)
+    expect(bowChargeRatio(BOW_CHARGE_MIN_SEC * 0.5, BOW_CHARGE_MIN_SEC, BOW_CHARGE_FULL_SEC)).toBe(
+      0,
+    )
     expect(bowChargeRatio(BOW_CHARGE_MIN_SEC - 0.01, BOW_CHARGE_MIN_SEC, BOW_CHARGE_FULL_SEC)).toBe(
       0,
     )

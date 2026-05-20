@@ -7,11 +7,11 @@
 // Damage per swing: 6 / 6 / 9 (stagger bonus on third).
 
 export const SWORD_M1_SWING_SEC = 0.4 as const
-export const SWORD_M1_RANGE_M = 3.5 as const       // 2.5→3.5: easier to hit in 3rd-person view
+export const SWORD_M1_RANGE_M = 3.5 as const // 2.5→3.5: easier to hit in 3rd-person view
 // Half-angle of the hit cone (radians). 120° arc = 60° each side.
-export const SWORD_M1_CONE_HALF_ANGLE_RAD = Math.PI / 3  // was PI/4 (45°) → PI/3 (60°), wider arc
+export const SWORD_M1_CONE_HALF_ANGLE_RAD = Math.PI / 3 // was PI/4 (45°) → PI/3 (60°), wider arc
 // Damage per combo index.
-export const SWORD_M1_DAMAGE = [12, 12, 18] as const  // was [6,6,9]; doubled to make melee viable
+export const SWORD_M1_DAMAGE = [12, 12, 18] as const // was [6,6,9]; doubled to make melee viable
 // Combo chain window — next swing must start within this many seconds of the
 // previous swing's start to continue the chain (0.3 s per design doc).
 export const SWORD_M1_CHAIN_WINDOW_SEC = 0.3 as const
@@ -64,8 +64,8 @@ export const WEAPON_SWAP_GCD_SEC = 0 as const
 // a mild drop so aim at medium range must compensate slightly. Charge cancels
 // on damage taken. No stamina / mana cost.
 
-export const BOW_CHARGE_MIN_SEC = 0.05 as const   // 0.15→0.05: near-instant tap fires
-export const BOW_CHARGE_FULL_SEC = 0.65 as const  // 1.1→0.65: full charge in well under 1s
+export const BOW_CHARGE_MIN_SEC = 0.05 as const // 0.15→0.05: near-instant tap fires
+export const BOW_CHARGE_FULL_SEC = 0.65 as const // 1.1→0.65: full charge in well under 1s
 export const BOW_DAMAGE_MIN = 4 as const
 export const BOW_DAMAGE_FULL = 22 as const
 export const BOW_SPEED_MIN_MPS = 35 as const
@@ -73,7 +73,7 @@ export const BOW_SPEED_FULL_MPS = 60 as const
 // Mild gravity applied to arrow trajectory (m/s²). Keeps arrows dodgeable.
 // Not the same as player gravity — arrows drop more slowly than bodies so the
 // target leading stays predictable at 30-40 m.
-export const BOW_GRAVITY_MPS2 = 2 as const  // 6→2: near-flat arc, much easier to aim
+export const BOW_GRAVITY_MPS2 = 2 as const // 6→2: near-flat arc, much easier to aim
 // Lifetime cap — after this the projectile despawns even without collision.
 export const BOW_PROJECTILE_LIFETIME_SEC = 2.5 as const
 // Effective range used by UI hints only. Physics uses lifetime+velocity.
@@ -83,11 +83,11 @@ export const BOW_EFFECTIVE_RANGE_FULL_M = 40 as const
 // --- Staff M1 ---------------------------------------------------------------
 // 2 bolts/s (0.5 s cadence), 8 dmg, 5 mana, 50 m/s near-flat. Despawn at 30 m.
 
-export const STAFF_M1_CADENCE_SEC = 0.4 as const   // slight rate up: 2→2.5 bolts/s
+export const STAFF_M1_CADENCE_SEC = 0.4 as const // slight rate up: 2→2.5 bolts/s
 export const STAFF_M1_DAMAGE = 8 as const
-export const STAFF_M1_MANA_COST = 2 as const       // 5→2: sustainable rapid fire
-export const STAFF_M1_SPEED_MPS = 75 as const      // 50→75: faster bolts, easier to land
-export const STAFF_M1_MAX_RANGE_M = 50 as const    // 30→50: longer effective range
+export const STAFF_M1_MANA_COST = 2 as const // 5→2: sustainable rapid fire
+export const STAFF_M1_SPEED_MPS = 75 as const // 50→75: faster bolts, easier to land
+export const STAFF_M1_MAX_RANGE_M = 50 as const // 30→50: longer effective range
 // Staff bolt uses tiny gravity for a flatter path than bow. Makes it a
 // different tool — bow rewards prediction, staff rewards consistent aim.
 export const STAFF_M1_GRAVITY_MPS2 = 1.0 as const
@@ -96,7 +96,7 @@ export const STAFF_M1_LIFETIME_SEC = STAFF_M1_MAX_RANGE_M / STAFF_M1_SPEED_MPS
 // --- Projectile collision ---------------------------------------------------
 // Players are approximated as vertical capsules for projectile intersection.
 // Values kept in sync with the kinematic controller's capsule dimensions.
-export const PLAYER_CAPSULE_RADIUS_M = 0.65 as const  // 0.5→0.65: larger hitbox, projectiles feel better
+export const PLAYER_CAPSULE_RADIUS_M = 0.65 as const // 0.5→0.65: larger hitbox, projectiles feel better
 export const PLAYER_CAPSULE_HEIGHT_M = 1.8 as const
 // Offset from replicated capsule centre to the first-person eye / projectile
 // muzzle. The player transform is already capsule-centre height, so this must

@@ -22,8 +22,8 @@ export const STAMINA_MAX = 100 as const
 export const HP_REGEN_PER_SEC_OOC = 2.0 as const
 export const HP_REGEN_OOC_DELAY_SEC = 5 as const
 
-export const MANA_REGEN_PER_SEC = 8.0 as const   // bumped 2.5→8: felt impossible to sustain a fight
-export const MANA_REGEN_DELAY_SEC = 0.5 as const  // bumped 2→0.5: shorter pause before regen kicks in
+export const MANA_REGEN_PER_SEC = 8.0 as const // bumped 2.5→8: felt impossible to sustain a fight
+export const MANA_REGEN_DELAY_SEC = 0.5 as const // bumped 2→0.5: shorter pause before regen kicks in
 
 export const STAMINA_REGEN_PER_SEC_IDLE = 10 as const
 export const STAMINA_REGEN_PER_SEC_MOVING = 5 as const

@@ -81,33 +81,36 @@ export interface GameInputOptions {
   onClear: () => void
 }
 
-export function initGameInput(state: GameInputState, {
-  rendererDomElement,
-  mouseSensitivity,
-  radialWheels,
-  pitchLimits,
-  weaponIds,
-  hint,
-  pingHud,
-  settingsOverlay,
-  pauseMenu,
-  loadoutStation,
-  menu,
-  getRoom,
-  getCurrentMatchPhase,
-  getPlacementAbilityId,
-  getLoadoutReturnsToPause,
-  setLoadoutReturnsToPause,
-  getPing,
-  getCurrentWeaponForInput,
-  isGameplayInputAllowed,
-  canEngageGameplaySurface,
-  openPauseMenu,
-  closePauseMenu,
-  cancelPlacementPreview,
-  activateAbilitySlot,
-  onClear,
-}: GameInputOptions): GameInputController {
+export function initGameInput(
+  state: GameInputState,
+  {
+    rendererDomElement,
+    mouseSensitivity,
+    radialWheels,
+    pitchLimits,
+    weaponIds,
+    hint,
+    pingHud,
+    settingsOverlay,
+    pauseMenu,
+    loadoutStation,
+    menu,
+    getRoom,
+    getCurrentMatchPhase,
+    getPlacementAbilityId,
+    getLoadoutReturnsToPause,
+    setLoadoutReturnsToPause,
+    getPing,
+    getCurrentWeaponForInput,
+    isGameplayInputAllowed,
+    canEngageGameplaySurface,
+    openPauseMenu,
+    closePauseMenu,
+    cancelPlacementPreview,
+    activateAbilitySlot,
+    onClear,
+  }: GameInputOptions,
+): GameInputController {
   function engageCanvasInput(): void {
     state.canvasInputEngaged = true
     document.body.classList.add('input-locked')
@@ -125,7 +128,9 @@ export function initGameInput(state: GameInputState, {
     try {
       const result = rendererDomElement.requestPointerLock?.()
       if (result && typeof result.catch === 'function') {
-        void result.catch(() => { state.pointerLookActive = true })
+        void result.catch(() => {
+          state.pointerLookActive = true
+        })
       }
     } catch {
       state.pointerLookActive = true
@@ -173,12 +178,17 @@ export function initGameInput(state: GameInputState, {
   function shouldIgnoreGameplayPointerTarget(target: EventTarget | null): boolean {
     const el = target as HTMLElement | null
     if (!el) return false
-    return Boolean(el.closest('button, input, textarea, select, [contenteditable="true"], #settings-overlay, #loadout-station, #pause-menu, #main-menu'))
+    return Boolean(
+      el.closest(
+        'button, input, textarea, select, [contenteditable="true"], #settings-overlay, #loadout-station, #pause-menu, #main-menu',
+      ),
+    )
   }
 
   function closeSettingsOverlayToReturnTarget(): void {
     settingsOverlay.classList.add('hidden')
-    if (settingsOverlay.dataset['returnTo'] === 'pause' && getRoom()) pauseMenu.classList.remove('hidden')
+    if (settingsOverlay.dataset['returnTo'] === 'pause' && getRoom())
+      pauseMenu.classList.remove('hidden')
     else if (getRoom()) openPauseMenu()
     else menu.showMain()
     settingsOverlay.dataset['returnTo'] = ''
@@ -219,11 +229,11 @@ export function initGameInput(state: GameInputState, {
       return
     }
     if (state.pointerLocked) {
-      state.mouseYaw   -= e.movementX * mouseSensitivity.value
+      state.mouseYaw -= e.movementX * mouseSensitivity.value
       state.mousePitch -= e.movementY * mouseSensitivity.value
     } else if (state.canvasInputEngaged && state.pointerLookActive && isGameplayInputAllowed()) {
       if (state.lastPointerClientX !== 0 || state.lastPointerClientY !== 0) {
-        state.mouseYaw   -= (e.clientX - state.lastPointerClientX) * mouseSensitivity.value
+        state.mouseYaw -= (e.clientX - state.lastPointerClientX) * mouseSensitivity.value
         state.mousePitch -= (e.clientY - state.lastPointerClientY) * mouseSensitivity.value
       }
       state.lastPointerClientX = e.clientX
@@ -231,123 +241,149 @@ export function initGameInput(state: GameInputState, {
     } else {
       return
     }
-    if (state.mousePitch > pitchLimits.up)   state.mousePitch = pitchLimits.up
+    if (state.mousePitch > pitchLimits.up) state.mousePitch = pitchLimits.up
     if (state.mousePitch < pitchLimits.down) state.mousePitch = pitchLimits.down
   }
 
   // ── Keyboard ────────────────────────────────────────────────────────────
 
-  addEventListener('keydown', (e) => {
-    const k = e.code
-    const gameplaySurfaceKey = canEngageGameplaySurface() && !isTextEditingTarget(e.target) && isGameplayKeyCode(k)
-    if (gameplaySurfaceKey) {
-      e.preventDefault()
-      e.stopImmediatePropagation()
-      engageCanvasInput()
-    }
-    const fresh = !state.keys.has(k)
-    state.keys.add(k)
-    if (!fresh) return
+  addEventListener(
+    'keydown',
+    (e) => {
+      const k = e.code
+      const gameplaySurfaceKey =
+        canEngageGameplaySurface() && !isTextEditingTarget(e.target) && isGameplayKeyCode(k)
+      if (gameplaySurfaceKey) {
+        e.preventDefault()
+        e.stopImmediatePropagation()
+        engageCanvasInput()
+      }
+      const fresh = !state.keys.has(k)
+      state.keys.add(k)
+      if (!fresh) return
 
-    if (k === 'Escape') {
-      e.preventDefault()
-      if (getPlacementAbilityId()) { cancelPlacementPreview(); return }
-      if (radialWheels.isOpen()) { radialWheels.close(false); return }
-      if (isOverlayOpen(settingsOverlay)) { closeSettingsOverlayToReturnTarget(); return }
-      if (!loadoutStationHidden()) {
-        loadoutStation.close()
-        const lrtp = getLoadoutReturnsToPause()
-        if (lrtp && getRoom()) {
-          setLoadoutReturnsToPause(false)
-          pauseMenu.classList.remove('hidden')
-        } else if (getRoom()) {
-          openPauseMenu()
-        } else if (!state.pointerLocked) {
-          menu.showMain()
+      if (k === 'Escape') {
+        e.preventDefault()
+        if (getPlacementAbilityId()) {
+          cancelPlacementPreview()
+          return
         }
+        if (radialWheels.isOpen()) {
+          radialWheels.close(false)
+          return
+        }
+        if (isOverlayOpen(settingsOverlay)) {
+          closeSettingsOverlayToReturnTarget()
+          return
+        }
+        if (!loadoutStationHidden()) {
+          loadoutStation.close()
+          const lrtp = getLoadoutReturnsToPause()
+          if (lrtp && getRoom()) {
+            setLoadoutReturnsToPause(false)
+            pauseMenu.classList.remove('hidden')
+          } else if (getRoom()) {
+            openPauseMenu()
+          } else if (!state.pointerLocked) {
+            menu.showMain()
+          }
+          return
+        }
+        if (getRoom()) {
+          if (isPauseMenuOpen()) closePauseMenu(true)
+          else openPauseMenu()
+          return
+        }
+        if (!state.pointerLocked) menu.showMain()
         return
       }
-      if (getRoom()) {
-        if (isPauseMenuOpen()) closePauseMenu(true)
-        else openPauseMenu()
+
+      if (
+        isTextEditingTarget(e.target) ||
+        isOverlayOpen(settingsOverlay) ||
+        !loadoutStationHidden() ||
+        isPauseMenuOpen()
+      ) {
         return
       }
-      if (!state.pointerLocked) menu.showMain()
-      return
-    }
 
-    if (isTextEditingTarget(e.target) || isOverlayOpen(settingsOverlay) || !loadoutStationHidden() || isPauseMenuOpen()) {
-      return
-    }
-
-    if (matchesAction(k, 'openLoadout')) {
-      e.preventDefault()
-      onClear()
-      if (radialWheels.isOpen()) radialWheels.close(false)
-      if (getRoom() && getCurrentMatchPhase() === 'live') {
-        openPauseMenu()
+      if (matchesAction(k, 'openLoadout')) {
+        e.preventDefault()
+        onClear()
+        if (radialWheels.isOpen()) radialWheels.close(false)
+        if (getRoom() && getCurrentMatchPhase() === 'live') {
+          openPauseMenu()
+          return
+        }
+        pauseMenu.classList.add('hidden')
+        settingsOverlay.classList.add('hidden')
+        menu.hideMain()
+        if (document.pointerLockElement) document.exitPointerLock()
+        setLoadoutReturnsToPause(Boolean(getRoom()))
+        loadoutStation.open()
         return
       }
-      pauseMenu.classList.add('hidden')
-      settingsOverlay.classList.add('hidden')
-      menu.hideMain()
-      if (document.pointerLockElement) document.exitPointerLock()
-      setLoadoutReturnsToPause(Boolean(getRoom()))
-      loadoutStation.open()
-      return
-    }
 
-    const gameplayInputActive = isGameplayInputAllowed()
-    if (!gameplayInputActive) return
+      const gameplayInputActive = isGameplayInputAllowed()
+      if (!gameplayInputActive) return
 
-    if (matchesAction(k, 'jump')) state.jumpEdgeQueued = true
+      if (matchesAction(k, 'jump')) state.jumpEdgeQueued = true
 
-    if (matchesAction(k, 'wheelUtility')) {
-      e.preventDefault()
-      radialWheels.openUtility(k)
-    }
-    if (matchesAction(k, 'wheelAbility')) {
-      e.preventDefault()
-      radialWheels.openAbility(k)
-    }
-    if (k === 'Backquote') {
-      document.getElementById('debug')?.classList.toggle('hidden')
-    }
-
-    if (matchesAction(k, 'swapWeapon')) {
-      e.preventDefault()
-      const cur = getCurrentWeaponForInput() as Weapon
-      const idx = weaponIds.indexOf(cur)
-      state.weaponSwapRequest = weaponIds[(idx + 1) % weaponIds.length] ?? null
-    }
-
-    for (const [code, , slotIdx] of slotKeybindEntries()) {
-      if (k === code) {
-        activateAbilitySlot(slotIdx, false)
-        break
+      if (matchesAction(k, 'wheelUtility')) {
+        e.preventDefault()
+        radialWheels.openUtility(k)
       }
-    }
+      if (matchesAction(k, 'wheelAbility')) {
+        e.preventDefault()
+        radialWheels.openAbility(k)
+      }
+      if (k === 'Backquote') {
+        document.getElementById('debug')?.classList.toggle('hidden')
+      }
 
-    if (matchesAction(k, 'sensDown')) mouseSensitivity.scale(0.9)
-    if (matchesAction(k, 'sensUp'))   mouseSensitivity.scale(1.1)
-  }, { capture: true })
+      if (matchesAction(k, 'swapWeapon')) {
+        e.preventDefault()
+        const cur = getCurrentWeaponForInput() as Weapon
+        const idx = weaponIds.indexOf(cur)
+        state.weaponSwapRequest = weaponIds[(idx + 1) % weaponIds.length] ?? null
+      }
 
-  addEventListener('keyup', (e) => {
-    const gameplaySurfaceKey = canEngageGameplaySurface() && !isTextEditingTarget(e.target) && isGameplayKeyCode(e.code)
-    if (gameplaySurfaceKey) {
-      e.preventDefault()
-      e.stopImmediatePropagation()
-      engageCanvasInput()
-    }
-    state.keys.delete(e.code)
-    if (radialWheels.isOpen() && e.code === radialWheels.activeKey()) {
-      radialWheels.close(true)
-    }
-  }, { capture: true })
+      for (const [code, , slotIdx] of slotKeybindEntries()) {
+        if (k === code) {
+          activateAbilitySlot(slotIdx, false)
+          break
+        }
+      }
+
+      if (matchesAction(k, 'sensDown')) mouseSensitivity.scale(0.9)
+      if (matchesAction(k, 'sensUp')) mouseSensitivity.scale(1.1)
+    },
+    { capture: true },
+  )
+
+  addEventListener(
+    'keyup',
+    (e) => {
+      const gameplaySurfaceKey =
+        canEngageGameplaySurface() && !isTextEditingTarget(e.target) && isGameplayKeyCode(e.code)
+      if (gameplaySurfaceKey) {
+        e.preventDefault()
+        e.stopImmediatePropagation()
+        engageCanvasInput()
+      }
+      state.keys.delete(e.code)
+      if (radialWheels.isOpen() && e.code === radialWheels.activeKey()) {
+        radialWheels.close(true)
+      }
+    },
+    { capture: true },
+  )
 
   // ── Pointer ──────────────────────────────────────────────────────────────
 
-  rendererDomElement.addEventListener('contextmenu', (e) => { e.preventDefault() })
+  rendererDomElement.addEventListener('contextmenu', (e) => {
+    e.preventDefault()
+  })
 
   rendererDomElement.addEventListener('pointerdown', (e) => {
     e.preventDefault()
@@ -366,21 +402,33 @@ export function initGameInput(state: GameInputState, {
     handleCombatPointerUp(e.button)
   })
 
-  document.addEventListener('pointerdown', (e) => {
-    if (!canEngageGameplaySurface() || shouldIgnoreGameplayPointerTarget(e.target)) return
-    e.preventDefault()
-    handleCombatPointerDown(e.button)
-  }, { capture: true })
+  document.addEventListener(
+    'pointerdown',
+    (e) => {
+      if (!canEngageGameplaySurface() || shouldIgnoreGameplayPointerTarget(e.target)) return
+      e.preventDefault()
+      handleCombatPointerDown(e.button)
+    },
+    { capture: true },
+  )
 
-  document.addEventListener('pointerup', (e) => {
-    if (!state.canvasInputEngaged || shouldIgnoreGameplayPointerTarget(e.target)) return
-    e.preventDefault()
-    handleCombatPointerUp(e.button)
-  }, { capture: true })
+  document.addEventListener(
+    'pointerup',
+    (e) => {
+      if (!state.canvasInputEngaged || shouldIgnoreGameplayPointerTarget(e.target)) return
+      e.preventDefault()
+      handleCombatPointerUp(e.button)
+    },
+    { capture: true },
+  )
 
-  document.addEventListener('pointermove', (e) => {
-    handleGameplayPointerMove(e)
-  }, { capture: true })
+  document.addEventListener(
+    'pointermove',
+    (e) => {
+      handleGameplayPointerMove(e)
+    },
+    { capture: true },
+  )
 
   document.addEventListener('pointerlockchange', () => {
     const wasPointerLocked = state.pointerLocked
@@ -406,7 +454,9 @@ export function initGameInput(state: GameInputState, {
     }
   })
 
-  addEventListener('blur', () => { onClear() })
+  addEventListener('blur', () => {
+    onClear()
+  })
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) onClear()
@@ -438,8 +488,12 @@ export function initGameInput(state: GameInputState, {
     if (dead) {
       return { moveX: 0, moveZ: 0, yaw: state.mouseYaw, jump: false, jumpHold: false }
     }
-    const forward = (state.keys.has(actionCode('moveForward')) ? 1 : 0) - (state.keys.has(actionCode('moveBack')) ? 1 : 0)
-    const strafe  = (state.keys.has(actionCode('moveRight'))   ? 1 : 0) - (state.keys.has(actionCode('moveLeft'))  ? 1 : 0)
+    const forward =
+      (state.keys.has(actionCode('moveForward')) ? 1 : 0) -
+      (state.keys.has(actionCode('moveBack')) ? 1 : 0)
+    const strafe =
+      (state.keys.has(actionCode('moveRight')) ? 1 : 0) -
+      (state.keys.has(actionCode('moveLeft')) ? 1 : 0)
     const input: SimInput = {
       moveX: strafe,
       moveZ: -forward,

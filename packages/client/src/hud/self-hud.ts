@@ -87,34 +87,54 @@ export interface SelfHudController {
 }
 
 export function initSelfHud({
-  hudHpFill, hudManaFill, hudStamFill,
-  hudHpNum, hudManaNum, hudStamNum,
-  comboDots, hudComboEl,
-  respawnOverlay, respawnSec, respawnKillerEl, respawnTipEl,
-  masteryBadge, statusStrip,
-  castBar, castBarFill, castBarLabel,
-  gcdRingEl, cooldownStrip,
+  hudHpFill,
+  hudManaFill,
+  hudStamFill,
+  hudHpNum,
+  hudManaNum,
+  hudStamNum,
+  comboDots,
+  hudComboEl,
+  respawnOverlay,
+  respawnSec,
+  respawnKillerEl,
+  respawnTipEl,
+  masteryBadge,
+  statusStrip,
+  castBar,
+  castBarFill,
+  castBarLabel,
+  gcdRingEl,
+  cooldownStrip,
 }: SelfHudOptions): SelfHudController {
-  const hudHpBar   = document.getElementById('hud-hp')
+  const hudHpBar = document.getElementById('hud-hp')
   const hudManaBar = document.getElementById('hud-mana')
   const hudStamBar = document.getElementById('hud-stam')
 
   function update({
-    selfSchema, now, tickNow,
-    castStartedAtMs, placementAbilityId, primedSlotIdx,
-    lastKillerName, selfMesh,
-    getCurrentLoadout, updateTransmuteBar,
-    setCastStartedAt, clearPrimedSlot, cancelPlacementPreview,
+    selfSchema,
+    now,
+    tickNow,
+    castStartedAtMs,
+    placementAbilityId,
+    primedSlotIdx,
+    lastKillerName,
+    selfMesh,
+    getCurrentLoadout,
+    updateTransmuteBar,
+    setCastStartedAt,
+    clearPrimedSlot,
+    cancelPlacementPreview,
   }: SelfHudUpdateParams): void {
     if (!selfSchema) return
 
     const hpPct = Math.max(0, Math.min(1, selfSchema.hp / HP_MAX))
     const mpPct = Math.max(0, Math.min(1, selfSchema.mana / MANA_MAX))
     const spPct = Math.max(0, Math.min(1, selfSchema.stamina / STAMINA_MAX))
-    hudHpFill.style.width   = `${(hpPct * 100).toFixed(1)}%`
+    hudHpFill.style.width = `${(hpPct * 100).toFixed(1)}%`
     hudManaFill.style.width = `${(mpPct * 100).toFixed(1)}%`
     hudStamFill.style.width = `${(spPct * 100).toFixed(1)}%`
-    hudHpNum.textContent   = `${Math.round(selfSchema.hp)} / ${HP_MAX}`
+    hudHpNum.textContent = `${Math.round(selfSchema.hp)} / ${HP_MAX}`
     hudManaNum.textContent = `${Math.round(selfSchema.mana)} / ${MANA_MAX}`
     hudStamNum.textContent = `${Math.round(selfSchema.stamina)} / ${STAMINA_MAX}`
     hudHpBar?.classList.toggle('warn', hpPct < 0.25)
@@ -123,9 +143,9 @@ export function initSelfHud({
 
     updateTransmuteBar()
 
-    const nextIdx    = selfSchema.comboIndex
+    const nextIdx = selfSchema.comboIndex
     const elapsedSec = (tickNow - selfSchema.lastSwingStartTick) / TICK_RATE_HZ
-    const live       = elapsedSec < 1.0 && selfSchema.lastSwingStartTick > 0
+    const live = elapsedSec < 1.0 && selfSchema.lastSwingStartTick > 0
     // comboIndex wraps 0→1→2→0. When live and nextIdx===0 the 3rd swing just
     // completed (index wrapped back to start), so all 3 dots should light up.
     const delivered = live && nextIdx === 0 ? 3 : nextIdx
@@ -137,7 +157,9 @@ export function initSelfHud({
     if (!selfSchema.alive && selfSchema.respawnAtTick > 0) {
       const secLeft = Math.max(0, (selfSchema.respawnAtTick - tickNow) / TICK_RATE_HZ)
       if (!respawnOverlay.classList.contains('active')) {
-        if (respawnTipEl) respawnTipEl.textContent = RESPAWN_TIPS[Math.floor(Math.random() * RESPAWN_TIPS.length)] ?? ''
+        if (respawnTipEl)
+          respawnTipEl.textContent =
+            RESPAWN_TIPS[Math.floor(Math.random() * RESPAWN_TIPS.length)] ?? ''
       }
       respawnOverlay.classList.add('active')
       respawnSec.textContent = secLeft.toFixed(1)
@@ -147,12 +169,12 @@ export function initSelfHud({
     }
 
     const mLevel = selfSchema.masteryLevel ?? 0
-    const mel    = selfSchema.masteryElement
+    const mel = selfSchema.masteryElement
     if (mLevel > 0 && mel && mel !== 'none' && mel !== '') {
       const bonus = MASTERY_BONUSES[mel as keyof typeof MASTERY_BONUSES]
       const label = mLevel >= 2 ? 'PERFECT MASTERY' : 'MASTERY'
       masteryBadge.textContent = `✦ ${mel.toUpperCase()} · ${label} ✦`
-      masteryBadge.style.color = bonus?.color ?? (ELEMENT_COLOR[mel] ?? '#ffd260')
+      masteryBadge.style.color = bonus?.color ?? ELEMENT_COLOR[mel] ?? '#ffd260'
     } else {
       masteryBadge.textContent = ''
     }
@@ -169,7 +191,7 @@ export function initSelfHud({
       stack.className = 'stack'
       stack.textContent = st.stacks > 1 ? String(st.stacks) : ''
       if (st.stacks > 1) icon.appendChild(stack)
-      const tm   = document.createElement('div')
+      const tm = document.createElement('div')
       tm.className = 'timer'
       const fill = document.createElement('div')
       fill.className = 'fill'
@@ -184,7 +206,7 @@ export function initSelfHud({
 
     // Rebuild CD strip if loadout changed. Colyseus ArraySchema can update in
     // place so reference comparison misses edits — compare slot contents instead.
-    const currentLoadout    = getCurrentLoadout()
+    const currentLoadout = getCurrentLoadout()
     const currentLoadoutSig = cooldownStrip.signature(currentLoadout)
     if (currentLoadoutSig !== cooldownStrip.currentSignature()) {
       cooldownStrip.rebuild(currentLoadout)
@@ -194,35 +216,38 @@ export function initSelfHud({
 
     if (selfSchema.casting && selfSchema.castEndsAtTick > tickNow) {
       if (castStartedAtMs === 0) setCastStartedAt(now)
-      const secLeft  = (selfSchema.castEndsAtTick - tickNow) / TICK_RATE_HZ
-      const elapsed  = (now - castStartedAtMs) / 1000
-      const total    = elapsed + secLeft
-      const ratio    = total > 0 ? Math.max(0, Math.min(1, elapsed / total)) : 0
+      const secLeft = (selfSchema.castEndsAtTick - tickNow) / TICK_RATE_HZ
+      const elapsed = (now - castStartedAtMs) / 1000
+      const total = elapsed + secLeft
+      const ratio = total > 0 ? Math.max(0, Math.min(1, elapsed / total)) : 0
       castBar.classList.add('active')
       castBarFill.style.width = `${(ratio * 100).toFixed(1)}%`
-      const castDef   = ABILITY_DEFS[selfSchema.castAbilityId]
-      const castName  = castDef?.name ?? selfSchema.castAbilityId.toUpperCase()
+      const castDef = ABILITY_DEFS[selfSchema.castAbilityId]
+      const castName = castDef?.name ?? selfSchema.castAbilityId.toUpperCase()
       castBarLabel.textContent = `${castName}  ${secLeft.toFixed(1)}s`
       const castElemColor = ELEMENT_COLOR[castDef?.element ?? 'none'] ?? '#4a90d8'
-      const castElemDim   = castElemColor + '44' // ~27% alpha
-      castBarFill.style.background  = `linear-gradient(90deg, ${castElemDim} 0%, ${castElemColor} 80%, #fff 100%)`
-      castBarFill.style.boxShadow   = `2px 0 14px ${castElemColor}88`
+      const castElemDim = castElemColor + '44' // ~27% alpha
+      castBarFill.style.background = `linear-gradient(90deg, ${castElemDim} 0%, ${castElemColor} 80%, #fff 100%)`
+      castBarFill.style.boxShadow = `2px 0 14px ${castElemColor}88`
       if (selfMesh) {
         const mat = selfMesh.userData['armorMat'] as THREE.MeshToonMaterial | undefined
         if (mat) {
-          const elemHex = parseInt((ELEMENT_COLOR[castDef?.element ?? 'none'] ?? '#9ba0b4').replace('#', ''), 16)
-          const pulse   = 0.5 + 0.5 * Math.sin(now * 0.012)
-          mat.emissiveIntensity = 0.70 + pulse * 1.1
+          const elemHex = parseInt(
+            (ELEMENT_COLOR[castDef?.element ?? 'none'] ?? '#9ba0b4').replace('#', ''),
+            16,
+          )
+          const pulse = 0.5 + 0.5 * Math.sin(now * 0.012)
+          mat.emissiveIntensity = 0.7 + pulse * 1.1
           mat.emissive.setHex(elemHex)
         }
       }
     } else {
       setCastStartedAt(0)
       castBar.classList.remove('active', 'interrupted')
-      castBarFill.style.width      = '0%'
+      castBarFill.style.width = '0%'
       castBarFill.style.background = ''
-      castBarFill.style.boxShadow  = ''
-      castBarLabel.textContent     = 'CAST'
+      castBarFill.style.boxShadow = ''
+      castBarLabel.textContent = 'CAST'
     }
 
     cooldownStrip.updateAbilityCooldowns({

@@ -28,13 +28,13 @@ Releasing M1 below minimum charge cancels the draw without firing.
 
 ## M1 with Mastery infusion
 
-| Element   | Infusion effect                                                                              |
-| --------- | -------------------------------------------------------------------------------------------- |
-| Fire      | Flaming arrow with fire trail; +1 Burn stack on hit                                          |
-| Ice       | Frost arrow with pale trail; +1 Chill stack on hit                                           |
+| Element   | Infusion effect                                            |
+| --------- | ---------------------------------------------------------- |
+| Fire      | Flaming arrow with fire trail; +1 Burn stack on hit        |
+| Ice       | Frost arrow with pale trail; +1 Chill stack on hit         |
 | Lightning | +30% projectile speed; 20% chance to arc to 1 nearby enemy |
-| Dark      | Dark arrow; 8% lifesteal on damage dealt                                                     |
-| Nature    | On hit: applies Poison to the target                                                         |
+| Dark      | Dark arrow; 8% lifesteal on damage dealt                   |
+| Nature    | On hit: applies Poison to the target                       |
 
 ## Constraints
 

@@ -20,20 +20,20 @@ status: current
 
 ## Client To Server Events
 
-| Type | Payload | Notes |
-| --- | --- | --- |
-| `input` | `{ tick, seq, moveX, moveZ, yaw, pitch, jump, jumpHold, m1, m2 }` | Movement intent; server echoes processed seq through player schema |
-| `swing` | `{ atTick, yaw }` | Sword M1 rising edge |
-| `cast` | `{ abilityId, atTick, targetYaw?, targetPitch?, targetPoint? }` | Instant direct casts, LMB-fired primed wheel abilities, and LMB-confirmed placement previews |
-| `weaponSwap` | `{ weapon, atTick }` | `sword`, `bow`, or `staff` |
-| `chargeStart` | `{ atTick }` | Bow M1 press |
-| `chargeRelease` | `{ atTick, yaw, pitch }` | Bow M1 release |
-| `fireStaff` | `{ atTick, yaw, pitch }` | Staff M1 |
-| `parryPress` | `{ atTick }` | RMB press |
-| `parryRelease` | `{ atTick }` | RMB release |
-| `transmute` | `{ direction, atTick }` | Legacy/direct transfer path |
-| `loadoutSet` | `{ melee, bow, magic[5], utility[4] }` | Server normalizes fixed transfer slots, rejects duplicates, and rejects transfer utilities in V |
-| `heartbeat` | `{ clientTime }` | Ping/keepalive |
+| Type            | Payload                                                           | Notes                                                                                           |
+| --------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `input`         | `{ tick, seq, moveX, moveZ, yaw, pitch, jump, jumpHold, m1, m2 }` | Movement intent; server echoes processed seq through player schema                              |
+| `swing`         | `{ atTick, yaw }`                                                 | Sword M1 rising edge                                                                            |
+| `cast`          | `{ abilityId, atTick, targetYaw?, targetPitch?, targetPoint? }`   | Instant direct casts, LMB-fired primed wheel abilities, and LMB-confirmed placement previews    |
+| `weaponSwap`    | `{ weapon, atTick }`                                              | `sword`, `bow`, or `staff`                                                                      |
+| `chargeStart`   | `{ atTick }`                                                      | Bow M1 press                                                                                    |
+| `chargeRelease` | `{ atTick, yaw, pitch }`                                          | Bow M1 release                                                                                  |
+| `fireStaff`     | `{ atTick, yaw, pitch }`                                          | Staff M1                                                                                        |
+| `parryPress`    | `{ atTick }`                                                      | RMB press                                                                                       |
+| `parryRelease`  | `{ atTick }`                                                      | RMB release                                                                                     |
+| `transmute`     | `{ direction, atTick }`                                           | Legacy/direct transfer path                                                                     |
+| `loadoutSet`    | `{ melee, bow, magic[5], utility[4] }`                            | Server normalizes fixed transfer slots, rejects duplicates, and rejects transfer utilities in V |
+| `heartbeat`     | `{ clientTime }`                                                  | Ping/keepalive                                                                                  |
 
 The wheel interaction itself is client-side UI. Releasing Q/E primes a slot; the subsequent LMB either sends `cast` immediately or opens the placement preview for non-instant abilities. Placement previews send `cast` only when LMB confirms the target point.
 
@@ -41,25 +41,25 @@ Server validation clamps `targetPoint` to the ability range and rejects/ignores 
 
 ## Server To Client Events
 
-| Type | Payload | Purpose |
-| --- | --- | --- |
-| `hit` | `{ attackerId, victimId, damage, element, didParry, atTick, cause }` | Damage/VFX/audio |
-| `death` | `{ victimId, killerId, assistIds, cause, atTick }` | Death UI, respawn |
-| `abilityCasted` | `{ casterId, abilityId, atTick }` | Cast bar, HUD pending clear, VFX |
-| `abilityFailed` | `{ abilityId, reason }` | Rejected cast feedback |
-| `statusApplied` / `statusExpired` | status payload | HUD icons and VFX |
-| `transmuteResult` | `{ playerId, direction, ok, reason?, atTick }` | Transfer feedback |
-| `zoneSpawned` / `zoneExpired` | zone payload | Zone VFX |
-| `projectileSpawned` / `projectileExpired` | projectile payload | Projectile and impact VFX |
-| `weaponSwapped` | `{ playerId, weapon, atTick }` | Weapon HUD/model feedback |
-| `parryEvent` | `{ playerId, kind, atTick }` | Parry HUD/VFX |
-| `channelInterrupted` | `{ casterId, abilityId, reason, atTick }` | Collapse cast bar, show interrupted |
-| `killStreak` | `{ playerId, streak, damageBonus, atTick }` | Streak UI |
-| `matchPhase` | phase payload | Menu/round overlays |
-| `score` | score payload | Scoreboard |
-| `pongAck` | ping payload | Latency HUD |
-| `serverNote` | `{ kind, text }` | Warnings/info |
-| `reconcile` | `{ tick, pos, vel }` | Owner movement reconciliation |
+| Type                                      | Payload                                                              | Purpose                             |
+| ----------------------------------------- | -------------------------------------------------------------------- | ----------------------------------- |
+| `hit`                                     | `{ attackerId, victimId, damage, element, didParry, atTick, cause }` | Damage/VFX/audio                    |
+| `death`                                   | `{ victimId, killerId, assistIds, cause, atTick }`                   | Death UI, respawn                   |
+| `abilityCasted`                           | `{ casterId, abilityId, atTick }`                                    | Cast bar, HUD pending clear, VFX    |
+| `abilityFailed`                           | `{ abilityId, reason }`                                              | Rejected cast feedback              |
+| `statusApplied` / `statusExpired`         | status payload                                                       | HUD icons and VFX                   |
+| `transmuteResult`                         | `{ playerId, direction, ok, reason?, atTick }`                       | Transfer feedback                   |
+| `zoneSpawned` / `zoneExpired`             | zone payload                                                         | Zone VFX                            |
+| `projectileSpawned` / `projectileExpired` | projectile payload                                                   | Projectile and impact VFX           |
+| `weaponSwapped`                           | `{ playerId, weapon, atTick }`                                       | Weapon HUD/model feedback           |
+| `parryEvent`                              | `{ playerId, kind, atTick }`                                         | Parry HUD/VFX                       |
+| `channelInterrupted`                      | `{ casterId, abilityId, reason, atTick }`                            | Collapse cast bar, show interrupted |
+| `killStreak`                              | `{ playerId, streak, damageBonus, atTick }`                          | Streak UI                           |
+| `matchPhase`                              | phase payload                                                        | Menu/round overlays                 |
+| `score`                                   | score payload                                                        | Scoreboard                          |
+| `pongAck`                                 | ping payload                                                         | Latency HUD                         |
+| `serverNote`                              | `{ kind, text }`                                                     | Warnings/info                       |
+| `reconcile`                               | `{ tick, pos, vel }`                                                 | Owner movement reconciliation       |
 
 ## Replicated State
 

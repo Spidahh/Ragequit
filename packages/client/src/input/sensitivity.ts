@@ -13,13 +13,19 @@ export function initMouseSensitivity(): MouseSensitivityController {
   let value = loadSens()
   const overlay = document.createElement('div')
   overlay.style.cssText = [
-    'position:fixed', 'top:50%', 'left:50%',
+    'position:fixed',
+    'top:50%',
+    'left:50%',
     'transform:translate(-50%,-50%) translateY(-80px)',
-    'background:rgba(0,0,0,0.78)', 'color:#ffd260',
-    'padding:6px 16px', 'border-radius:6px',
+    'background:rgba(0,0,0,0.78)',
+    'color:#ffd260',
+    'padding:6px 16px',
+    'border-radius:6px',
     'font:bold 13px/1.4 ui-monospace,monospace',
-    'pointer-events:none', 'opacity:0',
-    'transition:opacity 0.2s', 'z-index:900',
+    'pointer-events:none',
+    'opacity:0',
+    'transition:opacity 0.2s',
+    'z-index:900',
   ].join(';')
   document.body.appendChild(overlay)
   let overlayTimer = 0
@@ -28,7 +34,9 @@ export function initMouseSensitivity(): MouseSensitivityController {
     overlay.textContent = `🖱 SENS  ${value.toFixed(4)}`
     overlay.style.opacity = '1'
     clearTimeout(overlayTimer)
-    overlayTimer = setTimeout(() => { overlay.style.opacity = '0' }, 1600) as unknown as number
+    overlayTimer = setTimeout(() => {
+      overlay.style.opacity = '0'
+    }, 1600) as unknown as number
   }
 
   return {

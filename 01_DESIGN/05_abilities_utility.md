@@ -18,27 +18,27 @@ Utility abilities are NOT counted for Element Mastery (they have no element). Th
 
 ## Utility wheel sectors
 
-| Sector | Default key | Name                         | Effect                                |
-| ------ | ----------- | ---------------------------- | ------------------------------------- |
-| U1     | Z           | **HP → Mana**                | Spend 20 HP to gain 20 Mana           |
-| U2     | X           | **Mana → Stamina**           | Spend 20 Mana to gain 20 Stamina      |
-| U3     | F           | **Stamina → HP**             | Spend 30 Stamina to gain 20 HP        |
-| U4     | V           | **Flex Utility**             | Player pick from the utility pool     |
+| Sector | Default key | Name               | Effect                            |
+| ------ | ----------- | ------------------ | --------------------------------- |
+| U1     | Z           | **HP → Mana**      | Spend 20 HP to gain 20 Mana       |
+| U2     | X           | **Mana → Stamina** | Spend 20 Mana to gain 20 Stamina  |
+| U3     | F           | **Stamina → HP**   | Spend 30 Stamina to gain 20 HP    |
+| U4     | V           | **Flex Utility**   | Player pick from the utility pool |
 
 The Q wheel must exist even if direct hotkeys are available. Hotkeys mirror the wheel; they do not replace it.
 
 ## Flex utility pool
 
-| #   | Name                  | Effect                                               | Mini-malus / constraint                                |
-| --- | --------------------- | ---------------------------------------------------- | ------------------------------------------------------ |
-| F1  | **Self-Heal Potion**  | Restore 40 HP over 2 s while moving                  | 20 s CD and delayed healing window                     |
-| F2  | **Quick Dash**        | Dash 4 m in current movement direction               | 6 s CD; no iframes, walls stop the dash                |
-| F3  | **Mark Target**       | Aim-tag one target for 6 damage, 5 s mark, and 12 stamina drain | Low damage; line of sight required                     |
-| F4  | **Cleanse Surge**     | Remove debuffs from yourself and gain 2 s haste      | Costs stamina and does not heal by itself              |
-| F5  | **Barrier**           | Gain a temporary shield                              | Defensive only; no damage or crowd control             |
-| F6  | **Energize**          | Restore stamina immediately                          | Does not restore HP or mana                            |
-| F7  | **Phase Shift**       | Brief invulnerability while unable to attack or cast | Short duration; cannot be used offensively while phased |
-| F8  | **Smoke Screen**      | Create a forward smoke zone that repeatedly blinds enemies | No damage; zone is visible                             |
+| #   | Name                 | Effect                                                          | Mini-malus / constraint                                 |
+| --- | -------------------- | --------------------------------------------------------------- | ------------------------------------------------------- |
+| F1  | **Self-Heal Potion** | Restore 40 HP over 2 s while moving                             | 20 s CD and delayed healing window                      |
+| F2  | **Quick Dash**       | Dash 4 m in current movement direction                          | 6 s CD; no iframes, walls stop the dash                 |
+| F3  | **Mark Target**      | Aim-tag one target for 6 damage, 5 s mark, and 12 stamina drain | Low damage; line of sight required                      |
+| F4  | **Cleanse Surge**    | Remove debuffs from yourself and gain 2 s haste                 | Costs stamina and does not heal by itself               |
+| F5  | **Barrier**          | Gain a temporary shield                                         | Defensive only; no damage or crowd control              |
+| F6  | **Energize**         | Restore stamina immediately                                     | Does not restore HP or mana                             |
+| F7  | **Phase Shift**      | Brief invulnerability while unable to attack or cast            | Short duration; cannot be used offensively while phased |
+| F8  | **Smoke Screen**     | Create a forward smoke zone that repeatedly blinds enemies      | No damage; zone is visible                              |
 
 ## Key design choices
 

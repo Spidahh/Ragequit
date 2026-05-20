@@ -24,7 +24,7 @@ export const UTILITY_FLEX_SLOT_INDEX = 10
 
 export const KEY_SLOT: ReadonlyArray<readonly [code: string, label: string, slotIdx: number]> = [
   ['KeyR', 'R', 0],
-  ['KeyG', 'G', 1],   // bow ability — active slot, same cast path as melee/magic
+  ['KeyG', 'G', 1], // bow ability — active slot, same cast path as melee/magic
   ['Digit1', '1', 2],
   ['Digit2', '2', 3],
   ['Digit3', '3', 4],
@@ -59,12 +59,7 @@ export function buildLoadoutMessage(
       normalized[5] ?? '',
       normalized[6] ?? '',
     ],
-    utility: [
-      normalized[7] ?? '',
-      normalized[8] ?? '',
-      normalized[9] ?? '',
-      normalized[10] ?? '',
-    ],
+    utility: [normalized[7] ?? '', normalized[8] ?? '', normalized[9] ?? '', normalized[10] ?? ''],
     ...(instantCast ? { instantCast } : {}),
   }
 }

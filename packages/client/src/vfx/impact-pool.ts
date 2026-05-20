@@ -13,11 +13,11 @@ interface ImpactFx {
 //  2. Ring shockwave — thin torus that expands outward fast then slows.
 // Both share a slot index so they always animate in sync.
 export class ImpactPool {
-  readonly mesh: THREE.InstancedMesh      // sphere burst
-  readonly ringMesh: THREE.InstancedMesh  // shockwave ring
+  readonly mesh: THREE.InstancedMesh // sphere burst
+  readonly ringMesh: THREE.InstancedMesh // shockwave ring
 
   private readonly sphereColors: THREE.InstancedBufferAttribute
-  private readonly ringColors:   THREE.InstancedBufferAttribute
+  private readonly ringColors: THREE.InstancedBufferAttribute
   private readonly hiddenMat = new THREE.Matrix4().makeScale(0, 0, 0)
   private readonly impacts: ImpactFx[] = []
   private nextSlot = 0
@@ -33,7 +33,7 @@ export class ImpactPool {
 
     // --- Shockwave ring — thin torus, lies flat in XZ plane ---
     const ringGeo = new THREE.TorusGeometry(1, 0.04, 6, 32)
-    ringGeo.rotateX(Math.PI / 2)   // make it horizontal
+    ringGeo.rotateX(Math.PI / 2) // make it horizontal
     const ringMat = new THREE.MeshBasicMaterial({ transparent: true, vertexColors: false })
     this.ringMesh = new THREE.InstancedMesh(ringGeo, ringMat, poolSize)
     this.ringMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
@@ -70,20 +70,20 @@ export class ImpactPool {
         dirty = true
         continue
       }
-      const k = age / fx.lifeMs  // 0 → 1 linear progress
+      const k = age / fx.lifeMs // 0 → 1 linear progress
 
       // Sphere: ease-out — quick initial pop then slow fade.
       // Scale: 0.15 → 0.40 over life; fade out linearly from alpha 1 → 0.
-      const sphereEase = 1 - (1 - k) * (1 - k)  // quadratic ease-out
-      const sphereScale = 0.15 + sphereEase * 0.40
+      const sphereEase = 1 - (1 - k) * (1 - k) // quadratic ease-out
+      const sphereScale = 0.15 + sphereEase * 0.4
       const sphereAlpha = Math.max(0, 1 - k * 1.3)
       this.setMatrix(this.mesh, fx.slot, fx.pos, sphereScale, sphereScale, sphereScale)
       this.setColor(this.sphereColors, fx.slot, fx.color, sphereAlpha)
 
       // Ring: expands fast (radius 0.1 → 0.95 m) and fades after k > 0.4.
       const ringEase = 1 - (1 - Math.min(k * 1.6, 1)) * (1 - Math.min(k * 1.6, 1))
-      const ringRadius = 0.10 + ringEase * 0.90
-      const ringAlpha  = k < 0.35 ? 1.0 : Math.max(0, 1 - (k - 0.35) / 0.65)
+      const ringRadius = 0.1 + ringEase * 0.9
+      const ringAlpha = k < 0.35 ? 1.0 : Math.max(0, 1 - (k - 0.35) / 0.65)
       this.setMatrix(this.ringMesh, fx.slot, fx.pos, ringRadius, ringRadius, ringRadius)
       this.setColor(this.ringColors, fx.slot, fx.color, ringAlpha * 0.75)
 
@@ -101,7 +101,9 @@ export class ImpactPool {
     im: THREE.InstancedMesh,
     slot: number,
     pos: THREE.Vector3,
-    sx: number, sy: number, sz: number,
+    sx: number,
+    sy: number,
+    sz: number,
   ): void {
     im.setMatrixAt(
       slot,
@@ -120,8 +122,8 @@ export class ImpactPool {
     attr.setXYZ(
       slot,
       (((color >> 16) & 0xff) / 255) * fade,
-      (((color >>  8) & 0xff) / 255) * fade,
-      ( (color        & 0xff) / 255) * fade,
+      (((color >> 8) & 0xff) / 255) * fade,
+      ((color & 0xff) / 255) * fade,
     )
     attr.needsUpdate = true
   }

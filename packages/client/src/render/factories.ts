@@ -20,8 +20,8 @@ export function makeToonGradient(): THREE.DataTexture {
 // Arc span must equal the full hitbox cone (2 × half-angle) so the visual
 // matches what the server checks.  The rotation formula in main.ts offsets
 // by (π/2 + SWORD_M1_CONE_HALF_ANGLE_RAD) to centre the arc on forward.
-export const SWING_ARC_SPAN = SWORD_M1_CONE_HALF_ANGLE_RAD * 2   // 120° = full cone
-export const SWING_ARC_YAW_OFFSET = Math.PI / 2 + SWORD_M1_CONE_HALF_ANGLE_RAD  // ≈ 2.618
+export const SWING_ARC_SPAN = SWORD_M1_CONE_HALF_ANGLE_RAD * 2 // 120° = full cone
+export const SWING_ARC_YAW_OFFSET = Math.PI / 2 + SWORD_M1_CONE_HALF_ANGLE_RAD // ≈ 2.618
 
 export function makeSwingArcMesh(): THREE.Mesh {
   const geo = new THREE.TorusGeometry(SWORD_M1_RANGE_M * 0.72, 0.14, 8, 22, SWING_ARC_SPAN)
@@ -46,7 +46,7 @@ export function makeProjectileMesh(kind: 'arrow' | 'bolt'): THREE.Mesh {
     return new THREE.Mesh(geo, mat)
   }
   // Magic bolt — glowing cyan orb.
-  const geo = new THREE.SphereGeometry(0.20, 12, 8)
+  const geo = new THREE.SphereGeometry(0.2, 12, 8)
   const mat = new THREE.MeshStandardMaterial({
     color: 0x40e8ff,
     emissive: 0x00ccff,

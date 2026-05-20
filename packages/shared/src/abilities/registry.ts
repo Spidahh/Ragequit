@@ -41,7 +41,8 @@ export const ABILITY_M1_WHIRLWIND: AbilityDef = {
       slowFraction: 0.2,
     },
   ],
-  description: 'Spin for 1.0s. Three 4m cleave ticks for 7 damage each. Self Slow 20% while spinning.',
+  description:
+    'Spin for 1.0s. Three 4m cleave ticks for 7 damage each. Self Slow 20% while spinning.',
   miniMalus: 'Committed channel; movement is reduced during the spin.',
 }
 
@@ -61,7 +62,15 @@ export const ABILITY_M2_GAP_CLOSER: AbilityDef = {
   effects: [
     { at: 'onCast', kind: 'move', mode: 'dash', distance: 6, cancelOnCollision: true },
     { at: 'onLand', kind: 'damage', amount: 18, radius: 1.5 },
-    { at: 'onLand', kind: 'applyStatus', status: 'slow', durationSec: 0.8, stacks: 1, radius: 1.5, slowFraction: 0.35 },
+    {
+      at: 'onLand',
+      kind: 'applyStatus',
+      status: 'slow',
+      durationSec: 0.8,
+      stacks: 1,
+      radius: 1.5,
+      slowFraction: 0.35,
+    },
   ],
   description: '6m engage dash. Landing hit deals 18 damage in 1.5m and applies Slow 35% for 0.8s.',
   miniMalus: 'Linear engage; collision stops the dash and contact is parryable.',
@@ -154,7 +163,8 @@ export const ABILITY_M6_RENDING_DASH: AbilityDef = {
     { at: 'onLand', kind: 'damage', amount: 14, radius: 1.6 },
     { at: 'onLand', kind: 'applyStatus', status: 'bleed', durationSec: 4, stacks: 1, radius: 1.6 },
   ],
-  description: '5m slash-through dash. Landing hit deals 14 damage in 1.6m and applies Bleed for 4.0s.',
+  description:
+    '5m slash-through dash. Landing hit deals 14 damage in 1.6m and applies Bleed for 4.0s.',
   miniMalus: 'Collision stops dash. Bleed can be cleansed.',
   canParry: true,
 }
@@ -271,7 +281,8 @@ export const ABILITY_B4_SNARE_TRAP: AbilityDef = {
       applyStatus: { status: 'root', durationSec: 1.0, stacks: 1 },
     },
   ],
-  description: 'Self zone trap, 1.5m radius. Arms after 2.0s. First trigger deals 10 damage and Root 1.0s.',
+  description:
+    'Self zone trap, 1.5m radius. Arms after 2.0s. First trigger deals 10 damage and Root 1.0s.',
   miniMalus: 'No effect before arm delay.',
 }
 
@@ -461,7 +472,8 @@ export const ABILITY_F3_IGNITE: AbilityDef = {
   targeting: 'forward',
   comboRole: 'ray',
   effects: [{ at: 'onCast', kind: 'applyStatus', status: 'burn', durationSec: 3, stacks: 3 }],
-  description: 'Instant ray within 12m. Applies Burn x3 if the enemy is in the crosshair and line of sight.',
+  description:
+    'Instant ray within 12m. Applies Burn x3 if the enemy is in the crosshair and line of sight.',
   miniMalus: 'No direct damage. Requires clear line of sight.',
 }
 
@@ -542,7 +554,8 @@ export const ABILITY_F6_FIRE_BLINK: AbilityDef = {
     },
     { at: 'onCast', kind: 'move', mode: 'teleport', distance: 7, cancelOnCollision: true },
   ],
-  description: '7m teleport. Leaves a 1.5m fire zone at origin for 1.2s, 6 damage per tick and Burn x1.',
+  description:
+    '7m teleport. Leaves a 1.5m fire zone at origin for 1.2s, 6 damage per tick and Burn x1.',
   miniMalus: 'Blocked by occupied destination.',
 }
 
@@ -700,9 +713,17 @@ export const ABILITY_L1_CHAIN_BOLT: AbilityDef = {
   comboRole: 'ray',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 22, element: 'lightning' },
-    { at: 'onCast', kind: 'damage', amount: 10, radius: 6, element: 'lightning', excludePrimary: true },
+    {
+      at: 'onCast',
+      kind: 'damage',
+      amount: 10,
+      radius: 6,
+      element: 'lightning',
+      excludePrimary: true,
+    },
   ],
-  description: 'Instant ray within 15m. 22 damage to the aimed target and 10 damage arcs to nearby enemies.',
+  description:
+    'Instant ray within 15m. 22 damage to the aimed target and 10 damage arcs to nearby enemies.',
   miniMalus: 'Arc requires nearby secondary targets.',
 }
 
@@ -880,7 +901,8 @@ export const ABILITY_D3_LIFE_DRAIN: AbilityDef = {
     },
     { at: 'onCast', kind: 'resourceDrain', resource: 'stamina', amount: 20, gainFraction: 0.5 },
   ],
-  description: 'Drain beam. Drains 20 Stamina, then channels 4 ticks of 6 damage with 70% lifesteal.',
+  description:
+    'Drain beam. Drains 20 Stamina, then channels 4 ticks of 6 damage with 70% lifesteal.',
   miniMalus: 'Movement or damage interrupts the beam.',
 }
 
@@ -1139,7 +1161,16 @@ export const ABILITY_U2_QUICK_DASH: AbilityDef = {
   range: 4,
   targeting: 'forward',
   comboRole: 'mobility',
-  effects: [{ at: 'onCast', kind: 'move', mode: 'dash', distance: 4, useMovementDirection: true, cancelOnCollision: true }],
+  effects: [
+    {
+      at: 'onCast',
+      kind: 'move',
+      mode: 'dash',
+      distance: 4,
+      useMovementDirection: true,
+      cancelOnCollision: true,
+    },
+  ],
   description: '4m dash in movement direction.',
   miniMalus: 'No invulnerability.',
 }
@@ -1236,7 +1267,9 @@ export const ABILITY_U7_PHASE_SHIFT: AbilityDef = {
   range: 0,
   targeting: 'self',
   comboRole: 'counter',
-  effects: [{ at: 'onCast', kind: 'applyStatus', status: 'invulnerable', durationSec: 0.6, stacks: 1 }],
+  effects: [
+    { at: 'onCast', kind: 'applyStatus', status: 'invulnerable', durationSec: 0.6, stacks: 1 },
+  ],
   description: 'Invulnerable 0.6s. Prevents damage and crowd control.',
   miniMalus: 'Cannot attack or cast during phase.',
 }

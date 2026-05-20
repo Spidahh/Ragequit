@@ -129,10 +129,10 @@ const healFlash = document.getElementById('heal-flash')!
 const comboFlash = document.getElementById('combo-flash')!
 const comboPopup = document.getElementById('combo-popup')!
 const hitDirEls: Record<string, HTMLElement> = {
-  top:    document.querySelector<HTMLElement>('.hit-dir[data-dir="top"]')!,
+  top: document.querySelector<HTMLElement>('.hit-dir[data-dir="top"]')!,
   bottom: document.querySelector<HTMLElement>('.hit-dir[data-dir="bottom"]')!,
-  left:   document.querySelector<HTMLElement>('.hit-dir[data-dir="left"]')!,
-  right:  document.querySelector<HTMLElement>('.hit-dir[data-dir="right"]')!,
+  left: document.querySelector<HTMLElement>('.hit-dir[data-dir="left"]')!,
+  right: document.querySelector<HTMLElement>('.hit-dir[data-dir="right"]')!,
 }
 const parryRing = document.getElementById('parry-ring')!
 const bowCharge = document.getElementById('bow-charge')!
@@ -175,14 +175,17 @@ const settingsOverlay = document.getElementById('settings-overlay')!
 
 // Transmute bar elements.
 const transmuteSlotEls: Record<string, HTMLElement> = {
-  hp_mana:   document.getElementById('t-hp-mana')!,
+  hp_mana: document.getElementById('t-hp-mana')!,
   mana_stam: document.getElementById('t-mana-stam')!,
-  stam_hp:   document.getElementById('t-stam-hp')!,
+  stam_hp: document.getElementById('t-stam-hp')!,
 }
 function refreshKeybindHudLabels(): void {
-  transmuteSlotEls['hp_mana']!.querySelector<HTMLElement>('.t-key')!.textContent = actionLabel('transferHpMana')
-  transmuteSlotEls['mana_stam']!.querySelector<HTMLElement>('.t-key')!.textContent = actionLabel('transferManaStam')
-  transmuteSlotEls['stam_hp']!.querySelector<HTMLElement>('.t-key')!.textContent = actionLabel('transferStamHp')
+  transmuteSlotEls['hp_mana']!.querySelector<HTMLElement>('.t-key')!.textContent =
+    actionLabel('transferHpMana')
+  transmuteSlotEls['mana_stam']!.querySelector<HTMLElement>('.t-key')!.textContent =
+    actionLabel('transferManaStam')
+  transmuteSlotEls['stam_hp']!.querySelector<HTMLElement>('.t-key')!.textContent =
+    actionLabel('transferStamHp')
   weaponSlots.sword.querySelector<HTMLElement>('.key')!.textContent = actionLabel('swapWeapon')
   weaponSlots.bow.querySelector<HTMLElement>('.key')!.textContent = actionLabel('swapWeapon')
   weaponSlots.staff.querySelector<HTMLElement>('.key')!.textContent = actionLabel('swapWeapon')
@@ -225,37 +228,55 @@ const mouseSensitivity = initMouseSensitivity()
 // Positive inp.mousePitch → camera.rotation.x > 0 → looking UP (Three.js convention).
 // Mouse-up increments inp.mousePitch; mouse-down decrements it.
 // Cap looking UP at 75° and looking DOWN at 65° to avoid ground/sky clipping.
-const PITCH_UP_LIMIT   =  Math.PI * 0.415 //  +75° — max look-up angle
-const PITCH_DOWN_LIMIT = -Math.PI * 0.360 //  -65° — max look-down angle
+const PITCH_UP_LIMIT = Math.PI * 0.415 //  +75° — max look-up angle
+const PITCH_DOWN_LIMIT = -Math.PI * 0.36 //  -65° — max look-down angle
 
 // Cast / fire / weapon input dispatcher — owns primedSlotIdx, abilityCastQueue,
 // placementAbilityId, lastStaffFireMs and dispatches combat actions each sim tick.
 const castDispatcher = initCastDispatcher({
   getLoadout: currentLoadoutArray,
   isInstantCast: (id) => loadoutStation.isInstantCast(id),
-  hidePlacementVisual: () => { placementPreview.group.visible = false },
+  hidePlacementVisual: () => {
+    placementPreview.group.visible = false
+  },
   sendCast: (id, tick) => sendAbilityCast(id, tick),
   showShootFlash,
 })
 
 // --- HUD helpers -----------------------------------------------------------
 
-const cooldownStrip = initCooldownStrip(cdStrip, (slotIdx) => castDispatcher.activateAbilitySlot(slotIdx, true))
+const cooldownStrip = initCooldownStrip(cdStrip, (slotIdx) =>
+  castDispatcher.activateAbilitySlot(slotIdx, true),
+)
 
 const selfHud = initSelfHud({
-  hudHpFill, hudManaFill, hudStamFill,
-  hudHpNum, hudManaNum, hudStamNum,
-  comboDots, hudComboEl,
-  respawnOverlay, respawnSec, respawnKillerEl, respawnTipEl,
-  masteryBadge, statusStrip,
-  castBar, castBarFill, castBarLabel,
-  gcdRingEl, cooldownStrip,
+  hudHpFill,
+  hudManaFill,
+  hudStamFill,
+  hudHpNum,
+  hudManaNum,
+  hudStamNum,
+  comboDots,
+  hudComboEl,
+  respawnOverlay,
+  respawnSec,
+  respawnKillerEl,
+  respawnTipEl,
+  masteryBadge,
+  statusStrip,
+  castBar,
+  castBarFill,
+  castBarLabel,
+  gcdRingEl,
+  cooldownStrip,
 })
 
 const abilityFailHud = initAbilityFailHud({ statusStrip, gcdRingEl, serverToast, cooldownStrip })
 
 const transmuteHud = initTransmuteHud({
-  hudHpFill, hudManaFill, hudStamFill,
+  hudHpFill,
+  hudManaFill,
+  hudStamFill,
   transmuteSlotEls,
   cooldownStrip,
   onWarn: (text) => abilityFailHud.onServerNote({ kind: 'warn', text }),
@@ -317,13 +338,13 @@ scene.add(new THREE.HemisphereLight(0xb0ceff, 0x3a1060, 1.8))
 const dir = new THREE.DirectionalLight(0xffe8c0, 1.8)
 dir.position.set(12, 28, 14)
 dir.castShadow = true
-dir.shadow.mapSize.width  = 2048
+dir.shadow.mapSize.width = 2048
 dir.shadow.mapSize.height = 2048
-dir.shadow.camera.near   = 1
-dir.shadow.camera.far    = 120
-dir.shadow.camera.left   = -40
-dir.shadow.camera.right  = 40
-dir.shadow.camera.top    = 40
+dir.shadow.camera.near = 1
+dir.shadow.camera.far = 120
+dir.shadow.camera.left = -40
+dir.shadow.camera.right = 40
+dir.shadow.camera.top = 40
 dir.shadow.camera.bottom = -40
 dir.shadow.bias = -0.0008
 scene.add(dir)
@@ -347,10 +368,7 @@ const selfEmissive = initSelfEmissive({
 
 const toonGradient = makeToonGradient()
 
-const {
-  loadMapGeometry, getActiveMapId,
-  animateArena,
-} = buildArena(scene, toonGradient)
+const { loadMapGeometry, getActiveMapId, animateArena } = buildArena(scene, toonGradient)
 
 const placementPreview = initPlacementPreview({
   camera,
@@ -370,18 +388,24 @@ function spawnImpact(pos: THREE.Vector3, color: number): void {
 /** Map element → world-space impact tint. */
 function elementToImpactColor(element: string | undefined, cause: string): number {
   // Combo reactions get distinctive colours regardless of element.
-  if (cause === 'combo:steam')      return 0x88eeff  // cyan steam burst
-  if (cause === 'combo:combustion') return 0xff8822  // orange-fire explosion
-  if (cause === 'combo:festering')  return 0xaaff44  // sickly green DoT
-  if (cause === 'combo:entrapment') return 0x60bb40  // darker nature green
+  if (cause === 'combo:steam') return 0x88eeff // cyan steam burst
+  if (cause === 'combo:combustion') return 0xff8822 // orange-fire explosion
+  if (cause === 'combo:festering') return 0xaaff44 // sickly green DoT
+  if (cause === 'combo:entrapment') return 0x60bb40 // darker nature green
   // Element-mapped colours for projectile / zone hits.
   switch (element) {
-    case 'fire':      return 0xff6622
-    case 'ice':       return 0x88ddff
-    case 'lightning': return 0xffee44
-    case 'dark':      return 0xaa55ff
-    case 'nature':    return 0x77ee55
-    default:          return 0xd0d8ff  // neutral pale-blue
+    case 'fire':
+      return 0xff6622
+    case 'ice':
+      return 0x88ddff
+    case 'lightning':
+      return 0xffee44
+    case 'dark':
+      return 0xaa55ff
+    case 'nature':
+      return 0x77ee55
+    default:
+      return 0xd0d8ff // neutral pale-blue
   }
 }
 
@@ -414,9 +438,15 @@ const hitFeedback = initHitFeedback({
 })
 
 const combatOverlayHud = initCombatOverlayHud({
-  bowCharge, bowChargeFill, crosshairEl,
-  parryRing, roundTimer,
-  lowHpVignette, blindVignette, deathOverlay, healFlash,
+  bowCharge,
+  bowChargeFill,
+  crosshairEl,
+  parryRing,
+  roundTimer,
+  lowHpVignette,
+  blindVignette,
+  deathOverlay,
+  healFlash,
 })
 
 // -----------------------------------------------------------------------
@@ -444,22 +474,26 @@ function loadoutStationHidden(): boolean {
 }
 
 function isGameplayInputAllowed(): boolean {
-  return Boolean(room)
-    && currentMatchPhase === 'live'
-    && loadoutStationHidden()
-    && !isPauseMenuOpen()
-    && !isOverlayOpen(settingsOverlay)
-    && !document.body.classList.contains('main-menu-active')
-    && !document.body.classList.contains('loadout-active')
+  return (
+    Boolean(room) &&
+    currentMatchPhase === 'live' &&
+    loadoutStationHidden() &&
+    !isPauseMenuOpen() &&
+    !isOverlayOpen(settingsOverlay) &&
+    !document.body.classList.contains('main-menu-active') &&
+    !document.body.classList.contains('loadout-active')
+  )
 }
 
 function canEngageGameplaySurface(): boolean {
-  return Boolean(room)
-    && loadoutStationHidden()
-    && !isPauseMenuOpen()
-    && !isOverlayOpen(settingsOverlay)
-    && !document.body.classList.contains('main-menu-active')
-    && !document.body.classList.contains('loadout-active')
+  return (
+    Boolean(room) &&
+    loadoutStationHidden() &&
+    !isPauseMenuOpen() &&
+    !isOverlayOpen(settingsOverlay) &&
+    !document.body.classList.contains('main-menu-active') &&
+    !document.body.classList.contains('loadout-active')
+  )
 }
 
 function isWeapon(w: string): w is Weapon {
@@ -472,7 +506,10 @@ function currentWeaponFromSchema(): Weapon {
 }
 
 function currentWeaponForInput(): Weapon {
-  return (inp.optimisticWeapon && isWeapon(inp.optimisticWeapon) ? inp.optimisticWeapon : null) ?? currentWeaponFromSchema()
+  return (
+    (inp.optimisticWeapon && isWeapon(inp.optimisticWeapon) ? inp.optimisticWeapon : null) ??
+    currentWeaponFromSchema()
+  )
 }
 
 function clearCombatInputEdges(): void {
@@ -605,11 +642,13 @@ let ping = 0
 let matchStartMs = 0
 
 function isMatchPhase(value: unknown): value is ServerMatchPhaseMessage['phase'] {
-  return value === 'lobby'
-    || value === 'countdown'
-    || value === 'live'
-    || value === 'roundEnd'
-    || value === 'matchEnd'
+  return (
+    value === 'lobby' ||
+    value === 'countdown' ||
+    value === 'live' ||
+    value === 'roundEnd' ||
+    value === 'matchEnd'
+  )
 }
 
 function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
@@ -649,17 +688,21 @@ let victimHitStopUntilMs = 0
 
 // Hit-stop durations by damage source category (milliseconds).
 const HITSTOP_ATTACKER: Record<string, number> = { sword_m1: 65, uppercut: 65, bow: 35, staff: 35 }
-const HITSTOP_VICTIM: Record<string, number>   = { sword_m1: 45, uppercut: 45, bow: 30, staff: 30 }
+const HITSTOP_VICTIM: Record<string, number> = { sword_m1: 45, uppercut: 45, bow: 30, staff: 30 }
 function isAirPunishCause(cause: string): boolean {
   return cause.includes(':air_punish')
 }
 function hitstopAttacker(cause: string): number {
   if (isAirPunishCause(cause)) return 95
-  return HITSTOP_ATTACKER[cause] ?? (cause.startsWith('zone:') || cause.startsWith('combo:') ? 20 : 45)
+  return (
+    HITSTOP_ATTACKER[cause] ?? (cause.startsWith('zone:') || cause.startsWith('combo:') ? 20 : 45)
+  )
 }
 function hitstopVictim(cause: string): number {
   if (isAirPunishCause(cause)) return 70
-  return HITSTOP_VICTIM[cause] ?? (cause.startsWith('zone:') || cause.startsWith('combo:') ? 25 : 35)
+  return (
+    HITSTOP_VICTIM[cause] ?? (cause.startsWith('zone:') || cause.startsWith('combo:') ? 25 : 35)
+  )
 }
 
 // Client-side combo tracking for the attacker (independent of server combo state).
@@ -671,7 +714,7 @@ const COMBO_RESET_MS = 2500
 // Directional screen shake — camera displacement decays each frame toward zero.
 // Magnitude and direction are set by applyDirectionalShake(); decay is per-frame.
 const shakeOffset = new THREE.Vector3()
-let shakeDecay = 0  // current magnitude (metres), decays at shakeDecayRate/s
+let shakeDecay = 0 // current magnitude (metres), decays at shakeDecayRate/s
 const SHAKE_DECAY_RATE = 9 // m/s — shake disappears in ~1/SHAKE_DECAY_RATE seconds
 
 // Per-weapon camera — smoothly lerped so swapping weapons doesn't snap.
@@ -725,11 +768,12 @@ const loadoutStation = initLoadoutStation(
     }
   },
   () => Boolean(pendingLaunchMode),
-  () => pendingLaunchMode === 'training'
-    ? 'START TRAINING'
-    : pendingLaunchMode === 'duel_arena'
-      ? 'START 1V1'
-      : null,
+  () =>
+    pendingLaunchMode === 'training'
+      ? 'START TRAINING'
+      : pendingLaunchMode === 'duel_arena'
+        ? 'START 1V1'
+        : null,
 )
 const radialWheels = initRadialWheels({
   abilityWheelEl,
@@ -825,7 +869,9 @@ const gameInput = initGameInput(inp, {
   getCurrentMatchPhase: () => currentMatchPhase,
   getPlacementAbilityId: () => castDispatcher.getPlacementAbilityId(),
   getLoadoutReturnsToPause: () => loadoutReturnsToPause,
-  setLoadoutReturnsToPause: (v) => { loadoutReturnsToPause = v },
+  setLoadoutReturnsToPause: (v) => {
+    loadoutReturnsToPause = v
+  },
   getPing: () => ping,
   getCurrentWeaponForInput: () => currentWeaponForInput(),
   isGameplayInputAllowed: () => isGameplayInputAllowed(),
@@ -847,7 +893,8 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
     const roomOptions: Record<string, unknown> = { mode, botFill: mode === 'duel_arena' }
     if (token) roomOptions['token'] = token
     const joinedRoom = await client.joinOrCreate('game', roomOptions)
-    const mainMenuHidden = document.getElementById('main-menu')?.classList.contains('hidden') ?? false
+    const mainMenuHidden =
+      document.getElementById('main-menu')?.classList.contains('hidden') ?? false
     if (seq !== connectSeq || !mainMenuHidden) {
       void joinedRoom.leave()
       return
@@ -874,10 +921,13 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
 
     const isCurrentRoom = () => room === joinedRoom
 
-    joinedRoom.onMessage(MessageTypes.PongAck, (msg: { clientTime: number; serverTime: number }) => {
-      if (!isCurrentRoom()) return
-      ping = performance.now() - msg.clientTime
-    })
+    joinedRoom.onMessage(
+      MessageTypes.PongAck,
+      (msg: { clientTime: number; serverTime: number }) => {
+        if (!isCurrentRoom()) return
+        ping = performance.now() - msg.clientTime
+      },
+    )
 
     joinedRoom.onMessage(MessageTypes.Hit, (msg: ServerHitMessage) => {
       if (isCurrentRoom()) onHit(msg)
@@ -887,16 +937,13 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
     })
     joinedRoom.onMessage(MessageTypes.ProjectileSpawned, (msg: ServerProjectileSpawnedMessage) => {
       if (isCurrentRoom()) projectileVfx.onSpawned(msg)
-    },
-    )
+    })
     joinedRoom.onMessage(MessageTypes.ProjectileExpired, (msg: ServerProjectileExpiredMessage) => {
       if (isCurrentRoom()) projectileVfx.onExpired(msg)
-    },
-    )
+    })
     joinedRoom.onMessage(MessageTypes.WeaponSwapped, (msg: ServerWeaponSwappedMessage) => {
       if (isCurrentRoom()) onWeaponSwapped(msg)
-    },
-    )
+    })
     joinedRoom.onMessage(MessageTypes.ParryEvent, (msg: ServerParryEventMessage) => {
       if (!isCurrentRoom()) return
       // parry HUD is driven from schema (player.parrying / parryIsHold).
@@ -908,33 +955,33 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
     // Status / transmute / zone event listeners.
     joinedRoom.onMessage(MessageTypes.StatusApplied, (msg: ServerStatusAppliedMessage) => {
       if (isCurrentRoom()) statusOverlay.onStatusApplied(msg)
-    },
-    )
+    })
     joinedRoom.onMessage(MessageTypes.StatusExpired, (msg: ServerStatusExpiredMessage) => {
       if (isCurrentRoom()) statusOverlay.onStatusExpired(msg)
-    },
-    )
+    })
     joinedRoom.onMessage(MessageTypes.TransmuteResult, (msg: ServerTransmuteResultMessage) => {
       if (isCurrentRoom()) transmuteHud.onTransmuteResult(msg)
-    },
-    )
+    })
     joinedRoom.onMessage(MessageTypes.ZoneSpawned, (msg: ServerZoneSpawnedMessage) => {
       if (isCurrentRoom()) zoneVfx.onSpawned(msg)
     })
     joinedRoom.onMessage(MessageTypes.ZoneExpired, (msg: ServerZoneExpiredMessage) => {
       if (isCurrentRoom()) zoneVfx.onExpired(msg)
     })
-    joinedRoom.onMessage(MessageTypes.AbilityCasted, (msg: { casterId: string; abilityId: string; atTick: number }) => {
-      if (!isCurrentRoom()) return
-      // Play cast sound for self only; remote cast VFX can be expanded in a later polish pass.
-      if (msg.casterId === self?.sessionId) {
-        const def = ABILITY_DEFS[msg.abilityId]
-        soundEngine.playCast(def?.element ?? 'none')
-        trackAbilityCast(msg.abilityId, def?.element ?? 'none')
-        // Anchor cast bar to server ack time — eliminates RTT-induced desync.
-        if (def && def.windupSec > 0) castStartedAtMs = performance.now()
-      }
-    })
+    joinedRoom.onMessage(
+      MessageTypes.AbilityCasted,
+      (msg: { casterId: string; abilityId: string; atTick: number }) => {
+        if (!isCurrentRoom()) return
+        // Play cast sound for self only; remote cast VFX can be expanded in a later polish pass.
+        if (msg.casterId === self?.sessionId) {
+          const def = ABILITY_DEFS[msg.abilityId]
+          soundEngine.playCast(def?.element ?? 'none')
+          trackAbilityCast(msg.abilityId, def?.element ?? 'none')
+          // Anchor cast bar to server ack time — eliminates RTT-induced desync.
+          if (def && def.windupSec > 0) castStartedAtMs = performance.now()
+        }
+      },
+    )
 
     // Server notices — loadout rejections, room warnings, info toasts.
     joinedRoom.onMessage(MessageTypes.ServerNote, (msg: ServerNoteMessage) => {
@@ -946,9 +993,12 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
       if (isCurrentRoom()) abilityFailHud.onAbilityFailed(msg)
     })
     // Channel interrupted — clear cast bar immediately
-    joinedRoom.onMessage(MessageTypes.ChannelInterrupted, (msg: ServerChannelInterruptedMessage) => {
-      if (isCurrentRoom()) onChannelInterrupted(msg)
-    })
+    joinedRoom.onMessage(
+      MessageTypes.ChannelInterrupted,
+      (msg: ServerChannelInterruptedMessage) => {
+        if (isCurrentRoom()) onChannelInterrupted(msg)
+      },
+    )
 
     // Kill streak events.
     joinedRoom.onMessage(MessageTypes.KillStreak, (msg: ServerKillStreakMessage) => {
@@ -1030,9 +1080,9 @@ function onHit(msg: ServerHitMessage): void {
       soundEngine.playCrack(power)
       combatFeedHud.triggerComboFlash()
       combatFeedHud.showComboPopupText(localComboCount)
-      hitStopUntilMs = now + 80  // longer stop for crack
+      hitStopUntilMs = now + 80 // longer stop for crack
       applyDirectionalShake(getPlayerWorldPos(msg.victimId), 0.9)
-      localComboCount = 0  // reset after crack
+      localComboCount = 0 // reset after crack
     } else if (localComboCount === 2) {
       // ── Heavy hit ── escalated sound + stronger shake.
       soundEngine.playHeavyHit(power)
@@ -1072,9 +1122,10 @@ function onHit(msg: ServerHitMessage): void {
       damageFlash.classList.remove('active')
       // Shake toward attacker.
       const attackerPos = getPlayerWorldPos(msg.attackerId)
-      const shakeIntensity = msg.cause === 'sword_m1' || msg.cause === 'uppercut'
-        ? Math.min(1.2, msg.damage / 25)   // melee hits harder
-        : Math.min(1, msg.damage / 30)
+      const shakeIntensity =
+        msg.cause === 'sword_m1' || msg.cause === 'uppercut'
+          ? Math.min(1.2, msg.damage / 25) // melee hits harder
+          : Math.min(1, msg.damage / 30)
       applyDirectionalShake(attackerPos, shakeIntensity)
       hitFeedback.showDirectionalHit(attackerPos)
       triggerDamageBlink()
@@ -1083,11 +1134,18 @@ function onHit(msg: ServerHitMessage): void {
 
   // --- World-space impact VFX — melee, projectile, combo, parry ---
   {
-    const vicPos  = getPlayerWorldPos(msg.victimId)
-    const attPos  = getPlayerWorldPos(msg.attackerId)
-    const midpoint = (attPos && vicPos)
-      ? new THREE.Vector3((attPos.x + vicPos.x) * 0.5, (attPos.y + vicPos.y) * 0.5, (attPos.z + vicPos.z) * 0.5)
-      : (vicPos ? new THREE.Vector3(vicPos.x, vicPos.y, vicPos.z) : null)
+    const vicPos = getPlayerWorldPos(msg.victimId)
+    const attPos = getPlayerWorldPos(msg.attackerId)
+    const midpoint =
+      attPos && vicPos
+        ? new THREE.Vector3(
+            (attPos.x + vicPos.x) * 0.5,
+            (attPos.y + vicPos.y) * 0.5,
+            (attPos.z + vicPos.z) * 0.5,
+          )
+        : vicPos
+          ? new THREE.Vector3(vicPos.x, vicPos.y, vicPos.z)
+          : null
 
     if (midpoint) {
       const cause = msg.cause
@@ -1100,24 +1158,44 @@ function onHit(msg: ServerHitMessage): void {
           spawnImpact(new THREE.Vector3(vicPos.x, vicPos.y + 0.3, vicPos.z), 0xff8844)
           spawnImpact(new THREE.Vector3(vicPos.x, vicPos.y + 0.6, vicPos.z), 0xff4422)
         }
-        if (cause === 'sword_m1' || cause === 'uppercut' || cause === 'gap_closer'
-          || cause === 'bleed_strike' || cause === 'guard_break' || cause === 'rending_dash'
-          || cause === 'whirlwind') {
+        if (
+          cause === 'sword_m1' ||
+          cause === 'uppercut' ||
+          cause === 'gap_closer' ||
+          cause === 'bleed_strike' ||
+          cause === 'guard_break' ||
+          cause === 'rending_dash' ||
+          cause === 'whirlwind'
+        ) {
           // Melee — gold spark.
           spawnImpact(midpoint, 0xffcc44)
-        } else if (cause === 'bow_m1' || cause === 'piercing_shot' || cause === 'pin_shot'
-          || cause === 'marksman_shot' || cause === 'broadhead' || cause === 'blast_arrow'
-          || cause === 'volley' || cause === 'disengage_shot' || cause === 'snare_trap') {
+        } else if (
+          cause === 'bow_m1' ||
+          cause === 'piercing_shot' ||
+          cause === 'pin_shot' ||
+          cause === 'marksman_shot' ||
+          cause === 'broadhead' ||
+          cause === 'blast_arrow' ||
+          cause === 'volley' ||
+          cause === 'disengage_shot' ||
+          cause === 'snare_trap'
+        ) {
           // Bow / arrow — amber.
           spawnImpact(midpoint, 0xf08020)
         } else if (cause.startsWith('combo:')) {
           // Status combo reactions — element-specific colour.
           spawnImpact(midpoint, elementToImpactColor(msg.element, cause))
-        } else if (cause.startsWith('zone:') || cause.startsWith('dot:')
-          || cause.startsWith('status:')) {
+        } else if (
+          cause.startsWith('zone:') ||
+          cause.startsWith('dot:') ||
+          cause.startsWith('status:')
+        ) {
           // Zone / DoT ticks — small element-coloured pulse at victim.
-          if (vicPos) spawnImpact(new THREE.Vector3(vicPos.x, vicPos.y + 0.5, vicPos.z),
-            elementToImpactColor(msg.element, cause))
+          if (vicPos)
+            spawnImpact(
+              new THREE.Vector3(vicPos.x, vicPos.y + 0.5, vicPos.z),
+              elementToImpactColor(msg.element, cause),
+            )
         } else {
           // All other magic / ability hits — element-coloured impact.
           spawnImpact(midpoint, elementToImpactColor(msg.element, cause))
@@ -1189,7 +1267,6 @@ function onKillStreak(msg: ServerKillStreakMessage): void {
   combatFeedHud.updateKillStreak(msg, selfId)
 }
 
-
 function onChannelInterrupted(msg: ServerChannelInterruptedMessage): void {
   const selfId = self?.sessionId ?? ''
   if (msg.casterId !== selfId) return
@@ -1201,7 +1278,6 @@ function onChannelInterrupted(msg: ServerChannelInterruptedMessage): void {
   castBar.classList.add('interrupted')
   setTimeout(() => castBar.classList.remove('interrupted'), 600)
 }
-
 
 function onWeaponSwapped(msg: ServerWeaponSwappedMessage): void {
   if (msg.playerId !== self?.sessionId) return
@@ -1236,7 +1312,6 @@ function disposeObject3D(obj: THREE.Object3D): void {
     }
   })
 }
-
 
 function clearSelfVisuals(): void {
   if (selfMesh) {
@@ -1314,7 +1389,11 @@ function clearLocalMatchState(): void {
 function returnToMainMenu(opts: { leaveRoom: boolean; statusText?: string }): void {
   connectSeq++
   const leavingRoom = room
-  if (leavingRoom) trackMatchLeft(leavingRoom.state?.['mode'] as string ?? 'unknown', (performance.now() - matchStartMs) / 1000)
+  if (leavingRoom)
+    trackMatchLeft(
+      (leavingRoom.state?.['mode'] as string) ?? 'unknown',
+      (performance.now() - matchStartMs) / 1000,
+    )
   room = null
   self = null
   clearLocalMatchState()
@@ -1325,12 +1404,10 @@ function returnToMainMenu(opts: { leaveRoom: boolean; statusText?: string }): vo
   loadoutStation.close()
   menu.hideScoreboard()
   menu.showMain()
-  if (opts.statusText) setStatus(opts.statusText, opts.statusText === 'disconnected' ? '#e87070' : '#e4c05a')
+  if (opts.statusText)
+    setStatus(opts.statusText, opts.statusText === 'disconnected' ? '#e87070' : '#e4c05a')
   if (opts.leaveRoom && leavingRoom) void leavingRoom.leave()
 }
-
-
-
 
 function getPlayerWorldPos(sid: string): THREE.Vector3 | null {
   if (sid === self?.sessionId && selfMesh) {
@@ -1338,7 +1415,6 @@ function getPlayerWorldPos(sid: string): THREE.Vector3 | null {
   }
   return remotePlayerSystem.getWorldPos(sid)
 }
-
 
 // -----------------------------------------------------------------------
 // Self init
@@ -1458,7 +1534,6 @@ function sendAbilityCast(abilityId: string, tick: number): void {
   showShootFlash()
 }
 
-
 // -----------------------------------------------------------------------
 // Sim loop — 60 Hz
 // -----------------------------------------------------------------------
@@ -1475,8 +1550,10 @@ function simStep(): void {
   const schemaTick = getSchemaTick()
   const airborne = !!selfSchema && selfSchema.airborneUntilTick > schemaTick
   const dead = !!selfSchema && !selfSchema.alive
-  if ((dead || airborne) && castDispatcher.getPlacementAbilityId()) castDispatcher.cancelPlacementPreview()
-  if (inp.optimisticWeapon && selfSchema?.activeWeapon === inp.optimisticWeapon) inp.optimisticWeapon = null
+  if ((dead || airborne) && castDispatcher.getPlacementAbilityId())
+    castDispatcher.cancelPlacementPreview()
+  if (inp.optimisticWeapon && selfSchema?.activeWeapon === inp.optimisticWeapon)
+    inp.optimisticWeapon = null
   const activeWeapon: Weapon = currentWeaponForInput()
   const combatLive = currentMatchPhase === 'live'
   if (!combatLive && self.bowChargeStartMs > 0) {
@@ -1544,8 +1621,14 @@ function simStep(): void {
   inp.weaponSwapRequest = null
 
   castDispatcher.dispatch({
-    inp, bowCharge: self, room,
-    schemaTick, combatLive, dead, airborne, activeWeapon,
+    inp,
+    bowCharge: self,
+    room,
+    schemaTick,
+    combatLive,
+    dead,
+    airborne,
+    activeWeapon,
   })
 
   // --- Input message ------------------------------------------------------
@@ -1628,7 +1711,8 @@ function reconcileSelf(): void {
   self.sim = serverState
   // Replay only the unacknowledged in-flight inputs, each with the caps that
   // were active at send time so root/slow/stun match the server's computation.
-  for (const e of self.pending) simulatePlayer(self.sim, e.input, e.dt, getMap(getActiveMapId() || 'blockout'), e.caps)
+  for (const e of self.pending)
+    simulatePlayer(self.sim, e.input, e.dt, getMap(getActiveMapId() || 'blockout'), e.caps)
 
   const dx = self.sim.pos.x - predictedBefore.x
   const dy = self.sim.pos.y - predictedBefore.y
@@ -1680,12 +1764,14 @@ function render(now: number): void {
   // zoom and the charge HUD bar can consume it without duplicating the math.
   let bowChargeRatio = 0
   if (self && self.bowChargeStartMs > 0) {
-    const wSchemaOuter = selfSchema && isWeapon(selfSchema.activeWeapon) ? selfSchema.activeWeapon : 'sword'
+    const wSchemaOuter =
+      selfSchema && isWeapon(selfSchema.activeWeapon) ? selfSchema.activeWeapon : 'sword'
     if (wSchemaOuter === 'bow') {
       const elapsed = (now - self.bowChargeStartMs) / 1000
-      bowChargeRatio = elapsed <= BOW_CHARGE_MIN_SEC
-        ? 0
-        : Math.min(1, (elapsed - BOW_CHARGE_MIN_SEC) / (BOW_CHARGE_FULL_SEC - BOW_CHARGE_MIN_SEC))
+      bowChargeRatio =
+        elapsed <= BOW_CHARGE_MIN_SEC
+          ? 0
+          : Math.min(1, (elapsed - BOW_CHARGE_MIN_SEC) / (BOW_CHARGE_FULL_SEC - BOW_CHARGE_MIN_SEC))
     }
   }
 
@@ -1704,7 +1790,7 @@ function render(now: number): void {
       z = selfSchema.transform.z
     }
     // Idle breathing bob — tiny vertical sine when grounded, skipped airborne.
-    const idleBob = (!airborne && !dead) ? Math.sin(now * 0.0028) * 0.014 : 0
+    const idleBob = !airborne && !dead ? Math.sin(now * 0.0028) * 0.014 : 0
     selfMesh.position.set(x, y + idleBob, z)
     selfMesh.rotation.y = inp.mouseYaw
     // Follow-light tracks the player's torso level.
@@ -1713,7 +1799,8 @@ function render(now: number): void {
     // Per-weapon camera:
     // Sword keeps an over-shoulder view for melee spacing. Bow and staff are
     // first-person precision weapons, so their aim must match the crosshair.
-    const wSchema = selfSchema && isWeapon(selfSchema.activeWeapon) ? selfSchema.activeWeapon : 'sword'
+    const wSchema =
+      selfSchema && isWeapon(selfSchema.activeWeapon) ? selfSchema.activeWeapon : 'sword'
     // Update weapon prop if weapon changed.
     if (wSchema !== selfLastWeapon) {
       selfLastWeapon = wSchema
@@ -1721,18 +1808,19 @@ function render(now: number): void {
     }
     const firstPersonWeapon = wSchema === 'bow' || wSchema === 'staff'
     const wBackTarget = firstPersonWeapon ? 0 : 5.5
-    const wUpTarget   = firstPersonWeapon ? PROJECTILE_MUZZLE_Y_OFFSET_M : 1.3
+    const wUpTarget = firstPersonWeapon ? PROJECTILE_MUZZLE_Y_OFFSET_M : 1.3
 
     // Bow ADS narrows more while drawn; staff keeps a crisp FPS FOV.
-    const wFovTarget = wSchema === 'bow'
-      ? settingsFovBase - 7 - bowChargeRatio * 5
-      : wSchema === 'staff'
-        ? settingsFovBase - 3
-        : settingsFovBase
+    const wFovTarget =
+      wSchema === 'bow'
+        ? settingsFovBase - 7 - bowChargeRatio * 5
+        : wSchema === 'staff'
+          ? settingsFovBase - 3
+          : settingsFovBase
     const CAM_LERP = inHitStop ? 0 : 0.12
-    camBack    += (wBackTarget - camBack)    * CAM_LERP
-    camUp      += (wUpTarget   - camUp)      * CAM_LERP
-    camFovBase += (wFovTarget  - camFovBase) * CAM_LERP
+    camBack += (wBackTarget - camBack) * CAM_LERP
+    camUp += (wUpTarget - camUp) * CAM_LERP
+    camFovBase += (wFovTarget - camFovBase) * CAM_LERP
 
     selfMesh.visible = !dead && !firstPersonWeapon
 
@@ -1742,7 +1830,11 @@ function render(now: number): void {
     } else {
       // Stable third-person orbit. Yaw controls the shoulder/back position;
       // pitch controls only the look target so the camera never dives down.
-      const back = new THREE.Vector3(Math.sin(inp.mouseYaw) * camBack, 0, Math.cos(inp.mouseYaw) * camBack)
+      const back = new THREE.Vector3(
+        Math.sin(inp.mouseYaw) * camBack,
+        0,
+        Math.cos(inp.mouseYaw) * camBack,
+      )
       camera.position.set(x + back.x, y + camUp, z + back.z)
     }
 
@@ -1751,7 +1843,9 @@ function render(now: number): void {
     if (camera.position.y < groundFloor + 0.4) camera.position.y = groundFloor + 0.4
 
     if (!firstPersonWeapon) {
-      const aimForward = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(inp.mousePitch, inp.mouseYaw, 0, 'YXZ'))
+      const aimForward = new THREE.Vector3(0, 0, -1).applyEuler(
+        new THREE.Euler(inp.mousePitch, inp.mouseYaw, 0, 'YXZ'),
+      )
       const lookDistance = 10
       const lookY = y + CAPSULE_HALF_HEIGHT_M * 0.85
       camera.lookAt(
@@ -1830,7 +1924,8 @@ function render(now: number): void {
   }
 
   // Weapon wheel highlight + debug.
-  if (inp.optimisticWeapon && selfSchema?.activeWeapon === inp.optimisticWeapon) inp.optimisticWeapon = null
+  if (inp.optimisticWeapon && selfSchema?.activeWeapon === inp.optimisticWeapon)
+    inp.optimisticWeapon = null
   const activeWeapon: Weapon = currentWeaponForInput()
   dbgWeapon.textContent = activeWeapon
   for (const w of WEAPON_IDS) {
@@ -1838,7 +1933,8 @@ function render(now: number): void {
   }
 
   combatOverlayHud.update({
-    now, tickNow,
+    now,
+    tickNow,
     bowChargeRatio,
     activeWeapon,
     dead,
@@ -1848,7 +1944,10 @@ function render(now: number): void {
     selfSchema: selfSchema ?? null,
     livePhaseStartTick,
     clearBowCharge: () => {
-      if (self) { self.bowChargeStartMs = 0; self.bowChargeServerAcked = false }
+      if (self) {
+        self.bowChargeStartMs = 0
+        self.bowChargeServerAcked = false
+      }
     },
   })
 
@@ -1874,8 +1973,12 @@ function render(now: number): void {
     selfMesh,
     getCurrentLoadout: currentLoadoutArray,
     updateTransmuteBar: transmuteHud.updateBar,
-    setCastStartedAt: (ms) => { castStartedAtMs = ms },
-    clearPrimedSlot:  () =>  { castDispatcher.clearQueue() },
+    setCastStartedAt: (ms) => {
+      castStartedAtMs = ms
+    },
+    clearPrimedSlot: () => {
+      castDispatcher.clearQueue()
+    },
     cancelPlacementPreview: () => castDispatcher.cancelPlacementPreview(),
   })
 

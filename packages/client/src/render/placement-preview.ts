@@ -17,9 +17,17 @@ export interface PlacementPreviewController {
   aimPoint: (abilityId: string) => { x: number; y: number; z: number } | undefined
 }
 
-function placementFootprint(abilityId: string): { radius: number; width: number; depth: number; wall: boolean } {
+function placementFootprint(abilityId: string): {
+  radius: number
+  width: number
+  depth: number
+  wall: boolean
+} {
   const def = ABILITY_DEFS[abilityId]
-  let radius = 0.85, width = 0, depth = 0, wall = false
+  let radius = 0.85,
+    width = 0,
+    depth = 0,
+    wall = false
   if (!def) return { radius, width, depth, wall }
 
   for (const e of def.effects) {
@@ -57,10 +65,18 @@ export function initPlacementPreview({
   group.visible = false
 
   const discMat = new THREE.MeshBasicMaterial({
-    color: 0xffd260, transparent: true, opacity: 0.24, depthWrite: false, side: THREE.DoubleSide,
+    color: 0xffd260,
+    transparent: true,
+    opacity: 0.24,
+    depthWrite: false,
+    side: THREE.DoubleSide,
   })
   const ringMat = new THREE.MeshBasicMaterial({
-    color: 0xffd260, transparent: true, opacity: 0.92, depthWrite: false, side: THREE.DoubleSide,
+    color: 0xffd260,
+    transparent: true,
+    opacity: 0.92,
+    depthWrite: false,
+    side: THREE.DoubleSide,
   })
   const disc = new THREE.Mesh(new THREE.CircleGeometry(1, 64), discMat)
   disc.rotation.x = -Math.PI / 2
@@ -72,16 +88,27 @@ export function initPlacementPreview({
 
   const wall = new THREE.Mesh(
     new THREE.PlaneGeometry(1, 1),
-    new THREE.MeshBasicMaterial({ color: 0xff8a30, transparent: true, opacity: 0.38, depthWrite: false, side: THREE.DoubleSide }),
+    new THREE.MeshBasicMaterial({
+      color: 0xff8a30,
+      transparent: true,
+      opacity: 0.38,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    }),
   )
   wall.rotation.x = -Math.PI / 2
   group.add(wall)
 
-  const lineGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()])
-  group.add(new THREE.Line(
-    lineGeom,
-    new THREE.LineBasicMaterial({ color: 0xffd260, transparent: true, opacity: 0.78 }),
-  ))
+  const lineGeom = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(),
+    new THREE.Vector3(),
+  ])
+  group.add(
+    new THREE.Line(
+      lineGeom,
+      new THREE.LineBasicMaterial({ color: 0xffd260, transparent: true, opacity: 0.78 }),
+    ),
+  )
 
   function groundY(): number {
     return getMapGroundY(getActiveMapId() || getSchemaMapId())
@@ -165,7 +192,7 @@ export function initPlacementPreview({
     } else {
       disc.scale.setScalar(footprint.radius)
       ring.scale.setScalar(footprint.radius)
-      discMat.opacity = 0.18 + pulse * 0.10
+      discMat.opacity = 0.18 + pulse * 0.1
       ringMat.opacity = 0.72 + pulse * 0.22
     }
     const attr = lineGeom.attributes['position'] as THREE.BufferAttribute

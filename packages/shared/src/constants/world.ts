@@ -45,5 +45,5 @@ export const WEAPON_SWAP_LOCK_SEC = 0.12 as const
 // continuously for at least MOMENTUM_THRESHOLD_TICKS consecutive ticks.
 // At 60 Hz that is 0.5 s, matching the Quake / arena shooter standard.
 // The bonus is a fractional speed multiplier on top of MOVE_SPEED_MPS.
-export const MOMENTUM_THRESHOLD_TICKS = 30 as const  // ~0.5 s at 60 Hz
-export const MOMENTUM_BONUS = 0.08 as const           // +8% speed
+export const MOMENTUM_THRESHOLD_TICKS = 30 as const // ~0.5 s at 60 Hz
+export const MOMENTUM_BONUS = 0.08 as const // +8% speed

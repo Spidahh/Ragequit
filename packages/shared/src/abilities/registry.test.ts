@@ -75,7 +75,10 @@ describe('ability registry', () => {
     for (const def of Object.values(ABILITY_DEFS) as AbilityDef[]) {
       if (def.comboRole !== 'ray') continue
       expect(def.targeting, def.id).toBe('forward')
-      expect(def.effects.some((e) => e.kind === 'projectile' || e.kind === 'zone'), def.id).toBe(false)
+      expect(
+        def.effects.some((e) => e.kind === 'projectile' || e.kind === 'zone'),
+        def.id,
+      ).toBe(false)
     }
   })
 
@@ -84,9 +87,12 @@ describe('ability registry', () => {
       if (def.comboRole !== 'starter') continue
       const hasControl = def.effects.some((e) => {
         if (e.kind === 'knockup') return true
-        if (e.kind === 'applyStatus') return ['root', 'stun', 'freeze', 'blind', 'slow'].includes(e.status)
-        if (e.kind === 'projectile') return ['root', 'stun', 'freeze', 'blind', 'slow'].includes(e.onHitStatus?.status ?? '')
-        if (e.kind === 'zone') return ['root', 'stun', 'freeze', 'blind', 'slow'].includes(e.applyStatus?.status ?? '')
+        if (e.kind === 'applyStatus')
+          return ['root', 'stun', 'freeze', 'blind', 'slow'].includes(e.status)
+        if (e.kind === 'projectile')
+          return ['root', 'stun', 'freeze', 'blind', 'slow'].includes(e.onHitStatus?.status ?? '')
+        if (e.kind === 'zone')
+          return ['root', 'stun', 'freeze', 'blind', 'slow'].includes(e.applyStatus?.status ?? '')
         return false
       })
       expect(hasControl, def.id).toBe(true)
@@ -181,7 +187,9 @@ describe('ability registry', () => {
   it('movement tooltips match collision and direction flags', () => {
     const quickDash = getAbilityDef('quick_dash')!
     const quickMove = quickDash.effects.find((e) => e.kind === 'move')
-    expect(quickMove && 'useMovementDirection' in quickMove ? quickMove.useMovementDirection : false).toBe(true)
+    expect(
+      quickMove && 'useMovementDirection' in quickMove ? quickMove.useMovementDirection : false,
+    ).toBe(true)
 
     for (const id of ['fire_blink', 'lightning_dash']) {
       const def = getAbilityDef(id)!

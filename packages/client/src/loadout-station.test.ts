@@ -130,7 +130,9 @@ describe('loadout station smoke', () => {
     api.open()
     document.getElementById('ls-detail-instant')?.click()
 
-    const stored = JSON.parse(localStorage.getItem(__loadoutStationSmoke.instantCastStorageKey) ?? '{}') as Record<string, boolean>
+    const stored = JSON.parse(
+      localStorage.getItem(__loadoutStationSmoke.instantCastStorageKey) ?? '{}',
+    ) as Record<string, boolean>
     expect(stored['uppercut']).toBe(false)
     expect(api.isInstantCast('uppercut')).toBe(false)
   })
@@ -138,7 +140,12 @@ describe('loadout station smoke', () => {
   it('does not send or close when build changes are locked', () => {
     const send = vi.fn()
     const room = { send } as never
-    const api = initLoadoutStation(() => room, undefined, undefined, () => false)
+    const api = initLoadoutStation(
+      () => room,
+      undefined,
+      undefined,
+      () => false,
+    )
 
     api.open()
     document.getElementById('ls-confirm')?.click()
@@ -150,7 +157,12 @@ describe('loadout station smoke', () => {
 
   it('keeps build editing read-only while locked', () => {
     const room = { send: vi.fn() } as never
-    const api = initLoadoutStation(() => room, undefined, undefined, () => false)
+    const api = initLoadoutStation(
+      () => room,
+      undefined,
+      undefined,
+      () => false,
+    )
 
     api.open()
     const before = api.getLoadout().join('|')
@@ -168,13 +180,25 @@ describe('loadout station smoke', () => {
 
     api.open()
     document.querySelector<HTMLButtonElement>('[data-filter="starter"]')?.click()
-    expect(document.querySelector<HTMLButtonElement>('[data-filter="starter"]')?.classList.contains('active-filter')).toBe(true)
+    expect(
+      document
+        .querySelector<HTMLButtonElement>('[data-filter="starter"]')
+        ?.classList.contains('active-filter'),
+    ).toBe(true)
 
     document.querySelectorAll<HTMLButtonElement>('.ls-slot')[1]?.click()
 
     expect(document.querySelector<HTMLInputElement>('#ls-search')?.value).toBe('')
-    expect(document.querySelector<HTMLButtonElement>('[data-filter="all"]')?.classList.contains('active-filter')).toBe(true)
-    expect(document.querySelector<HTMLButtonElement>('[data-filter="starter"]')?.classList.contains('active-filter')).toBe(false)
+    expect(
+      document
+        .querySelector<HTMLButtonElement>('[data-filter="all"]')
+        ?.classList.contains('active-filter'),
+    ).toBe(true)
+    expect(
+      document
+        .querySelector<HTMLButtonElement>('[data-filter="starter"]')
+        ?.classList.contains('active-filter'),
+    ).toBe(false)
   })
 
   it('filters starter cards by combo role instead of legacy starter flags', () => {
@@ -197,9 +221,17 @@ describe('loadout station smoke', () => {
     expect(document.querySelectorAll('.pool-card.recommended').length).toBeGreaterThan(0)
 
     document.querySelector<HTMLButtonElement>('[data-filter="preview"]')?.click()
-    expect(Array.from(document.querySelectorAll('.pool-card .instant-toggle')).every((el) => el.getAttribute('aria-checked') === 'false')).toBe(true)
+    expect(
+      Array.from(document.querySelectorAll('.pool-card .instant-toggle')).every(
+        (el) => el.getAttribute('aria-checked') === 'false',
+      ),
+    ).toBe(true)
 
     document.querySelector<HTMLButtonElement>('[data-filter="instant"]')?.click()
-    expect(Array.from(document.querySelectorAll('.pool-card .instant-toggle')).every((el) => el.getAttribute('aria-checked') === 'true')).toBe(true)
+    expect(
+      Array.from(document.querySelectorAll('.pool-card .instant-toggle')).every(
+        (el) => el.getAttribute('aria-checked') === 'true',
+      ),
+    ).toBe(true)
   })
 })

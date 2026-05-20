@@ -26,18 +26,31 @@ const SETTINGS_STORAGE_KEY = 'ragequit.settings.v1'
 interface SettingsData {
   quality: GraphicsQuality
   fov: number
-  sens: number      // raw value (0.0004..0.008)
-  volume: number    // 0..1
+  sens: number // raw value (0.0004..0.008)
+  volume: number // 0..1
 }
 function loadSettings(): SettingsData {
   try {
     const raw = localStorage.getItem(SETTINGS_STORAGE_KEY)
-    if (raw) return { quality: 'med', fov: 90, sens: 0.0022, volume: 0.55, ...JSON.parse(raw) } as SettingsData
-  } catch { /* ignore */ }
+    if (raw)
+      return {
+        quality: 'med',
+        fov: 90,
+        sens: 0.0022,
+        volume: 0.55,
+        ...JSON.parse(raw),
+      } as SettingsData
+  } catch {
+    /* ignore */
+  }
   return { quality: 'med', fov: 90, sens: 0.0022, volume: 0.55 }
 }
 function saveSettings(s: SettingsData): void {
-  try { localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(s)) } catch { /* ignore */ }
+  try {
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(s))
+  } catch {
+    /* ignore */
+  }
 }
 
 export interface MenuApi {
@@ -86,12 +99,12 @@ export function initMenu(handlers: {
 
   // Sensitivity slider: map raw (0.0004..0.008) → slider units (4..80)
   // by multiplying by 10 000. Displayed as a 1–80 integer for clarity.
-  const fovSlider   = document.getElementById('setting-fov')   as HTMLInputElement
-  const fovVal      = document.getElementById('setting-fov-val')!
-  const sensSlider  = document.getElementById('setting-sens')  as HTMLInputElement
-  const sensVal     = document.getElementById('setting-sens-val')!
-  const volSlider   = document.getElementById('setting-vol')   as HTMLInputElement
-  const volVal      = document.getElementById('setting-vol-val')!
+  const fovSlider = document.getElementById('setting-fov') as HTMLInputElement
+  const fovVal = document.getElementById('setting-fov-val')!
+  const sensSlider = document.getElementById('setting-sens') as HTMLInputElement
+  const sensVal = document.getElementById('setting-sens-val')!
+  const volSlider = document.getElementById('setting-vol') as HTMLInputElement
+  const volVal = document.getElementById('setting-vol-val')!
   const qualityBtns = document.querySelectorAll<HTMLButtonElement>('.quality-btn')
   initKeybindSettings(settingsOverlay)
 
@@ -272,7 +285,12 @@ export function initMenu(handlers: {
         rebuildPips(pipsOther, 0)
         sbSelf.textContent = `${selfKills} kills`
         sbOther.textContent = `top: ${topKills}`
-        sbWinner.textContent = selfKills >= FFA_KILLS_TO_WIN ? 'YOU WIN' : topKills >= FFA_KILLS_TO_WIN ? 'GAME OVER' : 'ONGOING'
+        sbWinner.textContent =
+          selfKills >= FFA_KILLS_TO_WIN
+            ? 'YOU WIN'
+            : topKills >= FFA_KILLS_TO_WIN
+              ? 'GAME OVER'
+              : 'ONGOING'
       } else if (msg.team) {
         // 5v5 team mode
         const team = msg.team
@@ -284,7 +302,8 @@ export function initMenu(handlers: {
         rebuildPips(pipsOther, 0)
         sbSelf.textContent = `Red ${red}`
         sbOther.textContent = `Blue ${blue}`
-        sbWinner.textContent = red >= TEAM_KILLS_TO_WIN ? 'RED WINS' : blue >= TEAM_KILLS_TO_WIN ? 'BLUE WINS' : ''
+        sbWinner.textContent =
+          red >= TEAM_KILLS_TO_WIN ? 'RED WINS' : blue >= TEAM_KILLS_TO_WIN ? 'BLUE WINS' : ''
       }
     },
   }

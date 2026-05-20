@@ -5,12 +5,12 @@ import { slotKeybindEntries } from '../input/keybinds.js'
 import { FIXED_TRANSFER_SLOTS, normalizeLoadoutSlots } from '../input/loadout-slots.js'
 
 export const ELEMENT_COLOR: Record<string, string> = {
-  fire:      '#ff6a2a',
-  ice:       '#6dd6ff',
+  fire: '#ff6a2a',
+  ice: '#6dd6ff',
   lightning: '#ffe244',
-  dark:      '#b870ff',
-  nature:    '#80e860',
-  none:      '#9ba0b4',
+  dark: '#b870ff',
+  nature: '#80e860',
+  none: '#9ba0b4',
 }
 
 export interface CooldownLookup {
@@ -84,7 +84,10 @@ export function initCooldownStrip(
         ? `${def.name}\nCD ${def.cooldownSec}s${costStr}\n${def.miniMalus ?? ''}`
         : id
 
-      const elemLabel = (def?.element && def.element !== 'none') ? def.element.toUpperCase() : def?.slot.toUpperCase() ?? ''
+      const elemLabel =
+        def?.element && def.element !== 'none'
+          ? def.element.toUpperCase()
+          : (def?.slot.toUpperCase() ?? '')
       const cdLabel = def ? `${def.cooldownSec}s CD` : ''
       const costLabel = costParts.length > 0 ? costParts.join(' · ') : 'free'
       const malusHtml = def?.miniMalus ? `<div class="tt-malus">${def.miniMalus}</div>` : ''
@@ -209,19 +212,21 @@ export function initCooldownStrip(
     }
   }
 
-  rebuild(normalizeLoadoutSlots([
-    'uppercut',
-    'piercing_shot',
-    'fireball',
-    'flame_wall',
-    'frost_bolt',
-    'chain_bolt',
-    'shadow_bolt',
-    '',
-    '',
-    '',
-    'quick_dash',
-  ]))
+  rebuild(
+    normalizeLoadoutSlots([
+      'uppercut',
+      'piercing_shot',
+      'fireball',
+      'flame_wall',
+      'frost_bolt',
+      'chain_bolt',
+      'shadow_bolt',
+      '',
+      '',
+      '',
+      'quick_dash',
+    ]),
+  )
 
   return {
     currentSignature: () => loadoutSig,

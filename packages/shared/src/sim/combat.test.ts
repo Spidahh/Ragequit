@@ -45,12 +45,12 @@ describe('melee cone hit test', () => {
   it('respects cone half-angle — edge of 55° just hits, 75° misses', () => {
     // Cone is now 60° half-angle (120° total arc).
     // At 55° off-axis (inside 60° cone), target should be hit.
-    const x55 = Math.sin(Math.PI * 55 / 180) * 2
-    const z55 = -Math.cos(Math.PI * 55 / 180) * 2
+    const x55 = Math.sin((Math.PI * 55) / 180) * 2
+    const z55 = -Math.cos((Math.PI * 55) / 180) * 2
     expect(isInSwordM1Cone(attacker, 0, { x: x55, y: 0, z: z55 })).toBe(true)
     // At 75° off-axis, outside the 60° half-cone.
-    const x75 = Math.sin(Math.PI * 75 / 180) * 2
-    const z75 = -Math.cos(Math.PI * 75 / 180) * 2
+    const x75 = Math.sin((Math.PI * 75) / 180) * 2
+    const z75 = -Math.cos((Math.PI * 75) / 180) * 2
     expect(isInSwordM1Cone(attacker, 0, { x: x75, y: 0, z: z75 })).toBe(false)
   })
 
@@ -89,7 +89,12 @@ describe('sword M1 combo state machine', () => {
       lastTick = lastTick + 10
     }
     expect(plays).toEqual([0, 1, 2, 0])
-    expect(damages).toEqual([SWORD_M1_DAMAGE[0], SWORD_M1_DAMAGE[1], SWORD_M1_DAMAGE[2], SWORD_M1_DAMAGE[0]])
+    expect(damages).toEqual([
+      SWORD_M1_DAMAGE[0],
+      SWORD_M1_DAMAGE[1],
+      SWORD_M1_DAMAGE[2],
+      SWORD_M1_DAMAGE[0],
+    ])
   })
 
   it('resets combo after SWORD_M1_COMBO_RESET_SEC of inactivity', () => {

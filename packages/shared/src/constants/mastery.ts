@@ -44,10 +44,10 @@ export interface MasteryBonusDef {
 export const MASTERY_BONUSES: Readonly<Record<ElementId, MasteryBonusDef>> = {
   fire: {
     element: 'fire',
-    damageMult: 1.15,       // +15% damage on all fire abilities
+    damageMult: 1.15, // +15% damage on all fire abilities
     cooldownMult: 1.0,
     ccDurationMult: 1.0,
-    dotTickMult: 1.0,       // Burn duration +50% handled separately in StatusRuntime
+    dotTickMult: 1.0, // Burn duration +50% handled separately in StatusRuntime
     lifestealAdd: 0,
     level2Desc: 'Burn stacks detonate on hit — 1 extra AoE tick per consumed stack.',
     color: '#ff6a2a',
@@ -56,7 +56,7 @@ export const MASTERY_BONUSES: Readonly<Record<ElementId, MasteryBonusDef>> = {
     element: 'ice',
     damageMult: 1.0,
     cooldownMult: 1.0,
-    ccDurationMult: 1.10,   // +10% CC duration on all ice abilities
+    ccDurationMult: 1.1, // +10% CC duration on all ice abilities
     dotTickMult: 1.0,
     lifestealAdd: 0,
     level2Desc: 'Chill→Freeze threshold reduced from 5 to 4 stacks.',
@@ -65,7 +65,7 @@ export const MASTERY_BONUSES: Readonly<Record<ElementId, MasteryBonusDef>> = {
   lightning: {
     element: 'lightning',
     damageMult: 1.0,
-    cooldownMult: 0.85,     // -15% cooldown on all lightning abilities
+    cooldownMult: 0.85, // -15% cooldown on all lightning abilities
     ccDurationMult: 1.0,
     dotTickMult: 1.0,
     lifestealAdd: 0,
@@ -78,7 +78,7 @@ export const MASTERY_BONUSES: Readonly<Record<ElementId, MasteryBonusDef>> = {
     cooldownMult: 1.0,
     ccDurationMult: 1.0,
     dotTickMult: 1.0,
-    lifestealAdd: 0.20,     // +20% lifesteal on all dark hits
+    lifestealAdd: 0.2, // +20% lifesteal on all dark hits
     level2Desc: 'Lifesteal also heals nearby allies for 20% of the amount.',
     color: '#c890ff',
   },
@@ -87,7 +87,7 @@ export const MASTERY_BONUSES: Readonly<Record<ElementId, MasteryBonusDef>> = {
     damageMult: 1.0,
     cooldownMult: 1.0,
     ccDurationMult: 1.0,
-    dotTickMult: 1.25,      // +25% DoT tick damage on all nature abilities
+    dotTickMult: 1.25, // +25% DoT tick damage on all nature abilities
     lifestealAdd: 0,
     level2Desc: 'Poison stacks decay 2× slower.',
     color: '#aef090',

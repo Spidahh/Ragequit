@@ -16,13 +16,13 @@ All 52 abilities live in `packages/shared/src/abilities/registry.ts` and use the
 
 Counts:
 
-| Slot | Count | Notes |
-| --- | ---: | --- |
-| melee | 6 | One selected in the loadout |
-| bow | 8 | One selected in the loadout |
-| magic | 27 | Five selected; only these drive Mastery |
-| utility | 11 | Three fixed transfer utilities plus one flex utility |
-| total | 52 | No passive/rune system |
+| Slot    | Count | Notes                                                |
+| ------- | ----: | ---------------------------------------------------- |
+| melee   |     6 | One selected in the loadout                          |
+| bow     |     8 | One selected in the loadout                          |
+| magic   |    27 | Five selected; only these drive Mastery              |
+| utility |    11 | Three fixed transfer utilities plus one flex utility |
+| total   |    52 | No passive/rune system                               |
 
 The server executes these definitions through `AbilityEngine`. New abilities should be added as data first; engine changes are only for genuinely new primitives.
 
@@ -43,7 +43,17 @@ interface AbilityDef {
   windupSec: number
   range: number
   targeting: 'self' | 'forward' | 'target' | 'point'
-  comboRole: 'starter' | 'extender' | 'finisher' | 'ray' | 'pressure' | 'survival' | 'counter' | 'mobility' | 'drain' | 'resource'
+  comboRole:
+    | 'starter'
+    | 'extender'
+    | 'finisher'
+    | 'ray'
+    | 'pressure'
+    | 'survival'
+    | 'counter'
+    | 'mobility'
+    | 'drain'
+    | 'resource'
   effects: readonly EffectSpec[]
   description: string
   miniMalus: string
@@ -54,49 +64,49 @@ interface AbilityDef {
 
 Targeting notes:
 
-| Targeting | Runtime behavior |
-| --- | --- |
-| `self` | Effects resolve on caster |
-| `forward` | Uses current yaw/pitch; direct effects use aimed enemy selection |
-| `target` | Explicit target id when supplied |
-| `point` | Uses client-provided ground point, clamped client-side for preview and server-side for authority |
+| Targeting | Runtime behavior                                                                                 |
+| --------- | ------------------------------------------------------------------------------------------------ |
+| `self`    | Effects resolve on caster                                                                        |
+| `forward` | Uses current yaw/pitch; direct effects use aimed enemy selection                                 |
+| `target`  | Explicit target id when supplied                                                                 |
+| `point`   | Uses client-provided ground point, clamped client-side for preview and server-side for authority |
 
 ## Effect Primitives
 
 Current primitives:
 
-| Primitive | Purpose |
-| --- | --- |
-| `damage` | Direct or radius damage, optional element/lifesteal/excludePrimary |
-| `applyStatus` | Burn/chill/bleed/poison/slow/root/stun/freeze/curse/blind/mark/shield/haste/invulnerable |
-| `knockup` | Airborne lock; optional grounded-target requirement; optional horizontal knockback distance |
-| `heal` | Instant or over-time healing |
-| `lifesteal` | Cast-level lifesteal fraction |
-| `resourceDrain` | Drain Mana or Stamina from the resolved enemy and optionally refund part to the caster |
-| `projectile` | Arrow/bolt-like projectile with gravity, splash, on-hit status |
-| `zone` | Circle/wall zones with duration, arming delay, damage/status ticks |
-| `move` | Dash/teleport with collision cancellation and optional movement direction |
-| `channel` | Sustained tick effect; can break on movement or damage |
-| `cleanse` | Remove one status or all debuffs |
-| `restoreStamina` | Flat stamina restore |
-| `transmute` | Fixed HP/Mana/Stamina transfer utilities |
+| Primitive        | Purpose                                                                                     |
+| ---------------- | ------------------------------------------------------------------------------------------- |
+| `damage`         | Direct or radius damage, optional element/lifesteal/excludePrimary                          |
+| `applyStatus`    | Burn/chill/bleed/poison/slow/root/stun/freeze/curse/blind/mark/shield/haste/invulnerable    |
+| `knockup`        | Airborne lock; optional grounded-target requirement; optional horizontal knockback distance |
+| `heal`           | Instant or over-time healing                                                                |
+| `lifesteal`      | Cast-level lifesteal fraction                                                               |
+| `resourceDrain`  | Drain Mana or Stamina from the resolved enemy and optionally refund part to the caster      |
+| `projectile`     | Arrow/bolt-like projectile with gravity, splash, on-hit status                              |
+| `zone`           | Circle/wall zones with duration, arming delay, damage/status ticks                          |
+| `move`           | Dash/teleport with collision cancellation and optional movement direction                   |
+| `channel`        | Sustained tick effect; can break on movement or damage                                      |
+| `cleanse`        | Remove one status or all debuffs                                                            |
+| `restoreStamina` | Flat stamina restore                                                                        |
+| `transmute`      | Fixed HP/Mana/Stamina transfer utilities                                                    |
 
 ## Combo Role Contract
 
 `comboRole` is mandatory and design-authored. Do not infer it from effects in new ability data. There is no separate `isStarter` flag: starter filtering, tags, and tests read `comboRole` directly.
 
-| Role | Contract |
-| --- | --- |
-| `starter` | Applies real control: launch, root, freeze, stun, blind, or meaningful slow |
+| Role       | Contract                                                                              |
+| ---------- | ------------------------------------------------------------------------------------- |
+| `starter`  | Applies real control: launch, root, freeze, stun, blind, or meaningful slow           |
 | `extender` | Keeps enemies inside a started combo through zones, repeated control, or space denial |
-| `finisher` | Rewards setup with high-value damage or precision payoff |
-| `ray` | Instant forward line-of-sight hit; no projectile or point zone |
-| `pressure` | Sustained poke, DoT, bleed, poison, chill, or lifesteal pressure |
-| `survival` | Heal, shield, sustain, or recovery |
-| `counter` | Cleanse, phase, disengage, anti-melee, or interrupt answer |
-| `mobility` | Repositioning tool that changes engage/disengage geometry |
-| `drain` | Attacks enemy Mana/Stamina or converts enemy tempo into your resources |
-| `resource` | Fixed transfer or resource restore utility |
+| `finisher` | Rewards setup with high-value damage or precision payoff                              |
+| `ray`      | Instant forward line-of-sight hit; no projectile or point zone                        |
+| `pressure` | Sustained poke, DoT, bleed, poison, chill, or lifesteal pressure                      |
+| `survival` | Heal, shield, sustain, or recovery                                                    |
+| `counter`  | Cleanse, phase, disengage, anti-melee, or interrupt answer                            |
+| `mobility` | Repositioning tool that changes engage/disengage geometry                             |
+| `drain`    | Attacks enemy Mana/Stamina or converts enemy tempo into your resources                |
+| `resource` | Fixed transfer or resource restore utility                                            |
 
 ## Runtime Guarantees
 

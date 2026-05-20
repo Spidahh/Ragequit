@@ -117,7 +117,8 @@ export function initCombatOverlayHud({
     if (selfSchema) {
       const hpFrac = selfSchema.hp / HP_MAX
       lowHpVignette.classList.toggle('active', selfSchema.alive && hpFrac < 0.25)
-      const blinded = selfSchema.alive && Array.from(selfSchema.statuses).some((s) => s.kind === 'blind')
+      const blinded =
+        selfSchema.alive && Array.from(selfSchema.statuses).some((s) => s.kind === 'blind')
       blindVignette.classList.toggle('active', blinded)
       deathOverlay.classList.toggle('active', !selfSchema.alive)
       document.body.classList.toggle('player-dead', !selfSchema.alive)

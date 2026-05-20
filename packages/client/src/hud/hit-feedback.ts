@@ -1,12 +1,12 @@
 import * as THREE from 'three'
 
 const ELEMENT_POPUP_COLOR: Record<string, string> = {
-  fire:      '#ff8a4a',
-  ice:       '#9adfff',
+  fire: '#ff8a4a',
+  ice: '#9adfff',
   lightning: '#ffe566',
-  dark:      '#c890ff',
-  nature:    '#aef090',
-  steam:     '#ccddff',
+  dark: '#c890ff',
+  nature: '#aef090',
+  steam: '#ccddff',
 }
 
 export interface HitFeedbackOptions {
@@ -44,7 +44,10 @@ export function initHitFeedback({
   function showHitmarker(): void {
     clearTimeout(hitmarkerTimeout)
     crosshairEl.classList.add('hit')
-    hitmarkerTimeout = setTimeout(() => crosshairEl.classList.remove('hit'), 130) as unknown as number
+    hitmarkerTimeout = setTimeout(
+      () => crosshairEl.classList.remove('hit'),
+      130,
+    ) as unknown as number
   }
 
   function showDirectionalHit(attackerWorldPos: THREE.Vector3 | null): void {
@@ -56,8 +59,9 @@ export function initHitFeedback({
       const dx = attackerWorldPos.x - selfPos.x
       const dz = attackerWorldPos.z - selfPos.z
       const camYaw = getCamYaw()
-      const cos = Math.cos(-camYaw), sin = Math.sin(-camYaw)
-      const camX =  cos * dx + sin * dz
+      const cos = Math.cos(-camYaw),
+        sin = Math.sin(-camYaw)
+      const camX = cos * dx + sin * dz
       const camZ = -sin * dx + cos * dz
       if (Math.abs(camX) > Math.abs(camZ)) {
         dir = camX > 0 ? 'right' : 'left'

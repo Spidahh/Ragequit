@@ -282,7 +282,7 @@ export interface ServerChannelInterruptedMessage {
 // streak = 0 means the streak was broken (victim died).
 export interface ServerKillStreakMessage {
   playerId: string
-  streak: number    // current consecutive kills (0 = streak broken)
+  streak: number // current consecutive kills (0 = streak broken)
   damageBonus: number // e.g. 0.10 → +10% outgoing damage
   atTick: number
 }

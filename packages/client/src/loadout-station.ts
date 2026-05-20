@@ -101,7 +101,9 @@ export function initLoadoutStation(
   }
 
   function syncPoolFilterButtons(): void {
-    filterBtns.forEach((btn) => btn.classList.toggle('active-filter', btn.dataset['filter'] === poolFilterEl))
+    filterBtns.forEach((btn) =>
+      btn.classList.toggle('active-filter', btn.dataset['filter'] === poolFilterEl),
+    )
   }
 
   function setActiveSlot(idx: number): void {
@@ -118,7 +120,8 @@ export function initLoadoutStation(
       const raw = localStorage.getItem(STORAGE_KEY)
       if (!raw) return DEFAULT_SLOTS.slice()
       const parsed = JSON.parse(raw) as { slots?: string[] }
-      if (Array.isArray(parsed.slots) && parsed.slots.length === 11) return normalizeLoadoutSlots(parsed.slots)
+      if (Array.isArray(parsed.slots) && parsed.slots.length === 11)
+        return normalizeLoadoutSlots(parsed.slots)
     } catch {
       // Fall through to defaults.
     }
@@ -186,7 +189,9 @@ export function initLoadoutStation(
   }
 
   function currentMastery(): { level: MasteryLevel; element: ElementId | undefined } {
-    const defs = slots.map((id) => (id ? ABILITY_DEFS[id] : undefined)) as Array<AbilityDef | undefined>
+    const defs = slots.map((id) => (id ? ABILITY_DEFS[id] : undefined)) as Array<
+      AbilityDef | undefined
+    >
     return computeLoadoutMastery(defs)
   }
 
@@ -230,8 +235,14 @@ export function initLoadoutStation(
       `<span class="ls-slot-label">${slotKeyLabel(idx)}</span>`,
       `<span class="ls-slot-main"><span class="ls-slot-name">${def?.name ?? '— empty —'}</span><span class="ls-slot-role">${role?.title ?? slotPoolTitle(slotKind, idx)}</span></span>`,
       def ? `<span class="ls-slot-cost">${formatCost(def)} · ${def.cooldownSec}s</span>` : '',
-      def && !lockedTransfer ? `<span class="ls-slot-mode ${isInstantCast(def) ? 'instant' : 'preview'}">${isInstantCast(def) ? 'INSTANT' : 'PREVIEW'}</span>` : '',
-      lockedTransfer ? '<span class="ls-slot-lock">FIXED</span>' : id ? '<button class="ls-slot-clear" title="Clear">×</button>' : '',
+      def && !lockedTransfer
+        ? `<span class="ls-slot-mode ${isInstantCast(def) ? 'instant' : 'preview'}">${isInstantCast(def) ? 'INSTANT' : 'PREVIEW'}</span>`
+        : '',
+      lockedTransfer
+        ? '<span class="ls-slot-lock">FIXED</span>'
+        : id
+          ? '<button class="ls-slot-clear" title="Clear">×</button>'
+          : '',
     ].join('')
     el.addEventListener('click', (event) => {
       if (lockedTransfer) {
@@ -300,7 +311,8 @@ export function initLoadoutStation(
       detailsMeta.textContent = (LOADOUT_SLOT_ORDER[activeIdx] ?? 'utility').toUpperCase() + ' SLOT'
       detailsDesc.replaceChildren()
       const empty = document.createElement('p')
-      empty.textContent = 'Pick a compatible ability. Transfer slots are fixed and always stay on Z, X and F.'
+      empty.textContent =
+        'Pick a compatible ability. Transfer slots are fixed and always stay on Z, X and F.'
       detailsDesc.appendChild(empty)
       rebuildBuildCoach()
       detailsMalus.textContent = ''
@@ -331,7 +343,13 @@ export function initLoadoutStation(
       `${def.cooldownSec}s CD`,
       def.range > 0 ? `${def.range}m` : 'self',
     ].join(' · ')
-    detailsDesc.replaceChildren(roleBlock(role), castModeBlock(def, isInstantCast(def)), renderEffectTags(def), quickStatBlock(quickStats), textBlock(def.description))
+    detailsDesc.replaceChildren(
+      roleBlock(role),
+      castModeBlock(def, isInstantCast(def)),
+      renderEffectTags(def),
+      quickStatBlock(quickStats),
+      textBlock(def.description),
+    )
     rebuildBuildCoach()
     detailsMalus.textContent = def.miniMalus
   }
@@ -410,7 +428,10 @@ export function initLoadoutStation(
     const locked = buildLocked()
     const targetLabel = slotPoolTitle(targetSlot, activeIdx)
     if (poolTitle) poolTitle.textContent = targetLabel
-    if (poolSubtitle) poolSubtitle.textContent = locked ? 'Build editing is locked during live combat' : poolSubtitleFor(targetSlot, activeIdx)
+    if (poolSubtitle)
+      poolSubtitle.textContent = locked
+        ? 'Build editing is locked during live combat'
+        : poolSubtitleFor(targetSlot, activeIdx)
     if (activeIdx in FIXED_TRANSFER_SLOTS) {
       const empty = document.createElement('div')
       empty.className = 'pool-empty transfer-locked-copy'
@@ -424,7 +445,8 @@ export function initLoadoutStation(
       .filter((def) => !slots.some((id, idx) => idx !== activeIdx && id === def.id))
       .filter((def) => {
         if (poolFilterEl === 'all') return true
-        if (poolFilterEl === 'recommended') return recommendationTags(def, activeIdx, slots).length > 0
+        if (poolFilterEl === 'recommended')
+          return recommendationTags(def, activeIdx, slots).length > 0
         if (poolFilterEl === 'starter') return def.comboRole === 'starter'
         if (poolFilterEl === 'control') return abilityHasControl(def)
         if (poolFilterEl === 'instant') return isInstantCast(def)
@@ -468,7 +490,9 @@ export function initLoadoutStation(
         `<span class="pool-name">${escapeHtml(def.name)}</span>`,
         `<span class="pool-meta">${def.element !== 'none' ? def.element.toUpperCase() : 'PHYSICAL'} · ${formatCost(def)} · ${def.cooldownSec}s CD</span>`,
         `<span class="pool-summary">${escapeHtml(def.description)}</span>`,
-        `<span class="effect-tags">${formatEffectTags(def).map((tag) => `<span class="${tagClass(tag)}">${escapeHtml(tag)}</span>`).join('')}</span>`,
+        `<span class="effect-tags">${formatEffectTags(def)
+          .map((tag) => `<span class="${tagClass(tag)}">${escapeHtml(tag)}</span>`)
+          .join('')}</span>`,
         `<span class="pool-bars">${quickStats.map((s) => `<span class="pool-bar ${s.className}" title="${escapeHtml(s.label)}"><i style="width:${s.value * 20}%"></i></span>`).join('')}</span>`,
       ].join('')
       card.addEventListener('click', () => {
@@ -563,7 +587,7 @@ export function initLoadoutStation(
         ? 'LOCKED IN COMBAT'
         : getRoom()
           ? 'CONFIRM BUILD'
-          : getLaunchCtaLabel?.() ?? 'SAVE BUILD'
+          : (getLaunchCtaLabel?.() ?? 'SAVE BUILD')
       btnConfirm.classList.toggle('locked', locked)
       overlay.classList.toggle('build-locked', locked)
       document.body.classList.add('loadout-active')
@@ -608,9 +632,10 @@ function castModeBlock(def: AbilityDef, instant: boolean): HTMLDivElement {
 
   const copy = document.createElement('span')
   if (instant) {
-    copy.textContent = def.targeting === 'forward'
-      ? 'Direct key press fires toward the current crosshair.'
-      : 'Direct key press activates immediately.'
+    copy.textContent =
+      def.targeting === 'forward'
+        ? 'Direct key press fires toward the current crosshair.'
+        : 'Direct key press activates immediately.'
   } else {
     copy.textContent = 'Key press primes the spell, shows the placement preview, then LMB confirms.'
   }
@@ -639,17 +664,25 @@ interface BuildCoachReport {
 }
 
 function analyzeBuild(slotIds: readonly string[]): BuildCoachReport {
-  const defs = slotIds.map((id) => ABILITY_DEFS[id]).filter((def): def is AbilityDef => Boolean(def))
-  const magicDefs = slotIds.slice(2, 7).map((id) => ABILITY_DEFS[id]).filter((def): def is AbilityDef => Boolean(def))
+  const defs = slotIds
+    .map((id) => ABILITY_DEFS[id])
+    .filter((def): def is AbilityDef => Boolean(def))
+  const magicDefs = slotIds
+    .slice(2, 7)
+    .map((id) => ABILITY_DEFS[id])
+    .filter((def): def is AbilityDef => Boolean(def))
   const mastery = computeLoadoutMastery(slotIds.map((id) => ABILITY_DEFS[id]))
-  const roleCount = (role: AbilityDef['comboRole']): number => defs.filter((def) => def.comboRole === role).length
+  const roleCount = (role: AbilityDef['comboRole']): number =>
+    defs.filter((def) => def.comboRole === role).length
   const starters = roleCount('starter')
   const extenders = roleCount('extender')
   const finishers = roleCount('finisher') + roleCount('ray')
   const survival = roleCount('survival') + roleCount('counter') + roleCount('mobility')
   const controls = defs.filter((def) => abilityHasControl(def)).length
   const pointPreviews = defs.filter((def) => def.targeting === 'point').length
-  const instantHits = defs.filter((def) => def.targeting === 'forward' || def.comboRole === 'ray').length
+  const instantHits = defs.filter(
+    (def) => def.targeting === 'forward' || def.comboRole === 'ray',
+  ).length
   const hasAirPunish = defs.some((def) => def.comboRole === 'finisher')
 
   let score = 0
@@ -661,14 +694,44 @@ function analyzeBuild(slotIds: readonly string[]): BuildCoachReport {
   if (pointPreviews > 0 && instantHits > 0) score++
 
   const lines: BuildCoachReport['lines'] = []
-  if (starters === 0) lines.push({ kind: 'warn', text: 'Missing opener: add a launch, root, freeze, stun, or blind to start real combos.' })
-  else lines.push({ kind: 'good', text: 'Opener online: use the wheel to prime a setup, then confirm with LMB.' })
-  if (finishers === 0) lines.push({ kind: 'warn', text: 'Missing finisher: add an air punish, instant ray, or precision shot to cash out CC.' })
-  else lines.push({ kind: 'good', text: hasAirPunish ? 'Air punish available: launch into finisher for the damage bonus.' : 'Direct punish available: ray/projectile can cash out roots and freezes.' })
-  if (pointPreviews > 0 && instantHits === 0) lines.push({ kind: 'warn', text: 'You have placed previews but few instant hits; add a ray or fast shot for follow-up speed.' })
+  if (starters === 0)
+    lines.push({
+      kind: 'warn',
+      text: 'Missing opener: add a launch, root, freeze, stun, or blind to start real combos.',
+    })
+  else
+    lines.push({
+      kind: 'good',
+      text: 'Opener online: use the wheel to prime a setup, then confirm with LMB.',
+    })
+  if (finishers === 0)
+    lines.push({
+      kind: 'warn',
+      text: 'Missing finisher: add an air punish, instant ray, or precision shot to cash out CC.',
+    })
+  else
+    lines.push({
+      kind: 'good',
+      text: hasAirPunish
+        ? 'Air punish available: launch into finisher for the damage bonus.'
+        : 'Direct punish available: ray/projectile can cash out roots and freezes.',
+    })
+  if (pointPreviews > 0 && instantHits === 0)
+    lines.push({
+      kind: 'warn',
+      text: 'You have placed previews but few instant hits; add a ray or fast shot for follow-up speed.',
+    })
   if (mastery.level === 0) lines.push({ kind: 'warn', text: masteryHint(magicDefs) })
-  else lines.push({ kind: 'good', text: `${capitalize(mastery.element ?? 'magic')} mastery active: your magic deck has a readable element identity.` })
-  if (survival === 0) lines.push({ kind: 'warn', text: 'No reset tool: consider shield, cleanse, dash, phase, or heal in the utility slot.' })
+  else
+    lines.push({
+      kind: 'good',
+      text: `${capitalize(mastery.element ?? 'magic')} mastery active: your magic deck has a readable element identity.`,
+    })
+  if (survival === 0)
+    lines.push({
+      kind: 'warn',
+      text: 'No reset tool: consider shield, cleanse, dash, phase, or heal in the utility slot.',
+    })
 
   return {
     score,
@@ -677,8 +740,16 @@ function analyzeBuild(slotIds: readonly string[]): BuildCoachReport {
       { label: 'Control', value: controls > 0 ? String(controls) : 'LOW', ok: controls > 0 },
       { label: 'Cashout', value: finishers > 0 ? String(finishers) : 'MISS', ok: finishers > 0 },
       { label: 'Reset', value: survival > 0 ? String(survival) : 'MISS', ok: survival > 0 },
-      { label: 'Preview', value: pointPreviews > 0 ? String(pointPreviews) : 'NONE', ok: pointPreviews > 0 },
-      { label: 'Mastery', value: mastery.level > 0 ? `T${mastery.level}` : 'OFF', ok: mastery.level > 0 },
+      {
+        label: 'Preview',
+        value: pointPreviews > 0 ? String(pointPreviews) : 'NONE',
+        ok: pointPreviews > 0,
+      },
+      {
+        label: 'Mastery',
+        value: mastery.level > 0 ? `T${mastery.level}` : 'OFF',
+        ok: mastery.level > 0,
+      },
     ],
     lines: lines.slice(0, 5),
   }
@@ -692,7 +763,9 @@ function rebuildFlowStrip(report: BuildCoachReport): void {
     const ok = state.get(lookup) ?? false
     step.classList.toggle('online', ok)
     step.classList.toggle('missing', !ok)
-    step.title = ok ? `${step.textContent ?? lookup} ready` : `${step.textContent ?? lookup} missing`
+    step.title = ok
+      ? `${step.textContent ?? lookup} ready`
+      : `${step.textContent ?? lookup} missing`
   }
 }
 
@@ -705,35 +778,60 @@ function abilityHasControl(def: AbilityDef): boolean {
   return def.effects.some((effect) => {
     if (effect.kind === 'knockup') return true
     if (effect.kind === 'applyStatus') return statusControlScore(effect.status) >= 2
-    if (effect.kind === 'projectile' && effect.onHitStatus) return statusControlScore(effect.onHitStatus.status) >= 2
-    if (effect.kind === 'zone' && effect.applyStatus) return statusControlScore(effect.applyStatus.status) >= 2
-    if (effect.kind === 'channel' && effect.perTick.kind === 'applyStatus') return statusControlScore(effect.perTick.status) >= 2
+    if (effect.kind === 'projectile' && effect.onHitStatus)
+      return statusControlScore(effect.onHitStatus.status) >= 2
+    if (effect.kind === 'zone' && effect.applyStatus)
+      return statusControlScore(effect.applyStatus.status) >= 2
+    if (effect.kind === 'channel' && effect.perTick.kind === 'applyStatus')
+      return statusControlScore(effect.perTick.status) >= 2
     return false
   })
 }
 
-function recommendationTags(candidate: AbilityDef, activeIdx: number, slotIds: readonly string[]): string[] {
+function recommendationTags(
+  candidate: AbilityDef,
+  activeIdx: number,
+  slotIds: readonly string[],
+): string[] {
   if (activeIdx in FIXED_TRANSFER_SLOTS) return []
   const otherDefs = slotIds
     .map((id, idx) => (idx === activeIdx ? undefined : ABILITY_DEFS[id]))
     .filter((def): def is AbilityDef => Boolean(def))
   const tags: string[] = []
   const hasStarter = otherDefs.some((def) => def.comboRole === 'starter' || abilityHasControl(def))
-  const hasFinisher = otherDefs.some((def) => def.comboRole === 'finisher' || def.comboRole === 'ray')
-  const hasReset = otherDefs.some((def) => ['survival', 'counter', 'mobility'].includes(def.comboRole))
+  const hasFinisher = otherDefs.some(
+    (def) => def.comboRole === 'finisher' || def.comboRole === 'ray',
+  )
+  const hasReset = otherDefs.some((def) =>
+    ['survival', 'counter', 'mobility'].includes(def.comboRole),
+  )
   const hasPointPreview = otherDefs.some((def) => def.targeting === 'point')
-  const hasInstantHit = otherDefs.some((def) => def.targeting === 'forward' || def.comboRole === 'ray')
+  const hasInstantHit = otherDefs.some(
+    (def) => def.targeting === 'forward' || def.comboRole === 'ray',
+  )
   const masteryTarget = closestMasteryElement(slotIds, activeIdx)
 
-  if (!hasStarter && (candidate.comboRole === 'starter' || abilityHasControl(candidate))) tags.push('OPENER')
-  if (!hasFinisher && (candidate.comboRole === 'finisher' || candidate.comboRole === 'ray')) tags.push('CASHOUT')
-  if (!hasReset && ['survival', 'counter', 'mobility'].includes(candidate.comboRole)) tags.push('RESET')
-  if (hasPointPreview && !hasInstantHit && (candidate.targeting === 'forward' || candidate.comboRole === 'ray')) tags.push('FOLLOWUP')
-  if (masteryTarget && candidate.slot === 'magic' && candidate.element === masteryTarget) tags.push('MASTERY')
+  if (!hasStarter && (candidate.comboRole === 'starter' || abilityHasControl(candidate)))
+    tags.push('OPENER')
+  if (!hasFinisher && (candidate.comboRole === 'finisher' || candidate.comboRole === 'ray'))
+    tags.push('CASHOUT')
+  if (!hasReset && ['survival', 'counter', 'mobility'].includes(candidate.comboRole))
+    tags.push('RESET')
+  if (
+    hasPointPreview &&
+    !hasInstantHit &&
+    (candidate.targeting === 'forward' || candidate.comboRole === 'ray')
+  )
+    tags.push('FOLLOWUP')
+  if (masteryTarget && candidate.slot === 'magic' && candidate.element === masteryTarget)
+    tags.push('MASTERY')
   return Array.from(new Set(tags)).slice(0, 2)
 }
 
-function closestMasteryElement(slotIds: readonly string[], activeIdx: number): ElementId | undefined {
+function closestMasteryElement(
+  slotIds: readonly string[],
+  activeIdx: number,
+): ElementId | undefined {
   if (LOADOUT_SLOT_ORDER[activeIdx] !== 'magic') return undefined
   const counts: Partial<Record<ElementId, number>> = {}
   for (let idx = 2; idx < 7; idx++) {
@@ -807,16 +905,56 @@ function renderEffectTags(def: AbilityDef): HTMLDivElement {
 }
 
 const COMBO_ROLE_INFO: Record<AbilityDef['comboRole'], AbilityRoleInfo> = {
-  starter: { icon: '^', title: 'Combo Starter', line: 'Applies launch, root, freeze, blind or stun.' },
-  extender: { icon: '[]', title: 'Combo Extender', line: 'Controls space with zones, slows or repeated ticks.' },
-  finisher: { icon: '!', title: 'Finisher', line: 'High-value hit that gains +25% damage against airborne targets.' },
-  ray: { icon: '|', title: 'Instant Ray', line: 'Instant line-of-sight hit if the target is under the crosshair.' },
-  pressure: { icon: '*', title: 'Pressure', line: 'Applies direct damage, bleed, burn, poison or fast threat.' },
-  survival: { icon: '+', title: 'Survival Tool', line: 'Keeps you alive through healing, shield, sustain, or recovery.' },
-  counter: { icon: '<>', title: 'Counter Tool', line: 'Breaks pressure, cleanses, phases, disengages, or interrupts.' },
-  mobility: { icon: '>>', title: 'Mobility', line: 'Moves, dashes, teleports or repositions the player.' },
-  drain: { icon: '-', title: 'Resource Drain', line: 'Attacks enemy Mana or Stamina while creating tempo.' },
-  resource: { icon: '=', title: 'Resource Tool', line: 'Converts or restores resources on a fixed utility rhythm.' },
+  starter: {
+    icon: '^',
+    title: 'Combo Starter',
+    line: 'Applies launch, root, freeze, blind or stun.',
+  },
+  extender: {
+    icon: '[]',
+    title: 'Combo Extender',
+    line: 'Controls space with zones, slows or repeated ticks.',
+  },
+  finisher: {
+    icon: '!',
+    title: 'Finisher',
+    line: 'High-value hit that gains +25% damage against airborne targets.',
+  },
+  ray: {
+    icon: '|',
+    title: 'Instant Ray',
+    line: 'Instant line-of-sight hit if the target is under the crosshair.',
+  },
+  pressure: {
+    icon: '*',
+    title: 'Pressure',
+    line: 'Applies direct damage, bleed, burn, poison or fast threat.',
+  },
+  survival: {
+    icon: '+',
+    title: 'Survival Tool',
+    line: 'Keeps you alive through healing, shield, sustain, or recovery.',
+  },
+  counter: {
+    icon: '<>',
+    title: 'Counter Tool',
+    line: 'Breaks pressure, cleanses, phases, disengages, or interrupts.',
+  },
+  mobility: {
+    icon: '>>',
+    title: 'Mobility',
+    line: 'Moves, dashes, teleports or repositions the player.',
+  },
+  drain: {
+    icon: '-',
+    title: 'Resource Drain',
+    line: 'Attacks enemy Mana or Stamina while creating tempo.',
+  },
+  resource: {
+    icon: '=',
+    title: 'Resource Tool',
+    line: 'Converts or restores resources on a fixed utility rhythm.',
+  },
 }
 
 function abilityRole(def: AbilityDef): AbilityRoleInfo {
@@ -856,23 +994,62 @@ function abilityRole(def: AbilityDef): AbilityRoleInfo {
       hasSustain = hasSustain || ['shield', 'haste'].includes(e.status)
     } else if (e.kind === 'channel') {
       hasChannel = true
-      hasAreaHit = hasAreaHit || (e.perTick.kind === 'damage' && Boolean(e.perTick.radius && e.perTick.radius > 0))
+      hasAreaHit =
+        hasAreaHit ||
+        (e.perTick.kind === 'damage' && Boolean(e.perTick.radius && e.perTick.radius > 0))
       hasSustain = hasSustain || e.perTick.kind === 'heal'
-      hasHardCc = hasHardCc || (e.perTick.kind === 'applyStatus' && statusControlScore(e.perTick.status) >= 2)
-    } else if (e.kind === 'heal' || e.kind === 'cleanse' || e.kind === 'restoreStamina' || e.kind === 'transmute' || e.kind === 'lifesteal' || e.kind === 'resourceDrain') {
+      hasHardCc =
+        hasHardCc || (e.perTick.kind === 'applyStatus' && statusControlScore(e.perTick.status) >= 2)
+    } else if (
+      e.kind === 'heal' ||
+      e.kind === 'cleanse' ||
+      e.kind === 'restoreStamina' ||
+      e.kind === 'transmute' ||
+      e.kind === 'lifesteal' ||
+      e.kind === 'resourceDrain'
+    ) {
       hasSustain = true
     }
   }
 
-  if (def.id.startsWith('transfer_')) return { icon: '↔', title: 'Resource Swap', line: 'Converts one resource into another on a fixed utility key.' }
-  if (hasSustain && !hasHardCc && !hasPersistentZone) return { icon: '+', title: 'Survival Tool', line: 'Keeps you alive, cleansed, mobile or stocked on resources.' }
-  if (hasMove) return { icon: '↗', title: hasHardCc ? 'Engage Setup' : 'Mobility Hit', line: 'Moves the player and may apply control or damage.' }
-  if (hasHardCc && (hasPersistentZone || hasAreaHit)) return { icon: '⌖', title: 'Area Control', line: 'Controls space with AoE and status effects.' }
-  if (hasHardCc) return { icon: '↑', title: 'Combo Starter', line: 'Applies a disabling or airborne status.' }
-  if (hasPersistentZone) return { icon: '□', title: 'Zone Pressure', line: 'Controls an area with damage or status ticks.' }
-  if (hasAreaHit || hasChannel) return { icon: '◇', title: 'Area Damage', line: 'Hits a space or repeated window instead of one clean shot.' }
-  if (hasProjectile) return { icon: '➤', title: 'Skill Shot', line: 'Ranged aim tool fired toward the crosshair.' }
-  if (hasDot) return { icon: '✦', title: 'Status Pressure', line: 'Applies damage or debuffs over time.' }
+  if (def.id.startsWith('transfer_'))
+    return {
+      icon: '↔',
+      title: 'Resource Swap',
+      line: 'Converts one resource into another on a fixed utility key.',
+    }
+  if (hasSustain && !hasHardCc && !hasPersistentZone)
+    return {
+      icon: '+',
+      title: 'Survival Tool',
+      line: 'Keeps you alive, cleansed, mobile or stocked on resources.',
+    }
+  if (hasMove)
+    return {
+      icon: '↗',
+      title: hasHardCc ? 'Engage Setup' : 'Mobility Hit',
+      line: 'Moves the player and may apply control or damage.',
+    }
+  if (hasHardCc && (hasPersistentZone || hasAreaHit))
+    return { icon: '⌖', title: 'Area Control', line: 'Controls space with AoE and status effects.' }
+  if (hasHardCc)
+    return { icon: '↑', title: 'Combo Starter', line: 'Applies a disabling or airborne status.' }
+  if (hasPersistentZone)
+    return {
+      icon: '□',
+      title: 'Zone Pressure',
+      line: 'Controls an area with damage or status ticks.',
+    }
+  if (hasAreaHit || hasChannel)
+    return {
+      icon: '◇',
+      title: 'Area Damage',
+      line: 'Hits a space or repeated window instead of one clean shot.',
+    }
+  if (hasProjectile)
+    return { icon: '➤', title: 'Skill Shot', line: 'Ranged aim tool fired toward the crosshair.' }
+  if (hasDot)
+    return { icon: '✦', title: 'Status Pressure', line: 'Applies damage or debuffs over time.' }
   return { icon: '◆', title: 'Direct Hit', line: 'Straightforward damage or utility effect.' }
 }
 
@@ -900,7 +1077,14 @@ function abilityQuickStats(def: AbilityDef): AbilityQuickStat[] {
       control += e.airborneSec >= 0.8 ? 3 : 2
     } else if (e.kind === 'move') {
       mobility += e.distance >= 6 ? 3 : 2
-    } else if (e.kind === 'heal' || e.kind === 'cleanse' || e.kind === 'restoreStamina' || e.kind === 'transmute' || e.kind === 'lifesteal' || e.kind === 'resourceDrain') {
+    } else if (
+      e.kind === 'heal' ||
+      e.kind === 'cleanse' ||
+      e.kind === 'restoreStamina' ||
+      e.kind === 'transmute' ||
+      e.kind === 'lifesteal' ||
+      e.kind === 'resourceDrain'
+    ) {
       sustain += 2
     }
   }
@@ -936,25 +1120,29 @@ function formatEffectTags(def: AbilityDef): string[] {
     } else if (e.kind === 'projectile') {
       tags.add(`${e.damage} PROJECTILE DMG`)
       if (e.splashRadius && e.splashRadius > 0) tags.add(`${e.splashRadius}m SPLASH`)
-      if (e.onHitStatus) tags.add(statusTag(e.onHitStatus.status, e.onHitStatus.durationSec, e.onHitStatus.stacks))
+      if (e.onHitStatus)
+        tags.add(statusTag(e.onHitStatus.status, e.onHitStatus.durationSec, e.onHitStatus.stacks))
     } else if (e.kind === 'applyStatus') {
       tags.add(statusTag(e.status, e.durationSec, e.stacks))
     } else if (e.kind === 'knockup') {
       tags.add(`${e.airborneSec}s AIRBORNE`)
-      if (e.knockbackDistance && e.knockbackDistance > 0) tags.add(`${e.knockbackDistance}m KNOCKBACK`)
+      if (e.knockbackDistance && e.knockbackDistance > 0)
+        tags.add(`${e.knockbackDistance}m KNOCKBACK`)
     } else if (e.kind === 'heal') {
       tags.add(e.overSec && e.overSec > 0 ? `${e.amount} HEAL / ${e.overSec}s` : `${e.amount} HEAL`)
     } else if (e.kind === 'zone') {
       tags.add(`${e.durationSec}s ZONE`)
       if (e.damagePerTick) tags.add(`${e.damagePerTick}/TICK`)
-      if (e.applyStatus) tags.add(statusTag(e.applyStatus.status, e.applyStatus.durationSec, e.applyStatus.stacks))
+      if (e.applyStatus)
+        tags.add(statusTag(e.applyStatus.status, e.applyStatus.durationSec, e.applyStatus.stacks))
     } else if (e.kind === 'move') {
       tags.add(`${e.distance}m ${e.mode.toUpperCase()}`)
     } else if (e.kind === 'channel') {
       tags.add(`${e.durationSec}s CHANNEL`)
       if (e.perTick.kind === 'damage') tags.add(`${e.perTick.amount}/TICK`)
       if (e.perTick.kind === 'heal') tags.add(`${e.perTick.amount}/TICK HEAL`)
-      if (e.perTick.kind === 'applyStatus') tags.add(statusTag(e.perTick.status, e.perTick.durationSec, e.perTick.stacks))
+      if (e.perTick.kind === 'applyStatus')
+        tags.add(statusTag(e.perTick.status, e.perTick.durationSec, e.perTick.stacks))
     } else if (e.kind === 'cleanse') {
       tags.add(e.status ? `CLEANSE ${e.status.toUpperCase()}` : 'FULL CLEANSE')
     } else if (e.kind === 'restoreStamina') {
@@ -994,11 +1182,18 @@ function escapeHtml(text: string): string {
 }
 
 function tagClass(tag: string): string {
-  if (/\b(STARTER|EXTENDER|FINISHER|RAY|PRESSURE|SURVIVAL|COUNTER|MOBILITY|DRAIN|RESOURCE)\b/.test(tag)) return 'tag-role'
+  if (
+    /\b(STARTER|EXTENDER|FINISHER|RAY|PRESSURE|SURVIVAL|COUNTER|MOBILITY|DRAIN|RESOURCE)\b/.test(
+      tag,
+    )
+  )
+    return 'tag-role'
   if (/\b(SELF|POINT PREVIEW|SKILL SHOT|AIM LOCK|TARGET)\b/.test(tag)) return 'tag-targeting'
   if (/\b(DMG|DAMAGE|PROJECTILE|SPLASH|TICK)\b/.test(tag)) return 'tag-damage'
-  if (/\b(AIRBORNE|AIR PUNISH|KNOCKBACK|ROOT|STUN|FREEZE|SLOW|BLIND|MARK|CURSE)\b/.test(tag)) return 'tag-control'
-  if (/\b(BURN|BLEED|POISON|CHILL|SHIELD|HASTE|CLEANSE|INVULNERABLE)\b/.test(tag)) return 'tag-status'
+  if (/\b(AIRBORNE|AIR PUNISH|KNOCKBACK|ROOT|STUN|FREEZE|SLOW|BLIND|MARK|CURSE)\b/.test(tag))
+    return 'tag-control'
+  if (/\b(BURN|BLEED|POISON|CHILL|SHIELD|HASTE|CLEANSE|INVULNERABLE)\b/.test(tag))
+    return 'tag-status'
   if (/\b(DASH|TELEPORT|MOVE)\b/.test(tag)) return 'tag-move'
   if (/\b(HEAL|STAMINA|MANA|HP|LIFESTEAL|->)\b/.test(tag)) return 'tag-resource'
   return ''

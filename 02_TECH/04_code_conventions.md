@@ -76,7 +76,7 @@ ragequit/                         # repo root (== github.com/Spidahh/Ragequit)
 | ----------------- | ------------------------------------------------------------------------- | --------------------------------------- |
 | `packages/shared` | Node stdlib, zod, @colyseus/schema                                        | any workspace package                   |
 | `packages/client` | `packages/shared`, three, colyseus.js, howler, zod, @colyseus/schema, dom | `packages/server`                       |
-| `packages/server` | `packages/shared`, colyseus, express, node stdlib, zod                   | `packages/client`, `three`, any DOM API |
+| `packages/server` | `packages/shared`, colyseus, express, node stdlib, zod                    | `packages/client`, `three`, any DOM API |
 | `tools/*`         | anything                                                                  | —                                       |
 
 Circular imports within a package are also forbidden (ESLint `import/no-cycle`).

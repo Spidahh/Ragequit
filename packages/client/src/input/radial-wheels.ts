@@ -89,8 +89,8 @@ export function initRadialWheels({
       const def = id ? ABILITY_DEFS[id] : null
       const nameEl = slotEl.querySelector<HTMLElement>('.r-name')!
       const iconEl = slotEl.querySelector<HTMLElement>('.r-icon')!
-      const keyEl  = slotEl.querySelector<HTMLElement>('.r-key')!
-      const cdEl   = slotEl.querySelector<HTMLElement>('.r-cd')
+      const keyEl = slotEl.querySelector<HTMLElement>('.r-key')!
+      const cdEl = slotEl.querySelector<HTMLElement>('.r-cd')
       const modeEl = slotEl.querySelector<HTMLElement>('.r-mode')
 
       if (def) {
@@ -125,9 +125,14 @@ export function initRadialWheels({
         nameEl.textContent = 'empty'
         nameEl.classList.add('r-empty')
         keyEl.textContent = slotBindLabel(idx)
-        if (cdEl) { cdEl.textContent = ''; cdEl.classList.remove('r-cd-active') }
+        if (cdEl) {
+          cdEl.textContent = ''
+          cdEl.classList.remove('r-cd-active')
+        }
         slotEl.classList.remove('r-on-cd')
-        if (modeEl) { modeEl.textContent = '' }
+        if (modeEl) {
+          modeEl.textContent = ''
+        }
       }
       slotEl.classList.toggle('r-primed', idx === getPrimedSlot())
     }
@@ -174,7 +179,9 @@ export function initRadialWheels({
     if (dist < 18) {
       selectedDir = null
       activeWheel.el.classList.remove('has-selection')
-      for (const slotEl of Array.from(activeWheel.el.querySelectorAll<HTMLElement>('.radial-slot'))) {
+      for (const slotEl of Array.from(
+        activeWheel.el.querySelectorAll<HTMLElement>('.radial-slot'),
+      )) {
         slotEl.classList.remove('selected')
       }
       return
@@ -186,7 +193,9 @@ export function initRadialWheels({
     if (dir !== selectedDir) {
       selectedDir = dir
       activeWheel.el.classList.add('has-selection')
-      for (const slotEl of Array.from(activeWheel.el.querySelectorAll<HTMLElement>('.radial-slot'))) {
+      for (const slotEl of Array.from(
+        activeWheel.el.querySelectorAll<HTMLElement>('.radial-slot'),
+      )) {
         slotEl.classList.toggle('selected', slotEl.dataset['dir'] === dir)
       }
     }
@@ -196,7 +205,7 @@ export function initRadialWheels({
     let best = wheel.sectors[0]!
     let bestDelta = Number.POSITIVE_INFINITY
     for (const sector of wheel.sectors) {
-      const delta = Math.abs((((angleDeg - sector.angleDeg + 540) % 360) - 180))
+      const delta = Math.abs(((angleDeg - sector.angleDeg + 540) % 360) - 180)
       if (delta < bestDelta) {
         best = sector
         bestDelta = delta

@@ -283,15 +283,21 @@ export class MatchManager {
     const msg: ServerScoreMessage = {}
     if (this.isRoundMode) {
       const wins: Record<string, number> = {}
-      this.host.state.roundWins.forEach((n, sid) => { wins[sid] = n })
+      this.host.state.roundWins.forEach((n, sid) => {
+        wins[sid] = n
+      })
       msg.roundWins = wins
     } else if (this.mode === 'ffa') {
       const solo: Record<string, number> = {}
-      this.host.state.soloKills.forEach((n, sid) => { solo[sid] = n })
+      this.host.state.soloKills.forEach((n, sid) => {
+        solo[sid] = n
+      })
       msg.solo = solo
     } else if (this.mode === '5v5') {
       const team: Record<string, number> = {}
-      this.host.state.teamKills.forEach((n, t) => { team[t] = n })
+      this.host.state.teamKills.forEach((n, t) => {
+        team[t] = n
+      })
       msg.team = team
     }
     this.host.broadcast(MessageTypes.Score, msg)

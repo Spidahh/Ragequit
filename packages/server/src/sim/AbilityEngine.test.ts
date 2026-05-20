@@ -282,8 +282,9 @@ describe('AbilityEngine — Life Drain', () => {
       r.engine.tickWindups()
     }
     expect(r.pendingDamage.some((d) => d.victimId === 'B' && d.amount === 6)).toBe(true)
-    expect(r.pendingDamage.find((d) => d.victimId === 'B' && d.amount === 6)?.lifestealFraction)
-      .toBeCloseTo(0.7)
+    expect(
+      r.pendingDamage.find((d) => d.victimId === 'B' && d.amount === 6)?.lifestealFraction,
+    ).toBeCloseTo(0.7)
     expect(r.caster.hp).toBe(40)
   })
 
@@ -294,7 +295,9 @@ describe('AbilityEngine — Life Drain', () => {
     expect(r.caster.castAbilityId).toBe('life_drain')
 
     expect(r.engine.tryCast('A', 'fireball', { yaw: 0, pitch: 0 })).toBe(false)
-    expect(r.failures.find((f) => f.abilityId === 'fireball' && f.reason === 'casting')).toBeDefined()
+    expect(
+      r.failures.find((f) => f.abilityId === 'fireball' && f.reason === 'casting'),
+    ).toBeDefined()
 
     for (let i = 0; i < 181; i++) {
       r.state.tick += 1
@@ -319,7 +322,9 @@ describe('AbilityEngine — Life Drain', () => {
 
   it('damage interruption cancels windup casts before they resolve', () => {
     const r = makeRoom()
-    expect(r.engine.tryCast('A', 'meteor', { yaw: 0, pitch: 0, point: { x: 0, y: 0, z: -4 } })).toBe(true)
+    expect(
+      r.engine.tryCast('A', 'meteor', { yaw: 0, pitch: 0, point: { x: 0, y: 0, z: -4 } }),
+    ).toBe(true)
 
     r.engine.cancelCast('A', 'damage')
     r.state.tick += Math.round(ABILITY_DEFS.meteor!.windupSec * 60) + 1
@@ -504,7 +509,9 @@ describe('AbilityEngine — finisher air punish', () => {
     const r = makeRoom()
     r.target.airborneUntilTick = r.state.tick + 200
 
-    expect(r.engine.tryCast('A', 'meteor', { yaw: 0, pitch: 0, point: { x: 0, y: 0, z: -2 } })).toBe(true)
+    expect(
+      r.engine.tryCast('A', 'meteor', { yaw: 0, pitch: 0, point: { x: 0, y: 0, z: -2 } }),
+    ).toBe(true)
     r.state.tick += Math.round(ABILITY_DEFS.meteor!.windupSec * 60) + 1
     r.engine.tickWindups()
 
@@ -592,8 +599,9 @@ describe('AbilityEngine — Mastery bonuses', () => {
     directRoom.caster.masteryElement = 'dark'
     directRoom.caster.masteryLevel = 1
     expect(directRoom.engine.tryCast('A', 'void_spike', { yaw: 0, pitch: 0 })).toBe(true)
-    expect(directRoom.pendingDamage.find((d) => d.cause === 'ability:void_spike')?.lifestealFraction)
-      .toBeCloseTo(0.2)
+    expect(
+      directRoom.pendingDamage.find((d) => d.cause === 'ability:void_spike')?.lifestealFraction,
+    ).toBeCloseTo(0.2)
   })
 
   it('applies nature mastery to poison status tick damage', () => {
@@ -636,7 +644,9 @@ describe('StatusRuntime — status combos', () => {
 describe('AbilityEngine — Flame Wall (DoD probe: data-only ability)', () => {
   it('spawns a wall zone with 8 dmg/s for 3 s', () => {
     const r = makeRoom()
-    expect(r.engine.tryCast('A', 'flame_wall', { yaw: 0, pitch: 0, point: { x: 3, y: 0, z: -4 } })).toBe(true)
+    expect(
+      r.engine.tryCast('A', 'flame_wall', { yaw: 0, pitch: 0, point: { x: 3, y: 0, z: -4 } }),
+    ).toBe(true)
     expect(r.zones.length).toBe(1)
     expect(r.zones[0]!.abilityId).toBe('flame_wall')
     expect(r.zones[0]!.pos.x).toBe(3)
@@ -650,7 +660,9 @@ describe('AbilityEngine — Flame Wall (DoD probe: data-only ability)', () => {
 describe('AbilityEngine — point targeting', () => {
   it('places point-targeted bow and magic zones at the supplied aim point', () => {
     const r = makeRoom()
-    expect(r.engine.tryCast('A', 'volley', { yaw: 0, pitch: 0, point: { x: 4, y: 0, z: -6 } })).toBe(true)
+    expect(
+      r.engine.tryCast('A', 'volley', { yaw: 0, pitch: 0, point: { x: 4, y: 0, z: -6 } }),
+    ).toBe(true)
     expect(r.zones[0]!.abilityId).toBe('volley')
     expect(r.zones[0]!.pos.x).toBe(4)
     expect(r.zones[0]!.pos.z).toBe(-6)
@@ -659,7 +671,9 @@ describe('AbilityEngine — point targeting', () => {
   it('clamps supplied point targets to the ability range on the server', () => {
     const r = makeRoom()
 
-    expect(r.engine.tryCast('A', 'volley', { yaw: 0, pitch: 0, point: { x: 0, y: 0, z: -300 } })).toBe(true)
+    expect(
+      r.engine.tryCast('A', 'volley', { yaw: 0, pitch: 0, point: { x: 0, y: 0, z: -300 } }),
+    ).toBe(true)
 
     expect(r.zones[0]!.abilityId).toBe('volley')
     expect(r.zones[0]!.pos.z).toBeCloseTo(-ABILITY_DEFS.volley!.range)
@@ -732,7 +746,9 @@ describe('AbilityEngine — gating', () => {
 
     expect(r.engine.tryCast('A', 'fireball', { yaw: 0, pitch: 0 })).toBe(false)
 
-    expect(r.failures.find((f) => f.abilityId === 'fireball' && f.reason === 'not_in_loadout')).toBeDefined()
+    expect(
+      r.failures.find((f) => f.abilityId === 'fireball' && f.reason === 'not_in_loadout'),
+    ).toBeDefined()
   })
 
   it('rejects when airborne', () => {

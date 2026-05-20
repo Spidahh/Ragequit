@@ -54,7 +54,8 @@ files:
   07_modes.md: { section: meta, status: final, tags: [modes, win_conditions] }
   08_progression.md: { section: meta, status: final, tags: [elo, quests, talents] }
   09_visual.md: { section: art, status: final, tags: [style, vfx] }
-  11_ui_redesign_plan.md: { section: art, status: active, tags: [ui, ux, hud, menus, loadout, readability] }
+  11_ui_redesign_plan.md:
+    { section: art, status: active, tags: [ui, ux, hud, menus, loadout, readability] }
   10_tech_stack.md: { section: tech, status: final, tags: [frameworks, versions] }
   10_tech_netcode.md: { section: tech, status: final, tags: [multiplayer, server_auth] }
   10_tech_assets.md: { section: tech, status: final, tags: [assets, pipeline] }

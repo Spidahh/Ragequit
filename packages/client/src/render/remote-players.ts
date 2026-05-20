@@ -135,8 +135,17 @@ export function initRemotePlayers({
     nameplate.appendChild(barRow)
     nameplateContainer.appendChild(nameplate)
     return {
-      mesh, snapshots: [], arc, arcExpiresAt: 0, lastSwingStartTick: 0,
-      castRing, nameplate, hpFill, hp: HP_MAX, alive: true, lastWeapon: '',
+      mesh,
+      snapshots: [],
+      arc,
+      arcExpiresAt: 0,
+      lastSwingStartTick: 0,
+      castRing,
+      nameplate,
+      hpFill,
+      hp: HP_MAX,
+      alive: true,
+      lastWeapon: '',
     }
   }
 
@@ -183,7 +192,13 @@ export function initRemotePlayers({
         r.lastWeapon = remoteWeapon
         applyWeaponProp(r.mesh, remoteWeapon, toonGradient)
       }
-      r.snapshots.push({ at: now, x: p.transform.x, y: p.transform.y, z: p.transform.z, yaw: p.transform.yaw })
+      r.snapshots.push({
+        at: now,
+        x: p.transform.x,
+        y: p.transform.y,
+        z: p.transform.z,
+        yaw: p.transform.yaw,
+      })
       if (r.snapshots.length > 60) r.snapshots.shift()
       if (p.lastSwingStartTick > 0 && p.lastSwingStartTick !== r.lastSwingStartTick) {
         r.lastSwingStartTick = p.lastSwingStartTick
@@ -218,7 +233,11 @@ export function initRemotePlayers({
       for (let i = 0; i < snaps.length - 1; i++) {
         const s1 = snaps[i]!
         const s2 = snaps[i + 1]!
-        if (s1.at <= renderAt && s2.at >= renderAt) { a = s1; b = s2; break }
+        if (s1.at <= renderAt && s2.at >= renderAt) {
+          a = s1
+          b = s2
+          break
+        }
       }
       const span = b.at - a.at
       const t = span <= 0 ? 1 : Math.max(0, Math.min(1, (renderAt - a.at) / span))
@@ -280,13 +299,15 @@ export function initRemotePlayers({
       if (!p || !r.alive) return
       const mat = r.mesh.userData['armorMat'] as THREE.MeshToonMaterial | undefined
       if (!mat?.emissive) return
-      let tR = 0, tG = 0, tB = 0
+      let tR = 0,
+        tG = 0,
+        tB = 0
       for (const st of Array.from(p.statuses ?? [])) {
         const hex = statusEmissive[st.kind]
         if (hex !== undefined) {
           tR = Math.max(tR, ((hex >> 16) & 0xff) / 255)
-          tG = Math.max(tG, ((hex >> 8)  & 0xff) / 255)
-          tB = Math.max(tB, ( hex        & 0xff) / 255)
+          tG = Math.max(tG, ((hex >> 8) & 0xff) / 255)
+          tB = Math.max(tB, (hex & 0xff) / 255)
         }
       }
       if (p.invulnUntilTick > tickNow) {
@@ -309,7 +330,7 @@ export function initRemotePlayers({
       mat.emissive.r += (tR - mat.emissive.r) * LERP
       mat.emissive.g += (tG - mat.emissive.g) * LERP
       mat.emissive.b += (tB - mat.emissive.b) * LERP
-      mat.emissiveIntensity = 0.70
+      mat.emissiveIntensity = 0.7
     })
   }
 

@@ -16,9 +16,9 @@ const STATUS_ALIASES: Readonly<Record<string, string>> = {
 function spriteId(kind: IconKind, id: string): string {
   const normalized =
     kind === 'ability'
-      ? ABILITY_ALIASES[id] ?? id
+      ? (ABILITY_ALIASES[id] ?? id)
       : kind === 'status'
-        ? STATUS_ALIASES[id] ?? id
+        ? (STATUS_ALIASES[id] ?? id)
         : id
   return `${kind}-${normalized}`
 }
@@ -59,4 +59,5 @@ export async function ensureIconSprite(): Promise<void> {
 export const abilityIcon = (id: string, size?: number): SVGElement => makeIcon('ability', id, size)
 export const statusIcon = (id: string, size?: number): SVGElement => makeIcon('status', id, size)
 export const weaponIcon = (id: string, size?: number): SVGElement => makeIcon('weapon', id, size)
-export const abilityIconMarkup = (id: string, className?: string): string => iconMarkup('ability', id, className)
+export const abilityIconMarkup = (id: string, className?: string): string =>
+  iconMarkup('ability', id, className)

@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient, type Session } from '@supabase/supabase-js'
 
-const SUPABASE_URL      = import.meta.env['VITE_SUPABASE_URL'] as string | undefined
+const SUPABASE_URL = import.meta.env['VITE_SUPABASE_URL'] as string | undefined
 const SUPABASE_ANON_KEY = import.meta.env['VITE_SUPABASE_ANON_KEY'] as string | undefined
 
 let _client: SupabaseClient | null = null
@@ -26,7 +26,9 @@ export async function initSupabaseAuth(): Promise<string | null> {
   if (!sb) return null
 
   // Restore existing session from localStorage (Supabase handles this automatically).
-  const { data: { session } } = await sb.auth.getSession()
+  const {
+    data: { session },
+  } = await sb.auth.getSession()
   if (session) {
     _session = session
     console.info('[supabase] restored session, userId:', session.user.id)
@@ -48,7 +50,9 @@ export async function initSupabaseAuth(): Promise<string | null> {
 export async function getAccessToken(): Promise<string | null> {
   const sb = getClient()
   if (!sb) return null
-  const { data: { session } } = await sb.auth.getSession()
+  const {
+    data: { session },
+  } = await sb.auth.getSession()
   _session = session
   return session?.access_token ?? null
 }

@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
-const url  = process.env['SUPABASE_URL']
-const key  = process.env['SUPABASE_SERVICE_ROLE_KEY']
+const url = process.env['SUPABASE_URL']
+const key = process.env['SUPABASE_SERVICE_ROLE_KEY']
 
 // Lazily initialised — server boots without Supabase if env vars are absent
 // (local dev without credentials still works; auth is skipped gracefully).
@@ -32,10 +32,9 @@ export async function verifyToken(token: string): Promise<string | null> {
 export async function upsertPlayer(userId: string, username: string): Promise<void> {
   const sb = getSupabase()
   if (!sb) return
-  await sb.from('players').upsert(
-    { user_id: userId, username },
-    { onConflict: 'user_id', ignoreDuplicates: true },
-  )
+  await sb
+    .from('players')
+    .upsert({ user_id: userId, username }, { onConflict: 'user_id', ignoreDuplicates: true })
 }
 
 /** Load the saved loadout for a user (returns null if not found). */
@@ -62,10 +61,12 @@ export async function saveLoadout(
 ): Promise<void> {
   const sb = getSupabase()
   if (!sb) return
-  await sb.from('loadouts').upsert(
-    { user_id: userId, loadout_data: loadoutData, instant_cast_data: instantCastData },
-    { onConflict: 'user_id' },
-  )
+  await sb
+    .from('loadouts')
+    .upsert(
+      { user_id: userId, loadout_data: loadoutData, instant_cast_data: instantCastData },
+      { onConflict: 'user_id' },
+    )
 }
 
 /** Record a match result and update ELO.

@@ -33,13 +33,13 @@ If mana is 0, M1 becomes a weak unarmed punch (0 damage, 0.5 s swing) — a visu
 
 Staff has **stronger infusion effects** than sword/bow because each bolt costs mana — the budget spent is higher:
 
-| Element   | Infusion effect                                                                    |
-| --------- | ---------------------------------------------------------------------------------- |
-| Fire      | Fireball bolt; +2 Burn stacks per hit (vs 1 for sword/bow) + 1.5 m splash ignite   |
-| Ice       | +1 Chill stack + 1.5 m slow AoE on impact (0.3 s, 30% slow in zone)                |
-| Lightning | Bolt speed increases strongly; always chains to 1 nearby enemy |
-| Dark      | 15% lifesteal on damage dealt (vs 8% for sword/bow)                                |
-| Nature    | On impact: applies Poison and splashes in a 2 m radius |
+| Element   | Infusion effect                                                                  |
+| --------- | -------------------------------------------------------------------------------- |
+| Fire      | Fireball bolt; +2 Burn stacks per hit (vs 1 for sword/bow) + 1.5 m splash ignite |
+| Ice       | +1 Chill stack + 1.5 m slow AoE on impact (0.3 s, 30% slow in zone)              |
+| Lightning | Bolt speed increases strongly; always chains to 1 nearby enemy                   |
+| Dark      | 15% lifesteal on damage dealt (vs 8% for sword/bow)                              |
+| Nature    | On impact: applies Poison and splashes in a 2 m radius                           |
 
 ## Constraints
 

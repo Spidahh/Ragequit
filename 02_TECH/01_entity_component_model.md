@@ -18,43 +18,43 @@ This is intentional for the current scope: the entity count is low, Colyseus wan
 
 ## Replicated Schema Entities
 
-| Entity | Schema | Owner | Notes |
-| --- | --- | --- | --- |
-| Game state | `GameState` | server | Tick, phase, mode, map, score, players, projectiles, zones |
-| Player | `Player` | server | Transform, resources, weapon, cast/parry/charge, cooldowns, statuses, loadout, mastery |
-| Projectile | `Projectile` | server | Arrow/bolt position, velocity, gravity, damage, owner, element |
-| Zone | `Zone` | server | Circle/wall zones, armed tick, expiration, damage/status payload |
-| Status | `StatusInstance` | server | Kind, stacks, remaining seconds, source, slow override |
-| Transform | `Transform` | server | Position + yaw/pitch |
+| Entity     | Schema           | Owner  | Notes                                                                                  |
+| ---------- | ---------------- | ------ | -------------------------------------------------------------------------------------- |
+| Game state | `GameState`      | server | Tick, phase, mode, map, score, players, projectiles, zones                             |
+| Player     | `Player`         | server | Transform, resources, weapon, cast/parry/charge, cooldowns, statuses, loadout, mastery |
+| Projectile | `Projectile`     | server | Arrow/bolt position, velocity, gravity, damage, owner, element                         |
+| Zone       | `Zone`           | server | Circle/wall zones, armed tick, expiration, damage/status payload                       |
+| Status     | `StatusInstance` | server | Kind, stacks, remaining seconds, source, slow override                                 |
+| Transform  | `Transform`      | server | Position + yaw/pitch                                                                   |
 
 There are no replicated Totem, IceWall, Trap, or CorpseMarker schemas right now. Snare Trap, Ice Wall, Flame Wall, Thorn Field, Storm Field, Smoke Screen, and similar objects are represented by `Zone`.
 
 ## Server-Only State
 
-| State | Purpose |
-| --- | --- |
-| input/swing/cast/transmute queues | Rate-limited message buffering |
-| pending swing list | Sword M1 hit timing |
-| damage queue | Single path for HP, shield, parry, lifesteal, death |
-| projectile metadata | Splash/status/lifesteal payloads not all replicated in schema |
-| position history | Lag compensation for melee/swing checks |
-| bot controllers | Training and calibration bots |
-| match manager | Countdown/live/roundEnd/matchEnd |
-| replay recorder | Broadcast event capture |
-| rate limiter | Anti-spam guard |
+| State                             | Purpose                                                       |
+| --------------------------------- | ------------------------------------------------------------- |
+| input/swing/cast/transmute queues | Rate-limited message buffering                                |
+| pending swing list                | Sword M1 hit timing                                           |
+| damage queue                      | Single path for HP, shield, parry, lifesteal, death           |
+| projectile metadata               | Splash/status/lifesteal payloads not all replicated in schema |
+| position history                  | Lag compensation for melee/swing checks                       |
+| bot controllers                   | Training and calibration bots                                 |
+| match manager                     | Countdown/live/roundEnd/matchEnd                              |
+| replay recorder                   | Broadcast event capture                                       |
+| rate limiter                      | Anti-spam guard                                               |
 
 ## State Ownership
 
 Every gameplay field has one writer: the server. The client reads replicated state and sends intent messages.
 
-| Field | Writer | Client use |
-| --- | --- | --- |
-| Transform/resources | server | prediction reconciliation, HUD |
-| active weapon | server | weapon HUD, model/VFX |
-| cooldown maps | server | hotbar rings |
-| statuses | server | icons, movement caps display, VFX |
-| loadout/mastery | server after validation | hotbar, wheels, loadout station |
-| projectiles/zones | server | visual meshes and impact/zone effects |
+| Field               | Writer                  | Client use                            |
+| ------------------- | ----------------------- | ------------------------------------- |
+| Transform/resources | server                  | prediction reconciliation, HUD        |
+| active weapon       | server                  | weapon HUD, model/VFX                 |
+| cooldown maps       | server                  | hotbar rings                          |
+| statuses            | server                  | icons, movement caps display, VFX     |
+| loadout/mastery     | server after validation | hotbar, wheels, loadout station       |
+| projectiles/zones   | server                  | visual meshes and impact/zone effects |
 
 Client-side local prediction maintains a parallel local transform for responsiveness. It does not mutate authoritative state.
 

@@ -2,19 +2,19 @@ import { HP_MAX } from '@ragequit/shared'
 import * as THREE from 'three'
 
 export const STATUS_EMISSIVE: Record<string, number> = {
-  burn:    0xff2800,
-  bleed:   0x880000,
-  chill:   0x0055ff,
-  poison:  0x00bb33,
-  slow:    0x5500cc,
-  root:    0x663300,
-  stun:    0xeedd00,
-  freeze:  0x22aaff,
-  curse:   0xaa00ff,
-  blind:   0x050505,
-  mark:    0xff0044,
-  shield:  0x3377ff,
-  haste:   0xffcc00,
+  burn: 0xff2800,
+  bleed: 0x880000,
+  chill: 0x0055ff,
+  poison: 0x00bb33,
+  slow: 0x5500cc,
+  root: 0x663300,
+  stun: 0xeedd00,
+  freeze: 0x22aaff,
+  curse: 0xaa00ff,
+  blind: 0x050505,
+  mark: 0xff0044,
+  shield: 0x3377ff,
+  haste: 0xffcc00,
 }
 
 export interface SelfEmissiveSchema {
@@ -37,7 +37,10 @@ export interface SelfEmissiveController {
   ) => void
 }
 
-export function initSelfEmissive({ getSelfMesh, playerLight }: SelfEmissiveOptions): SelfEmissiveController {
+export function initSelfEmissive({
+  getSelfMesh,
+  playerLight,
+}: SelfEmissiveOptions): SelfEmissiveController {
   function update(
     now: number,
     tickNow: number,
@@ -58,13 +61,15 @@ export function initSelfEmissive({ getSelfMesh, playerLight }: SelfEmissiveOptio
     }
 
     const statuses = Array.from(selfSchema.statuses ?? [])
-    let tR = 0, tG = 0, tB = 0
+    let tR = 0,
+      tG = 0,
+      tB = 0
     for (const st of statuses) {
       const hex = STATUS_EMISSIVE[st.kind]
       if (hex !== undefined) {
         tR = Math.max(tR, ((hex >> 16) & 0xff) / 255)
-        tG = Math.max(tG, ((hex >> 8)  & 0xff) / 255)
-        tB = Math.max(tB, ( hex        & 0xff) / 255)
+        tG = Math.max(tG, ((hex >> 8) & 0xff) / 255)
+        tB = Math.max(tB, (hex & 0xff) / 255)
       }
     }
     if (selfSchema.invulnUntilTick > tickNow) {
@@ -84,10 +89,10 @@ export function initSelfEmissive({ getSelfMesh, playerLight }: SelfEmissiveOptio
     mat.emissive.r += (tR - mat.emissive.r) * LERP
     mat.emissive.g += (tG - mat.emissive.g) * LERP
     mat.emissive.b += (tB - mat.emissive.b) * LERP
-    mat.emissiveIntensity = 0.70
+    mat.emissiveIntensity = 0.7
 
     const hasShield = statuses.some((s) => s.kind === 'shield')
-    const hasHaste  = statuses.some((s) => s.kind === 'haste')
+    const hasHaste = statuses.some((s) => s.kind === 'haste')
     if (hpFrac < 0.28) {
       const redPulse = 0.5 + 0.5 * Math.sin(now * 0.008)
       playerLight.color.setRGB(0.8 + redPulse * 0.2, 0.1, 0.05 + redPulse * 0.05)
@@ -95,13 +100,13 @@ export function initSelfEmissive({ getSelfMesh, playerLight }: SelfEmissiveOptio
     } else if (hasShield) {
       const shieldPulse = 0.5 + 0.5 * Math.sin(now * 0.005)
       playerLight.color.setRGB(0.2, 0.5, 0.9 + shieldPulse * 0.1)
-      playerLight.intensity = 0.55 + shieldPulse * 0.20
+      playerLight.intensity = 0.55 + shieldPulse * 0.2
     } else if (hasHaste) {
       const hastePulse = 0.5 + 0.5 * Math.sin(now * 0.012)
-      playerLight.color.setRGB(0.95 + hastePulse * 0.05, 0.80, 0.15)
-      playerLight.intensity = 0.50 + hastePulse * 0.20
+      playerLight.color.setRGB(0.95 + hastePulse * 0.05, 0.8, 0.15)
+      playerLight.intensity = 0.5 + hastePulse * 0.2
     } else {
-      playerLight.color.setRGB(0.67, 0.80, 1.0)
+      playerLight.color.setRGB(0.67, 0.8, 1.0)
       playerLight.intensity = 0.45
     }
   }

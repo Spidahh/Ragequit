@@ -79,8 +79,9 @@ export function matchesAction(code: string, action: KeybindAction): boolean {
 
 export function setKeybind(action: KeybindAction, code: string): void {
   const previousCode = keybinds[action].code
-  const existingAction = (Object.keys(keybinds) as KeybindAction[])
-    .find((candidate) => candidate !== action && keybinds[candidate].code === code)
+  const existingAction = (Object.keys(keybinds) as KeybindAction[]).find(
+    (candidate) => candidate !== action && keybinds[candidate].code === code,
+  )
   if (existingAction) {
     keybinds[existingAction] = { ...keybinds[existingAction], code: previousCode }
   }
@@ -125,7 +126,9 @@ export function codeToLabel(code: string): string {
   return labels[code] ?? code.replace(/Left|Right/, '')
 }
 
-export function slotKeybindEntries(): ReadonlyArray<readonly [code: string, label: string, slotIdx: number]> {
+export function slotKeybindEntries(): ReadonlyArray<
+  readonly [code: string, label: string, slotIdx: number]
+> {
   return [
     [actionCode('meleeAbility'), actionLabel('meleeAbility'), 0],
     [actionCode('bowAbility'), actionLabel('bowAbility'), 1],
@@ -167,25 +170,29 @@ export function initKeybindSettings(root: Document | HTMLElement = document): vo
     refresh()
   })
 
-  window.addEventListener('keydown', (event) => {
-    if (!listening) return
-    event.preventDefault()
-    event.stopPropagation()
-    if (event.code === 'Escape') {
+  window.addEventListener(
+    'keydown',
+    (event) => {
+      if (!listening) return
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.code === 'Escape') {
+        listening = null
+        refresh()
+        return
+      }
+      if (event.code === 'Backspace') {
+        setKeybind(listening, DEFAULT_KEYBINDS[listening].code)
+        listening = null
+        refresh()
+        return
+      }
+      setKeybind(listening, event.code)
       listening = null
       refresh()
-      return
-    }
-    if (event.code === 'Backspace') {
-      setKeybind(listening, DEFAULT_KEYBINDS[listening].code)
-      listening = null
-      refresh()
-      return
-    }
-    setKeybind(listening, event.code)
-    listening = null
-    refresh()
-  }, true)
+    },
+    true,
+  )
 
   onKeybindsChanged(refresh)
   refresh()
@@ -214,7 +221,10 @@ function loadKeybinds(): Record<KeybindAction, KeybindDef> {
 
   const out = {} as Record<KeybindAction, KeybindDef>
   for (const action of Object.keys(DEFAULT_KEYBINDS) as KeybindAction[]) {
-    out[action] = { ...DEFAULT_KEYBINDS[action], code: loaded[action] ?? DEFAULT_KEYBINDS[action].code }
+    out[action] = {
+      ...DEFAULT_KEYBINDS[action],
+      code: loaded[action] ?? DEFAULT_KEYBINDS[action].code,
+    }
   }
   return out
 }
@@ -222,7 +232,8 @@ function loadKeybinds(): Record<KeybindAction, KeybindDef> {
 function saveKeybinds(): void {
   try {
     const compact: Partial<Record<KeybindAction, string>> = {}
-    for (const action of Object.keys(keybinds) as KeybindAction[]) compact[action] = keybinds[action].code
+    for (const action of Object.keys(keybinds) as KeybindAction[])
+      compact[action] = keybinds[action].code
     localStorage.setItem(STORAGE_KEY, JSON.stringify(compact))
   } catch {
     // Storage is optional.

@@ -32,17 +32,18 @@ describe('loadout slot helpers', () => {
   })
 
   it('builds the network payload with fixed transfers for the server loadout channel', () => {
-    expect(buildLoadoutMessage(['m', 'b', 'a', 'b2', 'c', 'd', 'e', 'u1', 'u2', 'u3', 'u4'])).toEqual({
+    expect(
+      buildLoadoutMessage(['m', 'b', 'a', 'b2', 'c', 'd', 'e', 'u1', 'u2', 'u3', 'u4']),
+    ).toEqual({
       melee: 'm',
       bow: 'b',
       magic: ['a', 'b2', 'c', 'd', 'e'],
       utility: ['transfer_hp_mana', 'transfer_mana_stam', 'transfer_stam_hp', 'u4'],
     })
-    expect(normalizeLoadoutSlots(['m', 'b', 'a', 'b2', 'c', 'd', 'e', '', '', '', 'quick_dash']).slice(7)).toEqual([
-      'transfer_hp_mana',
-      'transfer_mana_stam',
-      'transfer_stam_hp',
-      'quick_dash',
-    ])
+    expect(
+      normalizeLoadoutSlots(['m', 'b', 'a', 'b2', 'c', 'd', 'e', '', '', '', 'quick_dash']).slice(
+        7,
+      ),
+    ).toEqual(['transfer_hp_mana', 'transfer_mana_stam', 'transfer_stam_hp', 'quick_dash'])
   })
 })

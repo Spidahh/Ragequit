@@ -33,13 +33,20 @@ function getTransmuteLabel(direction: TransmuteDir): string {
 function getTransmuteFailText(msg: ServerTransmuteResultMessage): string {
   const label = getTransmuteLabel(msg.direction as TransmuteDir)
   switch (msg.reason) {
-    case 'cooldown':  return `${label}: cooling down`
-    case 'cost':      return `${label}: not enough resources`
-    case 'parrying':  return `${label}: cannot transfer while parrying`
-    case 'casting':   return `${label}: cannot transfer while casting`
-    case 'airborne':  return `${label}: cannot transfer while airborne`
-    case 'dead':      return `${label}: cannot transfer while dead`
-    default:          return `${label}: transfer failed`
+    case 'cooldown':
+      return `${label}: cooling down`
+    case 'cost':
+      return `${label}: not enough resources`
+    case 'parrying':
+      return `${label}: cannot transfer while parrying`
+    case 'casting':
+      return `${label}: cannot transfer while casting`
+    case 'airborne':
+      return `${label}: cannot transfer while airborne`
+    case 'dead':
+      return `${label}: cannot transfer while dead`
+    default:
+      return `${label}: transfer failed`
   }
 }
 

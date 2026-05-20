@@ -112,9 +112,18 @@ export interface EngineHost {
   // Trigger an atomic weapon swap (Fase 3 logic) without GCD penalty.
   forceWeaponSwap: (sid: string, weapon: 'sword' | 'bow' | 'staff') => void
   // Apply knockup using the existing Fase 2 helpers (player.airborneUntilTick + vy).
-  applyKnockup: (player: Player, airborneSec: number, knockback?: { x: number; z: number; distance: number }) => void
+  applyKnockup: (
+    player: Player,
+    airborneSec: number,
+    knockback?: { x: number; z: number; distance: number },
+  ) => void
   hasLineOfSight?: (from: Vec3, to: Vec3) => boolean
-  resolveDisplacement?: (player: Player, dx: number, dz: number, cancelOnCollision: boolean) => {
+  resolveDisplacement?: (
+    player: Player,
+    dx: number,
+    dz: number,
+    cancelOnCollision: boolean,
+  ) => {
     x: number
     z: number
   }
@@ -195,11 +204,17 @@ export class AbilityEngine {
       return false
     }
 
-    const transmuteEffect = baseDef.effects.find((effect): effect is TransmuteEffect => effect.kind === 'transmute')
+    const transmuteEffect = baseDef.effects.find(
+      (effect): effect is TransmuteEffect => effect.kind === 'transmute',
+    )
     if (transmuteEffect) {
       const transmuteFailure = this.transmuteFailureReason(player, transmuteEffect)
       if (transmuteFailure) {
-        this.host.sendAbilityFailed(sid, abilityId, transmuteFailure === 'cost' ? 'cost' : 'cooldown')
+        this.host.sendAbilityFailed(
+          sid,
+          abilityId,
+          transmuteFailure === 'cost' ? 'cost' : 'cooldown',
+        )
         this.broadcastTransmuteResult(sid, transmuteEffect.direction, false, transmuteFailure)
         return false
       }
@@ -500,14 +515,17 @@ export class AbilityEngine {
     const caster = this.host.state.players.get(sid)
     if (!caster) return 0
     const radius = e.radius ?? 0
-    const center = radius > 0 ? this.resolveAreaCenter(sid, caster, target, def) : this.resolveAnchor(caster, target, def)
+    const center =
+      radius > 0
+        ? this.resolveAreaCenter(sid, caster, target, def)
+        : this.resolveAnchor(caster, target, def)
     if (!center) return 0
     const element: ElementId | undefined =
       e.element ?? (isElementId(def.element) ? def.element : undefined)
 
     const bonus = this.masteryBonusFor(caster, element)
     const masteryMul = bonus?.damageMult ?? 1
-    const lifestealFraction = opts.lifestealFraction ?? (bonus?.lifestealAdd ?? 0)
+    const lifestealFraction = opts.lifestealFraction ?? bonus?.lifestealAdd ?? 0
 
     const amount = e.amount * masteryMul
     let totalDealt = 0
@@ -529,7 +547,9 @@ export class AbilityEngine {
       return finalAmount
     }
 
-    const primaryVictimId = e.excludePrimary ? this.resolveSingleTarget(sid, caster, target, def) : null
+    const primaryVictimId = e.excludePrimary
+      ? this.resolveSingleTarget(sid, caster, target, def)
+      : null
     this.host.state.players.forEach((victim, vid) => {
       if (!victim.alive) return
       if (vid === sid) return // melee/AoE skips self by default
@@ -564,7 +584,10 @@ export class AbilityEngine {
     const caster = this.host.state.players.get(sid)
     if (!caster) return
     const radius = e.radius ?? 0
-    const center = radius > 0 ? this.resolveAreaCenter(sid, caster, target, def) : this.resolveAnchor(caster, target, def)
+    const center =
+      radius > 0
+        ? this.resolveAreaCenter(sid, caster, target, def)
+        : this.resolveAnchor(caster, target, def)
     if (!center) return
     const element: ElementId | undefined = isElementId(def.element) ? def.element : undefined
     let dur = e.durationSec
@@ -602,7 +625,10 @@ export class AbilityEngine {
     const caster = this.host.state.players.get(sid)
     if (!caster) return
     const radius = e.radius ?? 0
-    const center = radius > 0 ? this.resolveAreaCenter(sid, caster, target, def) : this.resolveAnchor(caster, target, def)
+    const center =
+      radius > 0
+        ? this.resolveAreaCenter(sid, caster, target, def)
+        : this.resolveAnchor(caster, target, def)
     if (!center) return
     const tickNow = this.host.state.tick
     if (radius === 0) {
@@ -632,7 +658,11 @@ export class AbilityEngine {
         victim.airborneUntilTick > 0
       )
         return
-      this.host.applyKnockup(victim, e.airborneSec, this.knockbackFromPoint(center, victim, e, target.yaw))
+      this.host.applyKnockup(
+        victim,
+        e.airborneSec,
+        this.knockbackFromPoint(center, victim, e, target.yaw),
+      )
     })
   }
 
@@ -970,7 +1000,8 @@ export class AbilityEngine {
           y: victim.transform.y + PLAYER_CAPSULE_HEIGHT_M / 2,
           z: victim.transform.z,
         })
-      ) return null
+      )
+        return null
       return target.targetId
     }
     if (def.targeting === 'forward') {
@@ -992,7 +1023,11 @@ export class AbilityEngine {
     if (def.targeting === 'target' && target.targetId) {
       const victim = this.host.state.players.get(target.targetId)
       return victim?.alive
-        ? { x: victim.transform.x, y: victim.transform.y + PLAYER_CAPSULE_HEIGHT_M / 2, z: victim.transform.z }
+        ? {
+            x: victim.transform.x,
+            y: victim.transform.y + PLAYER_CAPSULE_HEIGHT_M / 2,
+            z: victim.transform.z,
+          }
         : null
     }
     if (def.targeting === 'forward') {
@@ -1009,7 +1044,11 @@ export class AbilityEngine {
       )
       const victim = victimId ? this.host.state.players.get(victimId) : undefined
       return victim?.alive
-        ? { x: victim.transform.x, y: victim.transform.y + PLAYER_CAPSULE_HEIGHT_M / 2, z: victim.transform.z }
+        ? {
+            x: victim.transform.x,
+            y: victim.transform.y + PLAYER_CAPSULE_HEIGHT_M / 2,
+            z: victim.transform.z,
+          }
         : null
     }
     return this.resolveAnchor(caster, target, def)
@@ -1044,7 +1083,8 @@ export class AbilityEngine {
           y: victim.transform.y + PLAYER_CAPSULE_HEIGHT_M / 2,
           z: victim.transform.z,
         })
-      ) return
+      )
+        return
       if (along < bestAlong) {
         bestAlong = along
         bestId = vid
@@ -1105,7 +1145,6 @@ export class AbilityEngine {
       z: player.transform.z + dz * scale,
     }
   }
-
 }
 
 void TICK_MS // avoid unused-import warning when the file changes shape

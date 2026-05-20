@@ -100,8 +100,14 @@ export function initCastDispatcher({
   }
 
   function dispatch({
-    inp, bowCharge, room,
-    schemaTick, combatLive, dead, airborne, activeWeapon,
+    inp,
+    bowCharge,
+    room,
+    schemaTick,
+    combatLive,
+    dead,
+    airborne,
+    activeWeapon,
   }: CastDispatchParams): void {
     if (!combatLive) {
       clearQueue()
@@ -213,9 +219,9 @@ export function initCastDispatcher({
     while (abilityCastQueue.length > 2) abilityCastQueue.shift()
 
     // Clear per-tick edges.
-    inp.lmbPressEdge   = false
+    inp.lmbPressEdge = false
     inp.lmbReleaseEdge = false
-    inp.rmbPressEdge   = false
+    inp.rmbPressEdge = false
     inp.rmbReleaseEdge = false
   }
 

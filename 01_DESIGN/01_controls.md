@@ -12,22 +12,22 @@ status: final
 
 ## Mouse
 
-| Button     | Action                                                                                                                                      |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Button     | Action                                                                                                                                               |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | M1 (left)  | Basic attack of currently equipped weapon, unless a wheel-selected ability is primed. If primed, M1 fires that ability toward the current crosshair. |
-| M2 (right) | Parry. Tap = 0.5s block window. Hold = continuous block while stamina holds out. See `01_combat_fundamentals.md`.                           |
-| Scroll     | Cycle equipped weapon                                                                                                                       |
+| M2 (right) | Parry. Tap = 0.5s block window. Hold = continuous block while stamina holds out. See `01_combat_fundamentals.md`.                                    |
+| Scroll     | Cycle equipped weapon                                                                                                                                |
 
 ## Keyboard — core
 
-| Key      | Action                                                       |
-| -------- | ------------------------------------------------------------ |
-| WASD     | Movement (sprint is always on — no Shift)                    |
-| Space    | Jump (tap = short, hold = higher)                            |
+| Key      | Action                                                          |
+| -------- | --------------------------------------------------------------- |
+| WASD     | Movement (sprint is always on — no Shift)                       |
+| Space    | Jump (tap = short, hold = higher)                               |
 | Q (hold) | Open **Utility Wheel** — fixed transfers Z/X/F + flex utility V |
-| E (hold) | Open **Ability Wheel** — melee, bow, and 5 magic abilities       |
-| Tab      | Cycle equipped weapon (rebindable)                           |
-| Escape   | Menu                                                         |
+| E (hold) | Open **Ability Wheel** — melee, bow, and 5 magic abilities      |
+| Tab      | Cycle equipped weapon (rebindable)                              |
+| Escape   | Menu                                                            |
 
 ## Wheels — interaction model
 
@@ -43,13 +43,13 @@ status: final
 
 The current default direct binds mirror the 11-slot loadout:
 
-| Key | Slot |
-| --- | --- |
-| R | melee ability |
-| G | bow ability |
-| 1-5 | five magic abilities |
-| Z/X/F | fixed transfers |
-| V | flex utility |
+| Key   | Slot                 |
+| ----- | -------------------- |
+| R     | melee ability        |
+| G     | bow ability          |
+| 1-5   | five magic abilities |
+| Z/X/F | fixed transfers      |
+| V     | flex utility         |
 
 Custom rebinds are live in the Settings menu and persist locally. Any ability slot can be remapped to a free key; if a chosen key is already used, the two actions swap bindings instead of creating duplicates.
 

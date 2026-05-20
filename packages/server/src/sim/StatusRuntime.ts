@@ -120,10 +120,10 @@ export class StatusRuntime {
 
     // STEAM: burn meets chill (or vice versa)
     if (triggerKind === 'burn' || triggerKind === 'chill') {
-      const burnIdx  = this.findIndex(player.statuses, 'burn')
+      const burnIdx = this.findIndex(player.statuses, 'burn')
       const chillIdx = this.findIndex(player.statuses, 'chill')
       if (burnIdx >= 0 && chillIdx >= 0) {
-        const burnStacks  = player.statuses[burnIdx]!.stacks
+        const burnStacks = player.statuses[burnIdx]!.stacks
         const chillStacks = player.statuses[chillIdx]!.stacks
         const burstDamage = 6 + (burnStacks + chillStacks) * 4 // 14–34 dmg range
         const cx = player.transform.x
@@ -132,7 +132,7 @@ export class StatusRuntime {
 
         // Remove the two comboing statuses.
         const higherIdx = Math.max(burnIdx, chillIdx)
-        const lowerIdx  = Math.min(burnIdx, chillIdx)
+        const lowerIdx = Math.min(burnIdx, chillIdx)
         player.statuses.splice(higherIdx, 1)
         player.statuses.splice(lowerIdx, 1)
         this.accs.get(sid)?.delete('burn')
@@ -241,7 +241,16 @@ export class StatusRuntime {
   // Does NOT remove shield, haste, or mark.
   cleanseDebuffs(sid: string): void {
     const NEGATIVE: ReadonlyArray<StatusKind> = [
-      'burn', 'bleed', 'poison', 'chill', 'slow', 'root', 'stun', 'freeze', 'curse', 'blind',
+      'burn',
+      'bleed',
+      'poison',
+      'chill',
+      'slow',
+      'root',
+      'stun',
+      'freeze',
+      'curse',
+      'blind',
     ]
     for (const kind of NEGATIVE) this.cleanse(sid, kind)
   }
@@ -303,9 +312,7 @@ export class StatusRuntime {
             const festerMul = festering && (kind === 'poison' || kind === 'bleed') ? 2 : 1
             const source = this.host.state.players.get(inst.sourceId)
             const natureDotMul =
-              kind === 'poison' &&
-              source?.masteryElement === 'nature' &&
-              source.masteryLevel >= 1
+              kind === 'poison' && source?.masteryElement === 'nature' && source.masteryLevel >= 1
                 ? (getMasteryBonus('nature')?.dotTickMult ?? 1)
                 : 1
             this.host.pendingDamage.push({

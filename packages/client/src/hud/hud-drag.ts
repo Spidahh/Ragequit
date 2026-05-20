@@ -33,7 +33,10 @@ export function initDraggableHud({
 
   function clampSize(width: number, barHeight: number): { width: number; barHeight: number } {
     const margin = 12
-    const maxWidth = Math.min(HUD_MAX_WIDTH, Math.max(HUD_MIN_WIDTH, window.innerWidth - margin * 2))
+    const maxWidth = Math.min(
+      HUD_MAX_WIDTH,
+      Math.max(HUD_MIN_WIDTH, window.innerWidth - margin * 2),
+    )
     return {
       width: Math.max(HUD_MIN_WIDTH, Math.min(maxWidth, width)),
       barHeight: Math.max(HUD_MIN_BAR_H, Math.min(HUD_MAX_BAR_H, barHeight)),
@@ -239,7 +242,8 @@ export function initDraggableHud({
     refreshBounds: () => {
       const currentHudWidth = parseFloat(panel.style.width)
       if (Number.isFinite(currentHudWidth)) {
-        const currentBarHeight = parseFloat(getComputedStyle(panel).getPropertyValue('--hud-bar-h')) || 22
+        const currentBarHeight =
+          parseFloat(getComputedStyle(panel).getPropertyValue('--hud-bar-h')) || 22
         setSize(currentHudWidth, currentBarHeight, false)
       }
       if (panel.style.left && panel.style.top) {

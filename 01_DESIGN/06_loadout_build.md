@@ -14,11 +14,11 @@ The loadout IS the build system. This is where RAGEQUIT's build-crafting identit
 
 ## Slot layout — 11 total
 
-| Slot    | Count | Pool                                                                |
-| ------- | ----- | ------------------------------------------------------------------- |
-| Melee   | 1     | From 6 melee abilities (`05_abilities_melee.md`)                    |
-| Bow     | 1     | From 8 bow abilities (`05_abilities_bow.md`)                        |
-| Magic   | 5     | From 27 magic abilities across 5 elements (`05_abilities_magic.md`) |
+| Slot    | Count | Pool                                                                 |
+| ------- | ----- | -------------------------------------------------------------------- |
+| Melee   | 1     | From 6 melee abilities (`05_abilities_melee.md`)                     |
+| Bow     | 1     | From 8 bow abilities (`05_abilities_bow.md`)                         |
+| Magic   | 5     | From 27 magic abilities across 5 elements (`05_abilities_magic.md`)  |
 | Utility | 4     | Three fixed transfers + one flex utility (`05_abilities_utility.md`) |
 
 **Total: 11 slots.** The 7 combat slots (1 Melee + 1 Bow + 5 Magic) appear on the Ability Wheel (E hold). The 4 utility slots appear on the Utility Wheel (Q hold): three fixed transfers plus one flex utility.

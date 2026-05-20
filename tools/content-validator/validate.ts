@@ -18,8 +18,16 @@ const VALID_SLOTS = new Set(['melee', 'bow', 'magic', 'utility'])
 const VALID_ELEMENTS = new Set(['fire', 'ice', 'lightning', 'dark', 'nature', 'none'])
 const VALID_TARGETING = new Set(['self', 'forward', 'target', 'point'])
 const VALID_EFFECT_KINDS = new Set([
-  'damage', 'applyStatus', 'knockup', 'heal', 'lifesteal',
-  'projectile', 'zone', 'move', 'channel', 'cleanse',
+  'damage',
+  'applyStatus',
+  'knockup',
+  'heal',
+  'lifesteal',
+  'projectile',
+  'zone',
+  'move',
+  'channel',
+  'cleanse',
 ])
 
 const issues: string[] = []
@@ -100,5 +108,7 @@ if (issues.length > 0) {
   for (const issue of issues) console.error(`  ✗ ${issue}`)
   process.exit(1)
 } else {
-  console.info(`\nContent validation PASSED — ${defs.length} abilities, ${mapsToCheck.length} maps OK`)
+  console.info(
+    `\nContent validation PASSED — ${defs.length} abilities, ${mapsToCheck.length} maps OK`,
+  )
 }

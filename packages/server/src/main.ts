@@ -91,10 +91,7 @@ function requireBasicAuth(user: string, password: string): RequestHandler {
     const separatorIdx = decoded.indexOf(':')
     const requestUser = separatorIdx >= 0 ? decoded.slice(0, separatorIdx) : ''
     const requestPassword = separatorIdx >= 0 ? decoded.slice(separatorIdx + 1) : ''
-    if (
-      constantTimeEquals(requestUser, user) &&
-      constantTimeEquals(requestPassword, password)
-    ) {
+    if (constantTimeEquals(requestUser, user) && constantTimeEquals(requestPassword, password)) {
       next()
       return
     }
@@ -126,8 +123,14 @@ const gameServer = new Server({
 gameServer.define('game', GameRoom).filterBy(['mode'])
 
 initServerTelemetry()
-process.on('SIGTERM', () => { shutdownServerTelemetry(); process.exit(0) })
-process.on('SIGINT',  () => { shutdownServerTelemetry(); process.exit(0) })
+process.on('SIGTERM', () => {
+  shutdownServerTelemetry()
+  process.exit(0)
+})
+process.on('SIGINT', () => {
+  shutdownServerTelemetry()
+  process.exit(0)
+})
 
 httpServer.listen(PORT, () => {
   console.info(`[ragequit-server] listening on http://localhost:${PORT}`)

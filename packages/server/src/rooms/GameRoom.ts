@@ -98,7 +98,13 @@ import {
   computeLoadoutMastery,
 } from '@ragequit/shared'
 
-import { verifyToken, upsertPlayer, loadLoadout, saveLoadout, recordMatchResult } from '../db/supabase.js'
+import {
+  verifyToken,
+  upsertPlayer,
+  loadLoadout,
+  saveLoadout,
+  recordMatchResult,
+} from '../db/supabase.js'
 import {
   AbilityEngine,
   AIR_PUNISH_DAMAGE_MULT,
@@ -417,7 +423,8 @@ export class GameRoom extends Room<GameState> {
         broadcast: (type, message) => this.broadcast(type, message),
         computeProjectileOrigin: (player, dir) => computeProjectileOrigin(player, dir),
         forceWeaponSwap: (sid, weapon) => this.forceWeaponSwap(sid, weapon),
-        applyKnockup: (player, airborneSec, knockback) => this.applyKnockupToPlayer(player, airborneSec, knockback),
+        applyKnockup: (player, airborneSec, knockback) =>
+          this.applyKnockupToPlayer(player, airborneSec, knockback),
         hasLineOfSight: (from, to) => this.hasLineOfSight(from, to),
         resolveDisplacement: (player, dx, dz, cancelOnCollision) =>
           this.resolveAbilityDisplacement(player, dx, dz, cancelOnCollision),
@@ -439,13 +446,15 @@ export class GameRoom extends Room<GameState> {
       onMatchEnd: (winnerSid, loserSid, winnerEloDelta, loserEloDelta) => {
         // Map session IDs → Supabase user IDs and persist ELO result.
         const winnerPlayer = this.state.players.get(winnerSid)
-        const loserPlayer  = this.state.players.get(loserSid)
+        const loserPlayer = this.state.players.get(loserSid)
         const winnerId = winnerPlayer?.userId
-        const loserId  = loserPlayer?.userId
+        const loserId = loserPlayer?.userId
         if (winnerId && loserId) {
-          recordMatchResult(winnerId, loserId, winnerEloDelta, loserEloDelta).catch((err: unknown) => {
-            console.warn('[GameRoom] recordMatchResult failed:', (err as Error).message)
-          })
+          recordMatchResult(winnerId, loserId, winnerEloDelta, loserEloDelta).catch(
+            (err: unknown) => {
+              console.warn('[GameRoom] recordMatchResult failed:', (err as Error).message)
+            },
+          )
         }
       },
     })
@@ -466,8 +475,8 @@ export class GameRoom extends Room<GameState> {
       const player = this.state.players.get(client.sessionId)
       if (player?.userId) {
         const loadoutArr = Array.from(player.loadout)
-        saveLoadout(player.userId, loadoutArr, message.instantCast ?? {}).catch(
-          (e: unknown) => console.warn('[supabase] saveLoadout failed:', e),
+        saveLoadout(player.userId, loadoutArr, message.instantCast ?? {}).catch((e: unknown) =>
+          console.warn('[supabase] saveLoadout failed:', e),
         )
       }
     })
@@ -592,7 +601,8 @@ export class GameRoom extends Room<GameState> {
     const player = new Player()
     player.id = client.sessionId
     player.name = options.name ?? `player-${client.sessionId.slice(0, 4)}`
-    player.team = this.state.mode === '5v5' ? (this.state.players.size % 2 === 0 ? 'red' : 'blue') : ''
+    player.team =
+      this.state.mode === '5v5' ? (this.state.players.size % 2 === 0 ? 'red' : 'blue') : ''
 
     // --- Supabase JWT verification ---
     // If a token is supplied, verify it. On success, userId = Supabase UUID.
@@ -650,7 +660,8 @@ export class GameRoom extends Room<GameState> {
     this.positionHistory.set(client.sessionId, [])
 
     trackPlayerConnected(this.roomId, this.state.mode)
-    if (this.state.players.size === 1) trackMatchStarted(this.roomId, this.state.mode, this.maxClients)
+    if (this.state.players.size === 1)
+      trackMatchStarted(this.roomId, this.state.mode, this.maxClients)
     console.info(
       `[GameRoom ${this.roomId}] join ${client.sessionId} (${player.name}) userId=${verifiedUserId || 'guest'} at spawn ${spawnIndex}`,
     )
@@ -689,7 +700,12 @@ export class GameRoom extends Room<GameState> {
       const path = this.replay.finalize()
       if (path) console.info(`[GameRoom ${this.roomId}] replay → ${path}`)
     }
-    trackMatchEnded(this.roomId, this.state.mode, (Date.now() - this.roomCreatedAt) / 1000, this.state.players.size)
+    trackMatchEnded(
+      this.roomId,
+      this.state.mode,
+      (Date.now() - this.roomCreatedAt) / 1000,
+      this.state.players.size,
+    )
     console.info(`[GameRoom ${this.roomId}] disposed`)
   }
 
@@ -1534,7 +1550,14 @@ export class GameRoom extends Room<GameState> {
         case 'ice':
           return { element, onHitStatus: { kind: 'chill', durationSec: 4, stacks: 1 } }
         case 'lightning':
-          return { element, speedMult: 1.3, chainTargets: 1, chainRadius: 6, chainDamage: 8, chainChance: 0.2 }
+          return {
+            element,
+            speedMult: 1.3,
+            chainTargets: 1,
+            chainRadius: 6,
+            chainDamage: 8,
+            chainChance: 0.2,
+          }
         case 'dark':
           return { element, lifestealFraction: 0.08 }
         case 'nature':
@@ -1546,7 +1569,11 @@ export class GameRoom extends Room<GameState> {
 
     switch (element) {
       case 'fire':
-        return { element, splashRadius: 1.5, onHitStatus: { kind: 'burn', durationSec: 3, stacks: 2 } }
+        return {
+          element,
+          splashRadius: 1.5,
+          onHitStatus: { kind: 'burn', durationSec: 3, stacks: 2 },
+        }
       case 'ice':
         return {
           element,
@@ -1554,11 +1581,22 @@ export class GameRoom extends Room<GameState> {
           onHitStatus: { kind: 'chill', durationSec: 4, stacks: 1, slowFraction: 0.3 },
         }
       case 'lightning':
-        return { element, speedMult: 1.6, chainTargets: 1, chainRadius: 6, chainDamage: STAFF_M1_DAMAGE, chainChance: 1 }
+        return {
+          element,
+          speedMult: 1.6,
+          chainTargets: 1,
+          chainRadius: 6,
+          chainDamage: STAFF_M1_DAMAGE,
+          chainChance: 1,
+        }
       case 'dark':
         return { element, lifestealFraction: 0.15 }
       case 'nature':
-        return { element, splashRadius: 2, onHitStatus: { kind: 'poison', durationSec: 4, stacks: 1 } }
+        return {
+          element,
+          splashRadius: 2,
+          onHitStatus: { kind: 'poison', durationSec: 4, stacks: 1 },
+        }
       default:
         return { element: 'none' }
     }
@@ -1809,7 +1847,11 @@ export class GameRoom extends Room<GameState> {
         // Subtract half-height to convert: foot = centre - H/2.
         const capsule: CapsuleTarget = {
           id: vid,
-          pos: { x: player.transform.x, y: player.transform.y - PLAYER_CAPSULE_HEIGHT_M / 2, z: player.transform.z },
+          pos: {
+            x: player.transform.x,
+            y: player.transform.y - PLAYER_CAPSULE_HEIGHT_M / 2,
+            z: player.transform.z,
+          },
           radius: PLAYER_CAPSULE_RADIUS_M,
           height: PLAYER_CAPSULE_HEIGHT_M,
         }
@@ -1912,7 +1954,11 @@ export class GameRoom extends Room<GameState> {
     hitPos: { x: number; y: number; z: number },
     directVictimId: string | null,
   ): void {
-    const baseCause = meta.abilityId ? `ability:${meta.abilityId}` : meta.kind === 'arrow' ? 'bow' : 'staff'
+    const baseCause = meta.abilityId
+      ? `ability:${meta.abilityId}`
+      : meta.kind === 'arrow'
+        ? 'bow'
+        : 'staff'
     const victimIds: string[] = []
     if (meta.splashRadius > 0) {
       this.state.players.forEach((player, pid) => {
@@ -1950,7 +1996,13 @@ export class GameRoom extends Room<GameState> {
       (meta.chainDamage ?? 0) > 0 &&
       Math.random() <= (meta.chainChance ?? 1)
     if (shouldChain) {
-      const chained = this.findChainVictims(meta.ownerId, victimIds, hitPos, meta.chainRadius ?? 0, meta.chainTargets ?? 0)
+      const chained = this.findChainVictims(
+        meta.ownerId,
+        victimIds,
+        hitPos,
+        meta.chainRadius ?? 0,
+        meta.chainTargets ?? 0,
+      )
       for (const victimId of chained) {
         this.damageQueue.push({
           attackerId: meta.ownerId,
@@ -2296,12 +2348,7 @@ export class GameRoom extends Room<GameState> {
     const maxY = y + PLAYER_CAPSULE_HEIGHT_M / 2
     for (const box of this.activeMap.boxes) {
       if (maxY < box.minY || minY > box.maxY) continue
-      if (
-        x + r >= box.minX &&
-        x - r <= box.maxX &&
-        z + r >= box.minZ &&
-        z - r <= box.maxZ
-      ) {
+      if (x + r >= box.minX && x - r <= box.maxX && z + r >= box.minZ && z - r <= box.maxZ) {
         return true
       }
     }
@@ -2405,7 +2452,12 @@ function makePendingDamageBridge(target: PendingDamage[]): {
     cause: string
     canParry: boolean
     lifestealFraction?: number
-    onDamageStatus?: { status: StatusKind; durationSec: number; stacks?: number; slowFraction?: number }
+    onDamageStatus?: {
+      status: StatusKind
+      durationSec: number
+      stacks?: number
+      slowFraction?: number
+    }
   }) => number
   length: number
 } {
@@ -2473,15 +2525,15 @@ const BOT_NAMES = ['Shadow', 'Ember', 'Frost', 'Storm', 'Void', 'Blaze', 'Riven'
 // 11 starter slots on server and client.
 // Slot order: melee, bow, magic[5], fixed transfer utilities[3], flex utility[1].
 const DEFAULT_LOADOUT: readonly string[] = Object.freeze([
-  'uppercut',       // melee
-  'piercing_shot',  // bow
-  'fireball',       // magic 1
-  'flame_wall',     // magic 2
-  'frost_bolt',     // magic 3
-  'chain_bolt',     // magic 4
-  'shadow_bolt',    // magic 5
-  'transfer_hp_mana',   // fixed transfer Z
+  'uppercut', // melee
+  'piercing_shot', // bow
+  'fireball', // magic 1
+  'flame_wall', // magic 2
+  'frost_bolt', // magic 3
+  'chain_bolt', // magic 4
+  'shadow_bolt', // magic 5
+  'transfer_hp_mana', // fixed transfer Z
   'transfer_mana_stam', // fixed transfer X
-  'transfer_stam_hp',   // fixed transfer F
-  'quick_dash',         // flex utility V
+  'transfer_stam_hp', // fixed transfer F
+  'quick_dash', // flex utility V
 ])

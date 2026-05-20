@@ -22,8 +22,18 @@ export function trackMatchStarted(roomId: string, mode: string, playerCount: num
   track('match_started', { room_id: roomId, mode, player_count: playerCount })
 }
 
-export function trackMatchEnded(roomId: string, mode: string, durationSec: number, playerCount: number): void {
-  track('match_ended', { room_id: roomId, mode, duration_sec: Math.round(durationSec), player_count: playerCount })
+export function trackMatchEnded(
+  roomId: string,
+  mode: string,
+  durationSec: number,
+  playerCount: number,
+): void {
+  track('match_ended', {
+    room_id: roomId,
+    mode,
+    duration_sec: Math.round(durationSec),
+    player_count: playerCount,
+  })
 }
 
 export function trackPlayerConnected(roomId: string, mode: string): void {

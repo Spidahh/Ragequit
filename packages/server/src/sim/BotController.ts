@@ -66,7 +66,8 @@ export class BotController {
     // trade melee hits and test damage numbers easily.
     const desiredRange = 2.0
     let mz = 0
-    if (dist > desiredRange + 0.5) mz = -1   // chase
+    if (dist > desiredRange + 0.5)
+      mz = -1 // chase
     else if (dist < desiredRange - 0.5) mz = 1 // back off slightly
     const strafeMag = 0.4 + (dist < 3 ? 0.4 : 0)
     const mx = this.strafeDir * strafeMag
@@ -83,10 +84,7 @@ export class BotController {
     this.host.sendInput(this.botId, mx, mz, yaw, doJump)
 
     // Sword swing when in range — bot swings every ~0.45 s to chain the combo.
-    if (
-      dist <= SWORD_M1_RANGE_M &&
-      tick - this.lastSwingTick > Math.round(0.45 * TICK_RATE_HZ)
-    ) {
+    if (dist <= SWORD_M1_RANGE_M && tick - this.lastSwingTick > Math.round(0.45 * TICK_RATE_HZ)) {
       this.host.sendSwing(this.botId, yaw)
       this.lastSwingTick = tick
     }

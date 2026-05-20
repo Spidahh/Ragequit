@@ -1,8 +1,4 @@
-import {
-  PLAYER_CAPSULE_HEIGHT_M,
-  PROJECTILE_MUZZLE_Y_OFFSET_M,
-  Player,
-} from '@ragequit/shared'
+import { PLAYER_CAPSULE_HEIGHT_M, PROJECTILE_MUZZLE_Y_OFFSET_M, Player } from '@ragequit/shared'
 import { describe, expect, it } from 'vitest'
 
 import { computeProjectileOrigin } from './GameRoom.js'

@@ -58,14 +58,14 @@ Current ability tuning follows a combo-first taxonomy. The exact live numbers ar
 
 Every ability must declare its `comboRole` in the registry. The loadout UI reads that role directly, and tests enforce the role contract so abilities cannot silently collapse back into generic damage buttons.
 
-| Role | Purpose | Examples |
-| --- | --- | --- |
-| Starter | Opens a punish window through launch, root, freeze, stun, blind or slow | Uppercut, Guard Break, Pin Shot, Eruption, Frost Pillar, Arc Lift, Entangle, Root Upthrow |
-| Extender | Keeps the enemy inside danger after the starter | Flame Wall, Blizzard, Thorn Field, Storm Field, Smoke Screen |
-| Finisher | Rewards accurate follow-up aim after setup | Marksman Shot, Piercing Shot, Meteor, Fireball, Blast Arrow |
-| Ray | Instant line-of-sight hit if the target is under the crosshair | Ignite, Chain Bolt, Freeze Target, Curse of Weakness, Mark Target |
-| Survival / Counter | Breaks or survives an enemy combo | Barrier, Dark Barrier, Cleanse Surge, Phase Shift, Quick Dash |
-| Drain | Attacks enemy resources instead of only HP | Curse of Weakness, Life Drain, Void Spike, Mark Target |
+| Role               | Purpose                                                                 | Examples                                                                                  |
+| ------------------ | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Starter            | Opens a punish window through launch, root, freeze, stun, blind or slow | Uppercut, Guard Break, Pin Shot, Eruption, Frost Pillar, Arc Lift, Entangle, Root Upthrow |
+| Extender           | Keeps the enemy inside danger after the starter                         | Flame Wall, Blizzard, Thorn Field, Storm Field, Smoke Screen                              |
+| Finisher           | Rewards accurate follow-up aim after setup                              | Marksman Shot, Piercing Shot, Meteor, Fireball, Blast Arrow                               |
+| Ray                | Instant line-of-sight hit if the target is under the crosshair          | Ignite, Chain Bolt, Freeze Target, Curse of Weakness, Mark Target                         |
+| Survival / Counter | Breaks or survives an enemy combo                                       | Barrier, Dark Barrier, Cleanse Surge, Phase Shift, Quick Dash                             |
+| Drain              | Attacks enemy resources instead of only HP                              | Curse of Weakness, Life Drain, Void Spike, Mark Target                                    |
 
 Combo examples to preserve when balancing:
 
@@ -80,11 +80,11 @@ Finisher rule: abilities with `comboRole: 'finisher'` gain **+25% damage** again
 
 **52 abilities total**:
 
-| Type                        | Count | Slot                                        |
-| --------------------------- | ----- | ------------------------------------------- |
-| Melee                       | 6     | 1 slot per loadout                          |
-| Bow                         | 8     | 1 slot per loadout                          |
-| Magic                       | 27    | 5 slots per loadout                         |
-| Utility                     | 11    | 3 fixed transfer slots + 1 flex utility slot |
+| Type    | Count | Slot                                         |
+| ------- | ----- | -------------------------------------------- |
+| Melee   | 6     | 1 slot per loadout                           |
+| Bow     | 8     | 1 slot per loadout                           |
+| Magic   | 27    | 5 slots per loadout                          |
+| Utility | 11    | 3 fixed transfer slots + 1 flex utility slot |
 
 Per-type lists: `05_abilities_melee.md`, `05_abilities_bow.md`, `05_abilities_magic.md`, `05_abilities_utility.md`.
