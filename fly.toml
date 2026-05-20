@@ -1,0 +1,41 @@
+# fly.toml — RAGEQUIT game server on Fly.io (free shared-cpu-1x, 256 MB RAM).
+# App name must match what you created with `flyctl apps create`.
+# Set secrets before first deploy:
+#   flyctl secrets set SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=...
+
+app = "ragequit-server"
+primary_region = "ams"   # Amsterdam — closest free region to Italy
+
+[build]
+  # Build from repo root so the Dockerfile can copy the full pnpm workspace.
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  NODE_ENV = "production"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"      # scale-to-zero on free plan
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 500
+    soft_limit = 400
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+
+[checks]
+  [checks.health]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    path = "/health"
+    port = 8080
+    timeout = "5s"
+    type = "http"

@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+**/.env
+**/.env.local
+**/dist
+**/*.test.ts
+.git
+.github
+*.md
+packages/client/src
+packages/client/public
+packages/client/index.html
+packages/client/vite.config.*
