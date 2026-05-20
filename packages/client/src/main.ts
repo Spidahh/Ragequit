@@ -11,6 +11,7 @@ import {
   PROJECTILE_MUZZLE_Y_OFFSET_M,
   getMap,
   TICK_MS,
+  TICK_RATE_HZ,
   WEAPON_IDS,
   makePlayerSimState,
   movementCapsFromStatuses,
@@ -733,6 +734,18 @@ const radialWheels = initRadialWheels({
   getPrimedSlot: () => castDispatcher.getPrimedSlotIdx(),
   onPrimeSlot: (slotIdx) => castDispatcher.activateAbilitySlot(slotIdx, true),
   utilityWheelEl,
+  getCooldownSec: (abilityId) => {
+    const players = getSchemaPlayers()
+    const selfId = self?.sessionId
+    if (!selfId || !players) return 0
+    const schema = players.get(selfId)
+    if (!schema) return 0
+    const readyAtTick = schema.abilityCooldowns.get(abilityId) ?? 0
+    const currentTick = (room?.state as { tick?: number })?.tick ?? 0
+    const remaining = (readyAtTick - currentTick) / TICK_RATE_HZ
+    return Math.max(0, remaining)
+  },
+  isInstantCast: (abilityId) => loadoutStation.isInstantCast(abilityId),
 })
 
 async function connectWithMode(mode: string, reopenLoadout = true): Promise<void> {

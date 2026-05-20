@@ -846,6 +846,42 @@
         color: #3a3a5a;
         font-style: italic;
       }
+      /* Cooldown badge — red seconds overlay, only shown when on cooldown */
+      .radial-slot .r-cd {
+        font-size: 9px;
+        font-family: ui-monospace, monospace;
+        color: #ff6644;
+        min-width: 18px;
+        text-align: center;
+        line-height: 1;
+      }
+      .radial-slot .r-cd:empty { display: none; }
+      /* Cast-mode badge — I (instant) or P (preview), tiny, bottom-right of slot */
+      .radial-slot .r-mode {
+        font-size: 8px;
+        font-family: ui-monospace, monospace;
+        border-radius: 2px;
+        padding: 0 2px;
+        line-height: 11px;
+        min-width: 10px;
+        text-align: center;
+      }
+      .radial-slot .r-mode:empty { display: none; }
+      .radial-slot .r-mode.r-mode-instant {
+        color: #ffd260;
+        background: rgba(255,210,96,0.14);
+        border: 1px solid rgba(255,210,96,0.38);
+      }
+      .radial-slot .r-mode.r-mode-preview {
+        color: #88c8ff;
+        background: rgba(80,160,255,0.14);
+        border: 1px solid rgba(80,160,255,0.38);
+      }
+      /* On-cooldown slot — dim the icon */
+      .radial-slot.r-on-cd .r-icon {
+        opacity: 0.45;
+        filter: grayscale(0.65) drop-shadow(0 1px 3px rgba(0,0,0,0.8));
+      }
 
       /* Highlight the selected sector */
       .radial-menu .radial-sector-highlight {
@@ -4059,21 +4095,29 @@
         <span class="r-icon">⚡</span>
         <span class="r-key">Z</span>
         <span class="r-name r-empty">empty</span>
+        <span class="r-cd"></span>
+        <span class="r-mode"></span>
       </div>
       <div class="radial-slot" data-dir="right"  data-slot="8" data-key="X">
         <span class="r-icon">⚡</span>
         <span class="r-key">X</span>
         <span class="r-name r-empty">empty</span>
+        <span class="r-cd"></span>
+        <span class="r-mode"></span>
       </div>
       <div class="radial-slot" data-dir="bottom" data-slot="9" data-key="F">
         <span class="r-icon">⚡</span>
         <span class="r-key">F</span>
         <span class="r-name r-empty">empty</span>
+        <span class="r-cd"></span>
+        <span class="r-mode"></span>
       </div>
       <div class="radial-slot" data-dir="left"   data-slot="10" data-key="V">
         <span class="r-icon">⚡</span>
         <span class="r-key">V</span>
         <span class="r-name r-empty">empty</span>
+        <span class="r-cd"></span>
+        <span class="r-mode"></span>
       </div>
       <div class="radial-center">Q</div>
     </div>
@@ -4081,13 +4125,13 @@
     <div id="ability-wheel" class="radial-menu">
       <div class="radial-bg"></div>
       <div class="radial-dividers"></div>
-      <div class="radial-slot" data-dir="top" data-slot="0" data-key="R"><span class="r-icon">⚔</span><span class="r-key">R</span><span class="r-name r-empty">empty</span></div>
-      <div class="radial-slot" data-dir="top-right" data-slot="1" data-key="BOW"><span class="r-icon">🏹</span><span class="r-key">BOW</span><span class="r-name r-empty">empty</span></div>
-      <div class="radial-slot" data-dir="right" data-slot="2" data-key="1"><span class="r-icon">✦</span><span class="r-key">1</span><span class="r-name r-empty">empty</span></div>
-      <div class="radial-slot" data-dir="bottom-right" data-slot="3" data-key="2"><span class="r-icon">✦</span><span class="r-key">2</span><span class="r-name r-empty">empty</span></div>
-      <div class="radial-slot" data-dir="bottom" data-slot="4" data-key="3"><span class="r-icon">✦</span><span class="r-key">3</span><span class="r-name r-empty">empty</span></div>
-      <div class="radial-slot" data-dir="bottom-left" data-slot="5" data-key="4"><span class="r-icon">✦</span><span class="r-key">4</span><span class="r-name r-empty">empty</span></div>
-      <div class="radial-slot" data-dir="left" data-slot="6" data-key="5"><span class="r-icon">✦</span><span class="r-key">5</span><span class="r-name r-empty">empty</span></div>
+      <div class="radial-slot" data-dir="top" data-slot="0" data-key="R"><span class="r-icon">⚔</span><span class="r-key">R</span><span class="r-name r-empty">empty</span><span class="r-cd"></span><span class="r-mode"></span></div>
+      <div class="radial-slot" data-dir="top-right" data-slot="1" data-key="BOW"><span class="r-icon">🏹</span><span class="r-key">BOW</span><span class="r-name r-empty">empty</span><span class="r-cd"></span><span class="r-mode"></span></div>
+      <div class="radial-slot" data-dir="right" data-slot="2" data-key="1"><span class="r-icon">✦</span><span class="r-key">1</span><span class="r-name r-empty">empty</span><span class="r-cd"></span><span class="r-mode"></span></div>
+      <div class="radial-slot" data-dir="bottom-right" data-slot="3" data-key="2"><span class="r-icon">✦</span><span class="r-key">2</span><span class="r-name r-empty">empty</span><span class="r-cd"></span><span class="r-mode"></span></div>
+      <div class="radial-slot" data-dir="bottom" data-slot="4" data-key="3"><span class="r-icon">✦</span><span class="r-key">3</span><span class="r-name r-empty">empty</span><span class="r-cd"></span><span class="r-mode"></span></div>
+      <div class="radial-slot" data-dir="bottom-left" data-slot="5" data-key="4"><span class="r-icon">✦</span><span class="r-key">4</span><span class="r-name r-empty">empty</span><span class="r-cd"></span><span class="r-mode"></span></div>
+      <div class="radial-slot" data-dir="left" data-slot="6" data-key="5"><span class="r-icon">✦</span><span class="r-key">5</span><span class="r-name r-empty">empty</span><span class="r-cd"></span><span class="r-mode"></span></div>
       <div class="radial-center">E</div>
     </div>
     <div id="gcd-ring"></div>

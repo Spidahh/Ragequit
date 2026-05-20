@@ -32,6 +32,10 @@ export interface RadialWheelControllerOptions {
   getPrimedSlot: () => number | null
   onPrimeSlot: (slotIdx: number) => void
   utilityWheelEl: HTMLElement
+  /** Returns remaining cooldown in seconds (0 = ready). */
+  getCooldownSec?: (abilityId: string) => number
+  /** Returns true when the ability is set to instant-cast mode. */
+  isInstantCast?: (abilityId: string) => boolean
 }
 
 const utilitySectors: readonly WheelSector[] = [
@@ -57,6 +61,8 @@ export function initRadialWheels({
   getPrimedSlot,
   onPrimeSlot,
   utilityWheelEl,
+  getCooldownSec,
+  isInstantCast,
 }: RadialWheelControllerOptions): RadialWheelController {
   const utilityWheel: RadialWheel = { el: utilityWheelEl, sectors: utilitySectors }
   const abilityWheel: RadialWheel = { el: abilityWheelEl, sectors: abilitySectors }
@@ -83,18 +89,45 @@ export function initRadialWheels({
       const def = id ? ABILITY_DEFS[id] : null
       const nameEl = slotEl.querySelector<HTMLElement>('.r-name')!
       const iconEl = slotEl.querySelector<HTMLElement>('.r-icon')!
-      const keyEl = slotEl.querySelector<HTMLElement>('.r-key')!
+      const keyEl  = slotEl.querySelector<HTMLElement>('.r-key')!
+      const cdEl   = slotEl.querySelector<HTMLElement>('.r-cd')
+      const modeEl = slotEl.querySelector<HTMLElement>('.r-mode')
+
       if (def) {
         iconEl.replaceChildren(abilityIcon(id, 25))
         nameEl.textContent = def.name
         nameEl.classList.remove('r-empty')
         keyEl.textContent = slotBindLabel(idx)
+
+        // Cooldown badge — shows remaining seconds; hidden when ready.
+        const cdSec = getCooldownSec ? getCooldownSec(id) : 0
+        if (cdEl) {
+          if (cdSec > 0.4) {
+            cdEl.textContent = cdSec < 10 ? cdSec.toFixed(1) : String(Math.ceil(cdSec))
+            cdEl.classList.add('r-cd-active')
+          } else {
+            cdEl.textContent = ''
+            cdEl.classList.remove('r-cd-active')
+          }
+        }
+        slotEl.classList.toggle('r-on-cd', cdSec > 0.4)
+
+        // Cast-mode badge: I = instant, P = preview.
+        if (modeEl && isInstantCast) {
+          const instant = isInstantCast(id)
+          modeEl.textContent = instant ? 'I' : 'P'
+          modeEl.classList.toggle('r-mode-instant', instant)
+          modeEl.classList.toggle('r-mode-preview', !instant)
+        }
       } else {
         iconEl.replaceChildren()
         iconEl.textContent = '·'
         nameEl.textContent = 'empty'
         nameEl.classList.add('r-empty')
         keyEl.textContent = slotBindLabel(idx)
+        if (cdEl) { cdEl.textContent = ''; cdEl.classList.remove('r-cd-active') }
+        slotEl.classList.remove('r-on-cd')
+        if (modeEl) { modeEl.textContent = '' }
       }
       slotEl.classList.toggle('r-primed', idx === getPrimedSlot())
     }
