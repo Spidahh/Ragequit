@@ -68,24 +68,29 @@ export async function saveLoadout(
   )
 }
 
-/** Record a match result and update ELO (simple ±20 system for now). */
+/** Record a match result and update ELO.
+ *  winnerEloDelta / loserEloDelta are the K-factor computed deltas from
+ *  MatchManager.applyEloUpdates(). Defaults to a flat ±20 only as a fallback
+ *  when called without the proper deltas (e.g. legacy code paths).
+ */
 export async function recordMatchResult(
   winnerId: string,
   loserId: string,
+  winnerEloDelta = 20,
+  loserEloDelta = -20,
 ): Promise<void> {
   const sb = getSupabase()
   if (!sb) return
-  const ELO_DELTA = 20
   await Promise.all([
     sb.rpc('increment_player_stats', {
       p_user_id: winnerId,
-      p_elo_delta: ELO_DELTA,
+      p_elo_delta: winnerEloDelta,
       p_win_delta: 1,
       p_loss_delta: 0,
     }),
     sb.rpc('increment_player_stats', {
       p_user_id: loserId,
-      p_elo_delta: -ELO_DELTA,
+      p_elo_delta: loserEloDelta,
       p_win_delta: 0,
       p_loss_delta: 1,
     }),

@@ -46,7 +46,14 @@ export interface MatchHost {
   broadcast: (type: string, message: unknown) => void
   // Called once at matchEnd with the session IDs of winner and loser (round
   // mode only). GameRoom maps sessionIds → userIds and persists ELO to DB.
-  onMatchEnd?: (winnerSessionId: string, loserSessionId: string) => void
+  // winnerEloDelta / loserEloDelta are the K-factor computed deltas so the DB
+  // stores the same values the in-memory model computed (not a flat ±20).
+  onMatchEnd?: (
+    winnerSessionId: string,
+    loserSessionId: string,
+    winnerEloDelta: number,
+    loserEloDelta: number,
+  ) => void
 }
 
 type Phase = 'lobby' | 'countdown' | 'live' | 'roundEnd' | 'matchEnd'
@@ -178,10 +185,10 @@ export class MatchManager {
   private enterMatchEnd(_tickNow: number): void {
     this.host.state.phase = 'matchEnd'
     this.broadcastPhase('matchEnd')
-    const { winnerId, loserId } = this.applyEloUpdates()
+    const { winnerId, loserId, winnerEloDelta, loserEloDelta } = this.applyEloUpdates()
     this.broadcastScore()
     if (winnerId && loserId && this.host.onMatchEnd) {
-      this.host.onMatchEnd(winnerId, loserId)
+      this.host.onMatchEnd(winnerId, loserId, winnerEloDelta, loserEloDelta)
     }
   }
 
@@ -229,9 +236,16 @@ export class MatchManager {
 
   // Update in-memory ELO at match end. 1v1 round modes: winner by round count.
   // FFA/5v5: ELO deferred to the ranked multiplayer pass; round modes update now.
-  // Returns { winnerId, loserId } so the caller can persist to DB.
-  private applyEloUpdates(): { winnerId: string; loserId: string } {
-    if (!this.isRoundMode) return { winnerId: '', loserId: '' }
+  // Returns { winnerId, loserId, winnerEloDelta, loserEloDelta } so the caller
+  // can persist the actual computed deltas to DB (not a flat constant).
+  private applyEloUpdates(): {
+    winnerId: string
+    loserId: string
+    winnerEloDelta: number
+    loserEloDelta: number
+  } {
+    const none = { winnerId: '', loserId: '', winnerEloDelta: 0, loserEloDelta: 0 }
+    if (!this.isRoundMode) return none
     let winnerId = ''
     let loserId = ''
     let bestWins = -1
@@ -245,16 +259,16 @@ export class MatchManager {
     this.host.state.players.forEach((_p, sid) => {
       if (sid !== winnerId) loserId = sid
     })
-    if (!winnerId || !loserId) return { winnerId: '', loserId: '' }
+    if (!winnerId || !loserId) return none
     const rW = this.ratingFor(winnerId)
     const rL = this.ratingFor(loserId)
     const exW = 1 / (1 + Math.pow(10, (rL - rW) / 400))
     const exL = 1 / (1 + Math.pow(10, (rW - rL) / 400))
-    const newW = Math.round(rW + ELO_K_RANKED * (1 - exW))
-    const newL = Math.round(rL + ELO_K_RANKED * (0 - exL))
-    this.elo.set(winnerId, newW)
-    this.elo.set(loserId, newL)
-    return { winnerId, loserId }
+    const winnerEloDelta = Math.round(ELO_K_RANKED * (1 - exW))
+    const loserEloDelta = Math.round(ELO_K_RANKED * (0 - exL))
+    this.elo.set(winnerId, rW + winnerEloDelta)
+    this.elo.set(loserId, rL + loserEloDelta)
+    return { winnerId, loserId, winnerEloDelta, loserEloDelta }
   }
 
   private broadcastPhase(phase: Phase, countdownMs?: number): void {

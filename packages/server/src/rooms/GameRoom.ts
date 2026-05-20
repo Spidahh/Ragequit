@@ -98,6 +98,7 @@ import {
   computeLoadoutMastery,
 } from '@ragequit/shared'
 
+import { verifyToken, upsertPlayer, loadLoadout, saveLoadout, recordMatchResult } from '../db/supabase.js'
 import {
   AbilityEngine,
   AIR_PUNISH_DAMAGE_MULT,
@@ -116,7 +117,6 @@ import {
   trackPlayerConnected,
   trackPlayerDisconnected,
 } from '../telemetry.js'
-import { verifyToken, upsertPlayer, loadLoadout, saveLoadout, recordMatchResult } from '../db/supabase.js'
 
 // Fase 3 GameRoom — three weapons (sword / bow / staff), parry, projectiles.
 //
@@ -436,14 +436,14 @@ export class GameRoom extends Room<GameState> {
       state: this.state,
       resetAllPlayers: () => this.resetAllPlayersForRound(),
       broadcast: (t, m) => this.broadcast(t, m),
-      onMatchEnd: (winnerSid, loserSid) => {
+      onMatchEnd: (winnerSid, loserSid, winnerEloDelta, loserEloDelta) => {
         // Map session IDs → Supabase user IDs and persist ELO result.
         const winnerPlayer = this.state.players.get(winnerSid)
         const loserPlayer  = this.state.players.get(loserSid)
         const winnerId = winnerPlayer?.userId
         const loserId  = loserPlayer?.userId
         if (winnerId && loserId) {
-          recordMatchResult(winnerId, loserId).catch((err: unknown) => {
+          recordMatchResult(winnerId, loserId, winnerEloDelta, loserEloDelta).catch((err: unknown) => {
             console.warn('[GameRoom] recordMatchResult failed:', (err as Error).message)
           })
         }
@@ -1997,8 +1997,9 @@ export class GameRoom extends Room<GameState> {
   private handleLoadoutSet(sid: string, msg: ClientLoadoutMessage): void {
     const player = this.state.players.get(sid)
     if (!player) return
+    // Look up client once — reused for all rejection notices below.
+    const client = this.clients.find((c) => c.sessionId === sid)
     if (this.state.phase === 'live') {
-      const client = this.clients.find((c) => c.sessionId === sid)
       client?.send(MessageTypes.ServerNote, {
         kind: 'warn',
         text: 'loadout changes are locked during live combat',
@@ -2043,7 +2044,6 @@ export class GameRoom extends Room<GameState> {
       if (id === '') continue
       const def = ABILITY_DEFS[id]
       if (!def || def.slot !== expectedSlot[i]) {
-        const client = this.clients.find((c) => c.sessionId === sid)
         client?.send(MessageTypes.ServerNote, {
           kind: 'warn',
           text: `loadout rejected: slot ${i} expected ${expectedSlot[i]}, got "${id}"`,
@@ -2051,7 +2051,6 @@ export class GameRoom extends Room<GameState> {
         return
       }
       if (i === 10 && id.startsWith('transfer_')) {
-        const client = this.clients.find((c) => c.sessionId === sid)
         client?.send(MessageTypes.ServerNote, {
           kind: 'warn',
           text: 'loadout rejected: V is the flex utility slot; transfers are fixed on Z/X/F',
@@ -2059,7 +2058,6 @@ export class GameRoom extends Room<GameState> {
         return
       }
       if (slots.findIndex((other) => other === id) !== i) {
-        const client = this.clients.find((c) => c.sessionId === sid)
         client?.send(MessageTypes.ServerNote, {
           kind: 'warn',
           text: `loadout rejected: duplicate ability "${id}"`,

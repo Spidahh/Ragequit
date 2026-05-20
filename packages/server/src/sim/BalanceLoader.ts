@@ -100,8 +100,8 @@ function findBalanceJson(): string {
   const candidates = [
     // Relative to this file when bundled: dist/sim/BalanceLoader.js → ../../../shared/src/constants/balance.json
     join(dirname(fileURLToPath(import.meta.url)), '../../../shared/src/constants/balance.json'),
-    // Relative when running from src directly (vitest).
-    join(dirname(fileURLToPath(import.meta.url)), '../../../shared/src/constants/balance.json'),
+    // Relative when running from src directly (vitest): src/sim/BalanceLoader.ts → ../../shared/src/constants/balance.json
+    join(dirname(fileURLToPath(import.meta.url)), '../../shared/src/constants/balance.json'),
     // Absolute fallback to packages root.
     join(process.cwd(), 'packages/shared/src/constants/balance.json'),
     join(process.cwd(), '../shared/src/constants/balance.json'),
