@@ -8,7 +8,7 @@ export default defineConfig({
     strictPort: true,
   },
   build: {
-    outDir: '../../apps/web/dist',
+    outDir: 'dist',
     emptyOutDir: true,
     target: 'es2022',
     sourcemap: true,
