@@ -53,7 +53,7 @@ export function initCombatOverlayHud({
   let prevSelfHp = -1
 
   function update({
-    now,
+    now: _now,
     tickNow,
     bowChargeRatio,
     activeWeapon,

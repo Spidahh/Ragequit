@@ -7,7 +7,6 @@ import {
   BOW_CHARGE_MIN_SEC,
   CAPSULE_HALF_HEIGHT_M,
   CAPSULE_HEIGHT_M,
-  CAPSULE_RADIUS_M,
   MessageTypes,
   PROJECTILE_MUZZLE_Y_OFFSET_M,
   getMap,
@@ -345,7 +344,6 @@ const selfEmissive = initSelfEmissive({
 const toonGradient = makeToonGradient()
 
 const {
-  groundMesh, grid,
   loadMapGeometry, getActiveMapId,
   animateArena,
 } = buildArena(scene, toonGradient)
@@ -804,7 +802,7 @@ const gameInput = initGameInput(inp, {
   activateAbilitySlot: (idx, fromWheel) => castDispatcher.activateAbilitySlot(idx, fromWheel),
   onClear: () => clearCombatInputEdges(),
 })
-const { engageCanvasInput, disengageCanvasInput, requestArenaPointerLock, sampleInput } = gameInput
+const { engageCanvasInput, requestArenaPointerLock, sampleInput } = gameInput
 
 async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void> {
   const seq = ++connectSeq
