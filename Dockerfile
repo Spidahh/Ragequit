@@ -11,14 +11,13 @@ RUN corepack enable && corepack prepare pnpm@10.0.0 --activate
 WORKDIR /app
 
 # Copy manifests first for better layer caching.
+COPY .npmrc ./
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/shared/package.json       packages/shared/
 COPY packages/server/package.json       packages/server/
 # Client package.json is not needed at runtime but pnpm needs it for the
 # workspace graph — copy a minimal version so install doesn't fail.
 COPY packages/client/package.json       packages/client/
-# Use a fast pnpm store path inside the image layer.
-RUN echo "store-dir=/tmp/pnpm-store" > .npmrc
 
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
@@ -39,14 +38,11 @@ RUN corepack enable && corepack prepare pnpm@10.0.0 --activate
 WORKDIR /app
 
 # Copy package manifests (workspace graph required by pnpm deploy).
+COPY .npmrc ./
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/shared/package.json       packages/shared/
 COPY packages/server/package.json       packages/server/
 COPY packages/client/package.json       packages/client/
-# pnpm v10 requires inject-workspace-packages=true for `pnpm deploy` in
-# monorepos (ERR_PNPM_DEPLOY_NONINJECTED_WORKSPACE). Keep this out of the
-# root .npmrc so the lockfile stays in non-injected format for normal dev.
-RUN printf "store-dir=/tmp/pnpm-store\ninject-workspace-packages=true\n" > .npmrc
 
 # Use pnpm deploy to extract only production deps for the server.
 COPY --from=builder /app/packages/shared/dist  packages/shared/dist/
