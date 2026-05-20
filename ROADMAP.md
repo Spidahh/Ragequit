@@ -37,34 +37,28 @@ Implementato:
 
 ### 1. Combat Feel E Bug Meccanici
 
-- Continuare audit su mira, projectile hit, AoE, status combo, parry edge cases, channel/cast interruption.
-- Tuning numerico TTK 20-30 s su bot e partite manuali.
-- Migliorare feedback hit/parry/channel/interrupt.
-- Rendere più leggibile la differenza tra basic M1, direct ability cast e primed ability fire.
+- Audit mira/projectile/AoE/status combo/parry/channel: ✅ codice verificato, nessun bug noto trovato.
+- Tuning numerico TTK 20-30 s su bot e partite manuali: richiede browser QA manuale.
+- Feedback hit/parry/channel/interrupt: ✅ element-colored world impacts per tutti i tipi di hit (melee/bow/magic/combo/zone); parry spark argento; doppio burst arancione per air-punish; trail line per proiettili (amber arrow, cyan bolt); durata toast ridotta, cooldown/gcd silenti.
+- Leggibilità basic M1 vs primed ability: ✅ `[data-primed]` crosshair gold pulse ring; slot pip gold lift + glow.
+- Wheel UX: ✅ cooldown badge (rosso, secondi) + cast-mode marker (I/P) su tutti gli slot; slot dimma se in cooldown.
 
-### 2. Loadout Station / UX
+### 2. Loadout Station / UX ✅ Completata (vedi M2)
 
-- Seguire `01_DESIGN/11_ui_redesign_plan.md` prima di altri interventi HUD/menu/loadout: prima togliere rumore e definire gerarchia, poi rifare superfici.
-- Continuare polish visivo AAA-style: più leggibilità, meno HTML panel feel.
-- Rendere chiarissima la distinzione:
-  - E = ability palette
-  - Q = utility/transfer palette
-  - LMB = fire primed ability
-  - direct keys = bypass wheel; instant cast immediato, placement con preview + LMB
-- Aggiungere preset persistenti quando entra il layer account/storage.
+- Design plan `11_ui_redesign_plan.md` seguito. Gerarchia HUD definita e applicata.
+- Rendere chiarissima la distinzione E/Q/LMB/direct-keys: ✅ (vedi M2 DoD).
+- Preset persistenti: localStorage già attivo; account/DB-backed rimandato a M4+.
 
 ### 3. Client Modularization ✅ Completata (vedi M3)
 
 Tutti i moduli estratti. `main.ts` a 1824 linee (da 2896). Moduli attivi: `hud/` (10), `input/` (6), `render/` (7), `net/` (1), `vfx/` (1), `world/` (arena + maps).
 
-### 4. Content Consistency
+### 4. Content Consistency ✅ Verificata
 
-- Ogni modifica a `registry.ts` deve aggiornare:
-  - `01_DESIGN/05_abilities_*.md`
-  - `02_TECH/02_ability_dsl.md` se cambia schema/primitiva
-  - tests registry/engine se cambia comportamento
-- Niente rune/passive nei docs, runtime o UI.
-- Transfer fissi sempre documentati come Z/X/F.
+- Conteggi confermati: 6 melee / 8 bow / 27 magic / 11 utility = 52. ✅
+- `02_TECH/02_ability_dsl.md` aggiornato e coerente con lo schema. ✅
+- Niente rune/passive nei docs, runtime o UI. ✅
+- Transfer fissi sempre documentati come Z/X/F. ✅
 
 ### 5. Production Layer
 
