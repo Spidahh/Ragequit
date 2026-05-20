@@ -1,18 +1,9 @@
 import { getMap, type AABB } from '@ragequit/shared'
 import * as THREE from 'three'
 
+// Only the three properties that main.ts needs. Everything else (arenaRing,
+// torchLights, particles, etc.) is fully encapsulated inside buildArena.
 export interface ArenaObjects {
-  arenaRing: THREE.Mesh
-  arenaRingHaloMat: THREE.MeshBasicMaterial
-  torchLights: THREE.PointLight[]
-  ambientParticles: THREE.Points
-  particleVels: Float32Array
-  magicParticles: THREE.Points
-  magicVels: Float32Array
-  floorCrestGroup: THREE.Group
-  centreGlowMat: THREE.MeshBasicMaterial
-  groundMesh: THREE.Mesh
-  grid: THREE.GridHelper
   loadMapGeometry: (mapId: string) => void
   getActiveMapId: () => string
   animateArena: (now: number, dt: number, inHitStop: boolean) => void
@@ -21,8 +12,8 @@ export interface ArenaObjects {
 const GROUND_SIZE = 80
 const ARENA_R = 30
 const ARENA_N = 8
-export const PARTICLE_COUNT = 260
-export const MAGIC_COUNT = 110
+const PARTICLE_COUNT = 260
+const MAGIC_COUNT = 110
 
 function makeBoxMesh(box: AABB, color: number, toonGradient: THREE.DataTexture): THREE.Mesh {
   const sx = box.maxX - box.minX
@@ -362,17 +353,6 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
   }
 
   return {
-    arenaRing,
-    arenaRingHaloMat,
-    torchLights,
-    ambientParticles,
-    particleVels,
-    magicParticles,
-    magicVels,
-    floorCrestGroup,
-    centreGlowMat,
-    groundMesh,
-    grid,
     loadMapGeometry,
     getActiveMapId: () => activeMapId,
     animateArena,
