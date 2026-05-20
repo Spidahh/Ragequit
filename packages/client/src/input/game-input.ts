@@ -1,4 +1,4 @@
-import { type SimInput } from '@ragequit/shared'
+import { type SimInput, type Weapon } from '@ragequit/shared'
 
 import { actionCode, matchesAction, slotKeybindEntries } from './keybinds.js'
 import { type RadialWheelController } from './radial-wheels.js'
@@ -16,8 +16,8 @@ export interface GameInputState {
   lmbReleaseEdge: boolean
   rmbPressEdge: boolean
   rmbReleaseEdge: boolean
-  weaponSwapRequest: string | null
-  optimisticWeapon: string | null
+  weaponSwapRequest: Weapon | null
+  optimisticWeapon: Weapon | null
   pointerLocked: boolean
   canvasInputEngaged: boolean
   pointerLookActive: boolean
@@ -58,7 +58,7 @@ export interface GameInputOptions {
   mouseSensitivity: MouseSensitivityController
   radialWheels: RadialWheelController
   pitchLimits: { up: number; down: number }
-  weaponIds: readonly string[]
+  weaponIds: readonly Weapon[]
   hint: HTMLElement
   pingHud: HTMLElement
   settingsOverlay: HTMLElement
@@ -316,8 +316,8 @@ export function initGameInput(state: GameInputState, {
 
     if (matchesAction(k, 'swapWeapon')) {
       e.preventDefault()
-      const cur = getCurrentWeaponForInput()
-      const idx = (weaponIds as readonly string[]).indexOf(cur)
+      const cur = getCurrentWeaponForInput() as Weapon
+      const idx = weaponIds.indexOf(cur)
       state.weaponSwapRequest = weaponIds[(idx + 1) % weaponIds.length] ?? null
     }
 
@@ -419,8 +419,8 @@ export function initGameInput(state: GameInputState, {
     if (shouldIgnoreGameplayPointerTarget(e.target)) return
     e.preventDefault()
     engageCanvasInput()
-    const cur = getCurrentWeaponForInput()
-    const idx = (weaponIds as readonly string[]).indexOf(cur)
+    const cur = getCurrentWeaponForInput() as Weapon
+    const idx = weaponIds.indexOf(cur)
     const dir = e.deltaY > 0 ? 1 : -1
     const next = weaponIds[(idx + dir + weaponIds.length) % weaponIds.length]
     state.weaponSwapRequest = next ?? null

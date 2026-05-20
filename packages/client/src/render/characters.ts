@@ -7,9 +7,11 @@ import * as THREE from 'three'
 export function makeCharacter(teamColor: number, toonGradient: THREE.DataTexture): THREE.Group {
   const g = new THREE.Group()
 
-  const armorMat = new THREE.MeshToonMaterial({ color: teamColor, gradientMap: toonGradient, emissive: teamColor, emissiveIntensity: 0.10 })
-  const darkMat  = new THREE.MeshToonMaterial({ color: 0x1a1e2e, gradientMap: toonGradient })
-  const visorMat = new THREE.MeshBasicMaterial({ color: 0x70e8ff, transparent: true, opacity: 0.95, side: THREE.DoubleSide })
+  const armorMat  = new THREE.MeshToonMaterial({ color: teamColor, gradientMap: toonGradient, emissive: teamColor, emissiveIntensity: 0.10 })
+  const darkMat   = new THREE.MeshToonMaterial({ color: 0x1a1e2e, gradientMap: toonGradient })
+  const visorMat  = new THREE.MeshBasicMaterial({ color: 0x70e8ff, transparent: true, opacity: 0.95, side: THREE.DoubleSide })
+  const crestMat  = new THREE.MeshToonMaterial({ color: 0xd8c060, gradientMap: toonGradient })
+  const detailMat = new THREE.MeshBasicMaterial({ color: 0x2a9de0, transparent: true, opacity: 0.80 })
 
   g.userData['armorMat'] = armorMat
   g.userData['darkMat']  = darkMat
@@ -28,24 +30,40 @@ export function makeCharacter(teamColor: number, toonGradient: THREE.DataTexture
     return m
   }
 
-  addPart(new THREE.SphereGeometry(0.195, 14, 10),    armorMat, 0, 0.71, 0)
-  addPart(new THREE.CircleGeometry(0.068, 10),  visorMat, -0.072, 0.73, -0.19)
-  addPart(new THREE.CircleGeometry(0.068, 10),  visorMat,  0.072, 0.73, -0.19)
-  addPart(new THREE.CylinderGeometry(0.068, 0.068, 0.12, 8), darkMat, 0, 0.53, 0)
-  addPart(new THREE.BoxGeometry(0.50, 0.58, 0.26), armorMat, 0, 0.16, 0)
-  addPart(new THREE.BoxGeometry(0.14, 0.08, 0.20), armorMat, -0.34, 0.46, 0)
-  addPart(new THREE.BoxGeometry(0.14, 0.08, 0.20), armorMat,  0.34, 0.46, 0)
-  addPart(new THREE.CylinderGeometry(0.072, 0.065, 0.30, 8), darkMat, -0.32, 0.22, 0, 0, 0,  0.24)
-  addPart(new THREE.CylinderGeometry(0.072, 0.065, 0.30, 8), darkMat,  0.32, 0.22, 0, 0, 0, -0.24)
-  addPart(new THREE.CylinderGeometry(0.062, 0.056, 0.26, 8), darkMat, -0.34, -0.07, 0.03, 0.22, 0,  0.10)
-  addPart(new THREE.CylinderGeometry(0.062, 0.056, 0.26, 8), darkMat,  0.34, -0.07, 0.03, 0.22, 0, -0.10)
-  addPart(new THREE.BoxGeometry(0.46, 0.09, 0.23), armorMat, 0, -0.12, 0)
-  addPart(new THREE.CylinderGeometry(0.093, 0.082, 0.35, 8), darkMat, -0.13, -0.38, 0)
-  addPart(new THREE.CylinderGeometry(0.093, 0.082, 0.35, 8), darkMat,  0.13, -0.38, 0)
-  addPart(new THREE.CylinderGeometry(0.080, 0.068, 0.30, 8), darkMat, -0.12, -0.70, 0.02, 0.07, 0, 0)
-  addPart(new THREE.CylinderGeometry(0.080, 0.068, 0.30, 8), darkMat,  0.12, -0.70, 0.02, 0.07, 0, 0)
-  addPart(new THREE.BoxGeometry(0.17, 0.10, 0.30), darkMat, -0.12, -0.88, 0.04)
-  addPart(new THREE.BoxGeometry(0.17, 0.10, 0.30), darkMat,  0.12, -0.88, 0.04)
+  // Head — slightly larger for heroic look.
+  addPart(new THREE.SphereGeometry(0.200, 14, 10), armorMat, 0, 0.72, 0)
+  // Visor eye slits (angled inward for a fierce look).
+  addPart(new THREE.CircleGeometry(0.070, 10), visorMat, -0.075, 0.74, -0.195, 0, 0.12, 0)
+  addPart(new THREE.CircleGeometry(0.070, 10), visorMat,  0.075, 0.74, -0.195, 0, -0.12, 0)
+  // Helmet crest — a gold fin running front-to-back along the top.
+  addPart(new THREE.BoxGeometry(0.040, 0.120, 0.280), crestMat, 0, 0.895, 0)
+  addPart(new THREE.CylinderGeometry(0.025, 0.025, 0.280, 6), crestMat, 0, 0.895, 0, 0, 0, 0)
+  // Neck connector
+  addPart(new THREE.CylinderGeometry(0.068, 0.068, 0.12, 8), darkMat, 0, 0.54, 0)
+  // Torso (slightly taller).
+  addPart(new THREE.BoxGeometry(0.52, 0.60, 0.27), armorMat, 0, 0.17, 0)
+  // Chest accent stripe — gives detail without texture.
+  addPart(new THREE.BoxGeometry(0.10, 0.40, 0.28), detailMat, 0, 0.24, 0)
+  // Shoulder pauldrons (larger for heroic silhouette).
+  addPart(new THREE.BoxGeometry(0.16, 0.10, 0.22), armorMat, -0.36, 0.47, 0)
+  addPart(new THREE.BoxGeometry(0.16, 0.10, 0.22), armorMat,  0.36, 0.47, 0)
+  // Upper arms
+  addPart(new THREE.CylinderGeometry(0.075, 0.068, 0.30, 8), darkMat, -0.33, 0.22, 0, 0, 0,  0.24)
+  addPart(new THREE.CylinderGeometry(0.075, 0.068, 0.30, 8), darkMat,  0.33, 0.22, 0, 0, 0, -0.24)
+  // Lower arms
+  addPart(new THREE.CylinderGeometry(0.064, 0.058, 0.26, 8), darkMat, -0.35, -0.07, 0.03, 0.22, 0,  0.10)
+  addPart(new THREE.CylinderGeometry(0.064, 0.058, 0.26, 8), darkMat,  0.35, -0.07, 0.03, 0.22, 0, -0.10)
+  // Belt
+  addPart(new THREE.BoxGeometry(0.48, 0.09, 0.24), armorMat, 0, -0.12, 0)
+  // Upper legs
+  addPart(new THREE.CylinderGeometry(0.095, 0.084, 0.36, 8), darkMat, -0.13, -0.39, 0)
+  addPart(new THREE.CylinderGeometry(0.095, 0.084, 0.36, 8), darkMat,  0.13, -0.39, 0)
+  // Lower legs
+  addPart(new THREE.CylinderGeometry(0.082, 0.070, 0.31, 8), darkMat, -0.12, -0.72, 0.02, 0.07, 0, 0)
+  addPart(new THREE.CylinderGeometry(0.082, 0.070, 0.31, 8), darkMat,  0.12, -0.72, 0.02, 0.07, 0, 0)
+  // Boots
+  addPart(new THREE.BoxGeometry(0.18, 0.11, 0.32), darkMat, -0.12, -0.90, 0.04)
+  addPart(new THREE.BoxGeometry(0.18, 0.11, 0.32), darkMat,  0.12, -0.90, 0.04)
 
   const shadow = new THREE.Mesh(
     new THREE.CircleGeometry(CAPSULE_RADIUS_M * 1.15, 24),

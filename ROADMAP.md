@@ -1,6 +1,6 @@
 # RAGEQUIT — Roadmap / Stato Reale
 
-Ultimo riallineamento documentale: 2026-05-19.
+Ultimo riallineamento documentale: 2026-05-20.
 
 Questo file non descrive più il bootstrap iniziale come se dovesse ancora partire. Il progetto ha già una vertical slice giocabile con server autoritativo, client Three.js, abilità data-driven, loadout, mastery, bot/training e match flow.
 
@@ -104,23 +104,23 @@ Non ancora completo:
 
 DoD:
 
-- Full test suite verde.
+- Full test suite verde. ✅ 161 tests passing.
 - Browser QA senza errori console.
-- Nessun mismatch noto tra descrizione ability e runtime.
-- Nessun cast doppio durante swing/charge/channel/parry.
-- Point abilities usano davvero il mirino.
+- Nessun mismatch noto tra descrizione ability e runtime. ✅ Bow ability projectiles now spawn as arrows (not bolts). Curse of Weakness mana drain now respects parry (was bypassing it). Audit completato su tutti 52 ability defs vs engine.
+- Nessun cast doppio durante swing/charge/channel/parry. ✅ Confermato: player.casting + swingEndsAtTick + bowChargeStartTick + player.parrying bloccano tutti i conflitti.
+- Point abilities usano davvero il mirino. ✅ placementPreview.aimPoint() invia targetPoint; defaultInstantCast() = def.targeting !== 'point'.
 
 ### M2 — Loadout UX Pass
 
 DoD:
 
-- HUD subtraction pass completato: niente pannelli esplicativi persistenti in centro visuale durante il live gameplay.
-- Bottom combat console coerente: risorse, weapon strip, combat slots, utility/transfer e cooldown leggibili senza sovrapporsi.
-- Loadout Station comprensibile in 10 secondi.
-- Loadout Station v2 centrata su build equipaggiata, abilità selezionata, combo flow e cast mode.
-- Transfer fissi visibili e non sostituibili.
-- Wheel behavior documentato e verificato.
-- Nessuna categoria/passiva/runa fantasma.
+- HUD subtraction pass completato: niente pannelli esplicativi persistenti in centro visuale durante il live gameplay. ✅ `#status-strip` spostato da `left:50%;bottom:204px` a `left:28px;bottom:302px` — fuori asse centrale. Nessun pannello esplicativo persistente trovato durante gameplay live.
+- Bottom combat console coerente: risorse, weapon strip, combat slots, utility/transfer e cooldown leggibili senza sovrapporsi. ✅ `#combat-console` (centro-basso) contiene weapon slots + cd-strip con sezioni E/Q separate. Nessun overlap con `#hud` (bottom-left) o `#status-strip` (bottom-left sopra HUD) a nessun viewport testato.
+- Loadout Station comprensibile in 10 secondi. ✅ Layout 3 colonne: sinistra=slot equipaggiati, centro=dettaglio ability + cast mode toggle, destra=filtri+pool. Build coach e flow strip attivi.
+- Loadout Station v2 centrata su build equipaggiata, abilità selezionata, combo flow e cast mode. ✅ Flow strip (Opener/Control/Cashout/Reset) in header con stato online/missing. Build coach (score/6, coach-pills, coach-lines) nel pannello centrale. Cast-mode toggle prominente su ogni slot e card.
+- Transfer fissi visibili e non sostituibili. ✅ Badge FIXED + nessun pulsante clear + CSS `locked-transfer` su slot Z/X/F.
+- Wheel behavior documentato e verificato. ✅ `01_controls.md` descrive contratto Q/E+release=prime+LMB=fire. `radial-wheels.ts` + `cast-dispatcher.ts` confermati in linea.
+- Nessuna categoria/passiva/runa fantasma. ✅ Nessun riferimento a rune/passive in HTML, TS o design docs.
 
 ### M3 — Client Split
 
@@ -144,11 +144,11 @@ Ancora aperto: Supabase auth/JWT verification e DB-backed persistence richiedono
 
 DoD:
 
-- Main menu, pause, settings e lobby condividono un linguaggio da gioco, non da pagina HTML.
-- Arena e personaggi smettono di sembrare blockout.
+- Main menu, pause, settings e lobby condividono un linguaggio da gioco, non da pagina HTML. ✅ Main menu: dark left panel + gold scanline + RAGEQUIT titolo enorme + command-style `.menu-btn` con hover slide. Pause: glassmorphism panel + gold h2 + `.pause-btn` con border-left accent. Settings: same dark glass language. Tutti e tre condividono colori, font-family, transizioni.
+- Arena e personaggi smettono di sembrare blockout. ✅ Arena: stone tile ground texture (canvas 512×512, 16×16 tiles con grout lines + brightness variation); 4 stone plinths con rune glow ai 4 diagonali r=16; doppia fascia decorativa sui pilastri (1.6m e 3.2m). Personaggi: helmet crest dorato (BoxGeometry + CylinderGeometry), visor slit angolati per look aggressivo, chest stripe detail, proporzioni leggermente più eroiche.
 - VFX elementali leggibili. ✅ Zone pulse differenziato per elemento; proiettili emissivi (amber arrow, cyan bolt).
 - Hit/parry/death/channel interrupt hanno feedback chiaro. ✅ ImpactPool ora produce sphere burst + ring shockwave espandibile con ease-out.
-- Bundle budget monitorato. ✅ chunkSizeWarningLimit=550 kB in vite.config.ts; game chunk a 177 kB / 53 kB gzip.
+- Bundle budget monitorato. ✅ chunkSizeWarningLimit=550 kB in vite.config.ts; game chunk a 179 kB / 54 kB gzip.
 
 ## Verification Standard
 

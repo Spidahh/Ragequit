@@ -29,11 +29,54 @@ function makeBoxMesh(box: AABB, color: number, toonGradient: THREE.DataTexture):
   return m
 }
 
+/** Procedural stone-tile texture: 512×512 canvas with 16×16 mortar grid. */
+function makeStoneGroundTexture(): THREE.CanvasTexture {
+  const size = 512
+  const tileCount = 16
+  const ts = size / tileCount
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = size
+  const ctx = canvas.getContext('2d')!
+
+  ctx.fillStyle = '#1a2234'
+  ctx.fillRect(0, 0, size, size)
+
+  // Per-tile brightness variation for stone wear effect.
+  for (let tx = 0; tx < tileCount; tx++) {
+    for (let ty = 0; ty < tileCount; ty++) {
+      // Use tx/ty with a small deterministic offset instead of Math.random()
+      // so the texture is visually varied but doesn't change each reload.
+      const h = ((tx * 7 + ty * 13) % 17)
+      const r = 28 + h, g = 42 + h, b = 54 + h
+      ctx.fillStyle = `rgb(${r},${g},${b})`
+      ctx.fillRect(tx * ts + 2, ty * ts + 2, ts - 4, ts - 4)
+
+      // Very subtle inner highlight on upper-left edge of each tile.
+      ctx.fillStyle = 'rgba(255,255,255,0.04)'
+      ctx.fillRect(tx * ts + 2, ty * ts + 2, ts - 4, 2)
+      ctx.fillRect(tx * ts + 2, ty * ts + 2, 2, ts - 4)
+    }
+  }
+
+  // Mortar/grout lines (dark, slightly raised look).
+  ctx.strokeStyle = '#111820'
+  ctx.lineWidth = 3
+  for (let i = 0; i <= tileCount; i++) {
+    ctx.beginPath(); ctx.moveTo(i * ts, 0); ctx.lineTo(i * ts, size); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(0, i * ts); ctx.lineTo(size, i * ts); ctx.stroke()
+  }
+
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+  tex.repeat.set(5, 5) // tiles span the full 80-unit ground
+  return tex
+}
+
 export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture): ArenaObjects {
   // ── Ground ────────────────────────────────────────────────────────────────
   const groundMesh = new THREE.Mesh(
     new THREE.PlaneGeometry(GROUND_SIZE, GROUND_SIZE, 1, 1),
-    new THREE.MeshToonMaterial({ color: 0x1e2838, gradientMap: toonGradient }),
+    new THREE.MeshToonMaterial({ color: 0xffffff, map: makeStoneGroundTexture(), gradientMap: toonGradient }),
   )
   groundMesh.rotation.x = -Math.PI / 2
   groundMesh.receiveShadow = true
@@ -137,8 +180,11 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
       scene.add(shaft)
       const cap = new THREE.Mesh(capGeo, capMat); cap.position.set(px, 7.20, pz); scene.add(cap)
       const base = new THREE.Mesh(baseGeo, capMat); base.position.set(px, 0.16, pz); scene.add(base)
+      // Two decorative bands — lower and mid-shaft.
       const band = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.048, 6, 26), bandMat)
       band.position.set(px, 3.2, pz); band.rotation.x = Math.PI / 2; scene.add(band)
+      const band2 = new THREE.Mesh(new THREE.TorusGeometry(0.44, 0.030, 6, 26), bandMat)
+      band2.position.set(px, 1.6, pz); band2.rotation.x = Math.PI / 2; scene.add(band2)
 
       const wall = new THREE.Mesh(new THREE.BoxGeometry(wallLen, 2.2, 0.52), wallMat)
       wall.position.set(mx, 1.1, mz); wall.rotation.y = wallYaw
@@ -225,6 +271,31 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
       const angle = (i / 4) * Math.PI * 2
       const spot = new THREE.PointLight(spotCols[i]!, 0.50, 32, 2)
       spot.position.set(Math.sin(angle) * 20, 13, Math.cos(angle) * 20); scene.add(spot)
+    }
+  }
+
+  // ── Decorative stone plinths at 4 diagonal mid-points (r=16) ────────────
+  // These break up the open ground, provide visual cover landmarks, and give
+  // the arena more of a "built" feel vs. plain blockout geometry.
+  {
+    const plinthMat = new THREE.MeshToonMaterial({ color: 0x304060, gradientMap: toonGradient })
+    const plinthTopMat = new THREE.MeshToonMaterial({ color: 0x3d5070, gradientMap: toonGradient })
+    const runeGlowMat = new THREE.MeshBasicMaterial({ color: 0x3068d8, transparent: true, opacity: 0.62, side: THREE.DoubleSide })
+    for (let i = 0; i < 4; i++) {
+      const angle = (i / 4) * Math.PI * 2 + Math.PI / 4  // diagonals
+      const px = Math.sin(angle) * 16, pz = Math.cos(angle) * 16
+      // Main plinth body
+      const body = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.9, 1.6), plinthMat)
+      body.position.set(px, 0.45, pz); body.castShadow = true; body.receiveShadow = true; scene.add(body)
+      // Wider base step
+      const step = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.22, 2.0), plinthMat)
+      step.position.set(px, 0.11, pz); step.receiveShadow = true; scene.add(step)
+      // Top cap
+      const top = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.14, 1.8), plinthTopMat)
+      top.position.set(px, 0.97, pz); scene.add(top)
+      // Glowing rune on top face
+      const rune = new THREE.Mesh(new THREE.CircleGeometry(0.48, 6), runeGlowMat)
+      rune.rotation.x = -Math.PI / 2; rune.position.set(px, 1.05, pz); scene.add(rune)
     }
   }
 

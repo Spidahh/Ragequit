@@ -1167,14 +1167,15 @@
         100% { transform: translate(-50%, -50%) translateY(-90px) scale(0.85); opacity: 0; }
       }
 
-      /* Status icons strip ----------------------------------------------- */
+      /* Status icons strip — left-aligned above the resource HUD panel. */
       #status-strip {
         position: fixed;
-        left: 50%;
-        bottom: 204px; /* sits above the combat console (~173px top) with a ~30px gap */
-        transform: translateX(-50%);
+        left: 28px;
+        bottom: 302px; /* default: sits above the resource HUD (bottom ~246–286 px) */
         display: flex;
+        flex-wrap: wrap;
         gap: 7px;
+        max-width: min(300px, 34vw);
         pointer-events: none;
         user-select: none;
       }
