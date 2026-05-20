@@ -1,7 +1,14 @@
 import { HP_MAX, INTERPOLATION_DELAY_MS } from '@ragequit/shared'
 import * as THREE from 'three'
 
-import { makeCharacter, applyWeaponProp, makeCastRing } from './characters.js'
+import {
+  makeCharacter,
+  applyWeaponProp,
+  makeCastRing,
+  loadCharacterGlb,
+  tickCharacterMixer,
+  setCharAnimState,
+} from './characters.js'
 import { SWING_ARC_YAW_OFFSET, makeSwingArcMesh } from './factories.js'
 
 // Minimal schema shape consumed by this module.
@@ -38,6 +45,8 @@ interface RemoteState {
   hp: number
   alive: boolean
   lastWeapon: string
+  prevX: number
+  prevZ: number
 }
 
 export interface RemotePlayersOptions {
@@ -83,6 +92,7 @@ export function initRemotePlayers({
   function spawnRemote(p: RemotePlayerSchema, sid: string): RemoteState {
     const mesh = makeCharacter(0xe04a4a, toonGradient)
     scene.add(mesh)
+    loadCharacterGlb(mesh, 0xe04a4a, toonGradient)
     const arc = makeSwingArcMesh()
     scene.add(arc)
     const castRing = makeCastRing()
@@ -146,10 +156,13 @@ export function initRemotePlayers({
       hp: HP_MAX,
       alive: true,
       lastWeapon: '',
+      prevX: p.transform.x,
+      prevZ: p.transform.z,
     }
   }
 
   function disposeRemote(r: RemoteState): void {
+    r.mesh.userData['disposed'] = true
     scene.remove(r.mesh)
     r.mesh.traverse((child) => {
       if (child instanceof THREE.Mesh) {
@@ -246,6 +259,19 @@ export function initRemotePlayers({
       const z = a.z + (b.z - a.z) * t
       const rIdleBob = Math.sin(now * 0.0028 + r.mesh.id * 0.618) * 0.014
       r.mesh.position.set(x, y + rIdleBob, z)
+
+      // Animation tick
+      const dx = x - r.prevX
+      const dz = z - r.prevZ
+      const moving = dx * dx + dz * dz > 1e-4
+      r.prevX = x
+      r.prevZ = z
+      tickCharacterMixer(r.mesh, 1 / 60) // steady 60 Hz step; mixer clamps internally
+      setCharAnimState(r.mesh, {
+        moving,
+        attacking: r.arc.visible && now < r.arcExpiresAt,
+        alive: r.alive,
+      })
       let dyaw = b.yaw - a.yaw
       if (dyaw > Math.PI) dyaw -= 2 * Math.PI
       if (dyaw < -Math.PI) dyaw += 2 * Math.PI

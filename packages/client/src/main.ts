@@ -66,7 +66,13 @@ import { initLoadoutStation } from './loadout-station.js'
 import { initMenu } from './menu.js'
 import { sendLoadout } from './net/loadout-sync.js'
 import { initSupabaseAuth, getAccessToken } from './net/supabase-auth.js'
-import { makeCharacter, applyWeaponProp } from './render/characters.js'
+import {
+  makeCharacter,
+  applyWeaponProp,
+  loadCharacterGlb,
+  tickCharacterMixer,
+  setCharAnimState,
+} from './render/characters.js'
 import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
 import { initPlacementPreview } from './render/placement-preview.js'
 import { initProjectileVisuals, type SchemaProjectile } from './render/projectile-visuals.js'
@@ -1441,6 +1447,7 @@ function initSelfIfNeeded(): void {
   }
   selfMesh = makeCharacter(0x3a8fde, toonGradient) // self = blue (standard: I am blue)
   scene.add(selfMesh)
+  loadCharacterGlb(selfMesh, 0x3a8fde, toonGradient)
   selfArc = makeSwingArcMesh()
   scene.add(selfArc)
   inp.mouseYaw = p.transform.yaw
@@ -1793,6 +1800,15 @@ function render(now: number): void {
     const idleBob = !airborne && !dead ? Math.sin(now * 0.0028) * 0.014 : 0
     selfMesh.position.set(x, y + idleBob, z)
     selfMesh.rotation.y = inp.mouseYaw
+
+    // Drive character animations
+    tickCharacterMixer(selfMesh, dt)
+    setCharAnimState(selfMesh, {
+      moving: Math.hypot(self.sim.vel.x, self.sim.vel.z) > 0.3,
+      attacking: !!(selfArc?.visible && now < selfArcExpiresAt),
+      alive: !dead,
+    })
+
     // Follow-light tracks the player's torso level.
     playerLight.position.set(x, y + 0.5 + idleBob, z)
 
