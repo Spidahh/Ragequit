@@ -1084,6 +1084,11 @@ function onHit(msg: ServerHitMessage): void {
         // Parry spark — bright silver flash at contact midpoint.
         spawnImpact(midpoint, 0xddeeff)
       } else if (msg.damage > 0) {
+        // Air punish — extra burst directly at victim height.
+        if (isAirPunish && vicPos) {
+          spawnImpact(new THREE.Vector3(vicPos.x, vicPos.y + 0.3, vicPos.z), 0xff8844)
+          spawnImpact(new THREE.Vector3(vicPos.x, vicPos.y + 0.6, vicPos.z), 0xff4422)
+        }
         if (cause === 'sword_m1' || cause === 'uppercut' || cause === 'gap_closer'
           || cause === 'bleed_strike' || cause === 'guard_break' || cause === 'rending_dash'
           || cause === 'whirlwind') {
