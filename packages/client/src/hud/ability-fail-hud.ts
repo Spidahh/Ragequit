@@ -75,13 +75,27 @@ export function initAbilityFailHud({
     }, duration)
   }
 
+  // Reasons that are already fully communicated by the slot flash / resource
+  // bar / GCD ring — no toast needed. Everything else gets a 1.5 s compact
+  // note rather than the old 5 s persistent label.
+  const SILENT_REASONS = new Set(['cooldown', 'gcd', 'parrying'])
+
   function showAbilityFailNote(msg: ServerAbilityFailedMessage): void {
+    if (SILENT_REASONS.has(msg.reason)) return
     const now = performance.now()
     const key = `${msg.abilityId}:${msg.reason}`
     if (key === lastAbilityFailToastKey && now - lastAbilityFailToastAt < 700) return
     lastAbilityFailToastKey = key
     lastAbilityFailToastAt = now
-    onServerNote({ kind: 'warn', text: getAbilityFailText(msg) })
+    // Short 1.5 s flash — informational, not blocking centre-screen for 5 s.
+    const text = getAbilityFailText(msg)
+    serverToast.textContent = text
+    serverToast.className = 'warn'
+    if (serverToastTimer !== null) clearTimeout(serverToastTimer)
+    serverToastTimer = setTimeout(() => {
+      serverToast.classList.add('hidden')
+      serverToastTimer = null
+    }, 1500)
   }
 
   function onAbilityFailed(msg: ServerAbilityFailedMessage): void {
