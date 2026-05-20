@@ -1,5 +1,6 @@
 import { getMap, type AABB } from '@ragequit/shared'
 import * as THREE from 'three'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 
 // Only the three properties that main.ts needs. Everything else (arenaRing,
 // torchLights, particles, etc.) is fully encapsulated inside buildArena.
@@ -186,6 +187,10 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
   scene.add(grid)
 
   // ── Colosseum — pillars + walls + torches ─────────────────────────────────
+  // All architectural meshes live inside procColosseumGroup so they can be
+  // hidden with a single flag when the GLB shell loads successfully.
+  const procColosseumGroup = new THREE.Group()
+  scene.add(procColosseumGroup)
   const torchLights: THREE.PointLight[] = []
   {
     const pillarMat = new THREE.MeshToonMaterial({ color: 0x28384e, gradientMap: toonGradient })
@@ -216,35 +221,35 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
       shaft.position.set(px, 3.5, pz)
       shaft.castShadow = true
       shaft.receiveShadow = true
-      scene.add(shaft)
+      procColosseumGroup.add(shaft)
       const cap = new THREE.Mesh(capGeo, capMat)
       cap.position.set(px, 7.2, pz)
-      scene.add(cap)
+      procColosseumGroup.add(cap)
       const base = new THREE.Mesh(baseGeo, capMat)
       base.position.set(px, 0.16, pz)
-      scene.add(base)
+      procColosseumGroup.add(base)
       // Two decorative bands — lower and mid-shaft.
       const band = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.048, 6, 26), bandMat)
       band.position.set(px, 3.2, pz)
       band.rotation.x = Math.PI / 2
-      scene.add(band)
+      procColosseumGroup.add(band)
       const band2 = new THREE.Mesh(new THREE.TorusGeometry(0.44, 0.03, 6, 26), bandMat)
       band2.position.set(px, 1.6, pz)
       band2.rotation.x = Math.PI / 2
-      scene.add(band2)
+      procColosseumGroup.add(band2)
 
       const wall = new THREE.Mesh(new THREE.BoxGeometry(wallLen, 2.2, 0.52), wallMat)
       wall.position.set(mx, 1.1, mz)
       wall.rotation.y = wallYaw
       wall.castShadow = true
       wall.receiveShadow = true
-      scene.add(wall)
+      procColosseumGroup.add(wall)
       for (let c = -1; c <= 1; c++) {
         const cOff = c * wallLen * 0.28
         const crenel = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.45, 0.58), capMat)
         crenel.position.set(mx + Math.sin(wallYaw) * cOff, 2.42, mz + Math.cos(wallYaw) * cOff)
         crenel.rotation.y = wallYaw
-        scene.add(crenel)
+        procColosseumGroup.add(crenel)
       }
 
       const flameMat = new THREE.MeshBasicMaterial({
@@ -254,7 +259,7 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
       })
       const flame = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.35, 8), flameMat)
       flame.position.set(px, 7.65, pz)
-      scene.add(flame)
+      procColosseumGroup.add(flame)
       const innerFlameMat = new THREE.MeshBasicMaterial({
         color: 0xffee80,
         transparent: true,
@@ -262,13 +267,15 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
       })
       const innerFlame2 = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.22, 8), innerFlameMat)
       innerFlame2.position.set(px, 7.72, pz)
-      scene.add(innerFlame2)
+      procColosseumGroup.add(innerFlame2)
       const bowlMat = new THREE.MeshToonMaterial({ color: 0x5a3a1a, gradientMap: toonGradient })
       const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.18, 8), bowlMat)
       bowl.position.set(px, 7.47, pz)
-      scene.add(bowl)
+      procColosseumGroup.add(bowl)
       const torch = new THREE.PointLight(0xff8830, 0.8, 18, 2)
       torch.position.set(px, 7.8, pz)
+      // Lights must stay in the scene (not the group) — group.visible=false would
+      // hide their illumination too. Move torch to scene but keep positional sync.
       scene.add(torch)
       torchLights.push(torch)
     }
@@ -475,6 +482,54 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
     }),
   )
   scene.add(magicParticles)
+
+  // ── Gladiators arena GLB — decorative architectural shell ─────────────────
+  // Loaded asynchronously; the procedural arena is visible immediately as
+  // fallback. On success, the GLB shell replaces procColosseumGroup.
+  const loader = new GLTFLoader()
+  loader.load(
+    '/arena/gladiators_arena.glb',
+    (gltf) => {
+      const arenaModel = gltf.scene
+
+      // Auto-scale: fit the GLB within the 80-unit procedural ground.
+      const bbox = new THREE.Box3().setFromObject(arenaModel)
+      const size = new THREE.Vector3()
+      bbox.getSize(size)
+      const maxHorizontal = Math.max(size.x, size.z)
+      const scale = maxHorizontal > 0 ? 78 / maxHorizontal : 1
+      arenaModel.scale.setScalar(scale)
+
+      // Re-center: align the GLB floor to y=0.
+      const bboxScaled = new THREE.Box3().setFromObject(arenaModel)
+      arenaModel.position.y = -bboxScaled.min.y
+
+      // Apply toon material to all GLB meshes for visual consistency with the
+      // existing cel-shaded scene.
+      arenaModel.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          const origMat = child.material as THREE.MeshStandardMaterial
+          child.material = new THREE.MeshToonMaterial({
+            color: origMat.color ?? new THREE.Color(0x2a3a50),
+            map: origMat.map ?? null,
+            gradientMap: toonGradient,
+          })
+          child.castShadow = true
+          child.receiveShadow = true
+        }
+      })
+
+      scene.add(arenaModel)
+
+      // GLB loaded — hide procedural colosseum to avoid duplication.
+      procColosseumGroup.visible = false
+    },
+    undefined, // onProgress — not needed
+    (err) => {
+      // GLB failed to load — procedural arena stays fully visible as fallback.
+      console.warn('[arena] GLB load failed, using procedural fallback', err)
+    },
+  )
 
   // ── Map geometry (dynamic, swapped by server schema) ──────────────────────
   let activeMapId = ''
