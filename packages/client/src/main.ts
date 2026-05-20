@@ -363,6 +363,24 @@ function spawnImpact(pos: THREE.Vector3, color: number): void {
   impactVfx.spawn(pos, color)
 }
 
+/** Map element → world-space impact tint. */
+function elementToImpactColor(element: string | undefined, cause: string): number {
+  // Combo reactions get distinctive colours regardless of element.
+  if (cause === 'combo:steam')      return 0x88eeff  // cyan steam burst
+  if (cause === 'combo:combustion') return 0xff8822  // orange-fire explosion
+  if (cause === 'combo:festering')  return 0xaaff44  // sickly green DoT
+  if (cause === 'combo:entrapment') return 0x60bb40  // darker nature green
+  // Element-mapped colours for projectile / zone hits.
+  switch (element) {
+    case 'fire':      return 0xff6622
+    case 'ice':       return 0x88ddff
+    case 'lightning': return 0xffee44
+    case 'dark':      return 0xaa55ff
+    case 'nature':    return 0x77ee55
+    default:          return 0xd0d8ff  // neutral pale-blue
+  }
+}
+
 const impactVfx = new ImpactPool()
 scene.add(impactVfx.mesh)
 scene.add(impactVfx.ringMesh)
@@ -1039,18 +1057,43 @@ function onHit(msg: ServerHitMessage): void {
     }
   }
 
-  // --- Melee VFX — spawn impact spark between attacker and victim ---
-  if ((msg.cause === 'sword_m1' || msg.cause === 'uppercut') && msg.damage > 0 && !msg.didParry) {
-    const attPos = getPlayerWorldPos(msg.attackerId)
-    const vicPos = getPlayerWorldPos(msg.victimId)
-    if (attPos && vicPos) {
-      const mx = (attPos.x + vicPos.x) * 0.5
-      const my = (attPos.y + vicPos.y) * 0.5
-      const mz = (attPos.z + vicPos.z) * 0.5
-      spawnImpact(new THREE.Vector3(mx, my, mz), 0xffcc44)
-    } else if (vicPos) {
-      // Fallback: impact at victim position.
-      spawnImpact(new THREE.Vector3(vicPos.x, vicPos.y, vicPos.z), 0xffcc44)
+  // --- World-space impact VFX — melee, projectile, combo, parry ---
+  {
+    const vicPos  = getPlayerWorldPos(msg.victimId)
+    const attPos  = getPlayerWorldPos(msg.attackerId)
+    const midpoint = (attPos && vicPos)
+      ? new THREE.Vector3((attPos.x + vicPos.x) * 0.5, (attPos.y + vicPos.y) * 0.5, (attPos.z + vicPos.z) * 0.5)
+      : (vicPos ? new THREE.Vector3(vicPos.x, vicPos.y, vicPos.z) : null)
+
+    if (midpoint) {
+      const cause = msg.cause
+      if (msg.didParry) {
+        // Parry spark — bright silver flash at contact midpoint.
+        spawnImpact(midpoint, 0xddeeff)
+      } else if (msg.damage > 0) {
+        if (cause === 'sword_m1' || cause === 'uppercut' || cause === 'gap_closer'
+          || cause === 'bleed_strike' || cause === 'guard_break' || cause === 'rending_dash'
+          || cause === 'whirlwind') {
+          // Melee — gold spark.
+          spawnImpact(midpoint, 0xffcc44)
+        } else if (cause === 'bow_m1' || cause === 'piercing_shot' || cause === 'pin_shot'
+          || cause === 'marksman_shot' || cause === 'broadhead' || cause === 'blast_arrow'
+          || cause === 'volley' || cause === 'disengage_shot' || cause === 'snare_trap') {
+          // Bow / arrow — amber.
+          spawnImpact(midpoint, 0xf08020)
+        } else if (cause.startsWith('combo:')) {
+          // Status combo reactions — element-specific colour.
+          spawnImpact(midpoint, elementToImpactColor(msg.element, cause))
+        } else if (cause.startsWith('zone:') || cause.startsWith('dot:')
+          || cause.startsWith('status:')) {
+          // Zone / DoT ticks — small element-coloured pulse at victim.
+          if (vicPos) spawnImpact(new THREE.Vector3(vicPos.x, vicPos.y + 0.5, vicPos.z),
+            elementToImpactColor(msg.element, cause))
+        } else {
+          // All other magic / ability hits — element-coloured impact.
+          spawnImpact(midpoint, elementToImpactColor(msg.element, cause))
+        }
+      }
     }
   }
 
