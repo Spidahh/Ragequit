@@ -191,6 +191,37 @@
         to   { transform: translate(-50%, -50%) scale(1.12); }
       }
 
+      /* Primed ability accent — gold ring tells the player LMB will fire the
+         primed ability rather than a basic M1 attack. */
+      #crosshair[data-primed] {
+        box-shadow:
+          0 -10px 0 0 rgba(255, 255, 255, 0.75),
+          0  10px 0 0 rgba(255, 255, 255, 0.75),
+          -10px 0 0 0 rgba(255, 255, 255, 0.75),
+           10px 0 0 0 rgba(255, 255, 255, 0.75),
+          0 0 0 18px rgba(255, 210, 96, 0.22),
+          0 0 0 20px rgba(255, 210, 96, 0.10);
+        animation: primed-crosshair-pulse 0.7s ease-in-out infinite alternate;
+      }
+      @keyframes primed-crosshair-pulse {
+        from { box-shadow:
+          0 -10px 0 0 rgba(255,255,255,0.72),
+          0  10px 0 0 rgba(255,255,255,0.72),
+          -10px 0 0 0 rgba(255,255,255,0.72),
+           10px 0 0 0 rgba(255,255,255,0.72),
+          0 0 0 16px rgba(255,210,96,0.18),
+          0 0 0 19px rgba(255,210,96,0.08);
+        }
+        to { box-shadow:
+          0 -10px 0 0 rgba(255,255,255,0.82),
+          0  10px 0 0 rgba(255,255,255,0.82),
+          -10px 0 0 0 rgba(255,255,255,0.82),
+           10px 0 0 0 rgba(255,255,255,0.82),
+          0 0 0 22px rgba(255,210,96,0.32),
+          0 0 0 28px rgba(255,210,96,0.14);
+        }
+      }
+
       /* Hitmarker flash when a hit lands */
       #crosshair.hit {
         background: rgba(255, 80, 80, 1);

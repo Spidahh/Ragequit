@@ -1711,6 +1711,10 @@ function render(now: number): void {
 
     // Weapon-specific crosshair — drives CSS via data attribute.
     crosshairEl.dataset['weapon'] = wSchema
+    // Primed crosshair accent — subtle gold ring when an ability is ready to fire on LMB.
+    const primedIdx = castDispatcher.getPrimedSlotIdx()
+    if (primedIdx !== null) crosshairEl.setAttribute('data-primed', 'true')
+    else crosshairEl.removeAttribute('data-primed')
 
     if (selfArc) {
       if (selfArc.visible && now < selfArcExpiresAt) {

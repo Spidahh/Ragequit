@@ -53,30 +53,9 @@ Implementato:
   - direct keys = bypass wheel; instant cast immediato, placement con preview + LMB
 - Aggiungere preset persistenti quando entra il layer account/storage.
 
-### 3. Client Modularization
+### 3. Client Modularization ✅ Completata (vedi M3)
 
-`packages/client/src/main.ts` è ancora troppo grande. Sono già presenti moduli `input`, `hud`, `net`, `render`, `vfx`, ma serve continuare l’estrazione:
-
-- HUD drag/resize controller estratto in `packages/client/src/hud/hud-drag.ts`.
-- Hotbar/cooldown strip estratta in `packages/client/src/hud/cd-strip.ts`.
-- Kill feed, kill splash, combo popup e streak banner estratti in `packages/client/src/hud/combat-feed.ts`.
-- Radial wheel controller Q/E estratto in `packages/client/src/input/radial-wheels.ts`.
-- Sensibilità mouse e overlay di regolazione estratti in `packages/client/src/input/sensitivity.ts`.
-- Game input controller (keyboard/mouse/pointer event registration + mutable state bag) estratto in `packages/client/src/input/game-input.ts`.
-- HUD self-player status renderer (HP/mana/stamina/mastery/status strip/cast bar/GCD) estratto in `packages/client/src/hud/self-hud.ts`.
-- Cast/fire/weapon input dispatcher (primedSlot, castQueue, placementId, dispatch per tick) estratto in `packages/client/src/input/cast-dispatcher.ts`.
-- Projectile visual system (onSpawned, onExpired, renderFrame) estratto in `packages/client/src/render/projectile-visuals.ts`.
-- Zone visual system (onSpawned, onExpired, animateFrame, zoneColorForElement) estratto in `packages/client/src/render/zone-visuals.ts`.
-- Placement preview system (footprint, aimPoint, update) estratto in `packages/client/src/render/placement-preview.ts`.
-- Remote player visual system (snapshot capture, interpolated render, emissives, nameplate) estratto in `packages/client/src/render/remote-players.ts`.
-- Ability fail / server toast HUD estratto in `packages/client/src/hud/ability-fail-hud.ts`.
-- Transmute bar HUD estratto in `packages/client/src/hud/transmute-hud.ts`.
-- Hit feedback HUD (hitmarker, directional hit, damage popup) estratto in `packages/client/src/hud/hit-feedback.ts`.
-- Arena particle/torch/ring animation spostata in `buildArena` closure in `packages/client/src/world/arena.ts`.
-- Bow charge / parry ring / round timer / vignettes estratti in `packages/client/src/hud/combat-overlay-hud.ts`.
-- Status applied/expired vignette flash estratto in `packages/client/src/hud/status-overlay.ts`.
-- Self-character emissive + player-light estratti in `packages/client/src/render/self-emissive.ts`.
-- main.ts ridotto a 1825 linee (da 2896); nucleo rimasto è orchestrazione pura (connect, simStep, render, reconcileSelf, onHit, onDeath).
+Tutti i moduli estratti. `main.ts` a 1824 linee (da 2896). Moduli attivi: `hud/` (10), `input/` (6), `render/` (7), `net/` (1), `vfx/` (1), `world/` (arena + maps).
 
 ### 4. Content Consistency
 
@@ -104,7 +83,7 @@ Non ancora completo:
 
 DoD:
 
-- Full test suite verde. ✅ 161 tests passing.
+- Full test suite verde. ✅ 162 tests passing (80 shared + 68 server + 14 client).
 - Browser QA senza errori console.
 - Nessun mismatch noto tra descrizione ability e runtime. ✅ Bow ability projectiles now spawn as arrows (not bolts). Curse of Weakness mana drain now respects parry (was bypassing it). Audit completato su tutti 52 ability defs vs engine.
 - Nessun cast doppio durante swing/charge/channel/parry. ✅ Confermato: player.casting + swingEndsAtTick + bowChargeStartTick + player.parrying bloccano tutti i conflitti.
@@ -126,9 +105,9 @@ DoD:
 
 DoD:
 
-- `main.ts` ridotto a orchestration/bootstrap.
-- Input/HUD/render/net/VFX in moduli dedicati.
-- Smoke test client su keybind, loadout, radial prime/fire.
+- `main.ts` ridotto a orchestration/bootstrap. ✅ 1824 linee (da 2896). Nucleo rimasto: connect, simStep, render, reconcileSelf, onHit, onDeath.
+- Input/HUD/render/net/VFX in moduli dedicati. ✅ `hud/` (10 moduli), `input/` (6 moduli), `render/` (7 moduli), `net/loadout-sync.ts`, `vfx/impact-pool.ts`.
+- Smoke test client su keybind, loadout, radial prime/fire. ✅ `keybinds.test.ts` (2), `loadout-slots.test.ts` (2), `loadout-station.test.ts` (10) — tutti verdi.
 
 ### M4 — Persistence And Account Stub
 
