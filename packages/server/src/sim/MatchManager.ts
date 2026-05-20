@@ -44,6 +44,9 @@ export interface MatchHost {
   // called between rounds and on match start.
   resetAllPlayers: () => void
   broadcast: (type: string, message: unknown) => void
+  // Called once at matchEnd with the session IDs of winner and loser (round
+  // mode only). GameRoom maps sessionIds → userIds and persists ELO to DB.
+  onMatchEnd?: (winnerSessionId: string, loserSessionId: string) => void
 }
 
 type Phase = 'lobby' | 'countdown' | 'live' | 'roundEnd' | 'matchEnd'
@@ -175,8 +178,11 @@ export class MatchManager {
   private enterMatchEnd(_tickNow: number): void {
     this.host.state.phase = 'matchEnd'
     this.broadcastPhase('matchEnd')
-    this.applyEloUpdates()
+    const { winnerId, loserId } = this.applyEloUpdates()
     this.broadcastScore()
+    if (winnerId && loserId && this.host.onMatchEnd) {
+      this.host.onMatchEnd(winnerId, loserId)
+    }
   }
 
   // Awarding + transition — `winnerId === ''` means tie (no win recorded).
@@ -223,8 +229,9 @@ export class MatchManager {
 
   // Update in-memory ELO at match end. 1v1 round modes: winner by round count.
   // FFA/5v5: ELO deferred to the ranked multiplayer pass; round modes update now.
-  private applyEloUpdates(): void {
-    if (!this.isRoundMode) return
+  // Returns { winnerId, loserId } so the caller can persist to DB.
+  private applyEloUpdates(): { winnerId: string; loserId: string } {
+    if (!this.isRoundMode) return { winnerId: '', loserId: '' }
     let winnerId = ''
     let loserId = ''
     let bestWins = -1
@@ -238,7 +245,7 @@ export class MatchManager {
     this.host.state.players.forEach((_p, sid) => {
       if (sid !== winnerId) loserId = sid
     })
-    if (!winnerId || !loserId) return
+    if (!winnerId || !loserId) return { winnerId: '', loserId: '' }
     const rW = this.ratingFor(winnerId)
     const rL = this.ratingFor(loserId)
     const exW = 1 / (1 + Math.pow(10, (rL - rW) / 400))
@@ -247,6 +254,7 @@ export class MatchManager {
     const newL = Math.round(rL + ELO_K_RANKED * (0 - exL))
     this.elo.set(winnerId, newW)
     this.elo.set(loserId, newL)
+    return { winnerId, loserId }
   }
 
   private broadcastPhase(phase: Phase, countdownMs?: number): void {

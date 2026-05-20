@@ -955,6 +955,12 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
       if (isCurrentRoom()) onKillStreak(msg)
     })
 
+    // Supabase — restore persisted instant-cast flags from previous session.
+    joinedRoom.onMessage('persistedInstantCast', (flags: Record<string, boolean>) => {
+      if (!isCurrentRoom()) return
+      loadoutStation.applyPersistedInstantCast(flags)
+    })
+
     // Fase 7 — match flow events
     joinedRoom.onMessage(MessageTypes.MatchPhase, (msg: ServerMatchPhaseMessage) => {
       if (!isCurrentRoom()) return

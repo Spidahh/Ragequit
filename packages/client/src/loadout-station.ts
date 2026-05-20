@@ -47,6 +47,8 @@ export interface LoadoutStationApi {
   close: () => void
   getLoadout: () => readonly string[]
   isInstantCast: (abilityId: string) => boolean
+  /** Merge server-persisted instant-cast flags into local state and save to localStorage. */
+  applyPersistedInstantCast: (flags: Record<string, boolean>) => void
 }
 
 export function initLoadoutStation(
@@ -574,6 +576,13 @@ export function initLoadoutStation(
     },
     getLoadout: () => slots as readonly string[],
     isInstantCast,
+    applyPersistedInstantCast: (flags: Record<string, boolean>) => {
+      // Server flags win only for keys the server explicitly sent; local prefs
+      // for other abilities are preserved.
+      instantCast = { ...instantCast, ...flags }
+      saveInstantCastPrefs()
+      rerender()
+    },
   }
 }
 

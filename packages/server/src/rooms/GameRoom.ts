@@ -116,7 +116,7 @@ import {
   trackPlayerConnected,
   trackPlayerDisconnected,
 } from '../telemetry.js'
-import { verifyToken, upsertPlayer, loadLoadout, saveLoadout } from '../db/supabase.js'
+import { verifyToken, upsertPlayer, loadLoadout, saveLoadout, recordMatchResult } from '../db/supabase.js'
 
 // Fase 3 GameRoom — three weapons (sword / bow / staff), parry, projectiles.
 //
@@ -436,6 +436,18 @@ export class GameRoom extends Room<GameState> {
       state: this.state,
       resetAllPlayers: () => this.resetAllPlayersForRound(),
       broadcast: (t, m) => this.broadcast(t, m),
+      onMatchEnd: (winnerSid, loserSid) => {
+        // Map session IDs → Supabase user IDs and persist ELO result.
+        const winnerPlayer = this.state.players.get(winnerSid)
+        const loserPlayer  = this.state.players.get(loserSid)
+        const winnerId = winnerPlayer?.userId
+        const loserId  = loserPlayer?.userId
+        if (winnerId && loserId) {
+          recordMatchResult(winnerId, loserId).catch((err: unknown) => {
+            console.warn('[GameRoom] recordMatchResult failed:', (err as Error).message)
+          })
+        }
+      },
     })
     this.onMessage<ClientTransmuteMessage>(MessageTypes.Transmute, (client, message) => {
       if (!this.gateRate(client, 'transmute')) return
