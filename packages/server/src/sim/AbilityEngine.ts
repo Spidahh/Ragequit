@@ -708,6 +708,8 @@ export class AbilityEngine {
     for (const victimId of victimIds) {
       const victim = this.host.state.players.get(victimId)
       if (!victim?.alive) continue
+      // Respect parry: a parrying target blocks canParry effects (same as damage/status).
+      if (!this.canApplyParryableFollowup(def, victim)) continue
       const current = e.resource === 'mana' ? victim.mana : victim.stamina
       const drained = Math.min(current, e.amount)
       if (drained <= 0) continue

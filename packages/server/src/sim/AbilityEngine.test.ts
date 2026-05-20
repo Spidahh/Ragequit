@@ -439,6 +439,21 @@ describe('AbilityEngine — resource drain', () => {
     expect(r.target.stamina).toBe(30)
     expect(r.caster.stamina).toBe(30)
   })
+
+  it('does not drain mana from a parrying target with Curse of Weakness (canParry=true)', () => {
+    const r = makeRoom()
+    r.target.parrying = true
+    r.target.parryIsHold = false
+
+    expect(r.engine.tryCast('A', 'curse_of_weakness', { yaw: 0, pitch: 0 })).toBe(true)
+    r.state.tick += Math.round(ABILITY_DEFS.curse_of_weakness!.windupSec * 60) + 1
+    r.engine.tickWindups()
+
+    // Status effects and resource drain must all be blocked by parry.
+    expect(r.target.statuses.some((s) => s.kind === 'curse')).toBe(false)
+    expect(r.target.statuses.some((s) => s.kind === 'blind')).toBe(false)
+    expect(r.target.mana).toBe(120) // MANA_MAX — no drain went through
+  })
 })
 
 describe('AbilityEngine — ability-specific target rules', () => {
