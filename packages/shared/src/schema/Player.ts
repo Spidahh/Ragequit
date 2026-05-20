@@ -14,6 +14,10 @@ export class Player extends Schema {
   @type('string') id = ''
   @type('string') name = ''
   @type('string') team = ''
+  // Empty string = guest session. Non-empty when an authenticated account is
+  // linked. The server sets this from the auth token in onJoin once auth exists;
+  // gameplay never gates on it — local sessions work without it.
+  @type('string') userId = ''
   @type(Transform) transform = new Transform()
 
   // Velocity (m/s). Replicated so clients can seed interpolation with vy and

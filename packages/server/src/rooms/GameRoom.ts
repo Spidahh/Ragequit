@@ -564,11 +564,14 @@ export class GameRoom extends Room<GameState> {
     console.info(`[GameRoom ${this.roomId}] spawned bot ${botId} at spawn ${spawnIndex}`)
   }
 
-  override onJoin(client: Client, options: { name?: string } = {}): void {
+  override onJoin(client: Client, options: { name?: string; userId?: string } = {}): void {
     const player = new Player()
     player.id = client.sessionId
     player.name = options.name ?? `player-${client.sessionId.slice(0, 4)}`
     player.team = this.state.mode === '5v5' ? (this.state.players.size % 2 === 0 ? 'red' : 'blue') : ''
+    // Auth stub — empty string for guest sessions. When account auth is wired
+    // (M4/Supabase) the verified userId will arrive in options after JWT validation.
+    player.userId = options.userId ?? ''
 
     const spawnIndex = this.state.players.size % this.activeMap.spawns.length
     const spawn = this.activeMap.spawns[spawnIndex]!

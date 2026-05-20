@@ -134,9 +134,11 @@ DoD:
 
 DoD:
 
-- Loadout persistente local-first o DB-backed.
-- Schema pronto per account guest.
-- Nessun blocco sul gameplay locale se persistence è assente.
+- Loadout persistente local-first o DB-backed. ✅ localStorage (ragequit.loadout.v6 + ragequit.instantCast.v2) già attivo in loadout-station.ts.
+- Schema pronto per account guest. ✅ Player.userId (string, default '') aggiunto; GameRoom.onJoin accetta options.userId; gameplay non dipende dal campo.
+- Nessun blocco sul gameplay locale se persistence è assente. ✅
+
+Ancora aperto: Supabase auth/JWT verification e DB-backed persistence richiedono credenziali esterne.
 
 ### M5 — Art/Feel Pass
 
