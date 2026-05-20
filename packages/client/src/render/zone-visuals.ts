@@ -94,13 +94,19 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
 
   function animateFrame(now: number): void {
     zoneVisuals.forEach((vis) => {
-      const pulse = 0.5 + 0.5 * Math.sin(now * 0.0035)
+      // Use a faster pulse for dangerous/aggressive elements (fire/lightning),
+      // slower for nature/ice zones — gives each element a distinct rhythm.
+      const matColor = (vis.mesh.material as THREE.MeshBasicMaterial).color
+      const isFireOrLightning = matColor.r > 0.9 || (matColor.r > 0.5 && matColor.g > 0.5 && matColor.b < 0.3)
+      const freq = isFireOrLightning ? 0.007 : 0.0035
+      const pulse = 0.5 + 0.5 * Math.sin(now * freq)
       const mat = vis.mesh.material as THREE.MeshBasicMaterial
-      if ('opacity' in mat) mat.opacity = 0.18 + pulse * 0.18
-      vis.mesh.rotation.y += 0.006
+      if ('opacity' in mat) mat.opacity = 0.16 + pulse * 0.20
+      vis.mesh.rotation.y += isFireOrLightning ? 0.010 : 0.006
       if (vis.extra) {
+        // Floor ring pulses with slightly higher opacity for clear AoE boundary.
         const eMat = vis.extra.material as THREE.MeshBasicMaterial
-        if ('opacity' in eMat) eMat.opacity = 0.35 + pulse * 0.22
+        if ('opacity' in eMat) eMat.opacity = 0.40 + pulse * 0.28
       }
     })
   }

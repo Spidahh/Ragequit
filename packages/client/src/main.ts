@@ -367,6 +367,7 @@ function spawnImpact(pos: THREE.Vector3, color: number): void {
 
 const impactVfx = new ImpactPool()
 scene.add(impactVfx.mesh)
+scene.add(impactVfx.ringMesh)
 
 const zoneVfx = initZoneVisuals({ scene })
 const projectileVfx = initProjectileVisuals({

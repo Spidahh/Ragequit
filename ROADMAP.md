@@ -146,9 +146,9 @@ DoD:
 
 - Main menu, pause, settings e lobby condividono un linguaggio da gioco, non da pagina HTML.
 - Arena e personaggi smettono di sembrare blockout.
-- VFX elementali leggibili.
-- Hit/parry/death/channel interrupt hanno feedback chiaro.
-- Bundle budget monitorato.
+- VFX elementali leggibili. ✅ Zone pulse differenziato per elemento; proiettili emissivi (amber arrow, cyan bolt).
+- Hit/parry/death/channel interrupt hanno feedback chiaro. ✅ ImpactPool ora produce sphere burst + ring shockwave espandibile con ease-out.
+- Bundle budget monitorato. ✅ chunkSizeWarningLimit=550 kB in vite.config.ts; game chunk a 177 kB / 53 kB gzip.
 
 ## Verification Standard
 
