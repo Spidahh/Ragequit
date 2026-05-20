@@ -1,8 +1,8 @@
 import { type SimInput } from '@ragequit/shared'
 
 import { actionCode, matchesAction, slotKeybindEntries } from './keybinds.js'
-import { type MouseSensitivityController } from './sensitivity.js'
 import { type RadialWheelController } from './radial-wheels.js'
+import { type MouseSensitivityController } from './sensitivity.js'
 
 // Mutable input state shared with the game loop. main.ts holds the reference
 // and reads/writes fields directly; this module owns the event wiring.

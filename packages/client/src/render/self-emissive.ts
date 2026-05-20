@@ -1,5 +1,5 @@
-import * as THREE from 'three'
 import { HP_MAX } from '@ragequit/shared'
+import * as THREE from 'three'
 
 export const STATUS_EMISSIVE: Record<string, number> = {
   burn:    0xff2800,

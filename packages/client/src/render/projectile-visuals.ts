@@ -1,5 +1,6 @@
-import * as THREE from 'three'
 import { type ServerProjectileSpawnedMessage, type ServerProjectileExpiredMessage } from '@ragequit/shared'
+import * as THREE from 'three'
+
 import { makeProjectileMesh } from './factories.js'
 
 export interface SchemaProjectile {

@@ -1,11 +1,5 @@
 import { Room, type Client } from '@colyseus/core'
 import {
-  trackMatchStarted,
-  trackMatchEnded,
-  trackPlayerConnected,
-  trackPlayerDisconnected,
-} from '../telemetry.js'
-import {
   type ClientTransmuteMessage,
   type AbilityComboRole,
   type ServerZoneExpiredMessage,
@@ -116,6 +110,12 @@ import {
   type ProjectileSpawnRequest,
   type ZoneSpawnRequest,
 } from '../sim/index.js'
+import {
+  trackMatchStarted,
+  trackMatchEnded,
+  trackPlayerConnected,
+  trackPlayerDisconnected,
+} from '../telemetry.js'
 
 // Fase 3 GameRoom — three weapons (sword / bow / staff), parry, projectiles.
 //

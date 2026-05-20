@@ -8,8 +8,9 @@ import {
 } from '@ragequit/shared'
 import * as THREE from 'three'
 
-import { ELEMENT_COLOR, type CooldownStripController } from './cd-strip.js'
 import { statusIcon } from '../icons.js'
+
+import { ELEMENT_COLOR, type CooldownStripController } from './cd-strip.js'
 
 const RESPAWN_TIPS: readonly string[] = [
   'RMB: tap for a parry window, hold to block repeated hits.',

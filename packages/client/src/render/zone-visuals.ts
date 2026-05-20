@@ -1,5 +1,5 @@
-import * as THREE from 'three'
 import { type ServerZoneSpawnedMessage, type ServerZoneExpiredMessage } from '@ragequit/shared'
+import * as THREE from 'three'
 
 interface ZoneVisual {
   mesh: THREE.Mesh

@@ -1,7 +1,8 @@
-import * as THREE from 'three'
 import { HP_MAX, INTERPOLATION_DELAY_MS } from '@ragequit/shared'
-import { SWING_ARC_YAW_OFFSET, makeSwingArcMesh } from './factories.js'
+import * as THREE from 'three'
+
 import { makeCharacter, applyWeaponProp, makeCastRing } from './characters.js'
+import { SWING_ARC_YAW_OFFSET, makeSwingArcMesh } from './factories.js'
 
 // Minimal schema shape consumed by this module.
 export interface RemotePlayerSchema {

@@ -742,9 +742,9 @@ export class AbilityEngine {
       ownerId: sid,
       abilityId: def.id,
       comboRole: def.comboRole,
-      // The projectile sim doesn't care about kind; we map magic projectiles
-      // to 'bolt' so the client knows it's not an arrow.
-      kind: 'bolt',
+      // The projectile sim doesn't care about kind; the client uses it for
+      // visuals — bow abilities fire arrows, everything else fires bolts.
+      kind: def.weapon === 'bow' ? 'arrow' : 'bolt',
       origin,
       vel,
       gravity: e.gravityMps2,

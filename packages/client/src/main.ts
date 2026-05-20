@@ -44,35 +44,33 @@ import {
 import { Client, type Room } from 'colyseus.js'
 import * as THREE from 'three'
 
+import { SoundEngine } from './audio/sound-engine.js'
+import { initAbilityFailHud } from './hud/ability-fail-hud.js'
 import { initCooldownStrip } from './hud/cd-strip.js'
 import { createCombatFeedHud } from './hud/combat-feed.js'
+import { initCombatOverlayHud } from './hud/combat-overlay-hud.js'
 import { createHudFlash } from './hud/flash.js'
+import { initHitFeedback } from './hud/hit-feedback.js'
 import { initDraggableHud } from './hud/hud-drag.js'
 import { initSelfHud } from './hud/self-hud.js'
-import { initAbilityFailHud } from './hud/ability-fail-hud.js'
-import { initCombatOverlayHud } from './hud/combat-overlay-hud.js'
-import { initHitFeedback } from './hud/hit-feedback.js'
-import { initTransmuteHud } from './hud/transmute-hud.js'
 import { initStatusOverlay } from './hud/status-overlay.js'
+import { initTransmuteHud } from './hud/transmute-hud.js'
 import { ensureIconSprite, weaponIcon } from './icons.js'
-import { actionLabel, onKeybindsChanged } from './input/keybinds.js'
 import { initCastDispatcher } from './input/cast-dispatcher.js'
 import { initGameInput, makeGameInputState } from './input/game-input.js'
+import { actionLabel, onKeybindsChanged } from './input/keybinds.js'
 import { initRadialWheels } from './input/radial-wheels.js'
 import { initMouseSensitivity } from './input/sensitivity.js'
 import { initLoadoutStation } from './loadout-station.js'
 import { initMenu } from './menu.js'
 import { sendLoadout } from './net/loadout-sync.js'
-import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
 import { makeCharacter, applyWeaponProp } from './render/characters.js'
-import { initZoneVisuals, zoneColorForElement } from './render/zone-visuals.js'
-import { initProjectileVisuals, type SchemaProjectile } from './render/projectile-visuals.js'
+import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
 import { initPlacementPreview } from './render/placement-preview.js'
+import { initProjectileVisuals, type SchemaProjectile } from './render/projectile-visuals.js'
 import { initRemotePlayers, type RemotePlayerSchema } from './render/remote-players.js'
 import { initSelfEmissive, STATUS_EMISSIVE } from './render/self-emissive.js'
-import { SoundEngine } from './audio/sound-engine.js'
-import { buildArena } from './world/arena.js'
-import { ImpactPool } from './vfx/impact-pool.js'
+import { initZoneVisuals, zoneColorForElement } from './render/zone-visuals.js'
 import {
   initTelemetry,
   trackMatchJoined,
@@ -81,6 +79,8 @@ import {
   trackDeath,
   trackAbilityCast,
 } from './telemetry.js'
+import { ImpactPool } from './vfx/impact-pool.js'
+import { buildArena } from './world/arena.js'
 
 // -----------------------------------------------------------------------
 // DOM refs

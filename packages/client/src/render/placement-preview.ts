@@ -1,5 +1,5 @@
-import * as THREE from 'three'
 import { ABILITY_DEFS } from '@ragequit/shared'
+import * as THREE from 'three'
 
 export interface PlacementPreviewOptions {
   camera: THREE.Camera
