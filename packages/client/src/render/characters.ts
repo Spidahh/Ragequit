@@ -1,5 +1,83 @@
 import { CAPSULE_HEIGHT_M, CAPSULE_RADIUS_M } from '@ragequit/shared'
 import * as THREE from 'three'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+
+// ---------------------------------------------------------------------------
+// Weapon GLB loader — shared loader + cache so each model is fetched once.
+// applyWeaponProp shows procedural geometry immediately, then upgrades to the
+// GLB when it arrives (cel-shading applied on load for visual consistency).
+// ---------------------------------------------------------------------------
+const _loader = new GLTFLoader()
+const _glbCache = new Map<string, THREE.Group>()
+const _glbInflight = new Map<string, Promise<THREE.Group>>()
+
+const _WEAPON_GLB: Record<string, string> = {
+  sword: '/weapons/sword.glb',
+  bow: '/weapons/bow.glb',
+  staff: '/weapons/staff.glb',
+}
+
+function _fetchWeaponGlb(weapon: string): Promise<THREE.Group> {
+  const hit = _glbCache.get(weapon)
+  if (hit) return Promise.resolve(hit)
+  const inflight = _glbInflight.get(weapon)
+  if (inflight) return inflight
+  const p = new Promise<THREE.Group>((resolve, reject) => {
+    _loader.load(
+      _WEAPON_GLB[weapon]!,
+      (gltf) => {
+        _glbCache.set(weapon, gltf.scene)
+        _glbInflight.delete(weapon)
+        resolve(gltf.scene)
+      },
+      undefined,
+      reject,
+    )
+  })
+  _glbInflight.set(weapon, p)
+  return p
+}
+
+function _clearWeaponGroup(wg: THREE.Group): void {
+  while (wg.children.length > 0) {
+    const c = wg.children[0] as THREE.Mesh
+    c.geometry?.dispose()
+    const m = c.material
+    if (Array.isArray(m)) m.forEach((x) => x.dispose())
+    else (m as THREE.Material | undefined)?.dispose()
+    wg.remove(c)
+  }
+}
+
+function _applyGlbToWeaponGroup(
+  wg: THREE.Group,
+  base: THREE.Group,
+  toonGradient: THREE.DataTexture,
+): void {
+  _clearWeaponGroup(wg)
+  const model = base.clone()
+  // Normalise: longest bounding-box axis → 0.85 m
+  const bbox = new THREE.Box3().setFromObject(model)
+  const size = bbox.getSize(new THREE.Vector3())
+  const maxDim = Math.max(size.x, size.y, size.z)
+  if (maxDim > 0) model.scale.setScalar(0.85 / maxDim)
+  // Centre model at origin so weapon group pivot controls placement
+  const bbox2 = new THREE.Box3().setFromObject(model)
+  model.position.sub(bbox2.getCenter(new THREE.Vector3()))
+  // Cel-shading pass
+  model.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      const orig = child.material as THREE.MeshStandardMaterial
+      child.material = new THREE.MeshToonMaterial({
+        color: orig.color ?? new THREE.Color(0xffffff),
+        map: orig.map ?? null,
+        gradientMap: toonGradient,
+      })
+      child.castShadow = true
+    }
+  })
+  wg.add(model)
+}
 
 // Group origin = capsule centre (transform.y = CAPSULE_HALF_HEIGHT_M above ground).
 // userData['armorMat'] → primary team-colour material (used for emissive flashes).
@@ -130,14 +208,12 @@ export function applyWeaponProp(
 ): void {
   const wg = charGroup.userData['weaponGroup'] as THREE.Group | undefined
   if (!wg) return
-  while (wg.children.length > 0) {
-    const child = wg.children[0] as THREE.Mesh
-    child.geometry?.dispose()
-    const mat = child.material as THREE.Material | THREE.Material[] | undefined
-    if (Array.isArray(mat)) mat.forEach((m) => m.dispose())
-    else mat?.dispose()
-    wg.remove(child)
-  }
+
+  // Tag so the async GLB callback can detect stale replacements
+  wg.userData['weapon'] = weapon
+
+  _clearWeaponGroup(wg)
+
   const addProp = (
     geo: THREE.BufferGeometry,
     mat: THREE.Material,
@@ -197,6 +273,19 @@ export function applyWeaponProp(
     orbRing.rotation.x = Math.PI / 3
     orbRing.castShadow = false
     wg.add(orbRing)
+  }
+
+  // Async GLB upgrade — replaces procedural once the model arrives.
+  // Guard against stale callbacks when weapon changes before load completes.
+  if (_WEAPON_GLB[weapon]) {
+    _fetchWeaponGlb(weapon)
+      .then((base) => {
+        if ((wg.userData['weapon'] as string) !== weapon) return
+        _applyGlbToWeaponGroup(wg, base, toonGradient)
+      })
+      .catch((err) => {
+        console.warn(`[weapon] GLB load failed for "${weapon}", keeping procedural`, err)
+      })
   }
 }
 
