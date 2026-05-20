@@ -101,6 +101,8 @@ export interface ClientLoadoutMessage {
   bow: string
   magic: [string, string, string, string, string]
   utility: [string, string, string, string]
+  /** Per-ability instant-cast flags. Included when sending from loadout station. */
+  instantCast?: Record<string, boolean>
 }
 
 export interface ClientHeartbeatMessage {

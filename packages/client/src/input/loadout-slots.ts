@@ -44,7 +44,10 @@ export function normalizeLoadoutSlots(slots: readonly string[]): string[] {
   return out
 }
 
-export function buildLoadoutMessage(slots: readonly string[]): ClientLoadoutMessage {
+export function buildLoadoutMessage(
+  slots: readonly string[],
+  instantCast?: Record<string, boolean>,
+): ClientLoadoutMessage {
   const normalized = normalizeLoadoutSlots(slots)
   return {
     melee: normalized[0] ?? '',
@@ -62,5 +65,6 @@ export function buildLoadoutMessage(slots: readonly string[]): ClientLoadoutMess
       normalized[9] ?? '',
       normalized[10] ?? '',
     ],
+    ...(instantCast ? { instantCast } : {}),
   }
 }

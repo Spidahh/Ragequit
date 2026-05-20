@@ -116,6 +116,7 @@ import {
   trackPlayerConnected,
   trackPlayerDisconnected,
 } from '../telemetry.js'
+import { verifyToken, upsertPlayer, loadLoadout, saveLoadout } from '../db/supabase.js'
 
 // Fase 3 GameRoom — three weapons (sword / bow / staff), parry, projectiles.
 //
@@ -449,6 +450,14 @@ export class GameRoom extends Room<GameState> {
     this.onMessage<ClientLoadoutMessage>(MessageTypes.Loadout, (client, message) => {
       if (!this.gateRate(client, 'loadoutSet')) return
       this.handleLoadoutSet(client.sessionId, message)
+      // Persist loadout to Supabase for authenticated users.
+      const player = this.state.players.get(client.sessionId)
+      if (player?.userId) {
+        const loadoutArr = Array.from(player.loadout)
+        saveLoadout(player.userId, loadoutArr, message.instantCast ?? {}).catch(
+          (e: unknown) => console.warn('[supabase] saveLoadout failed:', e),
+        )
+      }
     })
 
     // Spawn N bots at match start if BOTS env var set (used for TTK calibration).
@@ -564,14 +573,30 @@ export class GameRoom extends Room<GameState> {
     console.info(`[GameRoom ${this.roomId}] spawned bot ${botId} at spawn ${spawnIndex}`)
   }
 
-  override onJoin(client: Client, options: { name?: string; userId?: string } = {}): void {
+  override async onJoin(
+    client: Client,
+    options: { name?: string; userId?: string; token?: string } = {},
+  ): Promise<void> {
     const player = new Player()
     player.id = client.sessionId
     player.name = options.name ?? `player-${client.sessionId.slice(0, 4)}`
     player.team = this.state.mode === '5v5' ? (this.state.players.size % 2 === 0 ? 'red' : 'blue') : ''
-    // Auth stub — empty string for guest sessions. When account auth is wired
-    // (M4/Supabase) the verified userId will arrive in options after JWT validation.
-    player.userId = options.userId ?? ''
+
+    // --- Supabase JWT verification ---
+    // If a token is supplied, verify it. On success, userId = Supabase UUID.
+    // On failure or absence, fall back to guest (empty userId).
+    let verifiedUserId = ''
+    if (options.token) {
+      const uid = await verifyToken(options.token).catch(() => null)
+      if (uid) {
+        verifiedUserId = uid
+        // Upsert player row (no-op if already exists).
+        upsertPlayer(uid, player.name).catch((e: unknown) =>
+          console.warn('[supabase] upsertPlayer failed:', e),
+        )
+      }
+    }
+    player.userId = verifiedUserId
 
     const spawnIndex = this.state.players.size % this.activeMap.spawns.length
     const spawn = this.activeMap.spawns[spawnIndex]!
@@ -580,11 +605,23 @@ export class GameRoom extends Room<GameState> {
     player.transform.z = spawn.z
     player.invulnUntilTick = this.state.tick + SPAWN_INVULN_TICKS
 
-    // Assign default loadout + compute Mastery activation. Fase 6 replaces
-    // the default at login with the persisted player loadout.
-    for (const id of DEFAULT_LOADOUT) player.loadout.push(id)
+    // Load persisted loadout if user is authenticated; otherwise use defaults.
+    let resolvedLoadout: readonly string[] = DEFAULT_LOADOUT
+    let persistedInstantCast: Record<string, boolean> = {}
+    if (verifiedUserId) {
+      const saved = await loadLoadout(verifiedUserId).catch(() => null)
+      if (saved?.loadout_data?.length) {
+        resolvedLoadout = saved.loadout_data
+        persistedInstantCast = saved.instant_cast_data ?? {}
+      }
+    }
+    for (const id of resolvedLoadout) player.loadout.push(id)
+    // Broadcast persisted instant-cast settings back to this client.
+    if (Object.keys(persistedInstantCast).length > 0) {
+      client.send('persistedInstantCast', persistedInstantCast)
+    }
     {
-      const defs = DEFAULT_LOADOUT.map((id) => ABILITY_DEFS[id])
+      const defs = resolvedLoadout.map((id) => ABILITY_DEFS[id])
       const mastery = computeLoadoutMastery(defs)
       player.masteryElement = mastery.element ?? ''
       player.masteryLevel = mastery.level
@@ -603,7 +640,7 @@ export class GameRoom extends Room<GameState> {
     trackPlayerConnected(this.roomId, this.state.mode)
     if (this.state.players.size === 1) trackMatchStarted(this.roomId, this.state.mode, this.maxClients)
     console.info(
-      `[GameRoom ${this.roomId}] join ${client.sessionId} (${player.name}) at spawn ${spawnIndex}`,
+      `[GameRoom ${this.roomId}] join ${client.sessionId} (${player.name}) userId=${verifiedUserId || 'guest'} at spawn ${spawnIndex}`,
     )
   }
 

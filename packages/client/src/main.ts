@@ -65,6 +65,7 @@ import { initMouseSensitivity } from './input/sensitivity.js'
 import { initLoadoutStation } from './loadout-station.js'
 import { initMenu } from './menu.js'
 import { sendLoadout } from './net/loadout-sync.js'
+import { initSupabaseAuth, getAccessToken } from './net/supabase-auth.js'
 import { makeCharacter, applyWeaponProp } from './render/characters.js'
 import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
 import { initPlacementPreview } from './render/placement-preview.js'
@@ -270,6 +271,8 @@ onKeybindsChanged(() => {
 const soundEngine = new SoundEngine()
 soundEngine.muted = true
 initTelemetry()
+// Boot Supabase auth in the background — resolves before the player can click Play.
+initSupabaseAuth().catch((e: unknown) => console.warn('[supabase] auth init failed:', e))
 const statusOverlay = initStatusOverlay({
   getSelfId: () => self?.sessionId,
   playStatus: (el) => soundEngine.playStatus(el),
@@ -840,7 +843,9 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
   setStatus('connecting', '#e4c05a')
   try {
     const client = new Client(SERVER_URL)
-    const roomOptions = { mode, botFill: mode === 'duel_arena' }
+    const token = await getAccessToken().catch(() => null)
+    const roomOptions: Record<string, unknown> = { mode, botFill: mode === 'duel_arena' }
+    if (token) roomOptions['token'] = token
     const joinedRoom = await client.joinOrCreate('game', roomOptions)
     const mainMenuHidden = document.getElementById('main-menu')?.classList.contains('hidden') ?? false
     if (seq !== connectSeq || !mainMenuHidden) {

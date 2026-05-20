@@ -14,6 +14,7 @@
   "dependencies": {
     "@colyseus/schema": "^3.0.0",
     "@ragequit/shared": "workspace:*",
+    "@supabase/supabase-js": "^2.106.1",
     "colyseus.js": "^0.16.0",
     "posthog-js": "^1.374.2",
     "three": "^0.180.0"

@@ -3,6 +3,10 @@ import { readFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { fileURLToPath } from 'node:url'
 
+// Load .env before anything else so SUPABASE_* vars are available.
+const { config } = await import('dotenv')
+config()
+
 import { Server } from '@colyseus/core'
 import { monitor } from '@colyseus/monitor'
 import { WebSocketTransport } from '@colyseus/ws-transport'
