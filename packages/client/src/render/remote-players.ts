@@ -28,6 +28,7 @@ export interface RemotePlayerSchema {
   castEndsAtTick: number
   invulnUntilTick: number
   parrying?: boolean
+  onGround?: boolean
   statuses: ReadonlyArray<{ kind: string; stacks: number; remainingSec: number }>
 }
 
@@ -70,6 +71,12 @@ interface RemoteState {
   hitReactUntilMs: number
   /** Timestamp until which the Respawn animation should play. */
   respawnUntilMs: number
+  /** Server-side onGround from previous schema tick — used to detect transitions. */
+  onGround: boolean
+  /** Timestamp until which the Jump take-off animation should play. */
+  jumpUntilMs: number
+  /** Timestamp until which the Land animation should play. */
+  landUntilMs: number
 }
 
 export interface RemotePlayersOptions {
@@ -206,6 +213,9 @@ export function initRemotePlayers({
       prevZ: p.transform.z,
       hitReactUntilMs: 0,
       respawnUntilMs: 0,
+      onGround: true,
+      jumpUntilMs: 0,
+      landUntilMs: 0,
     }
   }
 
@@ -263,6 +273,13 @@ export function initRemotePlayers({
       r.casting = !!p.casting && p.castEndsAtTick > schemaTick
       r.comboIndex = p.comboIndex ?? 0
       r.parrying = !!p.parrying
+      // Jump / land animation transitions from server onGround field.
+      if (p.alive) {
+        const isOnGround = p.onGround !== false // default true when field absent
+        if (r.onGround && !isOnGround) r.jumpUntilMs = now + 500  // left ground
+        if (!r.onGround && isOnGround) r.landUntilMs = now + 400  // landed
+        r.onGround = isOnGround
+      }
       if (r.lastWeapon !== remoteWeapon) {
         r.lastWeapon = remoteWeapon
         applyWeaponProp(r.mesh, remoteWeapon, toonGradient)
@@ -357,6 +374,8 @@ export function initRemotePlayers({
         parrying: r.parrying,
         hitReact: now < r.hitReactUntilMs,
         respawning: now < r.respawnUntilMs,
+        jumping: now < r.jumpUntilMs,
+        landing: now < r.landUntilMs,
       })
       let dyaw = b.yaw - a.yaw
       if (dyaw > Math.PI) dyaw -= 2 * Math.PI

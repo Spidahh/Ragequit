@@ -694,6 +694,11 @@ let selfHitReactUntilMs = 0
 let selfRespawnUntilMs = 0
 let selfPrevDead = false
 
+// Jump/Land animation windows — triggered by onGround transitions.
+let selfJumpUntilMs = 0
+let selfLandUntilMs = 0
+let selfPrevOnGround = true
+
 // Directional screen shake — offset the camera toward/away from attacker.
 // attackerWorldPos: world-space position of whoever dealt damage. Pass null
 // for a random-direction fallback (e.g. death from zone damage).
@@ -1880,6 +1885,16 @@ function render(now: number): void {
   if (selfPrevDead && !dead) selfRespawnUntilMs = now + 1500
   selfPrevDead = dead
 
+  // Detect onGround transitions for jump take-off and landing animations.
+  // Use the client-predicted onGround (self.sim.onGround) for instant response.
+  // Fall back to "on ground" when dead or self is not yet initialised.
+  const selfOnGround = dead || !self || self.sim.onGround
+  if (!dead) {
+    if (selfPrevOnGround && !selfOnGround) selfJumpUntilMs = now + 500  // left ground
+    if (!selfPrevOnGround && selfOnGround) selfLandUntilMs = now + 400  // landed
+  }
+  selfPrevOnGround = selfOnGround
+
   // Bow charge ratio — computed here (outer scope) so both the camera FOV
   // zoom and the charge HUD bar can consume it without duplicating the math.
   let bowChargeRatio = 0
@@ -1933,6 +1948,8 @@ function render(now: number): void {
       parrying: !!selfSchema?.parrying,
       hitReact: !dead && now < selfHitReactUntilMs,
       respawning: now < selfRespawnUntilMs,
+      jumping: !dead && now < selfJumpUntilMs,
+      landing: !dead && now < selfLandUntilMs,
     })
 
     // Follow-light tracks the player's torso level.

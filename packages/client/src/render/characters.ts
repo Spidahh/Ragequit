@@ -273,6 +273,10 @@ function _chooseAnimState(store: _MixerStore, state: CharAnimState): _AnimName {
   // Respawn plays once right after coming back to life.
   if (state.respawning) return _firstAvailable(store, ['Respawn', 'Attacking_Idle', 'Idle'])
 
+  // Landing takes priority over hitReact: a landing player hit at the same
+  // tick should show land (brief), then the next hit-react if still active.
+  if (state.landing) return _firstAvailable(store, ['Land', 'Attacking_Idle', 'Idle'])
+
   if (state.hitReact) {
     return _firstAvailable(store, [
       state.attacking || state.casting ? 'RecieveHit_Attacking' : 'RecieveHit',
@@ -281,7 +285,10 @@ function _chooseAnimState(store: _MixerStore, state: CharAnimState): _AnimName {
     ])
   }
 
-  if (state.airborne) return _firstAvailable(store, ['Airborne', 'Jump', 'RecieveHit', 'Roll'])
+  // Knockup airborne (server-driven) takes priority over regular jump.
+  if (state.airborne) return _firstAvailable(store, ['Airborne', 'Jump', 'Attacking_Idle'])
+  // Regular jump take-off (left the ground from self-initiated jump).
+  if (state.jumping) return _firstAvailable(store, ['Jump', 'Airborne', 'Attacking_Idle'])
   if (state.casting && weapon === 'staff')
     return _firstAvailable(store, ['Staff_Cast', 'Channel', 'Punch', 'Attacking_Idle'])
 
@@ -409,6 +416,10 @@ export interface CharAnimState {
   respawning?: boolean
   /** Movement speed in m/s — used to choose Walk vs Run animation. */
   speed?: number
+  /** True for ~500 ms after leaving the ground (regular jump take-off). */
+  jumping?: boolean
+  /** True for ~400 ms after touching the ground — plays the landing clip once. */
+  landing?: boolean
 }
 
 function _installCharacterModel(
