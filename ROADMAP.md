@@ -121,7 +121,7 @@ DoD:
 - Arena e personaggi smettono di sembrare blockout. ✅ Arena: stone tile ground texture (canvas 512×512, 16×16 tiles con grout lines + brightness variation); 4 stone plinths con sigil glow decorativo ai 4 diagonali r=16; doppia fascia decorativa sui pilastri (1.6m e 3.2m). Personaggi: helmet crest dorato (BoxGeometry + CylinderGeometry), visor slit angolati per look aggressivo, chest stripe detail, proporzioni leggermente più eroiche.
 - VFX elementali leggibili. ✅ Zone pulse differenziato per elemento; proiettili emissivi (amber arrow, cyan bolt).
 - Hit/parry/death/channel interrupt hanno feedback chiaro. ✅ ImpactPool ora produce sphere burst + ring shockwave espandibile con ease-out.
-- Bundle budget monitorato. ✅ chunkSizeWarningLimit=550 kB in vite.config.ts; game chunk a 179 kB / 54 kB gzip.
+- Bundle budget monitorato. ✅ chunkSizeWarningLimit=700 kB in vite.config.ts per non segnalare il vendor Three.js isolato (~657 kB raw); game chunk resta ~201 kB / 61 kB gzip.
 
 ## Verification Standard
 
@@ -133,4 +133,4 @@ Prima di considerare chiuso un pass:
 - `pnpm build`
 - QA browser su `localhost:5173` per UI/gameplay toccato
 
-Il warning Vite sul chunk grande è noto e non bloccante, ma va affrontato nel pass di modularizzazione/code splitting.
+Il warning Vite sul chunk grande non deve comparire su una build pulita: il vendor Three.js è isolato in `vendor-three`, mentre eventuali crescite del game chunk vanno trattate come regressione di modularizzazione/code splitting.

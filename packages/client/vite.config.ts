@@ -12,9 +12,12 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'es2022',
     sourcemap: true,
-    // Bundle size budget — warn when game code chunk exceeds 250 kB raw
-    // or any vendor chunk exceeds 550 kB raw. Three.js alone is ~490 kB.
-    chunkSizeWarningLimit: 550,
+    // Bundle size budget — keep the game chunk around 250 kB raw.
+    // Three.js r180 plus addon loaders is intentionally isolated in
+    // vendor-three and currently lands around 657 kB raw, so the global Vite
+    // warning threshold is set above that known vendor chunk instead of
+    // producing noise on every clean build.
+    chunkSizeWarningLimit: 700,
     rollupOptions: {
       output: {
         manualChunks(id) {

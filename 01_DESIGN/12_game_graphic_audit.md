@@ -270,7 +270,7 @@ Problemi o rischi dedotti dal codice:
 - Ambient particles e magic particles aggiornano BufferAttribute CPU ogni frame. Il numero attuale è basso, ma resta lavoro CPU per frame.
 - `renderer.info.render.calls` è esposto nel debug, ma non è deducibile un budget automatico o throttling dinamico oltre pixel ratio quality.
 - Pixel ratio è limitato a 1.5 e quality setting usa 1.0/1.25/1.5: mitigazione già presente.
-- Vite separa `vendor-three` e imposta chunk warning 550 KB: mitigazione build già presente.
+- Vite separa `vendor-three` e imposta chunk warning 700 KB: il vendor Three.js resta isolato e non deve produrre warning su build pulita.
 - GLB loading non mostra uso di DRACO/KTX/compression pipeline: non deducibile dal codice.
 - La grossa CSS UI è in `index.html`; non è un problema GPU diretto, ma overlay DOM complessi possono pesare durante gameplay se molte superfici sono visibili.
 
