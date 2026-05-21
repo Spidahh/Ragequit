@@ -88,8 +88,8 @@ import {
   trackDeath,
   trackAbilityCast,
 } from './telemetry.js'
-import { ImpactPool } from './vfx/impact-pool.js'
 import { DeathBurst } from './vfx/death-burst.js'
+import { ImpactPool } from './vfx/impact-pool.js'
 import { buildArena } from './world/arena.js'
 
 // -----------------------------------------------------------------------
@@ -687,6 +687,13 @@ function triggerDamageBlink(): void {
   selfDamageBlinkUntilMs = performance.now() + 160
 }
 
+// Hit-react animation window — self character plays RecieveHit clip for 600 ms.
+let selfHitReactUntilMs = 0
+
+// Respawn animation — plays for 1500 ms after self transitions dead → alive.
+let selfRespawnUntilMs = 0
+let selfPrevDead = false
+
 // Directional screen shake — offset the camera toward/away from attacker.
 // attackerWorldPos: world-space position of whoever dealt damage. Pass null
 // for a random-direction fallback (e.g. death from zone damage).
@@ -1197,6 +1204,7 @@ function onHit(msg: ServerHitMessage): void {
   if (amISelf && msg.damage > 0 && !msg.didParry) {
     soundEngine.playHurtByType(msg.cause, power)
     victimHitStopUntilMs = now + hitstopVictim(msg.cause)
+    selfHitReactUntilMs = now + 600 // trigger hit-react animation for 600 ms
   }
 
   // --- Observer: world-space impact sound (attenuated) ---
@@ -1868,6 +1876,10 @@ function render(now: number): void {
   const airborne = !!selfSchema && selfSchema.airborneUntilTick > tickNow
   const dead = !!selfSchema && !selfSchema.alive
 
+  // Detect dead → alive transition to trigger the Respawn animation.
+  if (selfPrevDead && !dead) selfRespawnUntilMs = now + 1500
+  selfPrevDead = dead
+
   // Bow charge ratio — computed here (outer scope) so both the camera FOV
   // zoom and the charge HUD bar can consume it without duplicating the math.
   let bowChargeRatio = 0
@@ -1902,12 +1914,25 @@ function render(now: number): void {
     selfMesh.position.set(x, y + idleBob, z)
     selfMesh.rotation.y = inp.mouseYaw
 
+    const wSchema =
+      selfSchema && isWeapon(selfSchema.activeWeapon) ? selfSchema.activeWeapon : 'sword'
+
     // Drive character animations
     tickCharacterMixer(selfMesh, dt)
+    const selfSpeed = Math.hypot(self.sim.vel.x, self.sim.vel.z)
     setCharAnimState(selfMesh, {
-      moving: Math.hypot(self.sim.vel.x, self.sim.vel.z) > 0.3,
+      moving: selfSpeed > 0.3,
+      speed: selfSpeed,
+      activeWeapon: wSchema,
       attacking: !!(selfArc?.visible && now < selfArcExpiresAt),
+      attackVariant: selfSchema?.comboIndex ?? 0,
+      airborne,
+      bowCharging: wSchema === 'bow' && (self.bowChargeStartMs > 0 || (selfSchema?.bowChargeStartTick ?? 0) > 0),
+      casting: !!selfSchema?.casting && selfSchema.castEndsAtTick > tickNow,
       alive: !dead,
+      parrying: !!selfSchema?.parrying,
+      hitReact: !dead && now < selfHitReactUntilMs,
+      respawning: now < selfRespawnUntilMs,
     })
 
     // Follow-light tracks the player's torso level.
@@ -1916,8 +1941,6 @@ function render(now: number): void {
     // Per-weapon camera:
     // Sword keeps an over-shoulder view for melee spacing. Bow and staff are
     // first-person precision weapons, so their aim must match the crosshair.
-    const wSchema =
-      selfSchema && isWeapon(selfSchema.activeWeapon) ? selfSchema.activeWeapon : 'sword'
     // Update weapon prop if weapon changed.
     if (wSchema !== selfLastWeapon) {
       selfLastWeapon = wSchema

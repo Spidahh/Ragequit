@@ -20,10 +20,14 @@ export interface RemotePlayerSchema {
   hp: number
   alive: boolean
   activeWeapon: string
+  airborneUntilTick?: number
+  bowChargeStartTick?: number
+  comboIndex?: number
   lastSwingStartTick: number
   casting: boolean
   castEndsAtTick: number
   invulnUntilTick: number
+  parrying?: boolean
   statuses: ReadonlyArray<{ kind: string; stacks: number; remainingSec: number }>
 }
 
@@ -53,8 +57,19 @@ interface RemoteState {
   hp: number
   alive: boolean
   lastWeapon: string
+  activeWeapon: string
+  airborne: boolean
+  bowCharging: boolean
+  casting: boolean
+  comboIndex: number
+  deathStartedAt: number
+  parrying: boolean
   prevX: number
   prevZ: number
+  /** Timestamp until which the hit-react animation should play. */
+  hitReactUntilMs: number
+  /** Timestamp until which the Respawn animation should play. */
+  respawnUntilMs: number
 }
 
 export interface RemotePlayersOptions {
@@ -180,8 +195,17 @@ export function initRemotePlayers({
       hp: HP_MAX,
       alive: true,
       lastWeapon: '',
+      activeWeapon: 'sword',
+      airborne: false,
+      bowCharging: false,
+      casting: false,
+      comboIndex: 0,
+      deathStartedAt: 0,
+      parrying: false,
       prevX: p.transform.x,
       prevZ: p.transform.z,
+      hitReactUntilMs: 0,
+      respawnUntilMs: 0,
     }
   }
 
@@ -223,9 +247,22 @@ export function initRemotePlayers({
         remotePlayers.set(sid, r)
       }
       r.hp = p.hp
-      if (!r.alive && p.alive) r.snapshots.length = 0
+      if (!r.alive && p.alive) {
+        // Respawned: clear stale interpolation buffer, reset death timer,
+        // and trigger the Respawn animation for 1500 ms.
+        r.snapshots.length = 0
+        r.deathStartedAt = 0
+        r.respawnUntilMs = now + 1500
+      }
+      if (r.alive && !p.alive) r.deathStartedAt = now
       r.alive = p.alive
       const remoteWeapon = isWeapon(p.activeWeapon) ? p.activeWeapon : 'sword'
+      r.activeWeapon = remoteWeapon
+      r.airborne = (p.airborneUntilTick ?? 0) > schemaTick
+      r.bowCharging = remoteWeapon === 'bow' && (p.bowChargeStartTick ?? 0) > 0
+      r.casting = !!p.casting && p.castEndsAtTick > schemaTick
+      r.comboIndex = p.comboIndex ?? 0
+      r.parrying = !!p.parrying
       if (r.lastWeapon !== remoteWeapon) {
         r.lastWeapon = remoteWeapon
         applyWeaponProp(r.mesh, remoteWeapon, toonGradient)
@@ -259,10 +296,20 @@ export function initRemotePlayers({
     const renderAt = now - INTERPOLATION_DELAY_MS
     remotePlayers.forEach((r) => {
       if (!r.alive) {
-        r.mesh.visible = false
         r.arc.visible = false
         r.castRing.visible = false
         r.nameplate.style.display = 'none'
+        if (r.deathStartedAt > 0 && now - r.deathStartedAt < 1200) {
+          r.mesh.visible = true
+          tickCharacterMixer(r.mesh, animDt)
+          setCharAnimState(r.mesh, {
+            moving: false,
+            activeWeapon: r.activeWeapon,
+            alive: false,
+          })
+        } else {
+          r.mesh.visible = false
+        }
         return
       }
       r.mesh.visible = true
@@ -290,14 +337,26 @@ export function initRemotePlayers({
       // Animation tick
       const dx = x - r.prevX
       const dz = z - r.prevZ
-      const moving = dx * dx + dz * dz > 1e-4
+      const distSq = dx * dx + dz * dz
+      const moving = distSq > 1e-4
+      // Compute m/s speed from positional delta; guard against zero animDt.
+      const remoteSpeed = animDt > 0 ? Math.sqrt(distSq) / animDt : 0
       r.prevX = x
       r.prevZ = z
       tickCharacterMixer(r.mesh, animDt)
       setCharAnimState(r.mesh, {
         moving,
+        speed: remoteSpeed,
+        activeWeapon: r.activeWeapon,
         attacking: r.arc.visible && now < r.arcExpiresAt,
+        attackVariant: r.comboIndex,
+        airborne: r.airborne,
+        bowCharging: r.bowCharging,
+        casting: r.casting,
         alive: r.alive,
+        parrying: r.parrying,
+        hitReact: now < r.hitReactUntilMs,
+        respawning: now < r.respawnUntilMs,
       })
       let dyaw = b.yaw - a.yaw
       if (dyaw > Math.PI) dyaw -= 2 * Math.PI
@@ -411,6 +470,10 @@ export function initRemotePlayers({
 
   function setDamageBlink(sid: string, untilMs: number): void {
     remoteDamageBlinkUntil.set(sid, untilMs)
+    // Also drive the hit-react animation for this remote character.
+    // untilMs covers the 160 ms blink; hit-react should last ~600 ms.
+    const r = remotePlayers.get(sid)
+    if (r) r.hitReactUntilMs = untilMs - 160 + 600
   }
 
   return { updateFromSchema, renderFrame, renderEmissives, clear, getWorldPos, setDamageBlink }

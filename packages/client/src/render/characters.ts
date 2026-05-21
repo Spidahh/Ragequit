@@ -281,6 +281,9 @@ function _chooseAnimState(store: _MixerStore, state: CharAnimState): _AnimName {
 
   if (!state.alive) return _firstAvailable(store, ['Death', 'RecieveHit', 'Attacking_Idle'])
 
+  // Respawn plays once right after coming back to life.
+  if (state.respawning) return _firstAvailable(store, ['Respawn', 'Attacking_Idle', 'Idle'])
+
   if (state.hitReact) {
     return _firstAvailable(store, [
       state.attacking || state.casting ? 'RecieveHit_Attacking' : 'RecieveHit',
@@ -307,7 +310,13 @@ function _chooseAnimState(store: _MixerStore, state: CharAnimState): _AnimName {
 
   if (state.parrying) return _firstAvailable(store, ['Parry_Block', 'Attacking_Idle', 'Idle'])
 
-  if (state.moving) return _firstAvailable(store, ['Run', 'Walk', 'Attacking_Idle'])
+  if (state.moving) {
+    // Walk at low speed (<3 m/s), Run otherwise.
+    const isWalking = state.speed !== undefined && state.speed < 3.0
+    return isWalking
+      ? _firstAvailable(store, ['Walk', 'Run', 'Attacking_Idle'])
+      : _firstAvailable(store, ['Run', 'Walk', 'Attacking_Idle'])
+  }
   return _firstAvailable(store, ['Attacking_Idle', 'Idle', 'Run'])
 }
 
@@ -458,6 +467,10 @@ export interface CharAnimState {
   casting?: boolean
   parrying?: boolean
   hitReact?: boolean
+  /** True for ~1.5 s after spawning/respawning — plays the Respawn clip once. */
+  respawning?: boolean
+  /** Movement speed in m/s — used to choose Walk vs Run animation. */
+  speed?: number
 }
 
 function _installCharacterModel(
@@ -604,7 +617,7 @@ export function setCharAnimState(charGroup: THREE.Group, state: CharAnimState): 
   if (!store) return
   const target = _chooseAnimState(store, state)
   const fadeSec =
-    target === 'Death'
+    target === 'Death' || target === 'Respawn'
       ? 0.3
       : target === 'Dagger_Attack' ||
           target === 'Dagger_Attack2' ||
@@ -612,7 +625,14 @@ export function setCharAnimState(charGroup: THREE.Group, state: CharAnimState): 
           target === 'RecieveHit' ||
           target === 'RecieveHit_Attacking'
         ? 0.08
-        : 0.18
+        : target === 'Jump' ||
+            target === 'Land' ||
+            target === 'Roll' ||
+            target === 'Bow_Draw' ||
+            target === 'Bow_Release' ||
+            target === 'Staff_Cast'
+          ? 0.1
+          : 0.18
   _crossfade(store, target, fadeSec)
 }
 
