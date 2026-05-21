@@ -153,10 +153,13 @@ export function initRemotePlayers({
       'flex-shrink:0',
     ].join(';')
     const hpFill = document.createElement('div')
+    const hpGradient = isAlly
+      ? 'linear-gradient(90deg,#1a7a3a,#29ae55,#56d87c)' // green for ally
+      : 'linear-gradient(90deg,#c82020,#f04040,#ff7070)' // red for enemy
     hpFill.style.cssText = [
       'height:100%',
       'width:100%',
-      'background:linear-gradient(90deg,#c82020,#f04040,#ff7070)',
+      `background:${hpGradient}`,
       'transition:width 0.12s linear,background 0.25s',
       'border-radius:4px',
     ].join(';')

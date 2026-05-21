@@ -263,12 +263,14 @@ export function initMenu(handlers: {
     },
     onScore: (msg, selfId, otherId) => {
       if (msg.roundWins) {
-        // 1v1 round mode
+        // 1v1 round mode — show pips, hide kill counter
         const wins = msg.roundWins
         const selfWins = wins[selfId] ?? 0
         const otherWins = wins[otherId] ?? 0
         rebuildPips(pipsSelf, selfWins)
         rebuildPips(pipsOther, otherWins)
+        pipsSelf.style.display = ''
+        pipsOther.style.display = ''
         killCounter.classList.add('hidden')
         sbSelf.textContent = String(selfWins)
         sbOther.textContent = String(otherWins)
@@ -276,15 +278,15 @@ export function initMenu(handlers: {
         else if (otherWins >= MATCH_ROUNDS_TO_WIN) sbWinner.textContent = 'YOU LOSE'
         else sbWinner.textContent = 'DRAW'
       } else if (msg.solo) {
-        // FFA mode — live kill counter in the round HUD
+        // FFA mode — live kill counter in the round HUD; no pips needed
         const solo = msg.solo
         const selfKills = solo[selfId] ?? 0
         const topKills = Math.max(0, ...Object.values(solo))
         const isLeading = selfKills === topKills && selfKills > 0
         killCounter.textContent = `${selfKills} / ${FFA_KILLS_TO_WIN} kills${isLeading ? ' 👑 LEADING' : ` · leader: ${topKills}`}`
         killCounter.classList.remove('hidden')
-        rebuildPips(pipsSelf, 0)
-        rebuildPips(pipsOther, 0)
+        pipsSelf.style.display = 'none'
+        pipsOther.style.display = 'none'
         sbSelf.textContent = `${selfKills} kills`
         sbOther.textContent = `top: ${topKills}`
         sbWinner.textContent =
@@ -294,14 +296,14 @@ export function initMenu(handlers: {
               ? 'GAME OVER'
               : 'ONGOING'
       } else if (msg.team) {
-        // 5v5 team mode
+        // 5v5 team mode — live team kill counter; no round pips needed
         const team = msg.team
         const red = team['red'] ?? 0
         const blue = team['blue'] ?? 0
         killCounter.textContent = `🔴 ${red}  ·  🔵 ${blue} / ${TEAM_KILLS_TO_WIN}`
         killCounter.classList.remove('hidden')
-        rebuildPips(pipsSelf, 0)
-        rebuildPips(pipsOther, 0)
+        pipsSelf.style.display = 'none'
+        pipsOther.style.display = 'none'
         sbSelf.textContent = `Red ${red}`
         sbOther.textContent = `Blue ${blue}`
         sbWinner.textContent =

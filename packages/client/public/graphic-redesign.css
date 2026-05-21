@@ -1028,3 +1028,35 @@ body:not(.main-menu-active):not(.loadout-active) #bow-charge {
   border-radius: 3px !important;
   background: rgba(7, 10, 17, 0.92) !important;
 }
+
+/* Kill / death splash popup — use design font */
+.kill-splash {
+  font-family: var(--font-display) !important;
+  letter-spacing: 0.22em !important;
+}
+.kill-splash.kill {
+  color: var(--rq-gold) !important;
+  text-shadow: 0 0 18px var(--rq-gold), 0 0 40px rgba(255,210,96,0.4), 0 3px 8px #000 !important;
+}
+.kill-splash.died {
+  color: var(--rq-red) !important;
+  text-shadow: 0 0 18px var(--rq-red), 0 0 40px rgba(255,51,68,0.4), 0 3px 8px #000 !important;
+}
+
+/* Round timer — subtle gold tint when urgent */
+#round-timer {
+  font-family: var(--font-hud) !important;
+  color: #9098b8;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  transition: color 0.3s;
+}
+#round-timer.urgent {
+  color: var(--rq-gold) !important;
+  text-shadow: 0 0 8px rgba(255,210,96,0.5) !important;
+  animation: timer-pulse 1s ease-in-out infinite !important;
+}
+@keyframes timer-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}

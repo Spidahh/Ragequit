@@ -2064,7 +2064,9 @@ function render(now: number): void {
     serverCharging: !!selfSchema && selfSchema.bowChargeStartTick > 0,
     selfSchema: selfSchema ?? null,
     livePhaseStartTick,
-    isRoundMode: getSchemaMode() === 'duel_arena' || getSchemaMode() === 'training',
+    // Round timer shown only for modes with server-side round logic (duel_arena, blockout, 1v1).
+    // Training and kill-based modes (ffa, 5v5) have no server round timer.
+    isRoundMode: ['duel_arena', 'blockout', '1v1'].includes(getSchemaMode()),
     clearBowCharge: () => {
       if (self) {
         self.bowChargeStartMs = 0
