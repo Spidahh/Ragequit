@@ -1,6 +1,7 @@
-import { CAPSULE_HEIGHT_M, CAPSULE_RADIUS_M } from '@ragequit/shared'
+import { CAPSULE_HALF_HEIGHT_M, CAPSULE_HEIGHT_M, CAPSULE_RADIUS_M } from '@ragequit/shared'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js'
 
 // ---------------------------------------------------------------------------
 // Weapon GLB loader — shared loader + cache so each model is fetched once.
@@ -17,6 +18,71 @@ const _WEAPON_GLB: Record<string, string> = {
   staff: '/weapons/staff.glb',
 }
 const USE_WEAPON_GLB = false
+
+// ---------------------------------------------------------------------------
+// Character GLB — loaded once, cloned per character instance.
+// ---------------------------------------------------------------------------
+
+interface _CharGlbData {
+  scene: THREE.Group
+  animations: THREE.AnimationClip[]
+}
+
+let _charGlbData: _CharGlbData | null = null
+let _charGlbInflight: Promise<_CharGlbData> | null = null
+
+function _fetchCharGlb(): Promise<_CharGlbData> {
+  if (_charGlbData) return Promise.resolve(_charGlbData)
+  if (_charGlbInflight) return _charGlbInflight
+  _charGlbInflight = new Promise((resolve, reject) => {
+    _loader.load(
+      '/characters/player.glb',
+      (gltf) => {
+        _charGlbData = { scene: gltf.scene, animations: gltf.animations }
+        _charGlbInflight = null
+        resolve(_charGlbData)
+      },
+      undefined,
+      reject,
+    )
+  })
+  return _charGlbInflight
+}
+
+type _AnimName = 'Idle' | 'Attacking_Idle' | 'Run' | 'Dagger_Attack' | 'Death'
+const _ANIM_NAMES: _AnimName[] = ['Idle', 'Attacking_Idle', 'Run', 'Dagger_Attack', 'Death']
+
+interface _MixerStore {
+  mixer: THREE.AnimationMixer
+  actions: Partial<Record<_AnimName, THREE.AnimationAction>>
+  current: _AnimName
+}
+
+function _crossfade(store: _MixerStore, next: _AnimName, fadeSec: number): void {
+  if (store.current === next) return
+  const from = store.actions[store.current]
+  const to = store.actions[next]
+  store.current = next
+  if (!to) return
+  to.reset()
+  if (next === 'Dagger_Attack' || next === 'Death') {
+    to.setLoop(THREE.LoopOnce, 1)
+    to.clampWhenFinished = true
+  } else {
+    to.setLoop(THREE.LoopRepeat, Infinity)
+    to.clampWhenFinished = false
+  }
+  to.play()
+  if (from) from.crossFadeTo(to, fadeSec, true)
+}
+
+// The player.glb CharacterArmature node has scale=[100,100,100].
+// Bone translations sum from feet (y=0) to Head_end (y≈0.026 bone-units).
+// Actual world height = 0.026 * 100 ≈ 2.6 units.
+// Box3.setFromObject() on SkinnedMesh returns geometry bind-pose bounds (~0.02
+// units, i.e. before the node scale is applied), giving a false tiny modelH.
+// We use a hardcoded native height to avoid the ×90 scale explosion.
+const _CHAR_GLB_NATIVE_HEIGHT = 2.6
 
 function _fetchWeaponGlb(weapon: string): Promise<THREE.Group> {
   const hit = _glbCache.get(weapon)
@@ -118,23 +184,110 @@ export function loadCharacterGlb(
   teamColor: number,
   toonGradient: THREE.DataTexture,
 ): void {
-  void charGroup
-  void teamColor
-  void toonGradient
-  // The current character GLB deforms into huge triangles in gameplay. Keep the
-  // procedural low-poly body until the rig asset is replaced or repaired.
+  _fetchCharGlb()
+    .then(({ scene, animations }) => {
+      if (charGroup.userData['disposed'] as boolean) return
+
+      // Deep-clone with proper skeleton remapping so each character gets its
+      // own bone tree (required for independent AnimationMixer instances).
+      const model = skeletonClone(scene) as THREE.Group
+
+      // The GLB's CharacterArmature node has scale=[100,100,100] baked in.
+      // Box3.setFromObject() on SkinnedMesh returns bind-pose geometry bounds
+      // (~0.02 units), NOT the scaled world bounds (~2.6 units) — measuring
+      // from geometry would give scale×90 → skeleton explosion.
+      // Use hardcoded native height instead.
+      model.scale.setScalar(CAPSULE_HEIGHT_M / _CHAR_GLB_NATIVE_HEIGHT)
+
+      // Feet sit at armature y=0; shift so feet are at capsule bottom
+      // (charGroup origin = capsule centre = CAPSULE_HALF_HEIGHT_M above ground).
+      model.position.y = -CAPSULE_HALF_HEIGHT_M
+
+      // Apply toon shading; skip Blender helper meshes (NurbsPath).
+      // Collect ALL mesh materials so emissive-blink can illuminate the full body.
+      const glbMaterials: THREE.MeshToonMaterial[] = []
+      model.traverse((child) => {
+        if (!(child instanceof THREE.Mesh)) return
+        if (child.name.toLowerCase().includes('nurbs')) {
+          child.visible = false
+          return
+        }
+        const orig = child.material as THREE.MeshStandardMaterial
+        const mat = new THREE.MeshToonMaterial({
+          color: orig.color?.clone() ?? new THREE.Color(0xffffff),
+          map: orig.map ?? null,
+          gradientMap: toonGradient,
+          emissive: new THREE.Color(teamColor),
+          emissiveIntensity: 0.12,
+        })
+        child.material = mat
+        child.castShadow = true
+        glbMaterials.push(mat)
+      })
+
+      if (glbMaterials.length > 0) {
+        charGroup.userData['armorMat'] = glbMaterials[0]
+        charGroup.userData['glbMaterials'] = glbMaterials
+      }
+
+      // Hide procedural body (keep weaponGroup so weapon props stay visible).
+      const wg = charGroup.userData['weaponGroup'] as THREE.Group | undefined
+      for (const child of [...charGroup.children]) {
+        if (child !== wg) child.visible = false
+      }
+      charGroup.add(model)
+      charGroup.userData['charModel'] = model
+
+      // Wire up AnimationMixer — prefer short clip names first, then fall back
+      // to the CharacterArmature| prefixed variants exported by some tools.
+      const mixer = new THREE.AnimationMixer(model)
+      const actions: Partial<Record<_AnimName, THREE.AnimationAction>> = {}
+      for (const name of _ANIM_NAMES) {
+        const clip =
+          animations.find((a) => a.name === name) ??
+          animations.find((a) => a.name.endsWith('|' + name))
+        if (clip) actions[name] = mixer.clipAction(clip)
+      }
+
+      const initial: _AnimName = actions['Attacking_Idle']
+        ? 'Attacking_Idle'
+        : actions['Idle']
+          ? 'Idle'
+          : 'Run'
+      const initAction = actions[initial]
+      if (initAction) {
+        initAction.setLoop(THREE.LoopRepeat, Infinity)
+        initAction.play()
+      }
+
+      const store: _MixerStore = { mixer, actions, current: initial }
+      charGroup.userData['mixerStore'] = store
+    })
+    .catch((err) => {
+      console.warn('[character] GLB load failed, keeping procedural fallback', err)
+    })
 }
 
 /** Advance this character's AnimationMixer by deltaS seconds. */
 export function tickCharacterMixer(charGroup: THREE.Group, deltaS: number): void {
-  void charGroup
-  void deltaS
+  const store = charGroup.userData['mixerStore'] as _MixerStore | undefined
+  if (!store) return
+  store.mixer.update(Math.min(deltaS, 0.1)) // clamp to avoid large jumps after tab-switch
 }
 
 /** Drive the animation state machine based on current gameplay state. */
 export function setCharAnimState(charGroup: THREE.Group, state: CharAnimState): void {
-  void charGroup
-  void state
+  const store = charGroup.userData['mixerStore'] as _MixerStore | undefined
+  if (!store) return
+  const target: _AnimName = !state.alive
+    ? 'Death'
+    : state.attacking
+      ? 'Dagger_Attack'
+      : state.moving
+        ? 'Run'
+        : 'Attacking_Idle'
+  const fadeSec = target === 'Death' ? 0.3 : target === 'Dagger_Attack' ? 0.08 : 0.18
+  _crossfade(store, target, fadeSec)
 }
 
 /**
@@ -142,6 +295,12 @@ export function setCharAnimState(charGroup: THREE.Group, state: CharAnimState): 
  * Call before removing the group from the scene to prevent memory leaks.
  */
 export function disposeCharacterMixer(charGroup: THREE.Group): void {
+  const store = charGroup.userData['mixerStore'] as _MixerStore | undefined
+  if (store) {
+    store.mixer.stopAllAction()
+    const model = charGroup.userData['charModel'] as THREE.Object3D | undefined
+    if (model) store.mixer.uncacheRoot(model)
+  }
   delete charGroup.userData['mixerStore']
   delete charGroup.userData['charModel']
   delete charGroup.userData['glbMaterials']
