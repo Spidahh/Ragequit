@@ -699,6 +699,9 @@ let selfJumpUntilMs = 0
 let selfLandUntilMs = 0
 let selfPrevOnGround = true
 
+// Roll animation — triggered on dash ability cast confirmation.
+let selfRollingUntilMs = 0
+
 // Directional screen shake — offset the camera toward/away from attacker.
 // attackerWorldPos: world-space position of whoever dealt damage. Pass null
 // for a random-direction fallback (e.g. death from zone damage).
@@ -1081,13 +1084,19 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
       MessageTypes.AbilityCasted,
       (msg: { casterId: string; abilityId: string; atTick: number }) => {
         if (!isCurrentRoom()) return
+        const def = ABILITY_DEFS[msg.abilityId]
+        const isDash = def?.effects?.some((e) => e.kind === 'move' && (e as {mode?:string}).mode === 'dash') ?? false
         // Play cast sound for self only; remote cast VFX can be expanded in a later polish pass.
         if (msg.casterId === self?.sessionId) {
-          const def = ABILITY_DEFS[msg.abilityId]
           soundEngine.playCast(def?.element ?? 'none')
           trackAbilityCast(msg.abilityId, def?.element ?? 'none')
           // Anchor cast bar to server ack time — eliminates RTT-induced desync.
           if (def && def.windupSec > 0) castStartedAtMs = performance.now()
+          // Play Roll animation on dash abilities.
+          if (isDash) selfRollingUntilMs = performance.now() + 400
+        } else if (isDash) {
+          // Trigger roll animation on the remote character that dashed.
+          remotePlayerSystem.triggerRoll(msg.casterId, performance.now() + 400)
         }
       },
     )
@@ -1955,6 +1964,7 @@ function render(now: number): void {
       respawning: now < selfRespawnUntilMs,
       jumping: !dead && now < selfJumpUntilMs,
       landing: !dead && now < selfLandUntilMs,
+      rolling: !dead && now < selfRollingUntilMs,
     })
 
     // Follow-light tracks the player's torso level.

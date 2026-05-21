@@ -289,6 +289,8 @@ function _chooseAnimState(store: _MixerStore, state: CharAnimState): _AnimName {
   if (state.airborne) return _firstAvailable(store, ['Airborne', 'Jump', 'Attacking_Idle'])
   // Regular jump take-off (left the ground from self-initiated jump).
   if (state.jumping) return _firstAvailable(store, ['Jump', 'Airborne', 'Attacking_Idle'])
+  // Dash / roll — plays once, takes priority over idle/run but not over jump.
+  if (state.rolling) return _firstAvailable(store, ['Roll', 'Run', 'Attacking_Idle'])
   if (state.casting && weapon === 'staff') {
     // Channel (looping beam) vs Staff_Cast (one-shot burst) based on ability type.
     if (state.channeling)
@@ -426,6 +428,8 @@ export interface CharAnimState {
   landing?: boolean
   /** True when the active cast is a channel effect — selects the looping Channel clip. */
   channeling?: boolean
+  /** True for ~400 ms after a dash ability fires — plays the Roll clip once. */
+  rolling?: boolean
 }
 
 function _installCharacterModel(

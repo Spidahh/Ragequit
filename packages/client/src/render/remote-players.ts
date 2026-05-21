@@ -80,6 +80,8 @@ interface RemoteState {
   jumpUntilMs: number
   /** Timestamp until which the Land animation should play. */
   landUntilMs: number
+  /** Timestamp until which the Roll animation should play (triggered by dash cast). */
+  rollUntilMs: number
 }
 
 export interface RemotePlayersOptions {
@@ -110,6 +112,7 @@ export interface RemotePlayersController {
   clear: () => void
   getWorldPos: (sid: string) => THREE.Vector3 | null
   setDamageBlink: (sid: string, untilMs: number) => void
+  triggerRoll: (sid: string, untilMs: number) => void
 }
 
 export function initRemotePlayers({
@@ -220,6 +223,7 @@ export function initRemotePlayers({
       onGround: true,
       jumpUntilMs: 0,
       landUntilMs: 0,
+      rollUntilMs: 0,
     }
   }
 
@@ -385,6 +389,7 @@ export function initRemotePlayers({
         respawning: now < r.respawnUntilMs,
         jumping: now < r.jumpUntilMs,
         landing: now < r.landUntilMs,
+        rolling: now < r.rollUntilMs,
       })
       let dyaw = b.yaw - a.yaw
       if (dyaw > Math.PI) dyaw -= 2 * Math.PI
@@ -504,5 +509,18 @@ export function initRemotePlayers({
     if (r) r.hitReactUntilMs = untilMs - 160 + 600
   }
 
-  return { updateFromSchema, renderFrame, renderEmissives, clear, getWorldPos, setDamageBlink }
+  function triggerRoll(sid: string, untilMs: number): void {
+    const r = remotePlayers.get(sid)
+    if (r) r.rollUntilMs = untilMs
+  }
+
+  return {
+    updateFromSchema,
+    renderFrame,
+    renderEmissives,
+    clear,
+    getWorldPos,
+    setDamageBlink,
+    triggerRoll,
+  }
 }
