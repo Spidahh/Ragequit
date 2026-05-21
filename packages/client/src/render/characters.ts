@@ -328,8 +328,20 @@ function _measureRenderableBox(root: THREE.Object3D): THREE.Box3 {
   const box = new THREE.Box3()
   root.updateMatrixWorld(true)
   root.traverse((child) => {
-    if (!(child instanceof THREE.Mesh) || !child.visible) return
-    const childBox = new THREE.Box3().setFromObject(child)
+    // Use isMesh flag instead of instanceof to survive cross-module boundaries.
+    const mesh = child as THREE.Mesh
+    if (!mesh.isMesh || !child.visible) return
+    const geo = mesh.geometry
+    if (!geo) return
+    // Use the raw geometry bounding box (local vertex positions) instead of
+    // setFromObject / SkinnedMesh.computeBoundingBox().
+    // Three.js r180 SkinnedMesh.computeBoundingBox() calls applyBoneTransform
+    // per vertex, returning world-space coords — if bone matrixWorlds differ
+    // between the two clone calls the measured "native height" comes out ~100×
+    // too large for the second character, producing a wildly wrong target scale.
+    if (geo.boundingBox === null) geo.computeBoundingBox()
+    if (!geo.boundingBox) return
+    const childBox = geo.boundingBox.clone().applyMatrix4(child.matrixWorld)
     if (!childBox.isEmpty()) box.union(childBox)
   })
   return box
@@ -444,26 +456,30 @@ function _installCharacterModel(
 
   const nativeBox = _measureRenderableBox(model)
   const nativeHeight = _validBoxHeight(nativeBox)
-  console.log(`[character] ${sourceLabel}: nativeHeight=${nativeHeight.toFixed(3)} box.min.y=${nativeBox.min.y.toFixed(3)}`)
+  console.info(`[character] ${sourceLabel}: nativeHeight=${nativeHeight.toFixed(3)} box.min.y=${nativeBox.min.y.toFixed(3)}`)
 
   const targetScale = CAPSULE_HEIGHT_M / nativeHeight
   model.scale.setScalar(targetScale)
   const scaledBox = _measureRenderableBox(model)   // also calls updateMatrixWorld(true)
   model.position.y = -CAPSULE_HALF_HEIGHT_M - scaledBox.min.y
 
-  // After scaling the model, the bone matrixWorld values have changed but the
-  // skeleton's boneInverses were computed at load-time (identity) scale.
-  // Without this fix the vertex shader double-applies the scale factor and the
-  // character renders at sub-millimetre size — effectively invisible.
-  // We only need to recompute boneInverses; the mesh's own bindMatrix (identity)
-  // is already correct for local-space skinning.
-  model.updateMatrixWorld(true)
-  model.traverse((child) => {
-    if (child instanceof THREE.SkinnedMesh) {
-      child.skeleton.calculateInverses()
-    }
-  })
-  console.log(`[character] ${sourceLabel}: scale=${targetScale.toFixed(6)} pos.y=${model.position.y.toFixed(4)}`)
+  // Do NOT call skeleton.calculateInverses() here.
+  //
+  // The FBXLoader computes boneInverses at load-time in the FBX native scale
+  // (cm units, model scale = 1.0) and stores the mesh's bindMatrix from the FBX
+  // BindPose node at the same cm scale.  Because boneInverses and bindMatrix
+  // are consistent with each other, the skinning math is correct:
+  //   transformed = bindMatrixInverse × Σ(w · bone.matWorld · boneInverse) · bindMatrix · vertex
+  // Three.js SkinnedMesh in AttachedBindMode recomputes bindMatrixInverse every
+  // frame as inverse(mesh.matrixWorld), which already accounts for the 0.01×
+  // scaling we applied above — so the math cancels cleanly without us touching
+  // the boneInverses.
+  //
+  // Re-running calculateInverses() after we set model.scale = 0.01 would
+  // produce boneInverses in a different (scaled) space from bindMatrix (still
+  // at cm scale), breaking the rest-pose invariant and causing visible mesh
+  // deformation (or invisibility when the mismatch is extreme).
+  console.info(`[character] ${sourceLabel}: scale=${targetScale.toFixed(6)} pos.y=${model.position.y.toFixed(4)}`)
 
   const glbMaterials: THREE.MeshToonMaterial[] = []
   let renderableMeshes = 0
@@ -535,19 +551,19 @@ export function loadCharacterGlb(
   teamColor: number,
   toonGradient: THREE.DataTexture,
 ): void {
-  console.log('[character] loadCharacterGlb called, fetching legacy FBX...')
+  console.info('[character] loadCharacterGlb called, fetching legacy FBX...')
   _fetchLegacyCharacter()
     .then(({ scene, clips }) => {
-      console.log('[character] Legacy FBX loaded OK, cloning skeleton...')
+      console.info('[character] Legacy FBX loaded OK, cloning skeleton...')
       const model = skeletonClone(scene) as THREE.Group
       _installCharacterModel(charGroup, model, clips, teamColor, toonGradient, 'legacy FBX')
-      console.log('[character] Legacy FBX installed OK')
+      console.info('[character] Legacy FBX installed OK')
     })
     .catch((legacyErr) => {
       console.warn('[character] Legacy FBX failed, trying GLB fallback', legacyErr)
       _fetchCharGlb()
         .then(({ scene, animations }) => {
-          console.log('[character] GLB loaded OK, cloning...')
+          console.info('[character] GLB loaded OK, cloning...')
           const model = skeletonClone(scene) as THREE.Group
           const clips: Partial<Record<_AnimName, THREE.AnimationClip>> = {}
           const missing: _AnimName[] = []
@@ -560,7 +576,7 @@ export function loadCharacterGlb(
             console.warn(`[character] GLB missing animations (${missing.length}): ${missing.join(', ')}`)
           }
           _installCharacterModel(charGroup, model, clips, teamColor, toonGradient, 'GLB')
-          console.log('[character] GLB installed OK')
+          console.info('[character] GLB installed OK')
         })
         .catch((glbErr) => {
           console.warn('[character] GLB also failed, keeping procedural fallback', glbErr)

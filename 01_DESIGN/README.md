@@ -26,6 +26,11 @@ Files are prefixed with a section number:
 | `08_`  | Progression                             |
 | `09_`  | Visual / art direction                  |
 | `10_`  | Tech (stack, netcode, assets)           |
+| `11_`  | UI redesign plan                        |
+| `12_`  | Graphic audit                           |
+| `13_`  | Graphic redesign blueprint              |
+| `14_`  | Visual redesign system                  |
+| `15_`  | Visual strategy                         |
 | `99_`  | Meta (resolved ambiguities)             |
 
 ## File format
