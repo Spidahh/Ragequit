@@ -4080,6 +4080,7 @@
       }
 
     </style>
+    <link rel="stylesheet" href="/graphic-redesign.css">
   </head>
   <body>
     <div id="app"></div>
@@ -4300,8 +4301,10 @@
     </div>
 
     <div id="main-menu">
-      <h1>RAGEQUIT</h1>
-      <p class="tagline">skill-shot arena combat</p>
+      <div class="rq-menu-brand" aria-label="RAGEQUIT">
+        <img src="/ui/ragequit-logo-full.png" alt="RAGEQUIT">
+      </div>
+      <p class="tagline">PvP arena combat</p>
       <div class="menu-grid">
         <button class="menu-btn primary" id="menu-play" data-desc="duel rules">Play 1v1</button>
         <button class="menu-btn disabled" id="menu-ffa" data-desc="coming soon" disabled>Free For All</button>
@@ -4404,8 +4407,9 @@
       <!-- Top bar: title + mastery inline -->
       <div id="ls-header">
         <div id="ls-title-block">
-          <h1>LOADOUT <span>STATION</span></h1>
-          <p class="subtitle">E wheel: melee, bow, spells · Q wheel: transfers, utility</p>
+          <img class="rq-shell-logo" src="/ui/ragequit-logo-small.png" alt="RAGEQUIT">
+          <h1>LOADOUT <span>FORGE</span></h1>
+          <p class="subtitle">Build 7 combat actions + 4 utilities</p>
         </div>
         <div id="ls-flow-strip" aria-label="Build flow">
           <span data-flow="opener">Opener</span>

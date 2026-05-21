@@ -90,6 +90,17 @@ export function initSelfEmissive({
     mat.emissive.g += (tG - mat.emissive.g) * LERP
     mat.emissive.b += (tB - mat.emissive.b) * LERP
     mat.emissiveIntensity = 0.7
+    // Propagate to all GLB mesh materials so the whole character flashes
+    const glbMats = selfMesh.userData['glbMaterials'] as THREE.MeshToonMaterial[] | undefined
+    if (glbMats) {
+      for (const m of glbMats) {
+        if (m === mat) continue
+        m.emissive.r += (tR - m.emissive.r) * LERP
+        m.emissive.g += (tG - m.emissive.g) * LERP
+        m.emissive.b += (tB - m.emissive.b) * LERP
+        m.emissiveIntensity = 0.7
+      }
+    }
 
     const hasShield = statuses.some((s) => s.kind === 'shield')
     const hasHaste = statuses.some((s) => s.kind === 'haste')

@@ -339,10 +339,10 @@ scene.fog = new THREE.FogExp2(0x0d1520, 0.015)
 
 const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 400)
 
-// Sky-dome hemisphere: cool blue-white from above, warm purple from ground.
-scene.add(new THREE.HemisphereLight(0xb0ceff, 0x3a1060, 1.8))
-// Key light — warm golden directional, casts soft shadows.
-const dir = new THREE.DirectionalLight(0xffe8c0, 1.8)
+// Sky-dome hemisphere: neutral/cool so jumping never washes the screen yellow.
+scene.add(new THREE.HemisphereLight(0xc4d8ff, 0x182238, 1.2))
+// Key light — neutral, not golden; gameplay readability beats warm ambience.
+const dir = new THREE.DirectionalLight(0xf0f6ff, 1.15)
 dir.position.set(12, 28, 14)
 dir.castShadow = true
 dir.shadow.mapSize.width = 2048
@@ -359,8 +359,9 @@ scene.add(dir)
 const rim = new THREE.DirectionalLight(0x40c8ff, 0.55)
 rim.position.set(-12, 8, -14)
 scene.add(rim)
-// Ground bounce — very warm, simulates hot arena floor glow.
-const bounce = new THREE.PointLight(0xff6030, 0.6, 30, 2)
+// Ground bounce — subtle warm fill; intentionally low so it doesn't
+// create a visible orange haze when the camera is elevated (jumping).
+const bounce = new THREE.PointLight(0x80a8ff, 0.06, 16, 2)
 bounce.position.set(0, 0.5, 0)
 scene.add(bounce)
 // Player follow-light — soft blue-white halo around the self character,
@@ -374,6 +375,78 @@ const selfEmissive = initSelfEmissive({
 })
 
 const toonGradient = makeToonGradient()
+
+const firstPersonViewModel = new THREE.Group()
+camera.add(firstPersonViewModel)
+scene.add(camera)
+let firstPersonViewWeapon: Weapon | null = null
+
+function clearFirstPersonViewModel(): void {
+  while (firstPersonViewModel.children.length > 0) {
+    const child = firstPersonViewModel.children[0]!
+    child.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return
+      node.geometry.dispose()
+      const material = node.material
+      if (Array.isArray(material)) material.forEach((mat) => mat.dispose())
+      else material.dispose()
+    })
+    firstPersonViewModel.remove(child)
+  }
+}
+
+function viewMat(color: number, opacity = 1): THREE.MeshBasicMaterial {
+  return new THREE.MeshBasicMaterial({
+    color,
+    transparent: opacity < 1,
+    opacity,
+    depthTest: false,
+    depthWrite: false,
+  })
+}
+
+function addViewMesh(
+  geo: THREE.BufferGeometry,
+  mat: THREE.Material,
+  pos: THREE.Vector3Tuple,
+  rot: THREE.Vector3Tuple = [0, 0, 0],
+): void {
+  const mesh = new THREE.Mesh(geo, mat)
+  mesh.position.set(pos[0], pos[1], pos[2])
+  mesh.rotation.set(rot[0], rot[1], rot[2])
+  mesh.renderOrder = 999
+  firstPersonViewModel.add(mesh)
+}
+
+function rebuildFirstPersonViewModel(weapon: Weapon): void {
+  clearFirstPersonViewModel()
+  firstPersonViewWeapon = weapon
+  firstPersonViewModel.position.set(0.52, -0.46, -1.05)
+  firstPersonViewModel.rotation.set(-0.06, -0.1, 0.04)
+
+  const glove = viewMat(0x121826, 0.96)
+  const trim = viewMat(0xffd260, 0.88)
+  addViewMesh(new THREE.BoxGeometry(0.07, 0.09, 0.09), glove, [-0.05, -0.02, 0.03], [0.15, 0, 0.1])
+  addViewMesh(new THREE.BoxGeometry(0.018, 0.08, 0.1), trim, [-0.012, 0.0, 0.025], [0.15, 0, 0.1])
+
+  if (weapon === 'bow') {
+    const bowMat = viewMat(0x8a5a2c, 0.96)
+    const stringMat = viewMat(0xd8d0a0, 0.9)
+    const arc = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.014, 8, 22, Math.PI * 1.45), bowMat)
+    arc.position.set(0.14, 0.04, -0.06)
+    arc.rotation.set(0.2, 0.15, -0.48)
+    arc.renderOrder = 999
+    firstPersonViewModel.add(arc)
+    addViewMesh(new THREE.CylinderGeometry(0.003, 0.003, 0.32, 4), stringMat, [0.05, 0.04, -0.05], [0.15, 0.05, -0.08])
+  } else if (weapon === 'staff') {
+    const staffMat = viewMat(0x241a3a, 0.96)
+    const orbMat = viewMat(0x00d0ff, 0.86)
+    const ringMat = viewMat(0xffd260, 0.58)
+    addViewMesh(new THREE.CylinderGeometry(0.014, 0.018, 0.52, 8), staffMat, [0.12, 0.08, -0.05], [0.38, 0.05, -0.28])
+    addViewMesh(new THREE.SphereGeometry(0.052, 10, 8), orbMat, [0.19, 0.3, -0.15])
+    addViewMesh(new THREE.TorusGeometry(0.075, 0.007, 6, 20), ringMat, [0.19, 0.3, -0.15], [Math.PI / 3, 0.2, 0])
+  }
+}
 
 const { loadMapGeometry, getActiveMapId, animateArena } = buildArena(scene, toonGradient)
 
@@ -1841,6 +1914,9 @@ function render(now: number): void {
     camFovBase += (wFovTarget - camFovBase) * CAM_LERP
 
     selfMesh.visible = !dead && !firstPersonWeapon
+    firstPersonViewModel.visible = !dead && firstPersonWeapon
+    if (firstPersonWeapon && firstPersonViewWeapon !== wSchema) rebuildFirstPersonViewModel(wSchema)
+    if (!firstPersonWeapon && firstPersonViewModel.visible) firstPersonViewModel.visible = false
 
     if (firstPersonWeapon) {
       camera.position.set(x, y + camUp, z)

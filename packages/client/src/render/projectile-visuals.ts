@@ -10,6 +10,7 @@ export interface SchemaProjectile {
   id: string
   ownerId: string
   kind: string
+  element?: string
   x: number
   y: number
   z: number
@@ -19,26 +20,139 @@ export interface SchemaProjectile {
   expired: boolean
 }
 
-const TRAIL_LEN = 8
+const TRAIL_LEN = 10
+
+type ProjectileKind = 'arrow' | 'bolt'
+type ProjectileStyle = 'arrow' | 'fire' | 'ice' | 'lightning' | 'dark' | 'nature' | 'neutral'
 
 interface ProjectileVisual {
-  mesh: THREE.Mesh
+  object: THREE.Object3D
   trail: THREE.Line
   trailBuf: Float32Array // 3 * TRAIL_LEN floats, oldest → newest
   trailCount: number // how many valid positions have been written
   lastPos: THREE.Vector3
   lastAt: number
-  kind: 'arrow' | 'bolt'
+  kind: ProjectileKind
+  style: ProjectileStyle
 }
 
-function makeTrailLine(kind: 'arrow' | 'bolt'): THREE.Line {
+function projectileStyle(kind: ProjectileKind, element?: string): ProjectileStyle {
+  if (kind === 'arrow') return 'arrow'
+  switch (element) {
+    case 'fire':
+    case 'ice':
+    case 'lightning':
+    case 'dark':
+    case 'nature':
+      return element
+    default:
+      return 'neutral'
+  }
+}
+
+function projectileColor(style: ProjectileStyle): number {
+  switch (style) {
+    case 'arrow':
+      return 0xffa040
+    case 'fire':
+      return 0xff4500
+    case 'ice':
+      return 0x00e5ff
+    case 'lightning':
+      return 0xffe600
+    case 'dark':
+      return 0x6a0dad
+    case 'nature':
+      return 0x39ff14
+    default:
+      return 0x00d0ff
+  }
+}
+
+function makeBasicMat(color: number, opacity = 0.94): THREE.MeshBasicMaterial {
+  return new THREE.MeshBasicMaterial({
+    color,
+    transparent: true,
+    opacity,
+    depthWrite: false,
+  })
+}
+
+function makeProjectileObject(kind: ProjectileKind, element?: string): {
+  object: THREE.Object3D
+  style: ProjectileStyle
+} {
+  const style = projectileStyle(kind, element)
+  if (style === 'arrow') {
+    const arrow = makeProjectileMesh('arrow')
+    arrow.userData['pulse'] = false
+    return { object: arrow, style }
+  }
+
+  const color = projectileColor(style)
+  const group = new THREE.Group()
+
+  if (style === 'fire') {
+    group.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.18, 0), makeBasicMat(color, 0.96)))
+    const flame = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.38, 5), makeBasicMat(0xffb000, 0.72))
+    flame.rotation.x = -Math.PI / 2
+    flame.position.z = 0.22
+    group.add(flame)
+  } else if (style === 'ice') {
+    const shard = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.62, 5), makeBasicMat(color, 0.9))
+    shard.rotation.x = Math.PI / 2
+    group.add(shard)
+    const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.13), makeBasicMat(0xffffff, 0.44))
+    group.add(core)
+  } else if (style === 'lightning') {
+    const lance = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.07, 0.82, 5), makeBasicMat(color, 0.96))
+    lance.rotation.x = Math.PI / 2
+    group.add(lance)
+    const cross = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.035, 0.035), makeBasicMat(0xffffff, 0.68))
+    group.add(cross)
+  } else if (style === 'dark') {
+    const shard = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), makeBasicMat(color, 0.92))
+    shard.scale.set(0.8, 0.8, 1.35)
+    group.add(shard)
+    const core = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), makeBasicMat(0x170021, 0.86))
+    group.add(core)
+  } else if (style === 'nature') {
+    const dart = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.58, 6), makeBasicMat(color, 0.9))
+    dart.rotation.x = Math.PI / 2
+    group.add(dart)
+    const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.035, 0.1), makeBasicMat(0xb8ff5a, 0.62))
+    leaf.position.z = -0.16
+    group.add(leaf)
+  } else {
+    group.add(new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 8), makeBasicMat(color, 0.92)))
+    const halo = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.018, 6, 16), makeBasicMat(0x80f0ff, 0.52))
+    group.add(halo)
+  }
+
+  return { object: group, style }
+}
+
+function disposeObject(object: THREE.Object3D): void {
+  object.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return
+    child.geometry.dispose()
+    const material = child.material
+    if (Array.isArray(material)) {
+      material.forEach((mat) => mat.dispose())
+    } else {
+      material.dispose()
+    }
+  })
+}
+
+function makeTrailLine(style: ProjectileStyle): THREE.Line {
   const geo = new THREE.BufferGeometry()
   geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRAIL_LEN * 3), 3))
-  const color = kind === 'arrow' ? 0xffa040 : 0x50ccff
+  const color = projectileColor(style)
   const mat = new THREE.LineBasicMaterial({
     color,
     transparent: true,
-    opacity: 0.45,
+    opacity: style === 'lightning' ? 0.72 : style === 'dark' ? 0.56 : 0.48,
     depthWrite: false,
   })
   const line = new THREE.Line(geo, mat)
@@ -68,11 +182,11 @@ export function initProjectileVisuals({
 
   function onSpawned(msg: ServerProjectileSpawnedMessage): void {
     if (projectileVisuals.has(msg.id)) return
-    const kind: 'arrow' | 'bolt' = msg.kind === 'bolt' ? 'bolt' : 'arrow'
-    const mesh = makeProjectileMesh(kind)
-    mesh.position.set(msg.origin.x, msg.origin.y, msg.origin.z)
-    const trail = makeTrailLine(kind)
-    scene.add(mesh)
+    const kind: ProjectileKind = msg.kind === 'bolt' ? 'bolt' : 'arrow'
+    const { object, style } = makeProjectileObject(kind, msg.element)
+    object.position.set(msg.origin.x, msg.origin.y, msg.origin.z)
+    const trail = makeTrailLine(style)
+    scene.add(object)
     scene.add(trail)
     const buf = new Float32Array(TRAIL_LEN * 3)
     // Initialise all trail points at spawn origin.
@@ -82,21 +196,21 @@ export function initProjectileVisuals({
       buf[i * 3 + 2] = msg.origin.z
     }
     projectileVisuals.set(msg.id, {
-      mesh,
+      object,
       trail,
       trailBuf: buf,
       trailCount: 0,
       lastPos: new THREE.Vector3(msg.origin.x, msg.origin.y, msg.origin.z),
       lastAt: performance.now(),
       kind,
+      style,
     })
   }
 
   function disposeVisual(vis: ProjectileVisual): void {
-    scene.remove(vis.mesh)
+    scene.remove(vis.object)
     scene.remove(vis.trail)
-    vis.mesh.geometry.dispose()
-    ;(vis.mesh.material as THREE.Material).dispose()
+    disposeObject(vis.object)
     vis.trail.geometry.dispose()
     ;(vis.trail.material as THREE.Material).dispose()
   }
@@ -145,11 +259,11 @@ export function initProjectileVisuals({
     proj.forEach((p, id) => {
       let vis = projectileVisuals.get(id)
       if (!vis) {
-        const kind: 'arrow' | 'bolt' = p.kind === 'bolt' ? 'bolt' : 'arrow'
-        const mesh = makeProjectileMesh(kind)
-        mesh.position.set(p.x, p.y, p.z)
-        const trail = makeTrailLine(kind)
-        scene.add(mesh)
+        const kind: ProjectileKind = p.kind === 'bolt' ? 'bolt' : 'arrow'
+        const { object, style } = makeProjectileObject(kind, p.element)
+        object.position.set(p.x, p.y, p.z)
+        const trail = makeTrailLine(style)
+        scene.add(object)
         scene.add(trail)
         const buf = new Float32Array(TRAIL_LEN * 3)
         for (let i = 0; i < TRAIL_LEN; i++) {
@@ -158,23 +272,29 @@ export function initProjectileVisuals({
           buf[i * 3 + 2] = p.z
         }
         vis = {
-          mesh,
+          object,
           trail,
           trailBuf: buf,
           trailCount: 0,
           lastPos: new THREE.Vector3(p.x, p.y, p.z),
           lastAt: now,
           kind,
+          style,
         }
         projectileVisuals.set(id, vis)
       }
-      vis.mesh.position.set(p.x, p.y, p.z)
+      vis.object.position.set(p.x, p.y, p.z)
       const sp = Math.hypot(p.vx, p.vy, p.vz)
-      if (vis.kind === 'arrow' && sp > 0.01) {
-        vis.mesh.lookAt(p.x + p.vx, p.y + p.vy, p.z + p.vz)
-      } else if (vis.kind === 'bolt') {
-        vis.mesh.rotation.y += 0.06
-        vis.mesh.scale.setScalar(1.0 + 0.08 * Math.sin(now * 0.022))
+      if (sp > 0.01) {
+        vis.object.lookAt(p.x + p.vx, p.y + p.vy, p.z + p.vz)
+      }
+      if (vis.kind === 'bolt') {
+        const pulse = 1.0 + 0.08 * Math.sin(now * 0.022)
+        vis.object.scale.setScalar(pulse)
+        if (vis.style === 'lightning') vis.object.rotation.z += 0.24
+        else if (vis.style === 'dark') vis.object.rotation.z -= 0.06
+        else if (vis.style === 'fire') vis.object.rotation.z += 0.11
+        else vis.object.rotation.z += 0.045
       }
       updateTrail(vis, p.x, p.y, p.z)
       vis.lastPos.set(p.x, p.y, p.z)

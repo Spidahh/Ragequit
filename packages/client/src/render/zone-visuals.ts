@@ -4,6 +4,8 @@ import * as THREE from 'three'
 interface ZoneVisual {
   mesh: THREE.Mesh
   extra?: THREE.Mesh
+  accent?: THREE.Mesh
+  element: string
 }
 
 export interface ZoneVisualsOptions {
@@ -41,14 +43,31 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
   function onSpawned(msg: ServerZoneSpawnedMessage): void {
     if (zoneVisuals.has(msg.id)) return
     let mesh: THREE.Mesh
+    const zColor = zoneColorForElement(msg.element)
     if (msg.shape === 'wall' && msg.width > 0) {
       const geo = new THREE.BoxGeometry(msg.width, 1.6, 0.4)
-      const mat = new THREE.MeshBasicMaterial({ color: 0xff6a32, transparent: true, opacity: 0.7 })
+      const mat = new THREE.MeshBasicMaterial({ color: zColor, transparent: true, opacity: 0.7 })
       mesh = new THREE.Mesh(geo, mat)
       mesh.position.set(msg.pos.x, msg.pos.y + 0.8, msg.pos.z)
       mesh.rotation.y = msg.yaw
+
+      const edgeGeo = new THREE.BoxGeometry(msg.width + 0.08, 1.72, 0.06)
+      const edgeMat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.28,
+        depthWrite: false,
+      })
+      const edge = new THREE.Mesh(edgeGeo, edgeMat)
+      edge.position.set(msg.pos.x, msg.pos.y + 0.8, msg.pos.z)
+      edge.rotation.y = msg.yaw
+      edge.position.x += Math.sin(msg.yaw) * 0.23
+      edge.position.z += Math.cos(msg.yaw) * 0.23
+      scene.add(mesh)
+      scene.add(edge)
+      zoneVisuals.set(msg.id, { mesh, extra: edge, element: msg.element })
+      return
     } else {
-      const zColor = zoneColorForElement(msg.element)
       const cylinderGeo = new THREE.CylinderGeometry(msg.radius, msg.radius, 1.8, 28, 1, true)
       const cylinderMat = new THREE.MeshBasicMaterial({
         color: zColor,
@@ -71,11 +90,23 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
       const floorMesh = new THREE.Mesh(floorGeo, floorMat)
       floorMesh.position.set(msg.pos.x, msg.pos.y + 0.018, msg.pos.z)
       scene.add(floorMesh)
-      zoneVisuals.set(msg.id, { mesh, extra: floorMesh })
+
+      const accentGeo = new THREE.TorusGeometry(msg.radius * 0.72, 0.035, 6, 24)
+      accentGeo.rotateX(-Math.PI / 2)
+      const accentMat = new THREE.MeshBasicMaterial({
+        color: msg.element === 'dark' ? 0x170021 : 0xffffff,
+        transparent: true,
+        opacity: msg.element === 'dark' ? 0.34 : 0.22,
+        depthWrite: false,
+      })
+      const accentMesh = new THREE.Mesh(accentGeo, accentMat)
+      accentMesh.position.set(msg.pos.x, msg.pos.y + 0.055, msg.pos.z)
+      scene.add(accentMesh)
+      zoneVisuals.set(msg.id, { mesh, extra: floorMesh, accent: accentMesh, element: msg.element })
       return
     }
     scene.add(mesh)
-    zoneVisuals.set(msg.id, { mesh })
+    zoneVisuals.set(msg.id, { mesh, element: msg.element })
   }
 
   function onExpired(msg: ServerZoneExpiredMessage): void {
@@ -88,6 +119,11 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
       scene.remove(vis.extra)
       vis.extra.geometry.dispose()
       ;(vis.extra.material as THREE.Material).dispose()
+    }
+    if (vis.accent) {
+      scene.remove(vis.accent)
+      vis.accent.geometry.dispose()
+      ;(vis.accent.material as THREE.Material).dispose()
     }
     zoneVisuals.delete(msg.id)
   }
@@ -102,6 +138,11 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
         vis.extra.geometry.dispose()
         ;(vis.extra.material as THREE.Material).dispose()
       }
+      if (vis.accent) {
+        scene.remove(vis.accent)
+        vis.accent.geometry.dispose()
+        ;(vis.accent.material as THREE.Material).dispose()
+      }
     })
     zoneVisuals.clear()
   }
@@ -110,9 +151,7 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
     zoneVisuals.forEach((vis) => {
       // Use a faster pulse for dangerous/aggressive elements (fire/lightning),
       // slower for nature/ice zones — gives each element a distinct rhythm.
-      const matColor = (vis.mesh.material as THREE.MeshBasicMaterial).color
-      const isFireOrLightning =
-        matColor.r > 0.9 || (matColor.r > 0.5 && matColor.g > 0.5 && matColor.b < 0.3)
+      const isFireOrLightning = vis.element === 'fire' || vis.element === 'lightning'
       const freq = isFireOrLightning ? 0.007 : 0.0035
       const pulse = 0.5 + 0.5 * Math.sin(now * freq)
       const mat = vis.mesh.material as THREE.MeshBasicMaterial
@@ -122,6 +161,13 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
         // Floor ring pulses with slightly higher opacity for clear AoE boundary.
         const eMat = vis.extra.material as THREE.MeshBasicMaterial
         if ('opacity' in eMat) eMat.opacity = 0.4 + pulse * 0.28
+      }
+      if (vis.accent) {
+        const aMat = vis.accent.material as THREE.MeshBasicMaterial
+        if ('opacity' in aMat) aMat.opacity = 0.12 + pulse * 0.2
+        vis.accent.rotation.z += vis.element === 'dark' ? -0.018 : 0.014
+        if (vis.element === 'ice') vis.accent.scale.setScalar(1.0 + pulse * 0.05)
+        else if (vis.element === 'nature') vis.accent.scale.set(1.0 + pulse * 0.08, 1, 1.0 + pulse * 0.08)
       }
     })
   }

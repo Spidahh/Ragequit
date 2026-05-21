@@ -239,6 +239,15 @@ export function initSelfHud({
           const pulse = 0.5 + 0.5 * Math.sin(now * 0.012)
           mat.emissiveIntensity = 0.7 + pulse * 1.1
           mat.emissive.setHex(elemHex)
+          // Propagate to all GLB mesh materials
+          const glbMats = selfMesh.userData['glbMaterials'] as THREE.MeshToonMaterial[] | undefined
+          if (glbMats) {
+            for (const m of glbMats) {
+              if (m === mat) continue
+              m.emissiveIntensity = 0.7 + pulse * 1.1
+              m.emissive.setHex(elemHex)
+            }
+          }
         }
       }
     } else {

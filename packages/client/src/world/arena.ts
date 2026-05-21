@@ -1,6 +1,5 @@
 import { getMap, type AABB } from '@ragequit/shared'
 import * as THREE from 'three'
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 
 // Only the three properties that main.ts needs. Everything else (arenaRing,
 // torchLights, particles, etc.) is fully encapsulated inside buildArena.
@@ -272,7 +271,7 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
       const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.18, 8), bowlMat)
       bowl.position.set(px, 7.47, pz)
       procColosseumGroup.add(bowl)
-      const torch = new THREE.PointLight(0xff8830, 0.8, 18, 2)
+      const torch = new THREE.PointLight(0xffbb66, 0.28, 12, 2)
       torch.position.set(px, 7.8, pz)
       // Lights must stay in the scene (not the group) — group.visible=false would
       // hide their illumination too. Move torch to scene but keep positional sync.
@@ -428,7 +427,8 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
     const ring = i < 140
     const spread = ring ? 28 : 52
     particlePositions[i * 3] = (Math.random() - 0.5) * spread
-    particlePositions[i * 3 + 1] = Math.random() * (ring ? 8 : 22)
+    // Start at y ≥ 2 so ground-level and low-jump camera doesn't fly through them.
+    particlePositions[i * 3 + 1] = 2 + Math.random() * (ring ? 8 : 20)
     particlePositions[i * 3 + 2] = (Math.random() - 0.5) * spread
     particleVels[i * 3] = (Math.random() - 0.5) * 0.003
     particleVels[i * 3 + 1] = (ring ? 0.006 : 0.003) + Math.random() * 0.007
@@ -439,10 +439,10 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
   const ambientParticles = new THREE.Points(
     particleGeo,
     new THREE.PointsMaterial({
-      color: 0xff8866,
-      size: 0.09,
+      color: 0x6090cc, // cool blue-grey — was warm orange 0xff8866 which caused yellow haze
+      size: 0.07,
       transparent: true,
-      opacity: 0.42,
+      opacity: 0.18,   // was 0.42; halved so they don't fog the arena from above
       sizeAttenuation: true,
     }),
   )
@@ -483,53 +483,9 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
   )
   scene.add(magicParticles)
 
-  // ── Gladiators arena GLB — decorative architectural shell ─────────────────
-  // Loaded asynchronously; the procedural arena is visible immediately as
-  // fallback. On success, the GLB shell replaces procColosseumGroup.
-  const loader = new GLTFLoader()
-  loader.load(
-    '/arena/gladiators_arena.glb',
-    (gltf) => {
-      const arenaModel = gltf.scene
-
-      // Auto-scale: fit the GLB within the 80-unit procedural ground.
-      const bbox = new THREE.Box3().setFromObject(arenaModel)
-      const size = new THREE.Vector3()
-      bbox.getSize(size)
-      const maxHorizontal = Math.max(size.x, size.z)
-      const scale = maxHorizontal > 0 ? 78 / maxHorizontal : 1
-      arenaModel.scale.setScalar(scale)
-
-      // Re-center: align the GLB floor to y=0.
-      const bboxScaled = new THREE.Box3().setFromObject(arenaModel)
-      arenaModel.position.y = -bboxScaled.min.y
-
-      // Apply toon material to all GLB meshes for visual consistency with the
-      // existing cel-shaded scene.
-      arenaModel.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          const origMat = child.material as THREE.MeshStandardMaterial
-          child.material = new THREE.MeshToonMaterial({
-            color: origMat.color ?? new THREE.Color(0x2a3a50),
-            map: origMat.map ?? null,
-            gradientMap: toonGradient,
-          })
-          child.castShadow = true
-          child.receiveShadow = true
-        }
-      })
-
-      scene.add(arenaModel)
-
-      // GLB loaded — hide procedural colosseum to avoid duplication.
-      procColosseumGroup.visible = false
-    },
-    undefined, // onProgress — not needed
-    (err) => {
-      // GLB failed to load — procedural arena stays fully visible as fallback.
-      console.warn('[arena] GLB load failed, using procedural fallback', err)
-    },
-  )
+  // The old decorative GLB shell is intentionally not mounted here: in-game it
+  // placed large cloth-like shapes inside the player's view cone. The procedural
+  // arena keeps silhouettes clean until the shell asset is curated for gameplay.
 
   // ── Map geometry (dynamic, swapped by server schema) ──────────────────────
   let activeMapId = ''
@@ -577,7 +533,7 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
         pArr[i1] = (pArr[i1] ?? 0) + (particleVels[i1] ?? 0)
         pArr[i2] = (pArr[i2] ?? 0) + (particleVels[i2] ?? 0)
         if ((pArr[i1] ?? 0) > 18) {
-          pArr[i1] = 0
+          pArr[i1] = 2
           pArr[i0] = (Math.random() - 0.5) * 56
           pArr[i2] = (Math.random() - 0.5) * 56
         }

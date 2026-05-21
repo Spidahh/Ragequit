@@ -1,7 +1,6 @@
-import { CAPSULE_HALF_HEIGHT_M, CAPSULE_HEIGHT_M, CAPSULE_RADIUS_M } from '@ragequit/shared'
+import { CAPSULE_HEIGHT_M, CAPSULE_RADIUS_M } from '@ragequit/shared'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
-import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js'
 
 // ---------------------------------------------------------------------------
 // Weapon GLB loader — shared loader + cache so each model is fetched once.
@@ -17,6 +16,7 @@ const _WEAPON_GLB: Record<string, string> = {
   bow: '/weapons/bow.glb',
   staff: '/weapons/staff.glb',
 }
+const USE_WEAPON_GLB = false
 
 function _fetchWeaponGlb(weapon: string): Promise<THREE.Group> {
   const hit = _glbCache.get(weapon)
@@ -100,60 +100,6 @@ function _applyGlbToWeaponGroup(
 //   appropriate clip: Death → Dagger_Attack → Run → Attacking_Idle.
 // ---------------------------------------------------------------------------
 
-interface _CharGlbData {
-  scene: THREE.Group
-  animations: THREE.AnimationClip[]
-}
-
-let _charGlbData: _CharGlbData | null = null
-let _charGlbInflight: Promise<_CharGlbData> | null = null
-
-function _fetchCharGlb(): Promise<_CharGlbData> {
-  if (_charGlbData) return Promise.resolve(_charGlbData)
-  if (_charGlbInflight) return _charGlbInflight
-  _charGlbInflight = new Promise((resolve, reject) => {
-    _loader.load(
-      '/characters/player.glb',
-      (gltf) => {
-        _charGlbData = { scene: gltf.scene, animations: gltf.animations }
-        _charGlbInflight = null
-        resolve(_charGlbData)
-      },
-      undefined,
-      reject,
-    )
-  })
-  return _charGlbInflight
-}
-
-type _AnimName = 'Idle' | 'Attacking_Idle' | 'Run' | 'Dagger_Attack' | 'Death'
-const _ANIM_NAMES: _AnimName[] = ['Idle', 'Attacking_Idle', 'Run', 'Dagger_Attack', 'Death']
-
-interface _MixerStore {
-  mixer: THREE.AnimationMixer
-  actions: Partial<Record<_AnimName, THREE.AnimationAction>>
-  current: _AnimName
-}
-
-function _crossfade(store: _MixerStore, next: _AnimName, fadeSec: number): void {
-  if (store.current === next) return
-  const from = store.actions[store.current]
-  const to = store.actions[next]
-  // Always update current — avoids busy-loop retrying a missing clip every frame
-  store.current = next
-  if (!to) return
-  to.reset()
-  if (next === 'Dagger_Attack' || next === 'Death') {
-    to.setLoop(THREE.LoopOnce, 1)
-    to.clampWhenFinished = true
-  } else {
-    to.setLoop(THREE.LoopRepeat, Infinity)
-    to.clampWhenFinished = false
-  }
-  to.play()
-  if (from) from.crossFadeTo(to, fadeSec, true)
-}
-
 /** Describes the character's current gameplay state for animation selection. */
 export interface CharAnimState {
   moving: boolean
@@ -172,105 +118,23 @@ export function loadCharacterGlb(
   teamColor: number,
   toonGradient: THREE.DataTexture,
 ): void {
-  _fetchCharGlb()
-    .then(({ scene, animations }) => {
-      // Guard: group was disposed (player disconnected before load finished)
-      if (charGroup.userData['disposed'] as boolean) return
-
-      // Deep-clone with proper skeleton remapping
-      const model = skeletonClone(scene) as THREE.Group
-
-      // Scale so character height equals capsule height
-      const bbox0 = new THREE.Box3().setFromObject(model)
-      const modelH = bbox0.max.y - bbox0.min.y
-      if (modelH > 0) model.scale.setScalar(CAPSULE_HEIGHT_M / modelH)
-
-      // Floor-align: feet sit at -CAPSULE_HALF_HEIGHT_M (y=0 = capsule centre)
-      const bbox1 = new THREE.Box3().setFromObject(model)
-      model.position.y = -(CAPSULE_HALF_HEIGHT_M + bbox1.min.y)
-
-      // Apply toon shading; team colour bleeds in via low-intensity emissive.
-      // Collect ALL mesh materials so the emissive-blink system can illuminate
-      // the full character, not just the first mesh.
-      const glbMaterials: THREE.MeshToonMaterial[] = []
-      model.traverse((child) => {
-        if (!(child instanceof THREE.Mesh)) return
-        const orig = child.material as THREE.MeshStandardMaterial
-        const mat = new THREE.MeshToonMaterial({
-          color: orig.color?.clone() ?? new THREE.Color(0xffffff),
-          map: orig.map ?? null,
-          gradientMap: toonGradient,
-          emissive: new THREE.Color(teamColor),
-          emissiveIntensity: 0.12,
-        })
-        child.material = mat
-        child.castShadow = true
-        glbMaterials.push(mat)
-      })
-
-      // 'armorMat' → primary material read by emissive-blink logic
-      // 'glbMaterials' → full list so ALL meshes receive the flash
-      if (glbMaterials.length > 0) {
-        charGroup.userData['armorMat'] = glbMaterials[0]
-        charGroup.userData['glbMaterials'] = glbMaterials
-      }
-
-      // Hide procedural parts (keep weaponGroup so weapon GLBs still appear)
-      const wg = charGroup.userData['weaponGroup'] as THREE.Group | undefined
-      for (const child of charGroup.children) {
-        if (child !== wg) child.visible = false
-      }
-      charGroup.add(model)
-      charGroup.userData['charModel'] = model
-
-      // Wire up AnimationMixer
-      const mixer = new THREE.AnimationMixer(model)
-      const actions: Partial<Record<_AnimName, THREE.AnimationAction>> = {}
-      for (const name of _ANIM_NAMES) {
-        const clip = animations.find((a) => a.name === name)
-        if (clip) actions[name] = mixer.clipAction(clip)
-      }
-
-      // Pick the best available initial clip; track whichever actually plays
-      const initial: _AnimName = actions['Attacking_Idle']
-        ? 'Attacking_Idle'
-        : actions['Idle']
-          ? 'Idle'
-          : 'Run'
-      const initAction = actions[initial]
-      if (initAction) {
-        initAction.setLoop(THREE.LoopRepeat, Infinity)
-        initAction.play()
-      }
-
-      const store: _MixerStore = { mixer, actions, current: initial }
-      charGroup.userData['mixerStore'] = store
-    })
-    .catch((err) => {
-      console.warn('[character] GLB load failed, keeping procedural', err)
-    })
+  void charGroup
+  void teamColor
+  void toonGradient
+  // The current character GLB deforms into huge triangles in gameplay. Keep the
+  // procedural low-poly body until the rig asset is replaced or repaired.
 }
 
 /** Advance this character's AnimationMixer by deltaS seconds. */
 export function tickCharacterMixer(charGroup: THREE.Group, deltaS: number): void {
-  const store = charGroup.userData['mixerStore'] as _MixerStore | undefined
-  if (!store) return
-  store.mixer.update(Math.min(deltaS, 0.1)) // clamp to avoid large jumps after tab switch
+  void charGroup
+  void deltaS
 }
 
 /** Drive the animation state machine based on current gameplay state. */
 export function setCharAnimState(charGroup: THREE.Group, state: CharAnimState): void {
-  const store = charGroup.userData['mixerStore'] as _MixerStore | undefined
-  if (!store) return
-  const target: _AnimName = !state.alive
-    ? 'Death'
-    : state.attacking
-      ? 'Dagger_Attack'
-      : state.moving
-        ? 'Run'
-        : 'Attacking_Idle'
-  const fadeSec = target === 'Death' ? 0.3 : target === 'Dagger_Attack' ? 0.1 : 0.2
-  _crossfade(store, target, fadeSec)
+  void charGroup
+  void state
 }
 
 /**
@@ -278,11 +142,6 @@ export function setCharAnimState(charGroup: THREE.Group, state: CharAnimState): 
  * Call before removing the group from the scene to prevent memory leaks.
  */
 export function disposeCharacterMixer(charGroup: THREE.Group): void {
-  const store = charGroup.userData['mixerStore'] as _MixerStore | undefined
-  if (!store) return
-  store.mixer.stopAllAction()
-  const model = charGroup.userData['charModel'] as THREE.Object3D | undefined
-  if (model) store.mixer.uncacheRoot(model)
   delete charGroup.userData['mixerStore']
   delete charGroup.userData['charModel']
   delete charGroup.userData['glbMaterials']
@@ -487,7 +346,7 @@ export function applyWeaponProp(
 
   // Async GLB upgrade — replaces procedural once the model arrives.
   // Guard against stale callbacks when weapon changes before load completes.
-  if (_WEAPON_GLB[weapon]) {
+  if (USE_WEAPON_GLB && _WEAPON_GLB[weapon]) {
     _fetchWeaponGlb(weapon)
       .then((base) => {
         if ((wg.userData['weapon'] as string) !== weapon) return
