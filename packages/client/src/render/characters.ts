@@ -289,8 +289,12 @@ function _chooseAnimState(store: _MixerStore, state: CharAnimState): _AnimName {
   if (state.airborne) return _firstAvailable(store, ['Airborne', 'Jump', 'Attacking_Idle'])
   // Regular jump take-off (left the ground from self-initiated jump).
   if (state.jumping) return _firstAvailable(store, ['Jump', 'Airborne', 'Attacking_Idle'])
-  if (state.casting && weapon === 'staff')
+  if (state.casting && weapon === 'staff') {
+    // Channel (looping beam) vs Staff_Cast (one-shot burst) based on ability type.
+    if (state.channeling)
+      return _firstAvailable(store, ['Channel', 'Staff_Cast', 'Punch', 'Attacking_Idle'])
     return _firstAvailable(store, ['Staff_Cast', 'Channel', 'Punch', 'Attacking_Idle'])
+  }
 
   if (state.bowCharging) return _firstAvailable(store, ['Bow_Draw', 'Attacking_Idle', 'Idle'])
 
@@ -420,6 +424,8 @@ export interface CharAnimState {
   jumping?: boolean
   /** True for ~400 ms after touching the ground — plays the landing clip once. */
   landing?: boolean
+  /** True when the active cast is a channel effect — selects the looping Channel clip. */
+  channeling?: boolean
 }
 
 function _installCharacterModel(

@@ -1,4 +1,4 @@
-import { HP_MAX, INTERPOLATION_DELAY_MS } from '@ragequit/shared'
+import { ABILITY_DEFS, HP_MAX, INTERPOLATION_DELAY_MS } from '@ragequit/shared'
 import * as THREE from 'three'
 
 import {
@@ -29,6 +29,7 @@ export interface RemotePlayerSchema {
   invulnUntilTick: number
   parrying?: boolean
   onGround?: boolean
+  castAbilityId?: string
   statuses: ReadonlyArray<{ kind: string; stacks: number; remainingSec: number }>
 }
 
@@ -62,6 +63,8 @@ interface RemoteState {
   airborne: boolean
   bowCharging: boolean
   casting: boolean
+  /** True when the current cast is a channel effect (looping Channel clip). */
+  channeling: boolean
   comboIndex: number
   deathStartedAt: number
   parrying: boolean
@@ -206,6 +209,7 @@ export function initRemotePlayers({
       airborne: false,
       bowCharging: false,
       casting: false,
+      channeling: false,
       comboIndex: 0,
       deathStartedAt: 0,
       parrying: false,
@@ -271,6 +275,10 @@ export function initRemotePlayers({
       r.airborne = (p.airborneUntilTick ?? 0) > schemaTick
       r.bowCharging = remoteWeapon === 'bow' && (p.bowChargeStartTick ?? 0) > 0
       r.casting = !!p.casting && p.castEndsAtTick > schemaTick
+      r.channeling =
+        r.casting &&
+        (ABILITY_DEFS[p.castAbilityId ?? '']?.effects?.some((e) => e.kind === 'channel') ??
+          false)
       r.comboIndex = p.comboIndex ?? 0
       r.parrying = !!p.parrying
       // Jump / land animation transitions from server onGround field.
@@ -370,6 +378,7 @@ export function initRemotePlayers({
         airborne: r.airborne,
         bowCharging: r.bowCharging,
         casting: r.casting,
+        channeling: r.channeling,
         alive: r.alive,
         parrying: r.parrying,
         hitReact: now < r.hitReactUntilMs,

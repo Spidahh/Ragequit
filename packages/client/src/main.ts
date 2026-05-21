@@ -1944,6 +1944,11 @@ function render(now: number): void {
       airborne,
       bowCharging: wSchema === 'bow' && (self.bowChargeStartMs > 0 || (selfSchema?.bowChargeStartTick ?? 0) > 0),
       casting: !!selfSchema?.casting && selfSchema.castEndsAtTick > tickNow,
+      channeling:
+        !!selfSchema?.casting &&
+        selfSchema.castEndsAtTick > tickNow &&
+        (ABILITY_DEFS[selfSchema.castAbilityId]?.effects?.some((e) => e.kind === 'channel') ??
+          false),
       alive: !dead,
       parrying: !!selfSchema?.parrying,
       hitReact: !dead && now < selfHitReactUntilMs,
