@@ -15,6 +15,7 @@ import { SWING_ARC_YAW_OFFSET, makeSwingArcMesh } from './factories.js'
 // Minimal schema shape consumed by this module.
 export interface RemotePlayerSchema {
   name: string
+  team: string // '' for non-team modes; 'red' | 'blue' for 5v5
   transform: { x: number; y: number; z: number; yaw: number }
   hp: number
   alive: boolean
@@ -24,6 +25,12 @@ export interface RemotePlayerSchema {
   castEndsAtTick: number
   invulnUntilTick: number
   statuses: ReadonlyArray<{ kind: string; stacks: number; remainingSec: number }>
+}
+
+// Team-colour table: self is always blue, remotes are red unless same team.
+const TEAM_COLORS: Record<string, number> = {
+  enemy: 0xe04a4a,   // red — default for non-team modes / opposing 5v5 team
+  ally:  0x3a8fde,   // blue — same 5v5 team as self
 }
 
 interface RemoteSnapshot {
@@ -57,6 +64,7 @@ export interface RemotePlayersOptions {
   isWeapon: (w: string) => boolean
   capsuleHeightM: number
   capsuleHalfHeightM: number
+  getSelfTeam: () => string // '' | 'red' | 'blue' — used to colour allies vs enemies in 5v5
 }
 
 export interface RemotePlayersController {
@@ -86,39 +94,50 @@ export function initRemotePlayers({
   isWeapon,
   capsuleHeightM,
   capsuleHalfHeightM,
+  getSelfTeam,
 }: RemotePlayersOptions): RemotePlayersController {
   const remotePlayers = new Map<string, RemoteState>()
   const remoteDamageBlinkUntil = new Map<string, number>()
   let _prevFrameNow = 0 // used to compute real frame delta for AnimationMixer
 
+  function resolveRemoteColor(p: RemotePlayerSchema): number {
+    const selfTeam = getSelfTeam()
+    if (selfTeam && p.team && p.team === selfTeam) return TEAM_COLORS['ally']!
+    return TEAM_COLORS['enemy']!
+  }
+
   function spawnRemote(p: RemotePlayerSchema, sid: string): RemoteState {
-    const mesh = makeCharacter(0xe04a4a, toonGradient)
+    const color = resolveRemoteColor(p)
+    const mesh = makeCharacter(color, toonGradient)
     scene.add(mesh)
-    loadCharacterGlb(mesh, 0xe04a4a, toonGradient)
+    loadCharacterGlb(mesh, color, toonGradient)
     const arc = makeSwingArcMesh()
     scene.add(arc)
     const castRing = makeCastRing()
     scene.add(castRing)
+    const isAlly = resolveRemoteColor(p) === TEAM_COLORS['ally']
+    const nameColor = isAlly ? '#80b8ff' : '#ff8080'
+    const nameGlow = isAlly ? 'rgba(60,120,255,0.5)' : 'rgba(255,60,60,0.5)'
+    const borderColor = isAlly ? 'rgba(60,120,255,0.28)' : 'rgba(255,60,60,0.28)'
     const nameplate = document.createElement('div')
     nameplate.style.cssText = [
       'position:absolute',
       'transform:translate(-50%,-100%)',
       'text-align:center',
       'pointer-events:none',
-      'padding:4px 8px 5px',
-      'background:rgba(8,10,18,0.72)',
-      'border:1px solid rgba(255,255,255,0.10)',
-      'border-radius:6px',
-      'backdrop-filter:blur(2px)',
+      'padding:3px 7px 4px',
+      'background:rgba(5,7,13,0.86)',
+      `border:1px solid ${borderColor}`,
+      'border-radius:3px',
     ].join(';')
     const nameLabel = document.createElement('div')
     nameLabel.textContent = p.name || `#${sid.slice(0, 4)}`
     nameLabel.style.cssText = [
-      'color:#ffb0b0',
-      'font:700 12px/1 ui-monospace,monospace',
-      'text-shadow:0 1px 4px #000,0 0 6px rgba(255,60,60,0.5)',
-      'margin-bottom:4px',
-      'letter-spacing:0.06em',
+      `color:${nameColor}`,
+      'font:700 11px/1 Rajdhani,ui-monospace,monospace',
+      `text-shadow:0 1px 3px #000,0 0 6px ${nameGlow}`,
+      'margin-bottom:3px',
+      'letter-spacing:0.08em',
       'white-space:nowrap',
     ].join(';')
     const barRow = document.createElement('div')

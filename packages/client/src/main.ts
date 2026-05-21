@@ -89,6 +89,7 @@ import {
   trackAbilityCast,
 } from './telemetry.js'
 import { ImpactPool } from './vfx/impact-pool.js'
+import { DeathBurst } from './vfx/death-burst.js'
 import { buildArena } from './world/arena.js'
 
 // -----------------------------------------------------------------------
@@ -493,6 +494,9 @@ const impactVfx = new ImpactPool()
 scene.add(impactVfx.mesh)
 scene.add(impactVfx.ringMesh)
 
+const deathBurstVfx = new DeathBurst()
+scene.add(deathBurstVfx.mesh)
+
 const zoneVfx = initZoneVisuals({ scene })
 const projectileVfx = initProjectileVisuals({
   scene,
@@ -506,6 +510,7 @@ const remotePlayerSystem = initRemotePlayers({
   isWeapon,
   capsuleHeightM: CAPSULE_HEIGHT_M,
   capsuleHalfHeightM: CAPSULE_HALF_HEIGHT_M,
+  getSelfTeam: () => getSelfSchemaPlayer()?.team ?? '',
 })
 
 const hitFeedback = initHitFeedback({
@@ -900,6 +905,12 @@ const menu = initMenu({
     menu.hideMain()
     loadoutStation.open()
   },
+  onFfa: () => {
+    loadoutReturnsToPause = false
+    pendingLaunchMode = 'ffa'
+    menu.hideMain()
+    loadoutStation.open()
+  },
   onTraining: () => {
     loadoutReturnsToPause = false
     pendingLaunchMode = 'training'
@@ -970,7 +981,13 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
   try {
     const client = new Client(SERVER_URL)
     const token = await getAccessToken().catch(() => null)
-    const roomOptions: Record<string, unknown> = { mode, botFill: mode === 'duel_arena' }
+    // botFill=true → server spawns a bot opponent at match start.
+    // 1v1 always gets a bot (no matchmaking yet). Training: server handles bot
+    // via mode check. FFA: no bots — it's a multiplayer free-for-all.
+    const roomOptions: Record<string, unknown> = {
+      mode,
+      botFill: mode === 'duel_arena',
+    }
     if (token) roomOptions['token'] = token
     const joinedRoom = await client.joinOrCreate('game', roomOptions)
     const mainMenuHidden =
@@ -1308,6 +1325,10 @@ function onDeath(msg: ServerDeathMessage): void {
 
   combatFeedHud.addKillFeedEntry(killerName, victimName, isSelfKill, isSelfDied)
 
+  // World-space death burst — red particle explosion at victim position.
+  const deathPos = getPlayerWorldPos(msg.victimId)
+  if (deathPos) deathBurstVfx.spawn(deathPos, isSelfKill && !isSelfDied)
+
   if (isSelfKill && !isSelfDied) trackKill(msg.cause ?? 'unknown')
   if (isSelfDied) {
     trackDeath(msg.cause ?? 'unknown')
@@ -1600,6 +1621,11 @@ function getSchemaTick(): number {
 function getSchemaMapId(): string {
   if (!room?.state) return 'blockout'
   return (room.state as { mapId?: string }).mapId ?? 'blockout'
+}
+
+function getSchemaMode(): string {
+  if (!room?.state) return 'duel_arena'
+  return (room.state as { mode?: string }).mode ?? 'duel_arena'
 }
 
 function sendAbilityCast(abilityId: string, tick: number): void {
@@ -1999,6 +2025,7 @@ function render(now: number): void {
   if (proj) projectileVfx.renderFrame(proj as Map<string, SchemaProjectile>, now, dbgProj)
 
   impactVfx.update(now)
+  deathBurstVfx.update(now)
 
   // HUD + debug.
   dbgTick.textContent = String(tickNow)
@@ -2037,6 +2064,7 @@ function render(now: number): void {
     serverCharging: !!selfSchema && selfSchema.bowChargeStartTick > 0,
     selfSchema: selfSchema ?? null,
     livePhaseStartTick,
+    isRoundMode: getSchemaMode() === 'duel_arena' || getSchemaMode() === 'training',
     clearBowCharge: () => {
       if (self) {
         self.bowChargeStartMs = 0

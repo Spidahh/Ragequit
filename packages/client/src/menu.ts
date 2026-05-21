@@ -65,6 +65,7 @@ export interface MenuApi {
 
 export function initMenu(handlers: {
   onPlay: () => void
+  onFfa: () => void
   onTraining: () => void
   onLoadout: () => void
   onScoreboardBack: () => void
@@ -90,6 +91,7 @@ export function initMenu(handlers: {
   document.body.classList.add('main-menu-active')
 
   document.getElementById('menu-play')?.addEventListener('click', () => handlers.onPlay())
+  document.getElementById('menu-ffa')?.addEventListener('click', () => handlers.onFfa())
   document.getElementById('menu-train')?.addEventListener('click', () => handlers.onTraining())
   document.getElementById('menu-loadout')?.addEventListener('click', () => handlers.onLoadout())
   sbBack.addEventListener('click', () => handlers.onScoreboardBack())

@@ -32,6 +32,7 @@ export interface CombatOverlayUpdateParams {
   serverCharging: boolean
   selfSchema: CombatOverlaySchema | null
   livePhaseStartTick: number
+  isRoundMode: boolean
   clearBowCharge: () => void
 }
 
@@ -63,6 +64,7 @@ export function initCombatOverlayHud({
     serverCharging,
     selfSchema,
     livePhaseStartTick,
+    isRoundMode,
     clearBowCharge,
   }: CombatOverlayUpdateParams): void {
     // Bow charge bar.
@@ -105,12 +107,17 @@ export function initCombatOverlayHud({
       parryRing.classList.remove('active', 'hold')
     }
 
-    // Round live timer.
-    if (livePhaseStartTick >= 0 && tickNow > 0) {
+    // Round live timer — only shown in round-based modes (duel_arena, training).
+    // FFA and 5v5 are kill-based with no time limit.
+    if (isRoundMode && livePhaseStartTick >= 0 && tickNow > 0) {
       const elapsed = (tickNow - livePhaseStartTick) / TICK_RATE_HZ
       const secsLeft = Math.max(0, ROUND_TIMER_SEC - elapsed)
       roundTimer.textContent = secsLeft.toFixed(0) + 's'
       roundTimer.classList.toggle('urgent', secsLeft <= 15)
+      roundTimer.style.display = ''
+    } else if (!isRoundMode) {
+      roundTimer.textContent = ''
+      roundTimer.style.display = 'none'
     }
 
     // Low-HP vignette + blind vignette + death overlay + heal flash.
