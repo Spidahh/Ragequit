@@ -93,7 +93,7 @@ Usare sempre una scena arena scura dietro i menu:
 Asset da usare:
 
 - `packages/client/public/arena/gladiators_arena.glb`;
-- plinth/ring/rune procedurali gia presenti;
+- plinth/ring/sigilli decorativi procedurali gia presenti;
 - props futuri solo se low-poly e ritintati.
 
 ### Layout shell
@@ -635,4 +635,3 @@ The redesign works only if:
 - HUD does not block aim;
 - no heavy random asset breaks the low-poly style;
 - the whole game feels like one product.
-

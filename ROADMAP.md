@@ -57,7 +57,7 @@ Tutti i moduli estratti. `main.ts` a 1824 linee (da 2896). Moduli attivi: `hud/`
 
 - Conteggi confermati: 6 melee / 8 bow / 27 magic / 11 utility = 52. ✅
 - `02_TECH/02_ability_dsl.md` aggiornato e coerente con lo schema. ✅
-- Niente rune/passive nei docs, runtime o UI. ✅
+- Niente sistemi rune/passive nei docs, runtime o UI. ✅
 - Transfer fissi sempre documentati come Z/X/F. ✅
 
 ### 5. Production Layer
@@ -93,7 +93,7 @@ DoD:
 - Loadout Station v2 centrata su build equipaggiata, abilità selezionata, combo flow e cast mode. ✅ Flow strip (Opener/Control/Cashout/Reset) in header con stato online/missing. Build coach (score/6, coach-pills, coach-lines) nel pannello centrale. Cast-mode toggle prominente su ogni slot e card.
 - Transfer fissi visibili e non sostituibili. ✅ Badge FIXED + nessun pulsante clear + CSS `locked-transfer` su slot Z/X/F.
 - Wheel behavior documentato e verificato. ✅ `01_controls.md` descrive contratto Q/E+release=prime+LMB=fire. `radial-wheels.ts` + `cast-dispatcher.ts` confermati in linea.
-- Nessuna categoria/passiva/runa fantasma. ✅ Nessun riferimento a rune/passive in HTML, TS o design docs.
+- Nessuna categoria/passiva/runa fantasma. ✅ Nessun sistema rune/passive in HTML, TS o design docs; eventuali segni visuali sono solo sigilli decorativi senza meccanica.
 
 ### M3 — Client Split
 
@@ -118,7 +118,7 @@ Ancora aperto: Supabase auth/JWT verification e DB-backed persistence richiedono
 DoD:
 
 - Main menu, pause, settings e lobby condividono un linguaggio da gioco, non da pagina HTML. ✅ Main menu: dark left panel + gold scanline + RAGEQUIT titolo enorme + command-style `.menu-btn` con hover slide. Pause: glassmorphism panel + gold h2 + `.pause-btn` con border-left accent. Settings: same dark glass language. Tutti e tre condividono colori, font-family, transizioni.
-- Arena e personaggi smettono di sembrare blockout. ✅ Arena: stone tile ground texture (canvas 512×512, 16×16 tiles con grout lines + brightness variation); 4 stone plinths con rune glow ai 4 diagonali r=16; doppia fascia decorativa sui pilastri (1.6m e 3.2m). Personaggi: helmet crest dorato (BoxGeometry + CylinderGeometry), visor slit angolati per look aggressivo, chest stripe detail, proporzioni leggermente più eroiche.
+- Arena e personaggi smettono di sembrare blockout. ✅ Arena: stone tile ground texture (canvas 512×512, 16×16 tiles con grout lines + brightness variation); 4 stone plinths con sigil glow decorativo ai 4 diagonali r=16; doppia fascia decorativa sui pilastri (1.6m e 3.2m). Personaggi: helmet crest dorato (BoxGeometry + CylinderGeometry), visor slit angolati per look aggressivo, chest stripe detail, proporzioni leggermente più eroiche.
 - VFX elementali leggibili. ✅ Zone pulse differenziato per elemento; proiettili emissivi (amber arrow, cyan bolt).
 - Hit/parry/death/channel interrupt hanno feedback chiaro. ✅ ImpactPool ora produce sphere burst + ring shockwave espandibile con ease-out.
 - Bundle budget monitorato. ✅ chunkSizeWarningLimit=550 kB in vite.config.ts; game chunk a 179 kB / 54 kB gzip.

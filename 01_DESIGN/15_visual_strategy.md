@@ -154,7 +154,7 @@ Compatibilità browser desktop:
 
 ## 3. Direzione consigliata
 
-Direzione consigliata: **Stylized Arena Combat Low-Poly con accenti arcane-tech solo per UI, rune, telegraph e feedback**.
+Direzione consigliata: **Stylized Arena Combat Low-Poly con accenti arcane-tech solo per UI, sigilli decorativi, telegraph e feedback**.
 
 Motivo:
 
@@ -210,7 +210,7 @@ Ambiente:
 - Bordo consumato: `#52667E`
 - Metallo scuro: `#171C25`
 - Legno/impugnature: `#5A3A1A`
-- Rune/arcane neutral: `#4C79FF`
+- Sigil/arcane neutral: `#4C79FF`
 
 Regola: ambiente sotto-saturo, VFX sopra-saturi, UI leggibile ad alto contrasto.
 
@@ -508,7 +508,7 @@ Cosa serve:
 - weapon set sword/bow/staff;
 - arena shell;
 - ostacoli leggibili per `duel_arena` e `gladiators_arena`;
-- props modulari: pilastri, muri bassi, plinth, rune, torce, pedane;
+- props modulari: pilastri, muri bassi, plinth, sigilli, torce, pedane;
 - eventuale first-person weapon/viewmodel per bow/staff se confermato.
 
 Cosa cercare:
@@ -551,7 +551,7 @@ Fallback se non si trova nulla:
 Quando conviene usare codice invece di asset:
 
 - ostacoli AABB gameplay;
-- ring arena, spawn pad, rune floor, telegraph;
+- ring arena, spawn pad, sigil floor, telegraph;
 - projectile primitives;
 - placement preview;
 - VFX transienti;
@@ -600,7 +600,7 @@ Fallback se non si trova nulla:
 Quando conviene usare codice invece di asset:
 
 - floor grid/tile semplice;
-- rune circle;
+- sigil circle;
 - AoE boundary;
 - cooldown masks;
 - noise leggero.

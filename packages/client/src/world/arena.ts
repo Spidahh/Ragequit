@@ -387,7 +387,7 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
   {
     const plinthMat = new THREE.MeshToonMaterial({ color: 0x304060, gradientMap: toonGradient })
     const plinthTopMat = new THREE.MeshToonMaterial({ color: 0x3d5070, gradientMap: toonGradient })
-    const runeGlowMat = new THREE.MeshBasicMaterial({
+    const glyphGlowMat = new THREE.MeshBasicMaterial({
       color: 0x3068d8,
       transparent: true,
       opacity: 0.62,
@@ -412,11 +412,11 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
       const top = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.14, 1.8), plinthTopMat)
       top.position.set(px, 0.97, pz)
       scene.add(top)
-      // Glowing rune on top face
-      const rune = new THREE.Mesh(new THREE.CircleGeometry(0.48, 6), runeGlowMat)
-      rune.rotation.x = -Math.PI / 2
-      rune.position.set(px, 1.05, pz)
-      scene.add(rune)
+      // Glowing decorative sigil on top face.
+      const sigil = new THREE.Mesh(new THREE.CircleGeometry(0.48, 6), glyphGlowMat)
+      sigil.rotation.x = -Math.PI / 2
+      sigil.position.set(px, 1.05, pz)
+      scene.add(sigil)
     }
   }
 
