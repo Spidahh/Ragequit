@@ -1,5 +1,6 @@
 import { CAPSULE_HALF_HEIGHT_M, CAPSULE_HEIGHT_M, CAPSULE_RADIUS_M } from '@ragequit/shared'
 import * as THREE from 'three'
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js'
 
@@ -9,6 +10,7 @@ import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js'
 // GLB when it arrives (cel-shading applied on load for visual consistency).
 // ---------------------------------------------------------------------------
 const _loader = new GLTFLoader()
+const _fbxLoader = new FBXLoader()
 const _glbCache = new Map<string, THREE.Group>()
 const _glbInflight = new Map<string, Promise<THREE.Group>>()
 
@@ -49,8 +51,189 @@ function _fetchCharGlb(): Promise<_CharGlbData> {
   return _charGlbInflight
 }
 
-type _AnimName = 'Idle' | 'Attacking_Idle' | 'Run' | 'Dagger_Attack' | 'Death'
-const _ANIM_NAMES: _AnimName[] = ['Idle', 'Attacking_Idle', 'Run', 'Dagger_Attack', 'Death']
+function _loadFbx(url: string): Promise<THREE.Group> {
+  return new Promise((resolve, reject) => {
+    _fbxLoader.load(url, (group) => resolve(group), undefined, reject)
+  })
+}
+
+async function _fetchLegacyCharacter(): Promise<_LegacyCharacterData> {
+  if (_legacyCharacterData) return _legacyCharacterData
+  if (_legacyCharacterInflight) return _legacyCharacterInflight
+
+  _legacyCharacterInflight = (async () => {
+    const scene = await _loadFbx(_LEGACY_CHARACTER_FBX)
+    const baseBoneNames = _collectBoneNames(scene)
+    const clips: Partial<Record<_AnimName, THREE.AnimationClip>> = {}
+    const uniqueUrls = [
+      ...new Set(
+        _ANIM_NAMES.flatMap((name) => {
+          const url = _LEGACY_ANIM_FBX[name]
+          return url ? [url] : []
+        }),
+      ),
+    ]
+    const loaded = new Map(
+      await Promise.all(
+        uniqueUrls.map(async (url) => {
+          const animRoot = await _loadFbx(url)
+          const clip = animRoot.animations[0]
+          if (!clip) throw new Error(`Legacy animation missing clip: ${url}`)
+          return [url, clip] as const
+        }),
+      ),
+    )
+
+    for (const name of _ANIM_NAMES) {
+      const url = _LEGACY_ANIM_FBX[name]
+      if (!url) continue
+      const clip = loaded.get(url)
+      if (!clip) continue
+      clips[name] = _retargetLegacyClip(clip, name, baseBoneNames)
+    }
+
+    _legacyCharacterData = { scene, clips }
+    _legacyCharacterInflight = null
+    return _legacyCharacterData
+  })().catch((err) => {
+    _legacyCharacterInflight = null
+    throw err
+  })
+
+  return _legacyCharacterInflight
+}
+
+type _AnimName =
+  | 'Idle'
+  | 'Attacking_Idle'
+  | 'Run'
+  | 'Walk'
+  | 'Dagger_Attack'
+  | 'Dagger_Attack2'
+  | 'Death'
+  | 'Punch'
+  | 'RecieveHit'
+  | 'RecieveHit_Attacking'
+  | 'Roll'
+  | 'Jump'
+  | 'Land'
+  | 'Airborne'
+  | 'Parry_Block'
+  | 'Bow_Draw'
+  | 'Bow_Release'
+  | 'Staff_Cast'
+  | 'Channel'
+  | 'Respawn'
+
+const _ANIM_NAMES: _AnimName[] = [
+  'Idle',
+  'Attacking_Idle',
+  'Run',
+  'Walk',
+  'Dagger_Attack',
+  'Dagger_Attack2',
+  'Death',
+  'Punch',
+  'RecieveHit',
+  'RecieveHit_Attacking',
+  'Roll',
+  'Jump',
+  'Land',
+  'Airborne',
+  'Parry_Block',
+  'Bow_Draw',
+  'Bow_Release',
+  'Staff_Cast',
+  'Channel',
+  'Respawn',
+]
+
+const _LEGACY_CHARACTER_FBX = '/characters/legacy/player_base.fbx'
+const _LEGACY_ANIM_FBX: Partial<Record<_AnimName, string>> = {
+  Idle: '/characters/legacy/animations/idle_combat.fbx',
+  Attacking_Idle: '/characters/legacy/animations/idle_combat.fbx',
+  Run: '/characters/legacy/animations/run_forward.fbx',
+  Walk: '/characters/legacy/animations/walk_forward.fbx',
+  Jump: '/characters/legacy/animations/jump.fbx',
+  Airborne: '/characters/legacy/animations/airborne.fbx',
+  Land: '/characters/legacy/animations/land.fbx',
+  Dagger_Attack: '/characters/legacy/animations/melee_attack_01.fbx',
+  Dagger_Attack2: '/characters/legacy/animations/melee_attack_02.fbx',
+  Parry_Block: '/characters/legacy/animations/parry_block.fbx',
+  Bow_Draw: '/characters/legacy/animations/bow_draw.fbx',
+  Bow_Release: '/characters/legacy/animations/bow_release.fbx',
+  Punch: '/characters/legacy/animations/staff_cast.fbx',
+  Staff_Cast: '/characters/legacy/animations/staff_cast.fbx',
+  Channel: '/characters/legacy/animations/channel.fbx',
+  RecieveHit: '/characters/legacy/animations/hit_react.fbx',
+  RecieveHit_Attacking: '/characters/legacy/animations/hit_react.fbx',
+  Roll: '/characters/legacy/animations/dash_roll.fbx',
+  Death: '/characters/legacy/animations/death.fbx',
+  Respawn: '/characters/legacy/animations/respawn.fbx',
+}
+
+interface _LegacyCharacterData {
+  scene: THREE.Group
+  clips: Partial<Record<_AnimName, THREE.AnimationClip>>
+}
+
+let _legacyCharacterData: _LegacyCharacterData | null = null
+let _legacyCharacterInflight: Promise<_LegacyCharacterData> | null = null
+
+function _trackTargetName(trackName: string): string {
+  const dot = trackName.indexOf('.')
+  return dot >= 0 ? trackName.slice(0, dot) : trackName
+}
+
+function _trackPropertyName(trackName: string): string {
+  const dot = trackName.indexOf('.')
+  return dot >= 0 ? trackName.slice(dot) : ''
+}
+
+function _collectBoneNames(root: THREE.Object3D): Set<string> {
+  const names = new Set<string>()
+  root.traverse((node) => {
+    if (node instanceof THREE.Bone) names.add(node.name)
+  })
+  return names
+}
+
+function _resolveLegacyTrackTarget(target: string, boneNames: Set<string>): string | null {
+  if (boneNames.has(target)) return target
+
+  const withoutMixamo = target.replace(/^mixamorig/, '')
+  if (boneNames.has(withoutMixamo)) return withoutMixamo
+
+  return null
+}
+
+function _retargetLegacyClip(
+  source: THREE.AnimationClip,
+  name: _AnimName,
+  boneNames: Set<string>,
+): THREE.AnimationClip {
+  const tracks: THREE.KeyframeTrack[] = []
+  const seen = new Set<string>()
+
+  for (const track of source.tracks) {
+    const resolvedTarget = _resolveLegacyTrackTarget(_trackTargetName(track.name), boneNames)
+    if (!resolvedTarget) continue
+
+    const remappedName = `${resolvedTarget}${_trackPropertyName(track.name)}`
+    if (seen.has(remappedName)) continue
+    seen.add(remappedName)
+
+    const remapped = track.clone()
+    remapped.name = remappedName
+    tracks.push(remapped)
+  }
+
+  if (tracks.length === 0) {
+    throw new Error(`Legacy animation has no compatible tracks after retarget: ${name}`)
+  }
+
+  return new THREE.AnimationClip(name, source.duration, tracks)
+}
 
 interface _MixerStore {
   mixer: THREE.AnimationMixer
@@ -62,10 +245,23 @@ function _crossfade(store: _MixerStore, next: _AnimName, fadeSec: number): void 
   if (store.current === next) return
   const from = store.actions[store.current]
   const to = store.actions[next]
-  store.current = next
   if (!to) return
+  store.current = next
   to.reset()
-  if (next === 'Dagger_Attack' || next === 'Death') {
+  if (
+    next === 'Dagger_Attack' ||
+    next === 'Dagger_Attack2' ||
+    next === 'Death' ||
+    next === 'Punch' ||
+    next === 'Jump' ||
+    next === 'Land' ||
+    next === 'Bow_Release' ||
+    next === 'Staff_Cast' ||
+    next === 'Respawn' ||
+    next === 'RecieveHit' ||
+    next === 'RecieveHit_Attacking' ||
+    next === 'Roll'
+  ) {
     to.setLoop(THREE.LoopOnce, 1)
     to.clampWhenFinished = true
   } else {
@@ -76,13 +272,97 @@ function _crossfade(store: _MixerStore, next: _AnimName, fadeSec: number): void 
   if (from) from.crossFadeTo(to, fadeSec, true)
 }
 
-// The player.glb CharacterArmature node has scale=[100,100,100].
-// Bone translations sum from feet (y=0) to Head_end (y≈0.026 bone-units).
-// Actual world height = 0.026 * 100 ≈ 2.6 units.
-// Box3.setFromObject() on SkinnedMesh returns geometry bind-pose bounds (~0.02
-// units, i.e. before the node scale is applied), giving a false tiny modelH.
-// We use a hardcoded native height to avoid the ×90 scale explosion.
-const _CHAR_GLB_NATIVE_HEIGHT = 2.6
+function _firstAvailable(store: _MixerStore, names: _AnimName[]): _AnimName {
+  return names.find((name) => !!store.actions[name]) ?? 'Attacking_Idle'
+}
+
+function _chooseAnimState(store: _MixerStore, state: CharAnimState): _AnimName {
+  const weapon = state.activeWeapon ?? 'sword'
+
+  if (!state.alive) return _firstAvailable(store, ['Death', 'RecieveHit', 'Attacking_Idle'])
+
+  if (state.hitReact) {
+    return _firstAvailable(store, [
+      state.attacking || state.casting ? 'RecieveHit_Attacking' : 'RecieveHit',
+      'RecieveHit',
+      'Attacking_Idle',
+    ])
+  }
+
+  if (state.airborne) return _firstAvailable(store, ['Airborne', 'Jump', 'RecieveHit', 'Roll'])
+  if (state.casting && weapon === 'staff')
+    return _firstAvailable(store, ['Staff_Cast', 'Channel', 'Punch', 'Attacking_Idle'])
+
+  if (state.bowCharging) return _firstAvailable(store, ['Bow_Draw', 'Attacking_Idle', 'Idle'])
+
+  if (state.attacking) {
+    if (weapon === 'bow') return _firstAvailable(store, ['Bow_Release', 'Dagger_Attack', 'Punch'])
+    return _firstAvailable(store, [
+      state.attackVariant && state.attackVariant % 2 === 1 ? 'Dagger_Attack2' : 'Dagger_Attack',
+      'Dagger_Attack',
+      'Punch',
+      'Attacking_Idle',
+    ])
+  }
+
+  if (state.parrying) return _firstAvailable(store, ['Parry_Block', 'Attacking_Idle', 'Idle'])
+
+  if (state.moving) return _firstAvailable(store, ['Run', 'Walk', 'Attacking_Idle'])
+  return _firstAvailable(store, ['Attacking_Idle', 'Idle', 'Run'])
+}
+
+const _CHAR_GLB_FALLBACK_HEIGHT = 2.856
+
+function _measureRenderableBox(root: THREE.Object3D): THREE.Box3 {
+  const box = new THREE.Box3()
+  root.updateMatrixWorld(true)
+  root.traverse((child) => {
+    if (!(child instanceof THREE.Mesh) || !child.visible) return
+    const childBox = new THREE.Box3().setFromObject(child)
+    if (!childBox.isEmpty()) box.union(childBox)
+  })
+  return box
+}
+
+function _validBoxHeight(box: THREE.Box3): number {
+  const height = box.getSize(new THREE.Vector3()).y
+  return Number.isFinite(height) && height > 0.1 ? height : _CHAR_GLB_FALLBACK_HEIGHT
+}
+
+function _resolveClip(
+  animations: THREE.AnimationClip[],
+  name: _AnimName,
+): THREE.AnimationClip | undefined {
+  return (
+    animations.find((a) => a.name === name) ??
+    animations.find((a) => a.name.endsWith('|' + name))
+  )
+}
+
+function _makeToonMaterial(
+  source: THREE.Material | undefined,
+  teamColor: number,
+  toonGradient: THREE.DataTexture,
+  meshName = '',
+): THREE.MeshToonMaterial {
+  const src = source as THREE.MeshStandardMaterial | THREE.MeshToonMaterial | undefined
+  const lowerName = meshName.toLowerCase()
+  const color =
+    lowerName.includes('head') || lowerName.includes('face')
+      ? new THREE.Color(0xb98252)
+      : lowerName.includes('body') || lowerName.includes('character')
+        ? new THREE.Color(teamColor).lerp(new THREE.Color(0xffffff), 0.28)
+        : (src?.color?.clone() ?? new THREE.Color(0xffffff))
+  return new THREE.MeshToonMaterial({
+    color,
+    map: src && 'map' in src ? (src.map ?? null) : null,
+    gradientMap: toonGradient,
+    emissive: new THREE.Color(teamColor),
+    side: THREE.DoubleSide,
+    emissiveIntensity:
+      lowerName.includes('body') || lowerName.includes('character') ? 0.38 : 0.12,
+  })
+}
 
 function _fetchWeaponGlb(weapon: string): Promise<THREE.Group> {
   const hit = _glbCache.get(weapon)
@@ -151,12 +431,12 @@ function _applyGlbToWeaponGroup(
 }
 
 // ---------------------------------------------------------------------------
-// Character GLB loader + AnimationMixer system.
+// Character model loader + AnimationMixer system.
 //
 // loadCharacterGlb(charGroup, teamColor, toonGradient)
 //   Call once per character after makeCharacter().  Async: procedural body
-//   stays visible until the GLB arrives, then procedural parts are hidden and
-//   the GLB model (with toon shading) takes over.
+//   stays visible until the legacy FBX arrives, then procedural parts are hidden
+//   and the animated model (with toon shading) takes over.
 //
 // tickCharacterMixer(charGroup, deltaS)
 //   Call every render frame.  Updates the AnimationMixer by deltaS seconds.
@@ -169,102 +449,145 @@ function _applyGlbToWeaponGroup(
 /** Describes the character's current gameplay state for animation selection. */
 export interface CharAnimState {
   moving: boolean
-  attacking: boolean
   alive: boolean
+  activeWeapon?: string
+  attacking?: boolean
+  attackVariant?: number
+  airborne?: boolean
+  bowCharging?: boolean
+  casting?: boolean
+  parrying?: boolean
+  hitReact?: boolean
+}
+
+function _installCharacterModel(
+  charGroup: THREE.Group,
+  model: THREE.Group,
+  clipsByName: Partial<Record<_AnimName, THREE.AnimationClip>>,
+  teamColor: number,
+  toonGradient: THREE.DataTexture,
+  sourceLabel: string,
+): void {
+  if (charGroup.userData['disposed'] as boolean) return
+
+  const nativeBox = _measureRenderableBox(model)
+  const nativeHeight = _validBoxHeight(nativeBox)
+  console.log(`[character] ${sourceLabel}: nativeHeight=${nativeHeight.toFixed(3)} box.min.y=${nativeBox.min.y.toFixed(3)}`)
+
+  const targetScale = CAPSULE_HEIGHT_M / nativeHeight
+  model.scale.setScalar(targetScale)
+  const scaledBox = _measureRenderableBox(model)   // also calls updateMatrixWorld(true)
+  model.position.y = -CAPSULE_HALF_HEIGHT_M - scaledBox.min.y
+
+  // After scaling the model, the bone matrixWorld values have changed but the
+  // skeleton's boneInverses were computed at load-time (identity) scale.
+  // Without this fix the vertex shader double-applies the scale factor and the
+  // character renders at sub-millimetre size — effectively invisible.
+  // We only need to recompute boneInverses; the mesh's own bindMatrix (identity)
+  // is already correct for local-space skinning.
+  model.updateMatrixWorld(true)
+  model.traverse((child) => {
+    if (child instanceof THREE.SkinnedMesh) {
+      child.skeleton.calculateInverses()
+    }
+  })
+  console.log(`[character] ${sourceLabel}: scale=${targetScale.toFixed(6)} pos.y=${model.position.y.toFixed(4)}`)
+
+  const glbMaterials: THREE.MeshToonMaterial[] = []
+  let renderableMeshes = 0
+  let skinnedMeshes = 0
+  model.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return
+    renderableMeshes += 1
+    if (child instanceof THREE.SkinnedMesh) skinnedMeshes += 1
+    child.frustumCulled = false
+    const source = child.material
+    if (Array.isArray(source)) {
+          const mats = source.map((mat) => _makeToonMaterial(mat, teamColor, toonGradient, child.name))
+      child.material = mats
+      glbMaterials.push(...mats)
+    } else {
+      const mat = _makeToonMaterial(source, teamColor, toonGradient, child.name)
+      child.material = mat
+      glbMaterials.push(mat)
+    }
+    child.castShadow = true
+  })
+
+  if (renderableMeshes === 0 || skinnedMeshes === 0 || glbMaterials.length === 0) {
+    throw new Error(`${sourceLabel} missing renderable skinned meshes`)
+  }
+
+  charGroup.userData['armorMat'] = glbMaterials[0]
+  charGroup.userData['glbMaterials'] = glbMaterials
+
+  // Hide all procedural body parts — the loaded model replaces them entirely.
+  // Both FBX and GLB paths fully replace the procedural geometry.
+  const wg = charGroup.userData['weaponGroup'] as THREE.Group | undefined
+  for (const child of [...charGroup.children]) {
+    if (child !== wg) child.visible = false
+  }
+  charGroup.add(model)
+  charGroup.userData['charModel'] = model
+
+  const mixer = new THREE.AnimationMixer(model)
+  const actions: Partial<Record<_AnimName, THREE.AnimationAction>> = {}
+  for (const name of _ANIM_NAMES) {
+    const clip = clipsByName[name]
+    if (clip) actions[name] = mixer.clipAction(clip)
+  }
+
+  const initial = _firstAvailable({ mixer, actions, current: 'Idle' }, [
+    'Attacking_Idle',
+    'Idle',
+    'Run',
+  ])
+  const initAction = actions[initial]
+  if (initAction) {
+    initAction.setLoop(THREE.LoopRepeat, Infinity)
+    initAction.play()
+  }
+
+  const store: _MixerStore = { mixer, actions, current: initial }
+  charGroup.userData['mixerStore'] = store
 }
 
 /**
- * Starts loading the shared character GLB and wires up an AnimationMixer on
+ * Starts loading the shared character model and wires up an AnimationMixer on
  * charGroup once it arrives.  The procedural body is hidden and replaced by
- * the GLB model.  Safe to call multiple times on different groups — the GLB
- * is loaded only once and cloned per character.
+ * the animated model. Safe to call multiple times on different groups — the
+ * source model is loaded only once and cloned per character.
  */
 export function loadCharacterGlb(
   charGroup: THREE.Group,
   teamColor: number,
   toonGradient: THREE.DataTexture,
 ): void {
-  _fetchCharGlb()
-    .then(({ scene, animations }) => {
-      if (charGroup.userData['disposed'] as boolean) return
-
-      // Deep-clone with proper skeleton remapping so each character gets its
-      // own bone tree (required for independent AnimationMixer instances).
+  console.log('[character] loadCharacterGlb called, fetching legacy FBX...')
+  _fetchLegacyCharacter()
+    .then(({ scene, clips }) => {
+      console.log('[character] Legacy FBX loaded OK, cloning skeleton...')
       const model = skeletonClone(scene) as THREE.Group
-
-      // The GLB's CharacterArmature node has scale=[100,100,100] baked in.
-      // Box3.setFromObject() on SkinnedMesh returns bind-pose geometry bounds
-      // (~0.02 units), NOT the scaled world bounds (~2.6 units) — measuring
-      // from geometry would give scale×90 → skeleton explosion.
-      // Use hardcoded native height instead.
-      model.scale.setScalar(CAPSULE_HEIGHT_M / _CHAR_GLB_NATIVE_HEIGHT)
-
-      // Feet sit at armature y=0; shift so feet are at capsule bottom
-      // (charGroup origin = capsule centre = CAPSULE_HALF_HEIGHT_M above ground).
-      model.position.y = -CAPSULE_HALF_HEIGHT_M
-
-      // Apply toon shading; skip Blender helper meshes (NurbsPath).
-      // Collect ALL mesh materials so emissive-blink can illuminate the full body.
-      const glbMaterials: THREE.MeshToonMaterial[] = []
-      model.traverse((child) => {
-        if (!(child instanceof THREE.Mesh)) return
-        if (child.name.toLowerCase().includes('nurbs')) {
-          child.visible = false
-          return
-        }
-        const orig = child.material as THREE.MeshStandardMaterial
-        const mat = new THREE.MeshToonMaterial({
-          color: orig.color?.clone() ?? new THREE.Color(0xffffff),
-          map: orig.map ?? null,
-          gradientMap: toonGradient,
-          emissive: new THREE.Color(teamColor),
-          emissiveIntensity: 0.12,
-        })
-        child.material = mat
-        child.castShadow = true
-        glbMaterials.push(mat)
-      })
-
-      if (glbMaterials.length > 0) {
-        charGroup.userData['armorMat'] = glbMaterials[0]
-        charGroup.userData['glbMaterials'] = glbMaterials
-      }
-
-      // Hide procedural body (keep weaponGroup so weapon props stay visible).
-      const wg = charGroup.userData['weaponGroup'] as THREE.Group | undefined
-      for (const child of [...charGroup.children]) {
-        if (child !== wg) child.visible = false
-      }
-      charGroup.add(model)
-      charGroup.userData['charModel'] = model
-
-      // Wire up AnimationMixer — prefer short clip names first, then fall back
-      // to the CharacterArmature| prefixed variants exported by some tools.
-      const mixer = new THREE.AnimationMixer(model)
-      const actions: Partial<Record<_AnimName, THREE.AnimationAction>> = {}
-      for (const name of _ANIM_NAMES) {
-        const clip =
-          animations.find((a) => a.name === name) ??
-          animations.find((a) => a.name.endsWith('|' + name))
-        if (clip) actions[name] = mixer.clipAction(clip)
-      }
-
-      const initial: _AnimName = actions['Attacking_Idle']
-        ? 'Attacking_Idle'
-        : actions['Idle']
-          ? 'Idle'
-          : 'Run'
-      const initAction = actions[initial]
-      if (initAction) {
-        initAction.setLoop(THREE.LoopRepeat, Infinity)
-        initAction.play()
-      }
-
-      const store: _MixerStore = { mixer, actions, current: initial }
-      charGroup.userData['mixerStore'] = store
+      _installCharacterModel(charGroup, model, clips, teamColor, toonGradient, 'legacy FBX')
+      console.log('[character] Legacy FBX installed OK')
     })
-    .catch((err) => {
-      console.warn('[character] GLB load failed, keeping procedural fallback', err)
+    .catch((legacyErr) => {
+      console.warn('[character] Legacy FBX failed, trying GLB fallback', legacyErr)
+      _fetchCharGlb()
+        .then(({ scene, animations }) => {
+          console.log('[character] GLB loaded OK, cloning...')
+          const model = skeletonClone(scene) as THREE.Group
+          const clips: Partial<Record<_AnimName, THREE.AnimationClip>> = {}
+          for (const name of _ANIM_NAMES) {
+            const clip = _resolveClip(animations, name)
+            if (clip) clips[name] = clip
+          }
+          _installCharacterModel(charGroup, model, clips, teamColor, toonGradient, 'GLB')
+          console.log('[character] GLB installed OK')
+        })
+        .catch((glbErr) => {
+          console.warn('[character] GLB also failed, keeping procedural fallback', glbErr)
+        })
     })
 }
 
@@ -279,14 +602,17 @@ export function tickCharacterMixer(charGroup: THREE.Group, deltaS: number): void
 export function setCharAnimState(charGroup: THREE.Group, state: CharAnimState): void {
   const store = charGroup.userData['mixerStore'] as _MixerStore | undefined
   if (!store) return
-  const target: _AnimName = !state.alive
-    ? 'Death'
-    : state.attacking
-      ? 'Dagger_Attack'
-      : state.moving
-        ? 'Run'
-        : 'Attacking_Idle'
-  const fadeSec = target === 'Death' ? 0.3 : target === 'Dagger_Attack' ? 0.08 : 0.18
+  const target = _chooseAnimState(store, state)
+  const fadeSec =
+    target === 'Death'
+      ? 0.3
+      : target === 'Dagger_Attack' ||
+          target === 'Dagger_Attack2' ||
+          target === 'Punch' ||
+          target === 'RecieveHit' ||
+          target === 'RecieveHit_Attacking'
+        ? 0.08
+        : 0.18
   _crossfade(store, target, fadeSec)
 }
 
