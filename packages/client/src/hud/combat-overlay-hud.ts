@@ -107,8 +107,9 @@ export function initCombatOverlayHud({
       parryRing.classList.remove('active', 'hold')
     }
 
-    // Round live timer — only shown in round-based modes (duel_arena, training).
-    // FFA and 5v5 are kill-based with no time limit.
+    // Round live timer — only shown in modes with server-side round logic
+    // (duel_arena, blockout, 1v1).  FFA, 5v5 and training are kill-based /
+    // continuous — no server round timer, so we hide it entirely.
     if (isRoundMode && livePhaseStartTick >= 0 && tickNow > 0) {
       const elapsed = (tickNow - livePhaseStartTick) / TICK_RATE_HZ
       const secsLeft = Math.max(0, ROUND_TIMER_SEC - elapsed)
