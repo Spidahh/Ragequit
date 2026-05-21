@@ -10,6 +10,9 @@
   --rq-muted: #68748d;
   --rq-gold: #ffd260;
   --rq-red: #ff3344;
+  /* Typography — hud uses Rajdhani; display uses same for consistency */
+  --font-hud: Rajdhani, Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-display: Rajdhani, Impact, ui-sans-serif, system-ui, sans-serif;
 }
 
 * {
@@ -1059,4 +1062,17 @@ body:not(.main-menu-active):not(.loadout-active) #bow-charge {
 @keyframes timer-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
+}
+
+/* Damage popups — use design numeric font for consistency */
+.popup,
+.popup.big {
+  font-family: var(--font-hud) !important;
+}
+.popup.air-punish {
+  font-family: var(--font-display) !important;
+}
+.popup.parried {
+  font-family: var(--font-display) !important;
+  letter-spacing: 0.12em !important;
 }
