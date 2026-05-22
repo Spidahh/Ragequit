@@ -24,7 +24,6 @@ export const ANTI_CHEAT_LIMITS: Record<string, RateLimitConfig> = {
   // Cast/transmute/loadout are gated by GCD/CD server-side — anything past
   // 30/s is impossible from a real human input.
   cast: { windowMs: 1000, maxInWindow: 30 },
-  transmute: { windowMs: 1000, maxInWindow: 10 },
   weaponSwap: { windowMs: 1000, maxInWindow: 20 },
   parry: { windowMs: 1000, maxInWindow: 20 },
   charge: { windowMs: 1000, maxInWindow: 20 },

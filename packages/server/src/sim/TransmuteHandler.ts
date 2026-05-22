@@ -32,7 +32,6 @@ import {
   TRANSMUTE_STAM_TO_HP_GAIN_HP,
   TARGET_CLASS_DEFS,
   type ClassId,
-  type ClientTransmuteMessage,
   type Player,
   type ServerTransmuteResultMessage,
   type StatusKind,
@@ -144,22 +143,6 @@ export class TransmuteHandler {
       atTick: this.host.state.tick,
     }
     this.host.broadcast(MessageTypes.TransmuteResult, out)
-  }
-
-  // Validates and applies the transmute. Broadcasts ServerTransmuteResult.
-  // Returns true on success, false on rejection.
-  handle(sid: string, msg: ClientTransmuteMessage): boolean {
-    const player = this.host.state.players.get(sid)
-    if (!player) return false
-
-    const reason = this.getFailureReason(player, msg.direction)
-    if (reason) {
-      this.broadcastFailure(sid, msg.direction, reason)
-      return false
-    }
-
-    this.apply(sid, player, msg.direction)
-    return true
   }
 
   // Reset cooldowns on respawn.

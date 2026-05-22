@@ -1,6 +1,5 @@
 import { Room, type Client } from '@colyseus/core'
 import {
-  type ClientTransmuteMessage,
   type AbilityComboRole,
   type ServerZoneExpiredMessage,
   type ServerZoneSpawnedMessage,
@@ -275,8 +274,7 @@ export class GameRoom extends Room<GameState> {
   private projectileIdCounter = 0
   private zoneIdCounter = 0
 
-  // Fase 4 transmute queue + engine + status runtime + transmute handler.
-  private readonly transmuteQueues = new Map<string, ClientTransmuteMessage[]>()
+  // Fase 4 engine + status runtime + legacy ability-effect transmute handler.
   private engine!: AbilityEngine
   private statuses!: StatusRuntime
   private transmute!: TransmuteHandler
@@ -493,14 +491,6 @@ export class GameRoom extends Room<GameState> {
         }
       },
     })
-    this.onMessage<ClientTransmuteMessage>(MessageTypes.Transmute, (client, message) => {
-      if (!this.gateRate(client, 'transmute')) return
-      if (!this.canAcceptCombatAction()) return
-      const queue = this.transmuteQueues.get(client.sessionId)
-      if (!queue) return
-      if (queue.length < 8) queue.push(message)
-    })
-
     // Fase 6: loadout set / change. Validates ability ids against the registry,
     // applies to the Player.loadout array, recomputes Mastery + clears CDs.
     this.onMessage<ClientLoadoutMessage>(MessageTypes.Loadout, (client, message) => {
@@ -562,7 +552,6 @@ export class GameRoom extends Room<GameState> {
     this.inputQueues.set(botId, [])
     this.swingQueues.set(botId, [])
     this.castQueues.set(botId, [])
-    this.transmuteQueues.set(botId, [])
     this.lastSeqSeen.set(botId, 0)
     this.prevJumpHeld.set(botId, false)
     this.positionHistory.set(botId, [])
@@ -699,7 +688,6 @@ export class GameRoom extends Room<GameState> {
     this.inputQueues.set(client.sessionId, [])
     this.swingQueues.set(client.sessionId, [])
     this.castQueues.set(client.sessionId, [])
-    this.transmuteQueues.set(client.sessionId, [])
     this.lastSeqSeen.set(client.sessionId, 0)
     this.prevJumpHeld.set(client.sessionId, false)
     this.positionHistory.set(client.sessionId, [])
@@ -719,7 +707,6 @@ export class GameRoom extends Room<GameState> {
     this.inputQueues.delete(sid)
     this.swingQueues.delete(sid)
     this.castQueues.delete(sid)
-    this.transmuteQueues.delete(sid)
     this.rateLimiter.forgetClient(sid)
     this.lastSeqSeen.delete(sid)
     this.prevJumpHeld.delete(sid)
@@ -776,13 +763,10 @@ export class GameRoom extends Room<GameState> {
       // 2. Close expired parry tap windows + hold-drain stamina.
       this.tickParry(now, dt)
 
-      // 2b. Drain queued transmute messages.
-      this.drainTransmuteQueue()
-
-      // 2c. Resolve windups that completed this tick (engine-driven).
+      // 2b. Resolve windups that completed this tick (engine-driven).
       this.engine.tickWindups()
 
-      // 2d. Tick active statuses (DoT damage flows into damageQueue).
+      // 2c. Tick active statuses (DoT damage flows into damageQueue).
       this.statuses.tick(dt)
 
       // 2e. Tick zones (Flame Wall, etc.) — apply damage / status to occupants.
@@ -835,7 +819,6 @@ export class GameRoom extends Room<GameState> {
     this.damageQueue = []
     this.swingQueues.forEach((queue) => queue.splice(0))
     this.castQueues.forEach((queue) => queue.splice(0))
-    this.transmuteQueues.forEach((queue) => queue.splice(0))
 
     this.state.players.forEach((player, sid) => {
       player.bowChargeStartTick = 0
@@ -2655,19 +2638,6 @@ export class GameRoom extends Room<GameState> {
     player.airborneUntilTick = this.state.tick + Math.max(1, Math.round(airborneSec * TICK_RATE_HZ))
   }
 
-  // Drain queued transmute messages (one per tick max per player).
-  private drainTransmuteQueue(): void {
-    if (this.transmuteQueues.size === 0) return
-    this.transmuteQueues.forEach((queue, sid) => {
-      if (queue.length === 0) return
-      if (!this.canAcceptCombatAction()) {
-        queue.splice(0)
-        return
-      }
-      const msg = queue.shift()!
-      this.transmute.handle(sid, msg)
-    })
-  }
 }
 
 // --- Fase 4 helpers --------------------------------------------------------
