@@ -10,6 +10,11 @@ status: current
 
 # Ability DSL
 
+> Current runtime contract. The confirmed class redesign will change loadout
+> legality, split Magic into Base / Advanced, revisit airborne casts and replace
+> fixed-transfer target assumptions. Do not treat current counts and transfer
+> tests as the approved future ability grammar.
+
 ## Current Contract
 
 All 52 abilities live in `packages/shared/src/abilities/registry.ts` and use the schema in `packages/shared/src/abilities/types.ts`.
@@ -75,21 +80,21 @@ Targeting notes:
 
 Current primitives:
 
-| Primitive        | Purpose                                                                                     |
-| ---------------- | ------------------------------------------------------------------------------------------- |
-| `damage`         | Direct or radius damage, optional element/lifesteal/excludePrimary                          |
-| `applyStatus`    | Burn/chill/bleed/poison/slow/root/stun/freeze/curse/blind/mark/shield/haste/invulnerable    |
-| `knockup`        | Airborne lock; optional grounded-target requirement; optional horizontal knockback distance |
-| `heal`           | Instant or over-time healing                                                                |
-| `lifesteal`      | Cast-level lifesteal fraction                                                               |
-| `resourceDrain`  | Drain Mana or Stamina from the resolved enemy and optionally refund part to the caster      |
-| `projectile`     | Arrow/bolt-like projectile with gravity, splash, on-hit status                              |
-| `zone`           | Circle/wall zones with duration, arming delay, damage/status ticks                          |
-| `move`           | Dash/teleport with collision cancellation and optional movement direction                   |
-| `channel`        | Sustained tick effect; can break on movement or damage                                      |
-| `cleanse`        | Remove one status or all debuffs                                                            |
-| `restoreStamina` | Flat stamina restore                                                                        |
-| `transmute`      | Fixed HP/Mana/Stamina transfer utilities                                                    |
+| Primitive        | Purpose                                                                                  |
+| ---------------- | ---------------------------------------------------------------------------------------- |
+| `damage`         | Direct or radius damage, optional element/lifesteal/excludePrimary                       |
+| `applyStatus`    | Burn/chill/bleed/poison/slow/root/stun/freeze/curse/blind/mark/shield/haste/invulnerable |
+| `knockup`        | Current airborne lock/displacement primitive; target air rules are under redesign        |
+| `heal`           | Instant or over-time healing                                                             |
+| `lifesteal`      | Cast-level lifesteal fraction                                                            |
+| `resourceDrain`  | Drain Mana or Stamina from the resolved enemy and optionally refund part to the caster   |
+| `projectile`     | Arrow/bolt-like projectile with gravity, splash, on-hit status                           |
+| `zone`           | Circle/wall zones with duration, arming delay, damage/status ticks                       |
+| `move`           | Dash/teleport with collision cancellation and optional movement direction                |
+| `channel`        | Sustained tick effect; can break on movement or damage                                   |
+| `cleanse`        | Remove one status or all debuffs                                                         |
+| `restoreStamina` | Flat stamina restore                                                                     |
+| `transmute`      | Fixed HP/Mana/Stamina transfer utilities                                                 |
 
 ## Combo Role Contract
 
@@ -110,7 +115,10 @@ Current primitives:
 
 ## Runtime Guarantees
 
-- Ability casts validate alive state, cast lock, swing/charge lock, airborne, parry, Phase Shift, GCD, per-ability cooldown, weapon requirement, and resource cost.
+- Ability casts currently validate alive state, cast lock, swing/charge lock,
+  airborne, parry, Phase Shift, GCD, per-ability cooldown, weapon requirement,
+  and resource cost. The target air-combat pass replaces the blanket airborne
+  assumption.
 - Windups are interruptible through `AbilityEngine.cancelCast`.
 - Channels keep `Player.casting` active and block other casts until finished/interrupted.
 - Parryable abilities skip status/knockup followups when the initial hit is parried.
@@ -130,4 +138,7 @@ Core checks live in:
 - `packages/client/src/input/loadout-slots.test.ts`
 - `packages/client/src/loadout-station.test.ts`
 
-These tests protect counts, fixed transfers, slow fractions, mastery slot rules, targeting, movement collision contracts, parry followups, channel interruption, and loadout payload shape.
+These tests protect the current runtime counts, fixed transfers, slow fractions,
+mastery slot rules, targeting, movement collision contracts, parry followups,
+channel interruption, and loadout payload shape. Redesign work must change tests
+with the contracts rather than preserving obsolete assertions.

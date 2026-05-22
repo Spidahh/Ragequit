@@ -129,4 +129,6 @@ pnpm test
 pnpm build
 ```
 
-Il warning Vite sul chunk client grande è noto e non blocca la build; va affrontato nel pass di modularizzazione/code splitting.
+Una build pulita non deve mostrare il vecchio warning Vite sul chunk grande:
+`vendor-three` isola Three.js. Se il warning ricompare dopo un cambiamento,
+trattalo come regressione di modularizzazione o budget bundle.

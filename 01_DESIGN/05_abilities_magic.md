@@ -5,14 +5,18 @@ section: abilities
 tags: [magic, elements, list]
 provides: [magic_ability_list_per_element]
 deps: [05_abilities_philosophy.md, 03_mastery_system.md]
-status: final
+status: redesign
 ---
 
 # Magic Abilities
 
-Player picks **5** magic abilities for their loadout. These fill the 5 magic slots. Having 4+ of the same element activates Mastery (`03_mastery_system.md`).
+> Current runtime pool. Target magic work must split this set into Magic Base
+> and Magic Advanced, clean descriptions, and decide class legality before
+> registry changes.
 
-Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abilities/registry.ts` is the authoritative source for exact numbers, tooltips, ray/projectile behavior, drain values, and cooldowns.
+Player picks **5** magic abilities for their loadout (current classless runtime). Having 4+ of the same element activates Mastery in the **current runtime** (`03_mastery_system.md`). In the target class system, magic slots are split into Magic Base and Magic Advanced per class grammar (`00_classes.md`); Mastery is no longer the target identity axis.
+
+Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abilities/registry.ts` is the authoritative source for exact numbers, tooltips, cast data, ray/projectile behavior, drain values, and cooldowns. Numeric bullets below are design snapshots for role/readability review, not a second runtime registry.
 
 **27 magic abilities total** — every element has at least 5 magic abilities, with Fire and Nature currently carrying one extra mobility/control option.
 
@@ -122,7 +126,7 @@ Each element covers the same core roles so every element-specialist build has th
 ### L4 · Lightning Dash
 
 - **Effect**: Teleport 5 m forward, 15 damage shock on exit (1 m exit radius)
-- **Cost**: 25 mana · **CD**: 8 s
+- **Cost**: 25 mana · **CD**: 8 s · **Range**: 5 m (teleport distance)
 - **Mini-malus**: No damage on entry point; walls stop the dash
 
 ### L5 · Arc Lift [KNOCKUP]
@@ -142,9 +146,9 @@ Each element covers the same core roles so every element-specialist build has th
 
 ### D2 · Curse of Weakness
 
-- **Effect**: Debuff target: -20% outgoing damage for 5 s + Blind for 2 s
-- **Cast**: 1.2 s · **Cost**: 30 mana · **CD**: 15 s · **Range**: 15 m
-- **Mini-malus**: Long cast — parriable and interruptible
+- **Effect**: Debuff target: -20% outgoing damage for 5 s + Blind for 2.4 s
+- **Windup**: 0.35 s · **Cost**: 30 mana · **CD**: 15 s · **Range**: 15 m
+- **Mini-malus**: Parriable windup; primary value is opening a combo via Blind, not damage. `comboRole: 'starter'` (NOT `'drain'` — see `99_resolved_ambiguities.md` #31/#33)
 
 ### D3 · Life Drain
 
@@ -190,7 +194,8 @@ Each element covers the same core roles so every element-specialist build has th
 - **Effect**: Channel nature recovery for 5 s, healing yourself for 8 HP/s (40 HP total)
 - **Cost**: 30 mana · **CD**: 20 s · **Range**: self
 - **Overheal rule**: healing stops at target max HP; no overheal shield (see `99_resolved_ambiguities.md`)
-- **Mini-malus**: No burst heal; focused damage can outpace the recovery
+- **Channel break rule**: incoming damage does **NOT** cancel the channel. Unlike Life Drain (D3), Healing Totem completes its full 5 s regardless of hits taken. An aggressive opponent simply outdamages the recovery rate (8 HP/s heal vs any incoming DPS).
+- **Mini-malus**: No burst heal; a focused attacker dealing more than 8 damage/s negates the channel entirely while it is active
 
 ### N5 · Root Upthrow [KNOCKUP]
 
@@ -204,9 +209,13 @@ Each element covers the same core roles so every element-specialist build has th
 - **Cost**: 25 mana · **CD**: 12 s · **Range**: 5 m
 - **Mini-malus**: Enemies must walk into the landing zone; it does not pull them
 
-## Mastery numbers summary (cross-reference)
+## Mastery numbers summary — CURRENT RUNTIME ONLY
 
-When Mastery is active (4+ of one element), the element's abilities get the bonus listed in `03_mastery_system.md`:
+> Mastery is no longer the approved target identity axis. The class redesign
+> (`00_classes.md`) supersedes it. The numbers below apply to the **current live
+> runtime** only; do not design new abilities or features around these bonuses.
+
+When Mastery is active (4+ of one element) in the current runtime, the element's abilities get the bonus listed in `03_mastery_system.md`:
 
 - Fire: +15% damage, Burn duration +50%
 - Ice: +10% CC duration

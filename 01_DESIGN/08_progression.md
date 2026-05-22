@@ -65,7 +65,7 @@ A small customization layer **on top** of the build. Not a replacement for build
 
 - Combat: "+5% M1 damage at full HP"
 - Survival: "+1s stamina regen after successful parry"
-- Utility: "-1s CD on Self-Heal Potion"
+- Utility: "-1s CD on Healing Potion"
 
 Talents are **small numeric tweaks** (~5-10% each) — they flavor a build, they don't redefine it. Cannot combine into stat-stacking (diminishing returns hardcoded).
 
@@ -93,3 +93,9 @@ Talents are **small numeric tweaks** (~5-10% each) — they flavor a build, they
 - Not FOMO-driven
 
 Progression is **there if you want it** — the game is fully playable and competitive with the starter unlocks. Progression adds depth, it doesn't gate fun.
+
+**Starter unlock set (to be defined at launch):** New accounts receive a starting set of abilities covering all 5 elements and all 3 weapon types — enough to build a viable loadout without having completed any quests. The exact starter set is not defined yet; it must be curated to ensure element diversity without giving away the most powerful/synergistic picks. Current local build: all abilities are available (no unlock filtering active).
+
+Class redesign note: starter unlocks, quests and tutorials must be revisited once
+Tank, Arciere, Mago and Ibrido have final legal ability pools. A generic
+"all-three-weapon" starter unlock sentence is legacy target language until then.

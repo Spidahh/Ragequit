@@ -13,21 +13,27 @@ status: final
 ## Rules (what we always do)
 
 1. **Skill over stats**. Outcomes are determined by input quality, positioning, and decision-making. Never by grind or cosmetics.
-2. **Build diversity**. Every viable playstyle is supported through loadout combinations — never through class locks or archetype restrictions.
+2. **Class identity plus build diversity**. Tank, Arciere, Mago and Ibrido have
+   different slot grammars and resource emphasis; each still needs multiple
+   viable builds rather than one solved loadout.
 3. **Immediate feedback**. Every hit, every miss, every proc has a visual and audio tell. Damage numbers are optional but impact VFX is mandatory.
 4. **Server-authoritative**. The simulation lives on the server. The client predicts for responsiveness; the server confirms. Any discrepancy resolves in the server's favor.
 5. **No elemental counter**. Elements differ in _effect_, never in counter-relationships. A Fire build is never weak to an Ice build on principle.
 6. **Mini-malus on every ability**. Bonuses come with trade-offs. Prevents one-dimensional "all upside" abilities and forces build tension. See `05_abilities_philosophy.md`.
-7. **Depth vs breadth trade-off is a real choice**. Same-element stacking gets Mastery bonuses while individual abilities are tuned weaker. Mixed-element builds get stronger individual abilities but no Mastery. Both are viable. Weapon M1 infusion is a future implementation pass, not current runtime.
+7. **Arena-FPS activity is sacred**. Aim, movement, aerial counterplay and
+   weapon/spell tech must keep the player active. A combo window can pressure the
+   target; it must not become a long forced non-turn.
 
 ## Anti-patterns (what we never do)
 
-- **No classes**. No archetype that restricts weapon access, ability type, or stats.
-- **No tank/glass/balanced axis**. All players have identical base HP/Mana/Stamina. Differentiation is via loadout exclusively.
+- **No fake class skins**. A class must change play grammar, resources, slots and
+  mechanic; do not add class labels if they only recolor the same build.
 - **No auto-aim, no aim assist**. Ranged weapons and targeted abilities require skill. Aim assist undermines the meritocracy pillar.
 - **No pay-to-win**. Cosmetics only. No gameplay advantages ever purchasable.
 - **No season pass**. Progression is flat and earned through quests and play.
-- **No dodge / roll**. No iframe mechanic exists. Parry (M2) is the only active defense.
+- **No default iframe roll as the whole defense model**. Dodging should emerge
+  from movement, aim denial and abilities; parry/shield must be visible when it
+  protects.
 - **No Shift sprint**. Sprint is the default move speed. Shift is unused.
 - **No level grind / XP gates**. All abilities unlock via quests (skill-tested), never via farming time.
 - **No RNG in ability output**. No crit that depends on dice. Ability effects are deterministic given input conditions.

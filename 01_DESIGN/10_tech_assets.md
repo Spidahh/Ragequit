@@ -5,27 +5,51 @@ section: tech
 tags: [assets, sources, compression, pipeline]
 provides: [asset_sources, asset_pipeline, asset_targets]
 deps: [09_visual.md]
-status: final
+status: active
 ---
 
 # Asset Pipeline
 
-## Asset sources (free, 2026)
+## Current document role
 
-| Source                       | Content                                                          | License                                 |
-| ---------------------------- | ---------------------------------------------------------------- | --------------------------------------- |
-| **Kenney.nl**                | ~40k CC0 low-poly assets (characters, weapons, props, UI, audio) | CC0                                     |
-| **Quaternius**               | Low-poly rigged characters, animations                           | CC0                                     |
-| **Meshy AI** (free tier)     | Text-to-3D generation for gap-fills                              | Commercial use allowed within free tier |
-| **Mesh2Motion**              | Open-source Mixamo alternative for character rigging             | MIT                                     |
-| **Sonniss GameAudioGDC**     | Annual free AAA-quality SFX packs                                | Royalty-free for games                  |
-| **Freesound** (CC0 filtered) | SFX gap-fills                                                    | CC0 filter only                         |
+This is the asset pipeline contract. Whole-game visual decisions come from:
 
-## Existing assets
+1. `../GAME_GRAPHIC_AUDIT.md`
+2. `../VISUAL_STRATEGY.md`
+3. `12_game_graphic_audit.md`
+4. `15_visual_strategy.md`
+5. `13_graphic_redesign_blueprint.md`
 
-**499 models** exist in `04_CDN_ASSETS/` from the original project. **6 weapons are missing / broken**. Per Francesco's decision (2026-04-22), assets will be **rebuilt from Kenney/Quaternius sources** rather than audited one-by-one — faster, produces uniform style, and the new art direction (Risk of Rain 2) is easier to reach with fresh coherent assets than by patching 493 mismatched ones.
+Do not use this file as a substitute for the visual audit or blueprint.
 
-The old `04_CDN_ASSETS/` folder is kept as archive/reference during the rebuild and removed post-launch.
+## Asset sources
+
+| Source                                            | Content                                                                                     | License                                       |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| **Local asset library** `E:\GIOCHI\ASSET_GRAFICA` | Existing candidate models, VFX sprites, logos and archived assets already available on disk | verify per source asset                       |
+| **Kenney.nl**                                     | Low-poly props, UI, particles and audio candidates                                          | verify official pack license, prefer CC0      |
+| **Quaternius**                                    | Low-poly characters, props and animation-library candidates                                 | verify pack license, prefer CC0               |
+| **Poly Haven**                                    | CC0 textures/models when a source texture or prop is truly needed                           | CC0                                           |
+| **OpenGameArt / Freesound**                       | Gap-fill candidates only after per-asset license check                                      | prefer CC0; use attribution only when tracked |
+
+## Current runtime assets
+
+Runtime assets currently present in the client:
+
+- `packages/client/public/arena/gladiators_arena.glb`
+- `packages/client/public/characters/player.glb`
+- `packages/client/public/characters/legacy/player_base.fbx`
+- `packages/client/public/characters/legacy/animations/*.fbx`
+- `packages/client/public/weapons/sword.glb`
+- `packages/client/public/weapons/bow.glb`
+- `packages/client/public/weapons/staff.glb`
+- `packages/client/public/icons-sprite.svg`
+- `packages/client/public/ui/ragequit-logo-full.png`
+- `packages/client/public/ui/ragequit-logo-small.png`
+
+The visual audit and the character animation contracts decide whether a runtime
+asset is primary, fallback or replacement candidate. Asset presence alone is not
+acceptance.
 
 ## Build pipeline
 
@@ -91,12 +115,11 @@ This is aggressive but achievable via:
 - Instanced environment props
 - Aggressive texture atlasing (one atlas per element set)
 
-## Tools installed on dev side
+## Pipeline tool direction
 
-- `gltf-transform` (CLI + programmatic)
-- `@gltf-transform/meshopt` plugin
-- `basisu` CLI (for KTX2 encoding)
-- Blender (for source editing when needed; headless bake scripts)
-- FFmpeg (for audio)
+- `gltf-transform` / mesh optimization tools where already available in the repo workflow
+- texture resize/compression tools only when the runtime actually adds external textures
+- audio compression tools only when file-based audio replaces or complements procedural WebAudio
 
-All free, all CLI-scriptable for CI automation.
+The current pass should prefer existing repo tools, browser verification and
+lightweight runtime assets over introducing a new manual tool chain.

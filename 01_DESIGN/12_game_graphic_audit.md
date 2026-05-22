@@ -1,3 +1,13 @@
+---
+id: game_graphic_audit
+title: Game Graphic Audit
+section: art
+tags: [audit, repository, threejs, assets, ui, vfx]
+provides: [game_graphic_audit, visual_evidence, current_asset_inventory]
+deps: [09_visual.md, 11_ui_redesign_plan.md]
+status: current
+---
+
 # GAME GRAPHIC AUDIT
 
 Audit tecnico del progetto Three.js in `E:\GIOCHI\RAGEQUIT`.
@@ -73,11 +83,11 @@ Loop render client:
 Funzioni di gioco implementate:
 
 - Menu principale con `Play 1v1`, `Training`, `Loadout`, `Settings`.
-- `Free For All` visibile ma disabilitato nel menu.
+- `Free For All` selezionabile dal menu e instradato alla Loadout Station.
 - Connessione Colyseus a server configurabile.
 - Training con bot-fill.
 - Match flow con round BO5 per modalità round.
-- Scoring per round, FFA e team presente lato server/menu HUD, ma FFA è disabilitato lato client e 5v5 non appare come scelta di menu.
+- Scoring per round, FFA e team presente lato server/menu HUD; FFA è selezionabile lato client e 5v5 non appare come scelta di menu.
 - Movimento WASD, jump tap/hold, always sprint.
 - Mouse look con pointer lock o fallback pointer-look.
 - Weapon swap via Tab/scroll.
@@ -147,7 +157,7 @@ Stati client/UI deducibili:
 
 Schermate/superfici presenti in `packages/client/index.html` e moduli client:
 
-- Main menu: titolo `RAGEQUIT`, Play 1v1, Free For All disabilitato, Training, Loadout, Settings, riepilogo controlli.
+- Main menu: titolo `RAGEQUIT`, Play 1v1, Free For All, Training, Loadout, Settings, riepilogo controlli.
 - Settings overlay: graphics quality, FOV, mouse sensitivity, volume, keybinds.
 - Loadout Station: header, build flow, mastery pills, slot column, selected ability panel, filter/search, ability pool, confirm/back/reset.
 - Pause menu: Resume, Loadout, Settings, Return to Lobby, riepilogo controlli.
@@ -166,11 +176,10 @@ Per la vertical slice attuale, non emerge dal codice una schermata obbligatoria 
 
 Schermate future deducibili solo come necessità parziale:
 
-- Una vera schermata/selezione per FFA non è attiva: il bottone esiste ma è disabilitato.
 - Una vera schermata/selezione per 5v5 non è presente nel menu, anche se il server e lo score HUD hanno scaffolding.
 - Un account/profile UI non è deducibile dal codice come schermata esistente; Supabase auth è anonima e opzionale.
 - Matchmaking/ELO UI non deducibile dal codice.
-- Minimap non presente nel DOM letto; la documentazione visual la cita, ma il codice client non mostra una minimap implementata.
+- Minimap non presente nel DOM letto e non richiesta dal contratto HUD visuale corrente.
 
 ## 7. Informazioni che il giocatore deve vedere
 
@@ -215,7 +224,7 @@ Mancanze dedotte dal codice, non da preferenze estetiche:
 - Non è deducibile una visualizzazione specifica per cleanse oltre messaggi/status.
 - Non è deducibile un VFX world distinto per freeze/root/stun/curse/mark per ogni status; il codice mostra emissive/status overlay generici.
 - Non è deducibile un feedback per validità/invalidezza placement rispetto a collisioni o superficie, oltre la posizione/range del preview.
-- Non è deducibile un minimap renderizzato.
+- Non è presente un minimap renderizzato nel client letto.
 
 ## 9. Asset attuali
 
@@ -347,12 +356,11 @@ Vincoli dedotti:
 - Stile grafico finale da scegliere: non deducibile dal codice.
 - Asset futuri da usare: non deducibile dal codice.
 - Se il progetto vuole mantenere menu puramente DOM o spostarli in scene 3D: non deducibile dal codice.
-- Se FFA/5v5 sono ancora priorità immediate o solo scaffolding: non deducibile dal codice.
+- Se 5v5 è una priorità immediata o solo scaffolding: non deducibile dal codice.
 - Se il gioco userà account visibile, profilo, ranked UI o lobby social: non deducibile dal codice.
-- Se il minimap citato nei documenti sia ancora desiderato: non deducibile dal codice.
 - Se i VFX devono essere unici per ogni abilità o solo per archetipo/elemento: non deducibile dal codice.
 - Se audio procedurale è temporaneo o definitivo: non deducibile dal codice.
-- Se il player GLB attuale è placeholder o final: non deducibile dal codice.
+- Se il runtime character FBX legacy resterà la soluzione visuale definitiva: non deducibile dal codice.
 - Se `tools/asset-pipeline` è operativo oltre la documentazione: non deducibile dal codice.
 
 ## 15. Domande da fare al developer prima di decidere la grafica
@@ -360,15 +368,14 @@ Vincoli dedotti:
 1. Qual è il target hardware/browser minimo reale per la vertical slice?
 2. La priorità grafica immediata è migliorare il gameplay readability in arena o il presentation layer dei menu?
 3. Gli asset GLB attuali sono placeholder, direzione provvisoria o base da mantenere?
-4. Il gioco deve restare low-poly stylized come da documenti, o quella direzione va rivalutata?
+4. ~~Il gioco deve restare low-poly stylized come da documenti, o quella direzione va rivalutata?~~ **RISPOSTA: confermato low-poly stylized** (decisione locked in `MANIFEST.yaml → locked_decisions`, `AGENTS.md`, `00_pillars.md`).
 5. Ogni abilità deve avere un VFX unico, o basta differenziare per elemento + categoria?
-6. Quanti player simultanei devono essere supportati nel prossimo pass grafico: 1v1, Training, FFA o 5v5?
+6. Quanti player simultanei devono essere supportati nel prossimo pass grafico oltre ai flussi attivi 1v1, Training e FFA?
 7. Il player locale in bow/staff deve avere viewmodel/mani/arma in prima persona, o può restare senza corpo visibile?
-8. Il minimap documentato è ancora richiesto?
-9. I menu devono restare DOM/CSS o devono diventare superfici integrate nella scena?
-10. L’audio procedurale è intenzionale o è solo provvisorio?
-11. Serve mantenere compatibilità piena senza Supabase e senza asset remoti?
-12. Quali feedback combat sono più critici ora: hit/parry, status, cooldown/cost fail, placement, death, o readability dei proiettili?
-13. Qual è il budget massimo accettabile per draw calls, triangoli, texture memory e dimensione bundle?
-14. Ci sono vincoli di accessibilità colore oltre quelli già citati nei documenti?
-15. FFA e 5v5 devono influenzare subito la grafica/HUD o restano fuori scope?
+8. I menu devono restare DOM/CSS o devono diventare superfici integrate nella scena?
+9. L’audio procedurale è intenzionale o è solo provvisorio?
+10. Serve mantenere compatibilità piena senza Supabase e senza asset remoti?
+11. Quali feedback combat sono più critici ora: hit/parry, status, cooldown/cost fail, placement, death, o readability dei proiettili?
+12. Qual è il budget massimo accettabile per draw calls, triangoli, texture memory e dimensione bundle?
+13. Ci sono vincoli di accessibilità colore oltre quelli già citati nei documenti?
+14. FFA deve guidare subito la grafica/HUD insieme a 1v1 e Training, e 5v5 resta fuori scope o va considerato ora?

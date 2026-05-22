@@ -5,27 +5,44 @@ section: systems
 tags: [mastery, elements, bonus, infusion]
 provides: [mastery_activation, mastery_bonuses, m1_infusion]
 deps: [05_abilities_philosophy.md]
-status: final
+status: superseded-target
 ---
 
 # Element Mastery System
+
+> Current runtime still contains this Mastery system. The developer confirmed a
+> class-based redesign on 2026-05-22; Mastery is no longer the approved target
+> identity axis until the class/ability redesign decides what elemental affinity,
+> if any, survives.
+>
+> **Replacement system**: see `01_DESIGN/00_classes.md` for the class identity
+> system (Fury, Momentum, Risonanza, Flow) that supersedes Mastery as the target
+> build identity axis.
 
 ## Activation rule
 
 Mastery activates when the player has **4 or more magic abilities of the same element** in the 5 magic slots of their loadout (`06_loadout_build.md`).
 
-- 4/5 same element → Mastery active (one slot is flexible for utility pick)
-- 5/5 same element → Mastery active + small additional perk per element (see per-element table)
-- 3/5 or fewer → no Mastery; abilities fire at full individual strength (see trade-off in `05_abilities_philosophy.md`)
+- **4-of-5** same element → Mastery active (one slot is the flexible "off-element" pick)
+- **5-of-5** same element → Mastery active + Perfect Mastery tier (see per-element table)
+- **3-of-5 or fewer** → no Mastery; abilities fire at full individual strength (see trade-off in `05_abilities_philosophy.md`)
+
+"4/5" always means "at least 4 out of the 5 magic slots". It does NOT mean "exactly 4 with 1 flex" — a 5-of-5 loadout also qualifies for (and exceeds) the 4-of-5 threshold.
 
 Mastery is evaluated at loadout lock (pre-match) — it cannot change mid-match.
 
-## Core mechanics
+## Current runtime mechanics
 
-When Mastery is active, two things happen:
+When Mastery is active in the current runtime:
 
-1. **Element-specific bonus** applies to all your magic abilities of that element (see table below)
-2. **Your current weapon's M1 is infused** with the element's effect (see `02_weapon_sword.md`, `02_weapon_bow.md`, `02_weapon_staff.md`)
+1. **Element-specific bonus** applies to magic abilities of that element (see table below).
+2. The runtime exposes the mastery state/tier for loadout and UI use.
+
+## Target expression
+
+Weapon M1 infusion is the intended second expression of Mastery, described in
+`02_weapon_sword.md`, `02_weapon_bow.md`, and `02_weapon_staff.md`. It is not a
+live runtime guarantee until implemented and tested.
 
 ## Bonuses per element (4/5 stack)
 
@@ -39,7 +56,9 @@ When Mastery is active, two things happen:
 
 ## Perfect Mastery (5/5)
 
-The runtime detects 5/5 and exposes `masteryLevel = 2` / `masteryTier = 2` for UI. The current combat runtime applies the 4/5 bonus table above at both active tiers. The extra perks below are design targets and must not be treated as live behavior until implemented and tested:
+The runtime detects 5-of-5 and exposes `masteryLevel = 2` / `masteryTier = 2` for UI. The current combat runtime applies the 4-of-5 bonus table above at both tiers (so 5-of-5 gets the same live bonuses as 4-of-5).
+
+**The per-element extra perks below are DESIGN TARGETS — not live behavior. Do not implement or assume them until they are explicitly built and tested:**
 
 | Element       | 5/5 extra                                                                         |
 | ------------- | --------------------------------------------------------------------------------- |
@@ -76,7 +95,7 @@ base_damage
 
 Crit currently has no source in the design (no crit-chance stat, no crit-on-status effect). The order is specified for future-proofing if we add crit sources later.
 
-## M1 infusion strength by weapon
+## Target M1 infusion strength by weapon
 
 M1 infusion is a design target. The current server applies Mastery bonuses to elemental ability effects; weapon M1 infusion still needs a dedicated implementation pass.
 

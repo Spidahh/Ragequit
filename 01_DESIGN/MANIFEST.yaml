@@ -1,24 +1,29 @@
 # RAGEQUIT Design Docs — Machine-readable index
-# Purpose: Fast lookup for Claude (and humans) to load minimum relevant context per query.
+# Purpose: Fast lookup for coding agents and humans to load minimum relevant context per query.
 
 project: RAGEQUIT
-version: 1.1
+version: 1.4
 status: current
 
 # Read in this order for a full mental model
 read_order:
   - 00_vision.md
   - 00_pillars.md
+  - 00_classes.md
   - 00_player_journey.md
   - 01_stats.md
   - 01_controls.md
+  - 01_arena_fps_reference_study.md
   - 01_combat_fundamentals.md
   - 02_weapon_sword.md
   - 02_weapon_bow.md
   - 02_weapon_staff.md
   - 03_mastery_system.md
   - 04_transmutation.md
+  - 04_resource_sustain_study.md
   - 05_abilities_philosophy.md
+  - 05_ability_redesign_plan.md
+  - 05_ability_target_roster_pass1.md
   - 05_abilities_melee.md
   - 05_abilities_bow.md
   - 05_abilities_magic.md
@@ -28,6 +33,10 @@ read_order:
   - 08_progression.md
   - 09_visual.md
   - 11_ui_redesign_plan.md
+  - 12_game_graphic_audit.md
+  - 15_visual_strategy.md
+  - 13_graphic_redesign_blueprint.md
+  - 14_visual_redesign_system.md
   - 10_tech_stack.md
   - 10_tech_netcode.md
   - 10_tech_assets.md
@@ -36,89 +45,154 @@ read_order:
 files:
   00_vision.md: { section: core, status: final, tags: [philosophy, pitch] }
   00_pillars.md: { section: core, status: final, tags: [rules, anti-patterns] }
-  00_player_journey.md: { section: core, status: final, tags: [flow, ux] }
-  01_stats.md: { section: combat, status: final, tags: [numbers, hp, mana, stamina] }
-  01_controls.md: { section: combat, status: final, tags: [input, wheels, binds] }
-  01_combat_fundamentals.md: { section: combat, status: final, tags: [ttk, gcd, parry, knockup] }
-  02_weapon_sword.md: { section: weapons, status: final, tags: [melee, m1] }
-  02_weapon_bow.md: { section: weapons, status: final, tags: [ranged, projectile, m1] }
-  02_weapon_staff.md: { section: weapons, status: final, tags: [magic, m1] }
-  03_mastery_system.md: { section: systems, status: final, tags: [mastery, elements, infusion] }
-  04_transmutation.md: { section: systems, status: final, tags: [resources, trade] }
-  05_abilities_philosophy.md: { section: abilities, status: final, tags: [bonus, malus, tradeoffs] }
-  05_abilities_melee.md: { section: abilities, status: final, tags: [melee, list] }
-  05_abilities_bow.md: { section: abilities, status: final, tags: [bow, list] }
-  05_abilities_magic.md: { section: abilities, status: final, tags: [magic, elements, list] }
-  05_abilities_utility.md: { section: abilities, status: final, tags: [utility, fixed] }
-  06_loadout_build.md: { section: meta, status: final, tags: [build, loadout, slots] }
-  07_modes.md: { section: meta, status: final, tags: [modes, win_conditions] }
-  08_progression.md: { section: meta, status: final, tags: [elo, quests, talents] }
-  09_visual.md: { section: art, status: final, tags: [style, vfx] }
+  00_classes.md: { section: core, status: current, tags: [classes, identity, resources] }
+  00_player_journey.md: { section: core, status: target, tags: [flow, ux] }
+  01_stats.md: { section: combat, status: redesign, tags: [numbers, hp, mana, stamina] }
+  01_controls.md: { section: combat, status: redesign, tags: [input, wheels, binds] }
+  01_arena_fps_reference_study.md:
+    { section: combat, status: target-decision, tags: [movement, air_combat, references, impulse] }
+  01_combat_fundamentals.md: { section: combat, status: redesign, tags: [ttk, gcd, parry, knockup] }
+  02_weapon_sword.md: { section: weapons, status: redesign, tags: [melee, m1] }
+  02_weapon_bow.md: { section: weapons, status: redesign, tags: [ranged, projectile, m1] }
+  02_weapon_staff.md: { section: weapons, status: redesign, tags: [magic, m1] }
+  03_mastery_system.md:
+    { section: systems, status: superseded-target, tags: [mastery, elements, infusion] }
+  04_transmutation.md: { section: systems, status: superseded-runtime, tags: [resources, trade] }
+  04_resource_sustain_study.md:
+    { section: systems, status: target-decision, tags: [resources, healing, transfers, recovery] }
+  05_abilities_philosophy.md:
+    { section: abilities, status: redesign, tags: [bonus, malus, tradeoffs] }
+  05_ability_redesign_plan.md:
+    { section: abilities, status: plan, tags: [abilities, classes, magic_split] }
+  05_ability_target_roster_pass1.md:
+    { section: abilities, status: target-pass, tags: [abilities, roster, classes, magic_split] }
+  05_abilities_melee.md: { section: abilities, status: redesign, tags: [melee, list] }
+  05_abilities_bow.md: { section: abilities, status: redesign, tags: [bow, list] }
+  05_abilities_magic.md: { section: abilities, status: redesign, tags: [magic, elements, list] }
+  05_abilities_utility.md: { section: abilities, status: redesign, tags: [utility, fixed] }
+  06_loadout_build.md: { section: meta, status: redesign, tags: [build, loadout, slots] }
+  07_modes.md: { section: meta, status: current, tags: [modes, win_conditions] }
+  08_progression.md: { section: meta, status: target, tags: [elo, quests, talents] }
+  09_visual.md: { section: art, status: target, tags: [style, vfx] } # foundational direction; 15_visual_strategy.md is authoritative for design-system tokens
   11_ui_redesign_plan.md:
     { section: art, status: active, tags: [ui, ux, hud, menus, loadout, readability] }
+  12_game_graphic_audit.md:
+    { section: art, status: current, tags: [audit, repository, threejs, assets, ui, vfx] }
+  13_graphic_redesign_blueprint.md:
+    { section: art, status: active, tags: [execution, logo, menus, hud, loadout, spell_vfx] }
+  14_visual_redesign_system.md:
+    { section: art, status: active, tags: [visual_system, hierarchy, rules, debt] }
+  15_visual_strategy.md:
+    { section: art, status: active, tags: [strategy, design_system, performance, assets] }
   10_tech_stack.md: { section: tech, status: final, tags: [frameworks, versions] }
   10_tech_netcode.md: { section: tech, status: final, tags: [multiplayer, server_auth] }
-  10_tech_assets.md: { section: tech, status: final, tags: [assets, pipeline] }
+  10_tech_assets.md: { section: tech, status: active, tags: [assets, pipeline] }
   99_resolved_ambiguities.md: { section: meta, status: final, tags: [decisions, history] }
 
 sections:
-  core: [00_vision.md, 00_pillars.md, 00_player_journey.md]
-  combat: [01_stats.md, 01_controls.md, 01_combat_fundamentals.md]
+  core: [00_vision.md, 00_pillars.md, 00_classes.md, 00_player_journey.md]
+  combat: [01_stats.md, 01_controls.md, 01_arena_fps_reference_study.md, 01_combat_fundamentals.md]
   weapons: [02_weapon_sword.md, 02_weapon_bow.md, 02_weapon_staff.md]
-  systems: [03_mastery_system.md, 04_transmutation.md]
+  systems: [03_mastery_system.md, 04_transmutation.md, 04_resource_sustain_study.md]
   abilities:
     [
       05_abilities_philosophy.md,
+      05_ability_redesign_plan.md,
+      05_ability_target_roster_pass1.md,
       05_abilities_melee.md,
       05_abilities_bow.md,
       05_abilities_magic.md,
       05_abilities_utility.md,
     ]
   meta: [06_loadout_build.md, 07_modes.md, 08_progression.md, 99_resolved_ambiguities.md]
-  art: [09_visual.md, 11_ui_redesign_plan.md]
+  art:
+    [
+      09_visual.md,
+      11_ui_redesign_plan.md,
+      12_game_graphic_audit.md,
+      15_visual_strategy.md,
+      13_graphic_redesign_blueprint.md,
+      14_visual_redesign_system.md,
+    ]
   tech: [10_tech_stack.md, 10_tech_netcode.md, 10_tech_assets.md]
 
 query_hints:
   controls_and_input: [01_controls.md]
   player_movement: [01_stats.md, 01_controls.md]
+  arena_fps_movement: [01_arena_fps_reference_study.md, 01_controls.md, 01_combat_fundamentals.md]
   weapons_overview: [02_weapon_sword.md, 02_weapon_bow.md, 02_weapon_staff.md]
   aiming_and_projectiles: [02_weapon_bow.md, 02_weapon_staff.md]
   element_bonuses: [03_mastery_system.md]
+  class_redesign: [00_classes.md, 06_loadout_build.md]
+  sustain_redesign: [04_resource_sustain_study.md, 04_transmutation.md]
   ability_list:
     [05_abilities_melee.md, 05_abilities_bow.md, 05_abilities_magic.md, 05_abilities_utility.md]
+  ability_redesign:
+    [
+      05_ability_redesign_plan.md,
+      05_ability_target_roster_pass1.md,
+      00_classes.md,
+      01_arena_fps_reference_study.md,
+    ]
   build_crafting: [06_loadout_build.md, 05_abilities_philosophy.md]
   game_modes: [07_modes.md]
   progression_and_elo: [08_progression.md]
-  art_style: [09_visual.md, 11_ui_redesign_plan.md, 10_tech_assets.md]
+  art_style:
+    [
+      09_visual.md,
+      11_ui_redesign_plan.md,
+      12_game_graphic_audit.md,
+      15_visual_strategy.md,
+      13_graphic_redesign_blueprint.md,
+      14_visual_redesign_system.md,
+      10_tech_assets.md,
+    ]
+  visual_execution:
+    [
+      12_game_graphic_audit.md,
+      15_visual_strategy.md,
+      13_graphic_redesign_blueprint.md,
+      14_visual_redesign_system.md,
+      11_ui_redesign_plan.md,
+    ]
   tech_stack: [10_tech_stack.md, 10_tech_netcode.md]
   ttk_and_damage: [01_combat_fundamentals.md, 01_stats.md]
   decision_history: [99_resolved_ambiguities.md]
 
 locked_decisions:
-  - classless_game
-  - no_tank_vs_glass_axis
+  - class_system_tank_archer_mage_hybrid
   - ttk_window: '20-30 seconds'
   - wheels_Q_E_radial
-  - no_dodge
+  - no_default_iframe_roll
   - no_shift_sprint
   - m1_basic_or_primed_ability_fire
   - m2_is_parry
-  - all_players_access_all_3_weapons
-  - mastery_infuses_m1
+  - old_mastery_runtime_pending_class_redesign
   - no_pentagon_counter_between_elements
   - auto_swap_on_direct_ability_cast
   - wheel_release_primes_lmb_fires
+  - all_weapons_airborne_target
+  - no_fall_damage_target
+  - no_self_ability_damage_target
+  - no_fixed_transfers_target_recovery_utility_sustain
   - no_season_pass
   - 1v1_and_team_modes_at_launch
   - quest_based_permanent_unlocks
   - small_talent_tree
   - mini_malus_on_every_ability
   - visual_style: 'low-poly stylized (Risk of Rain 2 direction)'
-  - asset_sources: [Kenney.nl, Quaternius]
+  - asset_source_priority: [local_runtime_inventory, coherent_free_external_candidates]
 
-ability_counts:
+ability_counts: # current runtime TYPE pool, to be reclassified by class redesign
   melee: 6
   bow: 8
   magic: 27
-  utility: 11
+  utility: 11 # current runtime includes 3 fixed transfers + 8 flex abilities
   total: 52
+
+ability_slots_per_loadout: # current runtime slice; class target uses 00_classes.md
+  melee: 1
+  bow: 1
+  magic: 5
+  utility: 4 # old/current runtime fixed-transfer layout
+  total: 11

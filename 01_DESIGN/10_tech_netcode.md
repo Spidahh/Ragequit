@@ -10,6 +10,11 @@ status: final
 
 # Netcode Architecture
 
+> Redesign note: all-weapon air combat and self-impulse movement tech must stay
+> server-authoritative. If the movement model changes from direct velocity caps
+> toward acceleration/impulse preservation, prediction and reconciliation change
+> with it.
+
 ## Core principle: server-authoritative, zero-trust client
 
 The server is the single source of truth for all game state. The client is a **rendering and input-sending shell** that predicts its own movement for responsiveness but never commits anything. Every action the client "takes" is actually a request.

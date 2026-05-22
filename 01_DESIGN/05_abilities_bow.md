@@ -5,14 +5,17 @@ section: abilities
 tags: [bow, ranged, list]
 provides: [bow_ability_list]
 deps: [05_abilities_philosophy.md, 02_weapon_bow.md]
-status: final
+status: redesign
 ---
 
 # Bow Abilities
 
+> Current runtime pool. Target bow work must be re-evaluated for Arciere/Tank/
+> Ibrido legality, air-combat behavior and class starter/recovery coverage.
+
 Player picks **1** bow ability per loadout. Auto-swap applies — binding a bow ability while holding sword means pressing the bind swaps to bow and casts in the same input frame (`01_controls.md`).
 
-Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abilities/registry.ts` is the authoritative source for exact projectile speed, gravity, splash, setup duration, and tooltip text.
+Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abilities/registry.ts` is the authoritative source for exact projectile speed, gravity, splash, setup duration, cast data, and tooltip text. Numeric bullets below are design snapshots for role/readability review, not a second runtime registry.
 
 ## Pool — 8 abilities
 
@@ -58,8 +61,8 @@ Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abil
 
 ### B5 · Marksman Shot
 
-- **Effect**: Near-instant 300 m/s precision projectile
-- **Damage**: 32
+- **Effect**: 500 m/s fast-travel projectile, no gravity arc (not hitscan — a 30 m shot takes ~0.06 s of travel time)
+- **Damage**: 38
 - **Windup**: 1.0 s aim (laser-sight line visible to target during windup)
 - **Cost**: 20 mana
 - **Cooldown**: 15 s
@@ -82,6 +85,9 @@ Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abil
 - **Cooldown**: 9 s
 - **Range**: 22 m arcing projectile
 - **Mini-malus**: Gravity arc increases travel error against lateral movement
+- **Cleanse counter-play**: Broadhead Bleed needs visible cleanse counterplay.
+  Current runtime still cleanses Bleed through transmutation; target counterplay
+  moves to explicit cleanse rules after fixed transfers are removed.
 
 ### B8 · Blast Arrow
 

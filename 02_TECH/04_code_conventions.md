@@ -27,16 +27,17 @@ ragequit/                         # repo root (== github.com/Spidahh/Ragequit)
 │   │   │   └── index.ts          # barrel export
 │   │   └── package.json
 │   ├── client/                   # browser code
+│   │   ├── index.html            # Vite HTML entrypoint
 │   │   ├── src/
-│   │   │   ├── main.ts           # current entrypoint; still being split into modules
+│   │   │   ├── main.ts           # bootstrap/orchestration entrypoint
 │   │   │   ├── net/              # loadout sync and future room protocol helpers
-│   │   │   ├── render/           # target home for Three.js scene/camera modules
-│   │   │   ├── input/            # loadout slots, keybind helpers, wheel logic target
-│   │   │   ├── vfx/              # target home for particles, impacts, trails
-│   │   │   ├── hud/              # target home for cooldown/status/mastery HUD
-│   │   │   ├── audio/            # target home for WebAudio/SFX
-│   │   │   ├── ui/               # loadout station, menus, overlays
-│   │   │   └── index.html
+│   │   │   ├── render/           # Three.js scene, characters, camera and viewmodels
+│   │   │   ├── input/            # loadout slots, keybind helpers, cast and wheel logic
+│   │   │   ├── vfx/              # particles, impacts and trails
+│   │   │   ├── hud/              # cooldown, status, mastery and combat HUD modules
+│   │   │   ├── audio/            # WebAudio/SFX helpers
+│   │   │   ├── world/            # runtime arena and map rendering helpers
+│   │   │   └── types/            # client-facing type helpers
 │   │   └── package.json
 │   └── server/                   # Node.js server code
 │       ├── src/
@@ -46,7 +47,8 @@ ragequit/                         # repo root (== github.com/Spidahh/Ragequit)
 │       │   └── matchmaking/      # target home for queue, ELO, team balance
 │       └── package.json
 ├── tools/
-│   └── content-validator/        # target home for ability/content checks
+│   ├── content-validator/        # current ability/content checks
+│   └── asset-pipeline/           # audits plus future offline asset processing
 ├── package.json                  # monorepo root, pnpm workspaces
 ├── pnpm-workspace.yaml
 ├── tsconfig.base.json            # extended by every package
@@ -65,28 +67,28 @@ ragequit/                         # repo root (== github.com/Spidahh/Ragequit)
 - **Strict mode on** — `strict: true`, `noUncheckedIndexedAccess: true`, `noImplicitOverride: true` in `tsconfig.base.json`.
 - **ESM everywhere** — `"type": "module"` in every `package.json`.
 - **Explicit return types on exported functions**. Inferred is fine for locals.
-- **No `any`**. Use `unknown` + narrowing, or zod validation at boundaries.
+- **No `any`**. Use `unknown` + narrowing and typed protocol/schema boundaries.
 - **`as` casts are a code smell** — require a `// cast: why` comment if used.
 - **Naming**: `camelCase` for vars/functions, `PascalCase` for types/classes, `UPPER_SNAKE` for true constants.
 - **No default exports** from library modules. Named exports only. Default exports allowed in `main.ts` entrypoints.
 
 ## Import rules (enforced by ESLint `no-restricted-imports`)
 
-| From              | Allowed to import                                                         | Forbidden                               |
-| ----------------- | ------------------------------------------------------------------------- | --------------------------------------- |
-| `packages/shared` | Node stdlib, zod, @colyseus/schema                                        | any workspace package                   |
-| `packages/client` | `packages/shared`, three, colyseus.js, howler, zod, @colyseus/schema, dom | `packages/server`                       |
-| `packages/server` | `packages/shared`, colyseus, express, node stdlib, zod                    | `packages/client`, `three`, any DOM API |
-| `tools/*`         | anything                                                                  | —                                       |
+| From              | Allowed to import                                                                   | Forbidden                                |
+| ----------------- | ----------------------------------------------------------------------------------- | ---------------------------------------- |
+| `packages/shared` | Node stdlib where needed, `@colyseus/schema`                                        | any workspace package                    |
+| `packages/client` | `@ragequit/shared`, Three.js, `colyseus.js`, Supabase/PostHog client libs, DOM APIs | `packages/server`                        |
+| `packages/server` | `@ragequit/shared`, Colyseus, Express, Supabase/PostHog server libs, Node stdlib    | `packages/client`, Three.js, any DOM API |
+| `tools/*`         | workspace packages and tool dependencies                                            | DOM/runtime assumptions unless explicit  |
 
 Circular imports within a package are also forbidden (ESLint `import/no-cycle`).
 
 ## Constants and data
 
-- `packages/shared/constants/stats.ts` — HP 200, Mana 100, Stamina 100, regen rates, speeds
-- `packages/shared/constants/combat.ts` — TTK window, GCD, parry windows
-- `packages/shared/constants/transmute.ts` — transfer ratios and cooldowns
-- `packages/shared/abilities/registry.ts` — the current 52 ability definitions
+- `packages/shared/src/constants/stats.ts` — HP 200, Mana 100, Stamina 100, regen rates, speeds
+- `packages/shared/src/constants/combat.ts` — TTK window, GCD, parry windows
+- `packages/shared/src/constants/transmute.ts` — transfer ratios and cooldowns
+- `packages/shared/src/abilities/registry.ts` — the current 52 ability definitions
 
 **Every magic number in code must come from a constants module or an AbilityDefinition**. A grep CI check rejects PRs that introduce literals like `200` or `0.3` in sim code without referencing a constants export.
 
@@ -105,11 +107,16 @@ A dedicated determinism replay test is still future work. Until then, keep sim h
 
 ### Content validator
 
-The current safety net is the shared ability registry test suite. A standalone `tools/content-validator` command is planned, not live.
+The shared ability registry tests remain the first safety net. The root
+`pnpm validate:content` command also runs the current validator entrypoint in
+`tools/content-validator/validate.ts`.
 
 ### E2E / browser smoke
 
-- Local browser QA should open the Vite client, check console errors, verify the main menu/loadout station, and confirm fixed transfer utilities plus no rune/passive UI.
+- Local browser QA should open the Vite client, check console errors, verify the
+  main menu/loadout station, confirm current runtime fixed-transfer surfaces
+  only when the touched pass still depends on that legacy path, and confirm no
+  rune/passive UI.
 - Combat E2E with two browser clients is planned.
 
 ## Commits and PRs

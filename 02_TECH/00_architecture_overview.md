@@ -12,6 +12,10 @@ status: current
 
 ## Current Runtime Snapshot
 
+The snapshot below is not the target redesign. It still contains classless
+loadout, Mastery, fixed transmutation and airborne-lock code paths that are
+explicitly marked for redesign in `../REDESIGN_MASTER_PLAN.md`.
+
 RAGEQUIT is a TypeScript monorepo with three active packages:
 
 1. **Client** — Vite + Three.js browser app. It captures input, predicts local movement, renders HUD/wheels/loadout/VFX, and sends requests to the server.
@@ -67,6 +71,22 @@ Rule: **damage, cooldowns, resource spend, status application, loadout validatio
 | Client app/input/render/HUD    | `packages/client/src/`; game input controller in `input/game-input.ts`, radial wheel controller in `input/radial-wheels.ts`, mouse sensitivity in `input/sensitivity.ts`, cast/fire/weapon dispatcher in `input/cast-dispatcher.ts`, HUD drag/resize in `hud/hud-drag.ts`, hotbar/cooldown strip in `hud/cd-strip.ts`, combat feed in `hud/combat-feed.ts`, self-player HUD in `hud/self-hud.ts`, ability fail / server toast in `hud/ability-fail-hud.ts`, transmute bar in `hud/transmute-hud.ts`, hit feedback (hitmarker/dir hit/damage popup) in `hud/hit-feedback.ts`, bow charge / parry ring / round timer / vignettes in `hud/combat-overlay-hud.ts`, status applied/expired vignette flash in `hud/status-overlay.ts`, self-character emissive / player-light in `render/self-emissive.ts`, projectile visuals in `render/projectile-visuals.ts`, zone visuals in `render/zone-visuals.ts`, placement preview in `render/placement-preview.ts`, remote player visuals in `render/remote-players.ts`, arena animation in `world/arena.ts` (animateArena) |
 
 The Colyseus monitor is an admin surface, not public gameplay API. It is disabled unless `COLYSEUS_MONITOR_ENABLED=true`; when enabled, the server requires `COLYSEUS_MONITOR_USER` and `COLYSEUS_MONITOR_PASSWORD` and protects `/colyseus` with Basic Auth.
+
+## Redesign-sensitive runtime debt
+
+- `controller.ts` directly assigns horizontal velocity from input and also
+  accepts an `airborneLocked` movement cap. That is not enough by itself to
+  claim arena-FPS movement feel.
+- `AbilityEngine`, `GameRoom`, protocol rejection reasons and tests currently
+  treat airborne as a general cast/parry rejection surface.
+- Transmutation and old loadout payloads are current protocol/runtime surfaces,
+  not approved target UI grammar.
+- Movement, impulse, prediction and reconciliation must be redesigned together
+  if self spell movement tech becomes authoritative gameplay.
+- Current `applyKnockupToPlayer()` cancels parry/cast/charge, moves horizontal
+  knockback through displacement, zeros horizontal velocity and stamps
+  `airborneUntilTick`; that is the exact runtime path the target air model must
+  revisit.
 
 ## Build Outputs
 

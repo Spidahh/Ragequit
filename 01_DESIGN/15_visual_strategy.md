@@ -1,4 +1,25 @@
+---
+id: visual_strategy
+title: Visual Strategy
+section: art
+tags: [strategy, design_system, performance, assets]
+provides: [visual_strategy, visual_design_system, visual_asset_strategy]
+deps:
+  [
+    12_game_graphic_audit.md,
+    09_visual.md,
+    11_ui_redesign_plan.md,
+    ../02_TECH/06_visual_performance_contract.md,
+  ]
+status: active
+---
+
 # VISUAL STRATEGY
+
+> 2026-05-22 update: whole-game visual work must now serve the confirmed
+> class-based arena-FPS redesign. The old classless/fixed-transfer HUD examples
+> inside this strategy are evidence of current surfaces, not protected target
+> layout.
 
 Strategia grafica per RAGEQUIT, basata su `12_game_graphic_audit.md`, `09_visual.md`, `11_ui_redesign_plan.md` e `../02_TECH/06_visual_performance_contract.md`.
 
@@ -23,9 +44,11 @@ La grafica deve comunicare:
 
 - combattimento skill-based, non idle/autoplay;
 - arena leggibile prima dell’estetica;
-- tre armi con identità immediata: sword = corpo a corpo, bow = precisione/charge, staff = magie/proiettili;
+- weapon families and class legality with immediate identity: sword pressure,
+  bow precision/charge, staff spell/projectile play;
 - cinque elementi riconoscibili solo quando servono: Fire, Ice, Lightning, Dark, Nature;
-- risorse come superficie tattica: HP, Mana, Stamina e transfer fissi;
+- risorse come superficie tattica: HP, Mana, Stamina and the class-legal
+  Recovery surface chosen by the sustain decision;
 - loadout come build station da gioco, non pagina web;
 - server-authoritative feel: feedback chiaro ma mai ingannevole rispetto al risultato validato dal server.
 
@@ -38,7 +61,8 @@ In ogni momento live devono essere chiari:
 - se LMB farà basic attack, bow release, staff bolt, placement confirm o primed ability;
 - quale ability è primed;
 - se un’abilità è pronta, in cooldown, bloccata da costo o bloccata da stato;
-- quali risorse ho e quale transfer posso usare;
+- quali risorse ho e quale recovery/sustain action il loadout mi rende
+  disponibile;
 - dove finisce una AoE;
 - quale player è nemico e quanta vita ha;
 - quando subisco danno, parry, blind, freeze/root/stun o death;
@@ -156,6 +180,10 @@ Compatibilità browser desktop:
 
 Direzione consigliata: **Stylized Arena Combat Low-Poly con accenti arcane-tech solo per UI, sigilli decorativi, telegraph e feedback**.
 
+- **Estetica di Riferimento Obligatoria**: La grafica di gioco, gli asset tridimensionali, la modellazione e l'illuminazione devono uniformarsi e trarre diretta ispirazione dagli screenshot di esempio presenti in `E:\GIOCHI\ASSET_GRAFICA\esempio` (in particolare [esempio1.png](file:///E:/GIOCHI/ASSET_GRAFICA/esempio/esempio1.png), [esempio2.png](file:///E:/GIOCHI/ASSET_GRAFICA/esempio/esempio2.png) e [esempio3.png](file:///E:/GIOCHI/ASSET_GRAFICA/esempio/esempio3.png)). Le altre AI e tutti gli sviluppatori futuri devono allinearsi rigorosamente a questa direzione estetica e non introdurre elementi al di fuori di questo stile.
+
+Scope piattaforma corrente: desktop browser. Il redesign non deve piegare gerarchia, input o layout live verso una compatibilita mobile non richiesta.
+
 Motivo:
 
 - è la via più coerente con il gioco reale emerso dall’audit;
@@ -167,7 +195,7 @@ Motivo:
 
 La scelta pratica è:
 
-- mondo: low-poly fantasy arena, pietra/metallo/legno, silhouette pulite;
+- mondo: low-poly fantasy arena, pietra/metallo/legno, silhouette pulite (ispirate agli screenshot di esempio);
 - UI: combat console scura, gold accent, chip compatti, icone nette;
 - magic/VFX: arcane-tech leggibile, geometrie semplici, colori saturi;
 - player/weapon: stylized low-poly, niente realismo PBR.
@@ -263,7 +291,8 @@ HUD compatto, rettangolare, da arena:
 - cooldown: overlay radiale o fill scuro, numero breve;
 - primed: slot gold pulse + ring crosshair;
 - cost fail: breve flash arancio sullo slot o sulla risorsa;
-- transfer fixed: badge piccolo `FIXED`, sempre visibile in Q/HUD.
+- runtime fixed transfer: badge piccolo `FIXED` finche il vecchio sustain model
+  resta live; il target HUD deve passare al recovery/sustain contract approvato.
 
 HUD live deve usare poche parole. Le spiegazioni lunghe restano in Loadout/Pause.
 
@@ -286,7 +315,8 @@ Loadout Station:
 - selected ability panel come cockpit centrale;
 - pool filtrabile ma non protagonista;
 - flow strip `Opener / Control / Cashout / Reset`;
-- mastery pills come stato di build, non decorazione.
+- class grammar e class mechanic come stato di build, non decorazione; le
+  runtime mastery pills restano solo finche il vecchio loadout e live.
 
 ### Stile bottoni
 
@@ -309,7 +339,8 @@ Icone flat/SVG monocromatiche con tint per stato:
 - ability: silhouette leggibile, 1 simbolo principale;
 - elementi: forma + colore, non solo colore;
 - weapon: sword/bow/staff distinti a 24/32/60 px;
-- utility transfer: frecce risorsa con colori HP/Mana/Stamina;
+- recovery/sustain: glyph leggibile per il contratto finale; le frecce transfer
+  HP/Mana/Stamina restano solo per il runtime legacy;
 - status: simboli semplici, massimo due dettagli.
 
 Fonti coerenti:
@@ -476,7 +507,7 @@ Shader semplici ammessi:
 - Audio esterno, se introdotto.
 - Texture atlas VFX.
 - Icon pack extra non critico.
-- Asset specifici di FFA/5v5 quando quelle modalità diventano attive.
+- Asset specifici del 5v5 quando quella modalità diventa attiva.
 
 Il primo paint deve poter partire con fallback procedurali.
 
@@ -648,7 +679,8 @@ Fallback se non si trova nulla:
 Quando conviene usare codice invece di asset:
 
 - quasi sempre per HUD e menu;
-- soprattutto cooldown, bars, radial wheel, cast mode badge, mastery pills.
+- soprattutto cooldown, bars, radial wheel, cast mode badge e class-mechanic
+  state.
 
 ### Icone
 
@@ -795,15 +827,16 @@ Quando conviene usare codice invece di asset:
 
 ## 8. Domande aperte
 
+Le domande già risolte sono marcate ~~così~~.
+
 1. Qual è il target hardware minimo reale su desktop: PC mid-range o laptop integrato?
-2. FFA e 5v5 devono guidare subito budget e HUD, o la strategia deve ottimizzare prima 1v1/Training?
-3. Gli asset GLB attuali sono placeholder o devono essere mantenuti come base visuale?
+2. FFA deve guidare subito budget e HUD insieme a 1v1/Training, e 5v5 va considerato ora o resta fuori scope?
+3. ~~Gli asset GLB attuali sono placeholder o devono essere mantenuti come base visuale?~~ **RISPOSTA**: il character è l’FBX legacy Mixamo (active runtime, animation-complete); `player.glb` è il fallback; `sword/bow/staff.glb` sono i runtime weapon. Nessuno è “da buttare” — la sostituzione segue `02_TECH/07_character_animation_contract.md`.
 4. Il player locale in bow/staff deve mostrare viewmodel/mani/arma in prima persona?
-5. Il minimap documentato va implementato oppure va rimosso dal contratto visuale?
-6. I VFX devono diventare unici per ogni singola ability o basta un sistema per elemento + archetipo?
-7. La direzione “un po’ gore” deve includere blood particles in live build o restare solo hit flash/stylized burst?
-8. Menu e Loadout devono restare DOM/CSS o il main menu deve mostrare una scena arena dedicata dietro?
-9. Supabase/account/ranked avranno una UI visibile a breve?
-10. L’audio procedurale è considerato parte dello stile o solo placeholder?
-11. È accettabile usare asset CC-BY con attribution screen, o si vuole solo CC0/permissive?
-12. Quale budget massimo va imposto: draw calls, triangle count, texture memory, bundle size e initial load?
+5. I VFX devono diventare unici per ogni singola ability o basta un sistema per elemento + archetipo?
+6. ~~La direzione “un po’ gore” deve includere blood particles in live build o restare solo hit flash/stylized burst?~~ **RISPOSTA**: sangue rosso `#FF3344` su tutti i colpi fisici, sempre presente — non si mescola con i colori elemento. Confermato in `09_visual.md` e `AGENTS.md`.
+7. ~~Menu e Loadout devono restare DOM/CSS o il main menu deve mostrare una scena arena dedicata dietro?~~ **RISPOSTA**: DOM/CSS sopra canvas Three.js — la scena arena `#bg-canvas` esiste già nel menu ma è scura/vuota. La direzione è mostrare l’arena live secondo il blueprint `13_graphic_redesign_blueprint.md §3`.
+8. ~~Supabase/account/ranked avranno una UI visibile a breve?~~ **RISPOSTA**: No — è M4+ per ROADMAP. `userId` scaffolding presente ma auth UI non è in scope adesso.
+9. L’audio procedurale è considerato parte dello stile o solo placeholder?
+10. È accettabile usare asset CC-BY con attribution screen, o si vuole solo CC0/permissive?
+11. Quale budget massimo va imposto: draw calls, triangle count, texture memory, bundle size e initial load?

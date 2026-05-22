@@ -10,7 +10,7 @@ status: final
 
 # Tech Stack
 
-All choices prioritize: browser-first, free tier friendly, modern (2026), and compatible with my (Claude's) ability to read/write code confidently.
+All choices prioritize: browser-first, free tier friendly, modern (2026), and a codebase that stays understandable to maintainers and coding agents.
 
 ## Rendering
 
@@ -54,17 +54,20 @@ See `10_tech_netcode.md` for prediction/reconciliation details.
 
 ## Backend services
 
-| Component    | Choice                                     | Reason                                                                   |
-| ------------ | ------------------------------------------ | ------------------------------------------------------------------------ |
-| Auth & DB    | **Supabase**                               | Planned persistence/auth lane; not required for the local vertical slice |
-| CDN (assets) | **Cloudflare R2**                          | Zero egress fees; fits browser asset delivery                            |
-| Hosting      | **Fly.io**                                 | Free tier viable for early player base; region selection for latency     |
-| Monitoring   | **Sentry** (free tier)                     | Errors, perf traces                                                      |
-| Analytics    | **PostHog** (self-host or free cloud tier) | Event tracking, funnels                                                  |
+| Component    | Choice                                       | Reason                                                                                                                            |
+| ------------ | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Auth & DB    | **Supabase**                                 | Credentials configured as Fly secrets (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`); auth/persistence not yet active in game flow |
+| CDN (assets) | **Cloudflare R2**                            | Zero egress fees; fits browser asset delivery                                                                                     |
+| Hosting      | **Fly.io** (`ragequit-server`, region `ams`) | **LIVE** — server deployed on Fly.io Amsterdam; `fly.toml` at repo root                                                           |
+| Monitoring   | **Sentry** (free tier)                       | Errors, perf traces                                                                                                               |
+| Analytics    | **PostHog** (self-host or free cloud tier)   | Event tracking, funnels                                                                                                           |
 
 ## Asset pipeline
 
-See `10_tech_assets.md` for details. Headline: **gltf-transform + Meshopt compression + KTX2 textures + IndexedDB client cache**.
+See `10_tech_assets.md` for details. Current runtime uses installed client assets
+plus cheap procedural fallbacks; the target production lane is
+**gltf-transform + Meshopt compression + KTX2 textures + IndexedDB client
+cache**.
 
 ## Dev & CI
 

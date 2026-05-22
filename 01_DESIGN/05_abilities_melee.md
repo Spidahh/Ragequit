@@ -5,14 +5,17 @@ section: abilities
 tags: [melee, sword, list]
 provides: [melee_ability_list]
 deps: [05_abilities_philosophy.md, 02_weapon_sword.md]
-status: final
+status: redesign
 ---
 
 # Melee Abilities
 
+> Current runtime pool. Target melee work must be re-evaluated for class slot
+> grammar, Sword M1 rework and air-combat rules.
+
 Player picks **1** melee ability per loadout. This ability lives in the melee slot and is cast via the E wheel or a custom bind (which auto-swaps to sword — see `01_controls.md`).
 
-Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abilities/registry.ts` is the authoritative source for exact damage, CC duration, stamina cost, cooldown, and tooltip text.
+Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abilities/registry.ts` is the authoritative source for exact damage, CC duration, stamina cost, cooldown, cast data, and tooltip text. Numeric bullets below are design snapshots for role/readability review, not a second runtime registry.
 
 ## Pool — 6 abilities
 
@@ -36,7 +39,9 @@ Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abil
 
 ### M3 · Uppercut [KNOCKUP]
 
-- **Effect**: Vertical strike launches target up and slightly away for 0.8 s (disables their abilities + parry during airtime)
+- **Effect**: Vertical strike launches target up and slightly away for an
+  air-pressure window. The target keeps legal air answers according to
+  `01_arena_fps_reference_study.md`.
 - **Damage**: 15
 - **Windup**: 0.4 s clear telegraph (overhead raise)
 - **Cost**: 40 stamina
@@ -51,7 +56,9 @@ Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abil
 - **Cost**: 20 stamina
 - **Cooldown**: 7 s
 - **Range**: 2.5 m
-- **Mini-malus**: Bleed DoT is **cleansed by any transmutation cast** (visible counter-play)
+- **Mini-malus**: Bleed DoT must have visible cleanse/counterplay. Current
+  runtime still cleanses it through transmutation; target counterplay moves to
+  explicit cleanse rules after fixed transfers are removed.
 
 ### M5 · Guard Break
 
@@ -74,7 +81,7 @@ Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abil
 - **Whirlwind** = AoE answer for multi-enemy encounters
 - **Gap Closer** = engage tool for melee players chasing ranged opponents
 - **Uppercut** = the pure-melee launch setup, enabling follow-up from teammates or own bow/staff swap
-- **Bleed Strike** = pressure tool with a clear counter-play lane (transfer cleanse)
+- **Bleed Strike** = pressure tool with a clear counter-play lane (Cleanse Surge or future class cleanse utility)
 - **Guard Break** = close-range interrupt/shove tool
 - **Rending Dash** = melee mobility with bleed pressure
 

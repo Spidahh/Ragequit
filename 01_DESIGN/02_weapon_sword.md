@@ -3,44 +3,58 @@ id: weapon_sword
 title: Sword
 section: weapons
 tags: [weapon, melee, m1]
-provides: [sword_m1, sword_range, sword_mastery_infusion]
-deps: [01_combat_fundamentals.md, 03_mastery_system.md]
-status: final
+provides: [sword_m1, sword_range, sword_affinity_infusion]
+deps: [01_combat_fundamentals.md, 00_classes.md]
+status: redesign
 ---
 
 # Sword
 
-Close-range weapon. High sustain damage via chained swings. Primary source of melee pressure. Always available to every player.
+> Current runtime/basic values below are being redesigned. Confirmed target:
+> Sword M1 must not dominate abilities by spam, a miss must reset its hit chain,
+> and sword actions cannot be rejected only because the player is airborne.
+
+Close-range weapon. The class/loadout redesign controls access. Sword M1 should
+stay a follow-through pressure tool around melee abilities, not the best answer
+when spammed alone.
 
 ## M1 — Basic swing
 
 | Property       | Value                                                     |
 | -------------- | --------------------------------------------------------- |
 | Swing duration | 0.4 s per swing                                           |
-| Combo          | 3-hit chain (swing 1 → 2 → 3), 0.4 s each                 |
-| Range          | 2.5 m arc (cone ~90°)                                     |
-| Damage         | Swing 1: 6 · Swing 2: 6 · Swing 3: 9 (stagger bonus)      |
-| Combo total    | 21 damage over 1.2 s (17.5 DPS at perfect sustain)        |
-| Cost           | 0 (no stamina, no mana)                                   |
+| Combo          | 3-hit landed chain (miss resets the chain)                |
+| Range          | 1.8 m arc (cone ~60°)                                     |
+| Damage         | Swing 1: 5 · Swing 2: 5 · Swing 3: 8                      |
+| Combo total    | 18 damage over three landed swings                        |
+| Cost           | 8 stamina per swing                                       |
 | On-hit         | Light flinch on 1 & 2; 0.1 s slow + moderate stagger on 3 |
 
-Swings chain fluidly when M1 is tapped within 0.3 s of the previous swing. The combo counter resets after 1.0 s of inactivity.
+Swings chain fluidly only after server hit confirmation. A miss resets the combo
+counter immediately; inactivity still returns the next landed chain to swing 1.
 
-## M1 with Mastery infusion
+## Target M1 with element affinity infusion
 
-When Element Mastery is active (4+ magic abilities of one element — see `03_mastery_system.md`), sword M1 is infused:
+> The old Mastery system is superseded as the target identity axis. The element
+> infusion effects below survive as design intent but belong to the class/affinity
+> redesign pass, not the old 4/5-slot Mastery rule. Do not implement against the
+> old Mastery logic — wait for `00_classes.md` affinity pass to define the
+> trigger.
 
-| Element   | Infusion effect                                                                           |
-| --------- | ----------------------------------------------------------------------------------------- |
-| Fire      | +1 Burn stack per hit (Burn: 2 dmg/s for 3 s, stacks to 3)                                |
-| Ice       | +1 Chill stack per hit (Chill: 5% slow each, stacks to 5 → Frozen 0.3 s, consumes stacks) |
-| Lightning | 20% chance per hit to arc a 3-damage bolt to 1 nearby enemy within 3 m                    |
-| Dark      | Heal attacker for 8% of damage dealt                                                      |
-| Nature    | +1 Poison stack per hit (Poison: 1 dmg/s, decays 1 stack/s when not refreshed)            |
+Sword M1 element infusion effects (intended, pending class affinity pass):
+
+| Element   | Infusion effect                                                                                                             |
+| --------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Fire      | +1 Burn stack per hit (Burn: 2 dmg/s for 3 s, stacks to 3)                                                                  |
+| Ice       | +1 Chill stack per hit (Chill: 5% slow each, stacks to 5 → Frozen 0.3 s, consumes stacks)                                   |
+| Lightning | On every 3rd combo hit (swing 3), arc a 3-damage bolt to the nearest enemy within 3 m (deterministic, combo-gated — no RNG) |
+| Dark      | Heal attacker for 8% of damage dealt                                                                                        |
+| Nature    | +1 Poison stack per hit (Poison: 1 dmg/s, decays 1 stack/s when not refreshed)                                              |
 
 ## Constraints
 
-- Ground-only — sword cannot swing while airborne
+- Target redesign removes the old ground-only sword assumption; final air swing
+  behavior belongs to the air-combat pass
 - Swings cancel on parry (M2) or weapon swap
 - Hitbox-based — the server resolves the cone sweep per frame of the swing
 - Friendly fire: off in Team Battle, on in FFA

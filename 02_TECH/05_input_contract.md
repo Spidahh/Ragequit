@@ -2,6 +2,11 @@
 
 This file records the current browser-game input rules so we do not regress the basic play loop.
 
+Confirmed redesign note: wheel selection behavior and pointer-lock safety stay
+important, while slot counts, class legality and recovery surfaces change. Air
+action rules now follow `../01_DESIGN/01_arena_fps_reference_study.md`; browser
+smoke must cover air combat after that pass.
+
 ## Arena Capture
 
 - The in-game canvas must receive focus when entering or resuming gameplay.

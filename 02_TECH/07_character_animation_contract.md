@@ -42,25 +42,25 @@ the current low-poly stylized direction.
 These states are required by gameplay. A production-ready asset should include
 distinct clips for each row.
 
-| Gameplay state | Required clip intent | Active legacy FBX support |
-| --- | --- | --- |
-| Idle | Relaxed standing combat idle | `idle_combat.fbx` |
-| Run | Full-speed movement | `run_forward.fbx` |
-| Walk | Slow/interpolated movement, if used | `walk_forward.fbx` |
-| Jump start | Voluntary jump launch | `jump.fbx` |
-| Fall / airborne | Falling, knockup, or airborne lock | `airborne.fbx` |
-| Land | Ground contact after jump/fall | `land.fbx` |
-| Sword attack 1 | Primary melee swing | `melee_attack_01.fbx` |
-| Sword attack 2 / combo | Alternate melee swing | `melee_attack_02.fbx` |
-| Parry / block | Defensive weapon pose | `parry_block.fbx` |
-| Bow draw / aim | Held bow charge | `bow_draw.fbx` |
-| Bow release | Shot release | `bow_release.fbx` |
-| Staff cast | Magic cast gesture | `staff_cast.fbx` |
-| Channel | Held cast/beam/totem style action | `channel.fbx` |
-| Hit reaction | Damage response | `hit_react.fbx` |
-| Dash / roll | Utility movement burst | `dash_roll.fbx` |
-| Death | Death pose/fall | `death.fbx` |
-| Respawn | Return to controllable idle | `respawn.fbx` |
+| Gameplay state         | Required clip intent                | Active legacy FBX support |
+| ---------------------- | ----------------------------------- | ------------------------- |
+| Idle                   | Relaxed standing combat idle        | `idle_combat.fbx`         |
+| Run                    | Full-speed movement                 | `run_forward.fbx`         |
+| Walk                   | Slow/interpolated movement, if used | `walk_forward.fbx`        |
+| Jump start             | Voluntary jump launch               | `jump.fbx`                |
+| Fall / airborne        | Falling, knockup, or airborne lock  | `airborne.fbx`            |
+| Land                   | Ground contact after jump/fall      | `land.fbx`                |
+| Sword attack 1         | Primary melee swing                 | `melee_attack_01.fbx`     |
+| Sword attack 2 / combo | Alternate melee swing               | `melee_attack_02.fbx`     |
+| Parry / block          | Defensive weapon pose               | `parry_block.fbx`         |
+| Bow draw / aim         | Held bow charge                     | `bow_draw.fbx`            |
+| Bow release            | Shot release                        | `bow_release.fbx`         |
+| Staff cast             | Magic cast gesture                  | `staff_cast.fbx`          |
+| Channel                | Held cast/beam/totem style action   | `channel.fbx`             |
+| Hit reaction           | Damage response                     | `hit_react.fbx`           |
+| Dash / roll            | Utility movement burst              | `dash_roll.fbx`           |
+| Death                  | Death pose/fall                     | `death.fbx`               |
+| Respawn                | Return to controllable idle         | `respawn.fbx`             |
 
 If a new asset lacks required clips, it can be used only as a temporary visual
 placeholder. The missing states must be documented before integration.
@@ -77,6 +77,10 @@ client-only guesses where authoritative state exists.
 - `airborneUntilTick > schemaTick` maps to jump/fall/airborne.
 - `parrying=true` maps to parry/block.
 - Damage feedback should map to hit reaction when available.
+- Legacy FBX animation retargeting converts bone rotations from each source
+  FBX rest pose into the base skin rest pose and discards imported bone-position
+  tracks; gameplay/network transforms own world movement and the current base
+  skin does not share the animation FBXs' Mixamo-scale hip space.
 
 Fallbacks are allowed, but they must be intentional and cheap:
 
@@ -103,6 +107,8 @@ Fallbacks are allowed, but they must be intentional and cheap:
   mesh is proven to be a non-render helper.
 - Do not hardcode character scale when a valid renderable bounding box is
   available.
+- Keep `player_base.fbx` as the mesh/skin source. A legacy animation FBX with
+  its own clip is not an acceptable base asset.
 - Keep character materials toon/flat and browser-cheap.
 
 ## Current Gaps

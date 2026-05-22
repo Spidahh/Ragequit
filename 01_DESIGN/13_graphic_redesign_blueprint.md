@@ -1,4 +1,24 @@
+---
+id: graphic_redesign_blueprint
+title: Graphic Redesign Blueprint
+section: art
+tags: [execution, logo, menus, hud, loadout, spell_vfx]
+provides: [graphic_execution_plan, visual_acceptance_criteria, spell_visual_language]
+deps:
+  [
+    12_game_graphic_audit.md,
+    15_visual_strategy.md,
+    11_ui_redesign_plan.md,
+    ../02_TECH/06_visual_performance_contract.md,
+  ]
+status: active
+---
+
 # GRAPHIC REDESIGN BLUEPRINT
+
+> 2026-05-22 update: the presentation pass is reopened around the confirmed
+> class-based arena-FPS redesign. Any fixed-transfer or old mastery HUD example
+> below is legacy runtime context, not the approved target.
 
 Questo documento corregge il tiro rispetto a un semplice inventario asset.
 
@@ -8,7 +28,9 @@ Obiettivo: definire una grafica coerente per tutto RAGEQUIT: logo, shell menu, H
 
 La direzione da seguire e:
 
-**Arena fantasy low-poly da combat sport, con UI da war-console arcana.**
+**Arena fantasy low-poly da combat sport, con UI da war-console arcana (ispirata direttamente agli screen di esempio).**
+
+- **Riferimento Visivo Principale**: Tutti gli elementi grafici del mondo 3D, le arene, la modellazione delle armi e dei personaggi devono rispecchiare fedelmente lo stile ed il livello estetico mostrato negli screenshot di riferimento presenti in `E:\GIOCHI\ASSET_GRAFICA\esempio` (nello specifico [esempio1.png](file:///E:/GIOCHI/ASSET_GRAFICA/esempio/esempio1.png), [esempio2.png](file:///E:/GIOCHI/ASSET_GRAFICA/esempio/esempio2.png) e [esempio3.png](file:///E:/GIOCHI/ASSET_GRAFICA/esempio/esempio3.png)). Le altre AI devono utilizzare questi screenshot come unica sorgente di verità estetica durante la scelta, la modellazione o la generazione di asset grafici.
 
 Non deve sembrare:
 
@@ -81,20 +103,26 @@ Tutti i menu devono condividere la stessa architettura visiva.
 
 ### Background menu
 
-Usare sempre una scena arena scura dietro i menu:
+**Requisito non negoziabile:** `#bg-canvas` deve rendere una scena arena attiva, sempre. Un canvas buio o vuoto non è accettabile nel prodotto finale.
 
-- canvas Three.js visibile;
-- camera ferma o slow orbit molto leggero;
-- arena desaturata;
-- vignette nera ai bordi;
+Comportamento atteso:
+
+- canvas Three.js visibile, non nero;
+- camera ferma o slow orbit ≤ 0.02 rad/s — abbastanza lento da non distrarre;
+- arena desaturata (~30% saturation, non zero — deve sembrare un'arena, non una stampa in scala di grigi);
+- vignette nera ai bordi (CSS `radial-gradient` overlay);
 - niente background PNG enormi;
 - niente hero/landing page.
 
-Asset da usare:
+**Asset preferiti:**
 
-- `packages/client/public/arena/gladiators_arena.glb`;
-- plinth/ring/sigilli decorativi procedurali gia presenti;
+- `packages/client/public/arena/gladiators_arena.glb` — asset primario;
+- plinth/ring/sigilli decorativi procedurali già presenti come fallback;
 - props futuri solo se low-poly e ritintati.
+
+**Fallback obbligatorio:** se `gladiators_arena.glb` non è disponibile o il caricamento fallisce, rendere un ambiente procedurale minimo (pavimento scuro + ring ottagonale low-poly + 2-3 point lights ambient). Il canvas deve sempre mostrare qualcosa di riconducibile all'arena, mai uno sfondo piatto.
+
+**Perché questo è priorità:** il menu è il primo contatto del giocatore con il gioco. Se il canvas è nero, il gioco sembra un prototipo abbandonato. Se il canvas mostra l'arena, il gioco comunica immediatamente che è un prodotto PvP con un'identità visiva.
 
 ### Layout shell
 
@@ -153,7 +181,7 @@ LEFT 34%                         RIGHT 66%
 │ LOADOUT               │
 │ SETTINGS              │
 │                       │
-│ FFA locked/disabled   │
+│ FREE FOR ALL          │
 └───────────────────────┘
 ```
 
@@ -172,6 +200,24 @@ Da togliere o ridurre:
 - griglie di card grandi;
 - box multipli decorativi;
 - mode card bitmap pesanti.
+
+### Tagline
+
+La tagline attuale "PvP ARENA COMBAT" è generica. Deve comunicare la proposta core: **build crafting + meccanica knockup + arena skill-based**.
+
+Direzione:
+
+- deve essere breve (≤ 5 parole, preferibilmente ≤ 4);
+- deve sentirsi come un'arena da combattimento, non una descrizione di genere;
+- deve anticipare il core loop, non descrivere il setting.
+
+Candidati:
+
+- `CRAFT YOUR COMBO. CLAIM THE ARENA.`
+- `BUILD IT. BREAK THEM.`
+- `YOUR BUILD. YOUR COMBO. YOUR ARENA.`
+
+Tono definitivo da decidere con l'utente prima dell'implementazione. Il punto chiave: la tagline deve fare sentire al giocatore che costruire il proprio build e eseguire il proprio combo è il cuore del gioco — non solo "combattimento PvP".
 
 ### Visual
 
@@ -319,15 +365,15 @@ Filtri:
 - element chips come pill piccole;
 - search non deve dominare.
 
-### Mobile/narrow fallback
+### Desktop narrow fallback
 
-Tre tab:
+Il target resta desktop. Su finestre desktop strette la Loadout Forge deve preservare:
 
-- `SLOTS`
-- `DETAIL`
-- `POOL`
+- slot rail sempre visibile;
+- selected ability leggibile senza tagliare costi, cast mode e build role;
+- pool riducibile in larghezza o con scrolling interno.
 
-Non tentare di comprimere tutto in 3 colonne.
+Non comprimere la schermata in una falsa UI mobile e non sacrificare la gerarchia del build per far stare tutto in colonne minuscole.
 
 ## 7. HUD live
 
@@ -508,60 +554,60 @@ Le frecce non devono essere spell colorate.
 
 ## 9. VFX mapping per abilita
 
-| Ability | Visual identity |
-|---|---|
-| whirlwind | circular slash ring + red/white edge |
-| gap_closer | forward body streak + ground dust |
-| uppercut | vertical slash arc + lift column |
-| bleed_strike | red slash + small blood spray |
-| guard_break | bright impact star + cracked shield glyph |
-| rending_dash | red dash trail + slash impact |
-| piercing_shot | thin bright arrow trail through target |
-| volley | multiple light arrow traces |
-| pin_shot | arrow impact + root pin marker on feet |
-| snare_trap | low trap mesh + armed pulse ring |
-| marksman_shot | focused reticle + clean long arrow |
-| disengage_shot | arrow + backward dash streak |
-| broadhead | heavier arrow, short brutal trail |
-| blast_arrow | arrow then fire burst on impact |
-| fireball | unstable orange orb + flame tail |
-| flame_wall | vertical flame panels + hard ground edge |
-| ignite | instant target mark + burn burst |
-| meteor | warning circle + falling mass + ring impact |
-| eruption | cracked ground + vertical fire burst |
-| fire_blink | red/orange dash streak + arrival burst |
-| frost_bolt | ice shard projectile |
-| ice_wall | translucent block wall + frosty base |
-| blizzard | circle field + orbiting shards |
-| freeze_target | ice lock reticle + snap crystal |
-| frost_pillar | ground warning + rising crystal |
-| chain_bolt | jagged line segments target-to-target |
-| thunder_clap | expanding shock ring from caster |
-| storm_field | field boundary + vertical lightning ticks |
-| lightning_dash | yellow zigzag streak |
-| arc_lift | upward bolt column + lift ring |
-| shadow_bolt | dark shard with violet core |
-| curse_of_weakness | dark sigil over target + purple pulse |
-| life_drain | tether beam caster-target |
-| dark_barrier | dark dome/ring shield |
-| void_spike | black/violet spike from ground |
-| poison_dart | small green dart + toxic trail |
-| thorn_field | root/spike field boundary |
-| entangle | roots wrap feet |
-| healing_totem | placed totem + green pulse radius |
-| root_upthrow | root spike lifting target |
-| vine_dash | green dash with leaf trail |
-| self_heal | body-centered green pulse |
-| quick_dash | neutral white/blue movement streak |
-| ping_mark | target reticle marker |
-| cleanse_surge | white/green burst washing outward |
-| barrier | clear shield ring/dome |
-| energize | cyan/green resource spark around body |
-| phase_shift | transparent ghost duplicate + fade |
-| smoke_screen | smoke cloud field, low opacity edges |
-| transfer_hp_mana | red-to-cyan UI/world micro pulse |
-| transfer_mana_stam | cyan-to-green UI/world micro pulse |
-| transfer_stam_hp | green-to-red UI/world micro pulse |
+| Ability            | Visual identity                             |
+| ------------------ | ------------------------------------------- |
+| whirlwind          | circular slash ring + red/white edge        |
+| gap_closer         | forward body streak + ground dust           |
+| uppercut           | vertical slash arc + lift column            |
+| bleed_strike       | red slash + small blood spray               |
+| guard_break        | bright impact star + cracked shield glyph   |
+| rending_dash       | red dash trail + slash impact               |
+| piercing_shot      | thin bright arrow trail through target      |
+| volley             | multiple light arrow traces                 |
+| pin_shot           | arrow impact + root pin marker on feet      |
+| snare_trap         | low trap mesh + armed pulse ring            |
+| marksman_shot      | focused reticle + clean long arrow          |
+| disengage_shot     | arrow + backward dash streak                |
+| broadhead          | heavier arrow, short brutal trail           |
+| blast_arrow        | arrow then fire burst on impact             |
+| fireball           | unstable orange orb + flame tail            |
+| flame_wall         | vertical flame panels + hard ground edge    |
+| ignite             | instant target mark + burn burst            |
+| meteor             | warning circle + falling mass + ring impact |
+| eruption           | cracked ground + vertical fire burst        |
+| fire_blink         | red/orange dash streak + arrival burst      |
+| frost_bolt         | ice shard projectile                        |
+| ice_wall           | translucent block wall + frosty base        |
+| blizzard           | circle field + orbiting shards              |
+| freeze_target      | ice lock reticle + snap crystal             |
+| frost_pillar       | ground warning + rising crystal             |
+| chain_bolt         | jagged line segments target-to-target       |
+| thunder_clap       | expanding shock ring from caster            |
+| storm_field        | field boundary + vertical lightning ticks   |
+| lightning_dash     | yellow zigzag streak                        |
+| arc_lift           | upward bolt column + lift ring              |
+| shadow_bolt        | dark shard with violet core                 |
+| curse_of_weakness  | dark sigil over target + purple pulse       |
+| life_drain         | tether beam caster-target                   |
+| dark_barrier       | dark dome/ring shield                       |
+| void_spike         | black/violet spike from ground              |
+| poison_dart        | small green dart + toxic trail              |
+| thorn_field        | root/spike field boundary                   |
+| entangle           | roots wrap feet                             |
+| healing_totem      | placed totem + green pulse radius           |
+| root_upthrow       | root spike lifting target                   |
+| vine_dash          | green dash with leaf trail                  |
+| self_heal          | body-centered green pulse                   |
+| quick_dash         | neutral white/blue movement streak          |
+| ping_mark          | target reticle marker                       |
+| cleanse_surge      | white/green burst washing outward           |
+| barrier            | clear shield ring/dome                      |
+| energize           | cyan/green resource spark around body       |
+| phase_shift        | transparent ghost duplicate + fade          |
+| smoke_screen       | smoke cloud field, low opacity edges        |
+| transfer_hp_mana   | red-to-cyan UI/world micro pulse            |
+| transfer_mana_stam | cyan-to-green UI/world micro pulse          |
+| transfer_stam_hp   | green-to-red UI/world micro pulse           |
 
 ## 10. Asset usage from ASSET_GRAFICA
 

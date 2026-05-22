@@ -10,6 +10,10 @@ status: current
 
 # Network Protocol
 
+> Current runtime protocol. Class loadouts, final recovery/sustain, all-weapon
+> air combat and server-owned self-impulse are redesign work. Keep this document
+> honest when those protocol shapes change.
+
 ## Summary
 
 - Transport: Colyseus WebSocket.
@@ -37,7 +41,12 @@ status: current
 
 The wheel interaction itself is client-side UI. Releasing Q/E primes a slot; the subsequent LMB either sends `cast` immediately or opens the placement preview for non-instant abilities. Placement previews send `cast` only when LMB confirms the target point.
 
-Server validation clamps `targetPoint` to the ability range and rejects/ignores impossible casts after checking loadout membership, locks, cost, cooldown, weapon requirement, Phase Shift, parry state, and airborne state. Direct forward/target abilities must also pass server line-of-sight against static map cover before selecting a victim.
+Server validation currently clamps `targetPoint` to the ability range and
+rejects/ignores impossible casts after checking loadout membership, locks, cost,
+cooldown, weapon requirement, Phase Shift, parry state, and airborne state.
+Target redesign replaces blanket airborne rejection with explicit air-combat
+rules. Direct forward/target abilities must also pass server line-of-sight
+against static map cover before selecting a victim.
 
 ## Server To Client Events
 

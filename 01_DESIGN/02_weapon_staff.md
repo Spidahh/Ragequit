@@ -3,14 +3,21 @@ id: weapon_staff
 title: Staff
 section: weapons
 tags: [weapon, magic, m1, projectile]
-provides: [staff_m1, staff_range, staff_mastery_infusion]
-deps: [01_combat_fundamentals.md, 03_mastery_system.md]
-status: final
+provides: [staff_m1, staff_range, staff_affinity_infusion]
+deps: [01_combat_fundamentals.md, 00_classes.md]
+status: redesign
 ---
 
 # Staff
 
-Mid-range magic weapon. Fast projectile cadence, moderate damage per hit, primary delivery system for Mastery infusion procs. Always available to every player.
+> Staff remains the spell-facing M1 lane. Its target air behavior must be tuned
+> alongside Sword and Bow because the redesign keeps all weapon families active
+> in air.
+
+Mid-range magic weapon. Fast projectile cadence, moderate damage per hit, and
+the intended primary M1 delivery system for future element affinity procs.
+**Class access**: Arciere, Mago, Ibrido. Tank does not have staff access (Tank
+weapon grammar is Sword + Bow only).
 
 ## M1 — Magic bolt
 
@@ -29,9 +36,13 @@ Staff is the only M1 with a resource cost. This is deliberate — it couples sta
 
 If mana is 0, M1 becomes a weak unarmed punch (0 damage, 0.5 s swing) — a visual-only fallback with no combat utility.
 
-## M1 with Mastery infusion
+## Target M1 with element affinity infusion
 
-Staff has **stronger infusion effects** than sword/bow because each bolt costs mana — the budget spent is higher:
+> The old Mastery system is superseded as the target identity axis. These infusion
+> effects belong to the class/affinity redesign pass. See `00_classes.md`.
+
+Weapon M1 infusion is a design target, not current runtime behavior. The staff
+version is intended to be stronger than sword/bow because each bolt costs mana:
 
 | Element   | Infusion effect                                                                  |
 | --------- | -------------------------------------------------------------------------------- |

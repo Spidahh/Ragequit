@@ -2,6 +2,11 @@
 
 This file records the UI/VFX rules that keep RAGEQUIT readable and browser-friendly.
 
+Confirmed redesign note: every visual rule now serves a class-aware active arena
+FPS cockpit. Whole-game menu/HUD/loadout/VFX work remains open; keep aim,
+projectiles and enemy silhouettes dominant while replacing legacy transfer and
+Mastery surfaces.
+
 ## CSS / HUD
 
 - Animate `transform` and `opacity` first. Avoid long-running animations on `filter`, `border-color`, `box-shadow`, or large backdrop blurs.

@@ -119,25 +119,25 @@ combined runtime plan first:
 
 The replacement should provide these final mappings:
 
-| Gameplay state | Target animation |
-| --- | --- |
-| Idle | combat idle |
-| Run | forward run |
-| Walk | slow move / interpolation |
-| Jump start | jump start |
-| Fall / airborne | fall or airborne loop |
-| Land | landing |
-| Sword attack 1 | melee slash 1 |
-| Sword attack 2 | melee slash 2 |
-| Parry / block | guard or block pose |
-| Bow draw | bow aim / draw hold |
-| Bow release | bow shoot / release |
-| Staff cast | one-hand or two-hand cast |
-| Channel | casting/channel loop |
-| Hit reaction | hit reaction front |
-| Dash / roll | dash or roll |
-| Death | death |
-| Respawn | spawn/get-up or idle reset |
+| Gameplay state  | Target animation           |
+| --------------- | -------------------------- |
+| Idle            | combat idle                |
+| Run             | forward run                |
+| Walk            | slow move / interpolation  |
+| Jump start      | jump start                 |
+| Fall / airborne | fall or airborne loop      |
+| Land            | landing                    |
+| Sword attack 1  | melee slash 1              |
+| Sword attack 2  | melee slash 2              |
+| Parry / block   | guard or block pose        |
+| Bow draw        | bow aim / draw hold        |
+| Bow release     | bow shoot / release        |
+| Staff cast      | one-hand or two-hand cast  |
+| Channel         | casting/channel loop       |
+| Hit reaction    | hit reaction front         |
+| Dash / roll     | dash or roll               |
+| Death           | death                      |
+| Respawn         | spawn/get-up or idle reset |
 
 ## Current Decision
 

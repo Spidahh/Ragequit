@@ -5,44 +5,88 @@ section: combat
 tags: [ttk, gcd, parry, knockup, respawn]
 provides: [ttk_window, gcd, parry_rules, knockup_rules, respawn_rules]
 deps: [01_stats.md]
-status: final
+status: redesign
 ---
 
 # Combat Fundamentals
 
 ## TTK (time to kill)
 
-**Target window: 20-30 seconds** full-HP duel between two skill-matched players. All damage, cooldown, and cost values across every ability and M1 are tuned against this window during the calibration pass.
+**Target window: 20-30 seconds** full-HP duel between two skill-matched players
+who are actively defending through aim, movement, aerial responses, parry/shield
+windows, ability choices and the final sustain system. M1 and ability tuning must
+be recalibrated after the class redesign.
+
+This is the _effective_ TTK in real play — not the theoretical minimum. A passive target can be killed faster (Sword M1 at 17.5 DPS = ~11s theoretical minimum), but any competent player parries, evades, and heals. The 20-30s window emerges from the friction of defense, not from low damage numbers.
 
 Long TTK is deliberate — it:
 
 - Rewards positioning and resource management over burst-and-pray
-- Makes Element Mastery bonuses meaningful over a fight
-- Gives parry and transmutation room to affect the fight
+- Gives class mechanics, resources and sustain room to matter
+- Gives parry/shield and movement responses room to affect the fight
 - Lets combo execution (knockup → follow-up) be impactful without being instant-kill
 
 ## Global Cooldown (GCD)
 
-**0.3s between ability casts.** This floor prevents macro-chain spam. M1 basic attacks are not bound by the GCD. Ability casts from direct binds, primed wheel fire, and utility transfer abilities go through the server ability path.
+**0.3s between ability casts.** This floor prevents macro-chain spam.
+
+GCD rules:
+
+- **M1 basic attacks**: NOT bound by GCD
+- **Recovery utility and magic sustain casts**: share the ability GCD unless a
+  future ability spec documents a narrow exception before implementation
+- **Combat ability slots** (Melee, Bow, Magic): ALL trigger and share the 0.3 s GCD
+
+Ability casts from direct binds and primed wheel fire go through the server ability path.
 
 ## Parry (M2)
 
 - **Tap M2** → 0.5s perfect block window. Blocks 100% of incoming damage during the window. Cost: 20 stamina. CD: 3s.
 - **Hold M2** → continuous block while stamina holds out (drains ~15 stamina/s while active). Reduces incoming damage by 70% (not 100%). No CD on release but you can't parry-tap if stamina is exhausted.
 - **No perfect-timing bonus**. Parry is binary (blocked or not) — no riposte window, no stamina refund on "perfect" timing. Keeps parry readable and avoids skill gap extremes.
+- **Efficiency**: Tap costs 20 stamina for a 0.5 s window. Hold costs 15/s, meaning after 1.33 s it becomes more expensive than a tap. Use tap for reactive blocks against a single known hit; use hold only when you need to absorb a sustained burst and can afford the bleed. The design intentionally favors tap parry to reward read-and-react over holding block.
 
-Parry works against melee, projectile, and parryable direct ability damage. It does NOT counter abilities tagged [KNOCKUP] during the airborne period — you can parry the initial hit but not the follow-up while airborne.
+Parry/shield must show a readable visible protection state. Exact airborne parry
+rules are part of the air-combat redesign; do not preserve the old assumption
+that launched players have no defensive answer.
 
 ## Knockup (signature mechanic)
 
-Abilities tagged `[KNOCKUP]` send the target airborne for **0.6-1.0s** (ability-specific). Some knockups also apply a short horizontal shove so the victim is popped up and away, creating a readable aim challenge instead of a static stun. During the airborne period, the target:
+Abilities tagged `[KNOCKUP]` still create air pressure and aim challenges. The
+old target lockout model is rejected: the launched player must keep meaningful
+arena-FPS answers through allowed weapons, abilities, movement tech or
+disruption. The target contract in `01_arena_fps_reference_study.md` treats
+knockup as displacement/aim pressure rather than a universal airborne silence;
+final timings still wait on browser prototype tuning.
 
-- Cannot move horizontally (trajectory is locked by the knockup force)
-- Cannot activate abilities (all 7 slots grayed out)
-- Cannot parry
-- Can still be hit by all follow-up damage (from the attacker or teammates)
+## Knockup combo feedback (UI spec)
 
-This creates the **knockup → follow-up combo window** that is RAGEQUIT's signature. Skilled players queue an instant spell, projectile, bow shot, or precise M1 follow-up to land during airborne frames.
+The knockup mechanic is RAGEQUIT's signature. The UI must make it legible and satisfying every time it succeeds.
+
+### During the airborne window
+
+- The launched target gets world/camera/velocity feedback for displacement
+  without a blanket slot-strip shutdown; any actual disabled action must come
+  from a specific status or ability rule.
+- The attacker sees a **brief arc indicator** above the target (a small rising arc VFX, 0.2s) to signal airborne state and telegraph the follow-up window.
+- A subtle **AIR tag** appears near the target's health bar on the attacker's HUD for the duration of the window. Small, not intrusive — confirms state without cluttering aim.
+
+### On successful conversion (follow-up hits during airborne)
+
+When the attacker lands at least one ability hit during the knockup window:
+
+- **Impact confirmation**: the landing hit triggers a slightly more exaggerated impact flash (same red `#FF3344`, slightly brighter for 1 frame) — no new panel, just hit-confirm intensity.
+- **Combo audio cue**: a short distinct sound marker on follow-up hit during air state (different from a ground hit). Not a VO, just a distinguishable impact tick.
+
+### End-of-match stat tracking
+
+Track per player per match:
+
+- `knockup_attempts`: times a KNOCKUP ability hit a grounded target
+- `knockup_conversions`: times the attacker landed ≥1 ability during the subsequent airborne window
+- `conversion_rate`: conversions / attempts (displayed as % on end screen)
+
+These stats are **end-screen only** — no mid-match counter or running combo pop-up. The feedback loop is: play → feel the window → see how often you converted → improve.
 
 ## Vision Control
 
@@ -51,8 +95,9 @@ This creates the **knockup → follow-up combo window** that is RAGEQUIT's signa
 ### Counter-play
 
 - Knockup abilities have cooldowns long enough that spamming is not viable
-- A second knockup during airborne does NOT extend the airtime (knockup-immunity for 2s after landing)
+- A second knockup while already airborne does NOT extend the airtime — anti-chain protection, not a hard-CC immunity window. The target still retains skill-based arena responses (aim, movement abilities, disruption) per `01_arena_fps_reference_study.md`.
 - Positioning away from predictable knockup angles defeats the setup
+- Parry (M2) during the knockup windup blocks the launch entirely
 
 ## Respawn
 
@@ -67,4 +112,4 @@ See `07_modes.md` for mode details.
 
 ## Damage types
 
-All damage is **physical** or **elemental**. There is no armor/resist attribute system. Element Mastery adds an _effect_ (burn, slow, chain, lifesteal, DoT) on top of base damage — it does not multiply damage against some enemies and reduce against others. See `03_mastery_system.md`.
+All damage is **physical** or **elemental**. There is no armor/resist attribute system. Each element has a distinct _effect_ (burn, slow, chain, lifesteal, DoT) on top of base damage — no element is strong or weak against another. See `00_vision.md` (no elemental counter pillar). The current runtime still applies Mastery bonuses at 4/5 slots (`03_mastery_system.md`), but Mastery is no longer the target identity axis — the class/affinity pass replaces it.

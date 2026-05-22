@@ -1,9 +1,12 @@
-# RAGEQUIT — Asset pipeline (Fase 8)
+# RAGEQUIT — Asset pipeline
 
-This folder is the home of the asset processing pipeline that ships with the
-client bundle. It is intentionally **decoupled** from the runtime — assets are
-preprocessed offline, the bundle ships only the final optimized files, and the
-runtime fetches them via versioned URL (Cloudflare R2 in Fase 9).
+This folder is the home of asset audit helpers and the future offline processing
+pipeline. Runtime assets already exist under `packages/client/public/`; this
+folder must not pretend that the playable client is still primitives-only.
+
+The intended production pipeline is decoupled from runtime: assets are
+preprocessed offline, the bundle/CDN ships only final optimized files, and the
+runtime resolves versioned URLs when that lane exists.
 
 The pipeline runs in three stages:
 
@@ -22,15 +25,15 @@ The pipeline runs in three stages:
 
 ## Stage 1 — validate / normalize
 
-Source assets land in `in/` with a flat naming convention:
+Future source assets should land in `in/` with a flat naming convention:
 
 ```
 in/
-  characters/<name>.gltf            # Quaternius character meshes
-  animations/<bone>/<clip>.gltf     # Mixamo / shared animation library
-  vfx/<element>/<clip>.png          # 2-band toon spritesheets
-  audio/<category>/<id>.ogg         # Sonniss GameAudioGDC + Kenney UI
-  ui/<icon>.svg                     # Lucide / heroicons
+  characters/<name>.gltf
+  animations/<bone>/<clip>.gltf
+  vfx/<element>/<clip>.png
+  audio/<category>/<id>.ogg
+  ui/<icon>.svg
 ```
 
 Each asset has a `<asset>.meta.json` next to it with min metadata:
@@ -53,7 +56,8 @@ because they need GPU/native binaries the sandbox can't run):
 
 - **glTF mesh** → `gltf-transform optimize` + `meshopt` quantization →
   `<name>.glb`
-- **Texture** → `KTX2` BC7 (desktop) + ETC1S (mobile) → `<name>.ktx2`
+- **Texture** → `KTX2` browser-compressed output with a documented fallback
+  path → `<name>.ktx2`
 - **Audio** → `ffmpeg` to mono OGG @ 96 kbps for SFX, stereo @ 128 kbps for music
 - **Animation** → `gltf-transform retarget` to the shared bone library
 - **UI icons** → `svgo` minify
@@ -69,27 +73,31 @@ per file, renames to `<name>.<hash8>.<ext>`, and uploads to Cloudflare R2 with
 public-read ACL + cache-control = 1 year. A `manifest.json` mapping logical
 ids → versioned URLs is produced and bundled with the client.
 
-## Current status (Fase 8 v0.1)
+## Current status
 
-The shared layer references the pipeline output via the map registry
-(`packages/shared/src/sim/map.ts → MAPS`), but the **runtime currently uses
-procedural geometry** (Three.js primitives) for every asset:
+The current browser client mixes imported runtime assets and procedural fallbacks:
 
-- Characters → capsule (`THREE.CapsuleGeometry`)
-- Maps → AABB boxes (`THREE.BoxGeometry`)
-- Projectiles → cylinder / sphere
-- Zones → torus / plane
-- VFX → coloured sphere flash + ring decal
+- Character loaders and audits consume active character files from
+  `packages/client/public/characters/`.
+- Arena, weapon and presentation assets live in client public/runtime folders
+  when installed; fallback Three.js geometry still protects loading and smoke
+  tests.
+- Projectiles, zones and short-lived VFX still rely heavily on cheap code-driven
+  geometry/materials for readability and performance.
+- `audit-character-glb.mjs`, `audit-legacy-character-fbx.mjs` and
+  `measure-fbx-bounds.mjs` are current utility scripts in this folder.
 
-The full pipeline ships with **Fase 8b** when Francesco runs the offline
-processing on the host (sandbox can't host Blender + KTX2 + ffmpeg toolchain).
+The complete normalize/compress/publish lane is still future work. Character
+replacement work must follow `02_TECH/07_character_animation_contract.md` and
+`02_TECH/08_character_asset_replacement_plan.md` before being promoted.
 
 ## Where this is wired
 
-- `packages/shared/src/sim/map.ts` exports `MAPS` registry + `getMap(id)`.
-  Server reads this in Fase 9 to pick a map per match mode (`duel_arena`,
-  `gladiators_arena`, `blockout`).
-- `packages/client/src/main.ts` reads `STATIC_MAP` for now; Fase 8b switches
-  to `getMap(roomId)` once the room broadcasts which map is in use.
-- `tools/asset-pipeline/in/` and `out/` are gitignored — only sources land
-  in the repo, and only via PRs that include `*.meta.json`.
+- `packages/shared/src/sim/map.ts` exports the current `MAPS` registry and
+  `getMap(id)`.
+- Client world/render code consumes the local map/runtime asset path that exists
+  today; server-to-client map selection changes must be documented against the
+  active room protocol when they land.
+- `tools/asset-pipeline/in/` and `out/` stay offline working folders for the
+  future pipeline. Accepted runtime assets still live in the client public tree;
+  new source/pipeline lanes need tracked metadata and license review.
