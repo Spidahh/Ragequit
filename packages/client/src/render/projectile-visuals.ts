@@ -78,7 +78,10 @@ function makeBasicMat(color: number, opacity = 0.94): THREE.MeshBasicMaterial {
   })
 }
 
-function makeProjectileObject(kind: ProjectileKind, element?: string): {
+function makeProjectileObject(
+  kind: ProjectileKind,
+  element?: string,
+): {
   object: THREE.Object3D
   style: ProjectileStyle
 } {
@@ -94,7 +97,10 @@ function makeProjectileObject(kind: ProjectileKind, element?: string): {
 
   if (style === 'fire') {
     group.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.18, 0), makeBasicMat(color, 0.96)))
-    const flame = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.38, 5), makeBasicMat(0xffb000, 0.72))
+    const flame = new THREE.Mesh(
+      new THREE.ConeGeometry(0.13, 0.38, 5),
+      makeBasicMat(0xffb000, 0.72),
+    )
     flame.rotation.x = -Math.PI / 2
     flame.position.z = 0.22
     group.add(flame)
@@ -105,10 +111,16 @@ function makeProjectileObject(kind: ProjectileKind, element?: string): {
     const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.13), makeBasicMat(0xffffff, 0.44))
     group.add(core)
   } else if (style === 'lightning') {
-    const lance = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.07, 0.82, 5), makeBasicMat(color, 0.96))
+    const lance = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.035, 0.07, 0.82, 5),
+      makeBasicMat(color, 0.96),
+    )
     lance.rotation.x = Math.PI / 2
     group.add(lance)
-    const cross = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.035, 0.035), makeBasicMat(0xffffff, 0.68))
+    const cross = new THREE.Mesh(
+      new THREE.BoxGeometry(0.42, 0.035, 0.035),
+      makeBasicMat(0xffffff, 0.68),
+    )
     group.add(cross)
   } else if (style === 'dark') {
     const shard = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), makeBasicMat(color, 0.92))
@@ -120,12 +132,18 @@ function makeProjectileObject(kind: ProjectileKind, element?: string): {
     const dart = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.58, 6), makeBasicMat(color, 0.9))
     dart.rotation.x = Math.PI / 2
     group.add(dart)
-    const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.035, 0.1), makeBasicMat(0xb8ff5a, 0.62))
+    const leaf = new THREE.Mesh(
+      new THREE.BoxGeometry(0.22, 0.035, 0.1),
+      makeBasicMat(0xb8ff5a, 0.62),
+    )
     leaf.position.z = -0.16
     group.add(leaf)
   } else {
     group.add(new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 8), makeBasicMat(color, 0.92)))
-    const halo = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.018, 6, 16), makeBasicMat(0x80f0ff, 0.52))
+    const halo = new THREE.Mesh(
+      new THREE.TorusGeometry(0.22, 0.018, 6, 16),
+      makeBasicMat(0x80f0ff, 0.52),
+    )
     group.add(halo)
   }
 
@@ -291,10 +309,61 @@ export function initProjectileVisuals({
       if (vis.kind === 'bolt') {
         const pulse = 1.0 + 0.08 * Math.sin(now * 0.022)
         vis.object.scale.setScalar(pulse)
-        if (vis.style === 'lightning') vis.object.rotation.z += 0.24
-        else if (vis.style === 'dark') vis.object.rotation.z -= 0.06
-        else if (vis.style === 'fire') vis.object.rotation.z += 0.11
-        else vis.object.rotation.z += 0.045
+
+        const child0 = vis.object.children[0] as THREE.Mesh | undefined
+        const child1 = vis.object.children[1] as THREE.Mesh | undefined
+
+        if (vis.style === 'fire') {
+          vis.object.rotation.z += 0.11
+          if (child0) {
+            child0.rotation.x += 0.05
+            child0.rotation.y += 0.03
+          }
+          if (child1) {
+            const f = now * 0.05
+            child1.scale.set(
+              1.0 + 0.12 * Math.sin(f),
+              1.0 + 0.12 * Math.sin(f),
+              1.0 + 0.18 * Math.cos(f)
+            )
+          }
+        } else if (vis.style === 'ice') {
+          vis.object.rotation.z += 0.025
+          if (child0) {
+            child0.rotation.z += 0.01
+          }
+          if (child1) {
+            child1.rotation.y += 0.07
+            child1.rotation.x += 0.04
+          }
+        } else if (vis.style === 'lightning') {
+          vis.object.rotation.z += 0.24
+          if (child1) {
+            const jit = 0.85 + 0.3 * Math.random()
+            child1.scale.set(jit, 1.0, jit)
+          }
+        } else if (vis.style === 'dark') {
+          vis.object.rotation.z -= 0.06
+          if (child0) {
+            child0.rotation.x -= 0.03
+            child0.rotation.y -= 0.02
+          }
+          if (child1) {
+            const ds = 0.9 + 0.18 * Math.sin(now * 0.03)
+            child1.scale.setScalar(ds)
+          }
+        } else if (vis.style === 'nature') {
+          vis.object.rotation.z += 0.045
+          if (child1) {
+            child1.rotation.z = 0.25 * Math.sin(now * 0.06)
+          }
+        } else {
+          vis.object.rotation.z += 0.045
+          if (child1) {
+            child1.rotation.y -= 0.05
+            child1.scale.setScalar(1.0 + 0.08 * Math.sin(now * 0.015))
+          }
+        }
       }
       updateTrail(vis, p.x, p.y, p.z)
       vis.lastPos.set(p.x, p.y, p.z)

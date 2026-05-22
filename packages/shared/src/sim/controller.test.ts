@@ -81,6 +81,25 @@ describe('simulatePlayer', () => {
     expect(s.pos.x).toBeLessThanOrEqual(6.6 + 0.001)
   })
 
+  it('keeps horizontal input during knockup-air state unless a real status locks movement', () => {
+    const s = makePlayerSimState({ x: 0, y: BASE_Y + 2, z: 20 })
+
+    simulatePlayer(
+      s,
+      { moveX: 0, moveZ: -1, yaw: 0, jump: false, jumpHold: false },
+      DT,
+      STATIC_MAP,
+      {
+        slowFraction: 0,
+        movementLocked: false,
+        castLocked: false,
+        airborneLocked: true,
+      },
+    )
+
+    expect(s.vel.z).toBeLessThan(0)
+  })
+
   it('coyote time allows jump within window after walking off a ledge', () => {
     // Player starts grounded (onGround=true) but with no floor below — simulates
     // walking off a ledge. First tick: wasOnGround=true, no jump, onGround→false

@@ -131,7 +131,7 @@ export function computeLoadoutMastery(loadout: readonly (AbilityDef | null | und
   element: ElementId | undefined
   level: MasteryLevel
 } {
-  const magicDefs = loadout.slice(2, 7).filter((def): def is AbilityDef => !!def)
+  const magicDefs = loadout.filter((def): def is AbilityDef => !!def && def.slot === 'magic')
   return computeMastery(magicDefs)
 }
 

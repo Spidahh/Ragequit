@@ -34,7 +34,8 @@ import type { AABB, PlayerSimState, SimInput, StaticMap, Vec3 } from './types.js
 //   slowFraction  : 0..1, additive %-slow from chill/slow statuses (clamped)
 //   movementLocked: true if root/stun/freeze is active — no horizontal motion
 //   castLocked    : true if stun/freeze incapacitates — informational only
-//   airborneLocked: true if the player is mid-knockup — also no horiz motion
+//   airborneLocked: legacy caller state kept during the air-legality migration.
+//                   Knockup no longer removes horizontal input by itself.
 export interface MovementCaps {
   slowFraction: number
   movementLocked: boolean
@@ -89,10 +90,10 @@ export function simulatePlayer(
   caps?: MovementCaps,
 ): PlayerSimState {
   // --- 1. Horizontal velocity from normalised input in local frame -----
-  // Movement-locked statuses (root, stun, freeze) and airborne knockup zero
-  // horizontal motion. Caller still pays gravity. The slow fraction scales
-  // the baseline speed for chill / explicit %-slow statuses.
-  const locked = !!(caps && (caps.movementLocked || caps.airborneLocked))
+  // Movement-locked statuses (root, stun, freeze) zero horizontal motion.
+  // Knockup is launch pressure, not a universal air stun; it keeps gravity and
+  // normal input alive unless a real status applies the lock.
+  const locked = !!caps?.movementLocked
   // slowFraction can be negative (haste gives −0.4 → 40% speed boost above base).
   // Cap speed multiplier at 1.5× max to prevent runaway haste stacking.
   const slowed = caps ? Math.min(1, caps.slowFraction) : 0

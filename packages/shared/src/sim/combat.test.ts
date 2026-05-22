@@ -9,6 +9,7 @@ import {
 
 import {
   advanceSwordCombo,
+  finishSwordCombo,
   isInMeleeCone,
   isInSwordM1Cone,
   uppercutBallisticAirtimeSec,
@@ -19,7 +20,7 @@ describe('melee cone hit test', () => {
   const attacker = { x: 0, y: 0, z: 0 }
 
   it('hits a target directly in front within range', () => {
-    expect(isInSwordM1Cone(attacker, 0, { x: 0, y: 0, z: -2 })).toBe(true)
+    expect(isInSwordM1Cone(attacker, 0, { x: 0, y: 0, z: -1.5 })).toBe(true)
   })
 
   it('misses a target behind the attacker', () => {
@@ -27,31 +28,27 @@ describe('melee cone hit test', () => {
   })
 
   it('misses a target out of range', () => {
-    // Range is now 3.5 m; use distance 4 m to be safely outside.
-    expect(isInSwordM1Cone(attacker, 0, { x: 0, y: 0, z: -4 })).toBe(false)
+    expect(isInSwordM1Cone(attacker, 0, { x: 0, y: 0, z: -2 })).toBe(false)
   })
 
   it('respects yaw rotation (facing +X)', () => {
     // yaw=-π/2 in three.js "forward = -Z" convention looks at +X.
     const yaw = -Math.PI / 2
-    expect(isInSwordM1Cone(attacker, yaw, { x: 2, y: 0, z: 0 })).toBe(true)
-    expect(isInSwordM1Cone(attacker, yaw, { x: -2, y: 0, z: 0 })).toBe(false)
+    expect(isInSwordM1Cone(attacker, yaw, { x: 1.5, y: 0, z: 0 })).toBe(true)
+    expect(isInSwordM1Cone(attacker, yaw, { x: -1.5, y: 0, z: 0 })).toBe(false)
   })
 
   it('ignores Y so airborne targets are still hit', () => {
-    expect(isInSwordM1Cone(attacker, 0, { x: 0, y: 2, z: -2 })).toBe(true)
+    expect(isInSwordM1Cone(attacker, 0, { x: 0, y: 2, z: -1.5 })).toBe(true)
   })
 
-  it('respects cone half-angle — edge of 55° just hits, 75° misses', () => {
-    // Cone is now 60° half-angle (120° total arc).
-    // At 55° off-axis (inside 60° cone), target should be hit.
-    const x55 = Math.sin((Math.PI * 55) / 180) * 2
-    const z55 = -Math.cos((Math.PI * 55) / 180) * 2
-    expect(isInSwordM1Cone(attacker, 0, { x: x55, y: 0, z: z55 })).toBe(true)
-    // At 75° off-axis, outside the 60° half-cone.
-    const x75 = Math.sin((Math.PI * 75) / 180) * 2
-    const z75 = -Math.cos((Math.PI * 75) / 180) * 2
-    expect(isInSwordM1Cone(attacker, 0, { x: x75, y: 0, z: z75 })).toBe(false)
+  it('respects cone half-angle — edge of 40° just hits, 55° misses', () => {
+    const x40 = Math.sin((Math.PI * 40) / 180) * 1.5
+    const z40 = -Math.cos((Math.PI * 40) / 180) * 1.5
+    expect(isInSwordM1Cone(attacker, 0, { x: x40, y: 0, z: z40 })).toBe(true)
+    const x55 = Math.sin((Math.PI * 55) / 180) * 1.5
+    const z55 = -Math.cos((Math.PI * 55) / 180) * 1.5
+    expect(isInSwordM1Cone(attacker, 0, { x: x55, y: 0, z: z55 })).toBe(false)
   })
 
   it('custom cone params work', () => {
@@ -103,6 +100,13 @@ describe('sword M1 combo state machine', () => {
     const r = advanceSwordCombo(2, 100, 100 + resetTicks)
     expect(r.indexJustPlayed).toBe(0)
     expect(r.damage).toBe(SWORD_M1_DAMAGE[0])
+  })
+
+  it('stores no sword chain progress when the launched swing misses', () => {
+    expect(finishSwordCombo(0, false)).toBe(0)
+    expect(finishSwordCombo(1, false)).toBe(0)
+    expect(finishSwordCombo(0, true)).toBe(1)
+    expect(finishSwordCombo(2, true)).toBe(0)
   })
 })
 

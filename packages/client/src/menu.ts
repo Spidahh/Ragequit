@@ -18,6 +18,7 @@ import {
 } from '@ragequit/shared'
 
 import { initKeybindLabels, initKeybindSettings } from './input/keybinds.js'
+import { renderScoreboard, type ScoreboardData } from './endgame.js'
 
 export type MenuChoice = 'play1v1' | 'training' | 'loadout' | 'stats' | 'settings'
 export type GraphicsQuality = 'low' | 'med' | 'high'
@@ -56,7 +57,7 @@ function saveSettings(s: SettingsData): void {
 export interface MenuApi {
   showMain: () => void
   hideMain: () => void
-  showScoreboard: (selfId: string) => void
+  showScoreboard: (selfId: string, scoreboardData?: ScoreboardData) => void
   hideScoreboard: () => void
   onMatchPhase: (msg: ServerMatchPhaseMessage, selfId: string) => void
   onScore: (msg: ServerScoreMessage, selfId: string, otherId: string) => void
@@ -94,7 +95,17 @@ export function initMenu(handlers: {
   document.getElementById('menu-ffa')?.addEventListener('click', () => handlers.onFfa())
   document.getElementById('menu-train')?.addEventListener('click', () => handlers.onTraining())
   document.getElementById('menu-loadout')?.addEventListener('click', () => handlers.onLoadout())
-  sbBack.addEventListener('click', () => handlers.onScoreboardBack())
+  // Delegated click listener on scoreboard to support dynamic scoreboard templates
+  scoreboard.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement | null
+    if (!target) return
+    const isChip = target.closest('.sb-chip')
+    const isMenuButton = target.closest('#scoreboard-back')
+    const hasMenuText = target.textContent?.toUpperCase().includes('MENU')
+    if (isChip || isMenuButton || hasMenuText) {
+      handlers.onScoreboardBack()
+    }
+  })
 
   // ---- Settings panel ---------------------------------------------------
   const settings = loadSettings()
@@ -221,10 +232,20 @@ export function initMenu(handlers: {
     }
   }
 
+  function stopCountdown(): void {
+    countdownEndsAt = 0
+    roundCountdown.textContent = ''
+    if (countdownTimer !== null) {
+      clearInterval(countdownTimer)
+      countdownTimer = null
+    }
+  }
+
   function setPhase(phase: ServerMatchPhaseMessage['phase'], ms?: number): void {
     roundPhase.textContent = phase.toUpperCase()
     switch (phase) {
       case 'lobby':
+        stopCountdown()
         roundHud.classList.add('hidden')
         killCounter.classList.add('hidden')
         break
@@ -241,6 +262,7 @@ export function initMenu(handlers: {
         if (ms) startCountdown(ms)
         break
       case 'matchEnd':
+        stopCountdown()
         roundHud.classList.add('hidden')
         break
     }
@@ -248,6 +270,7 @@ export function initMenu(handlers: {
 
   return {
     showMain: () => {
+      setPhase('lobby')
       document.body.classList.add('main-menu-active')
       mainMenu.classList.remove('hidden')
     },
@@ -255,7 +278,12 @@ export function initMenu(handlers: {
       document.body.classList.remove('main-menu-active')
       mainMenu.classList.add('hidden')
     },
-    showScoreboard: (_selfId) => scoreboard.classList.remove('hidden'),
+    showScoreboard: (_selfId, scoreboardData) => {
+      if (scoreboardData) {
+        renderScoreboard(scoreboard, scoreboardData)
+      }
+      scoreboard.classList.remove('hidden')
+    },
     hideScoreboard: () => scoreboard.classList.add('hidden'),
     getSettings: () => settings,
     onMatchPhase: (msg, _selfId) => {

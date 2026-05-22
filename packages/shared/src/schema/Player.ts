@@ -109,4 +109,29 @@ export class Player extends Schema {
   // Mastery tier computed from the 5 magic slots only: 0 none, 1 active, 2 perfect.
   // Written by the server on every loadout change.
   @type('number') masteryTier: number = 0
+
+  @type('string') classId = 'hybrid'
+
+  // --- Class mechanic state (Pass 5) -----------------------------------------
+  // Replicated so the HUD can render mechanic indicators without extra messages.
+
+  // Tank — Fury: 0-5 stacks (float during decay); each stack = +8% melee damage.
+  // At 5 stacks all are consumed and furyNextMeleeIsSurge is armed (+40% burst).
+  @type('number') furyStacks: number = 0
+  @type('boolean') furyNextMeleeIsSurge = false
+
+  // Archer — Momentum: 0-100. Gains while moving, resets instantly on any hit taken.
+  // ≥60: faster bow charge (2.0s → 1.2s). 100: magic ability CDs -15%.
+  @type('number') momentum: number = 0
+
+  // Mago — Risonanza: elemental window. On a second same-element cast within 2.5 s,
+  // triggers a bonus proc. Empty string = no window active.
+  @type('string') risonanzaElement = ''
+  @type('number') risonanzaArmedUntilTick: number = 0
+
+  // Ibrido — Flow: 0-3 stacks from weapon swaps. At 3 stacks next ability cast
+  // gains +20% damage and costs 0 GCD; stacks are consumed on that cast.
+  @type('number') flowStacks: number = 0
+  @type('boolean') flowPendingBonus = false
 }
+

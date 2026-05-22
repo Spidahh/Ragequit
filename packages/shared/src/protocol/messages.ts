@@ -36,7 +36,7 @@ export interface ClientCastMessage {
 }
 
 // Explicit swing request. Sent on every M1 rising edge — the server decides
-// whether it's combo-continue, combo-reset or rejected (airborne / swing lock).
+// whether it's combo-continue, combo-reset or rejected by live combat state.
 // We use a dedicated message instead of the m1 boolean inside ClientInputMessage
 // so the swing dispatch is atomic and carries the firing tick for lag-comp.
 export interface ClientSwingMessage {
@@ -96,11 +96,20 @@ export interface ClientTransmuteMessage {
   atTick: number
 }
 
+/**
+ * Class-aware loadout envelope (Pass 4).
+ * Each array contains ability ids for that slot family; length is determined
+ * by the class slot grammar. Server validates family, class-legality, budget
+ * and uniqueness — not wire array positions.
+ */
 export interface ClientLoadoutMessage {
-  melee: string
-  bow: string
-  magic: [string, string, string, string, string]
-  utility: [string, string, string, string]
+  /** Class id the player is building for. Required; defaults to 'hybrid' if absent or invalid. */
+  classId: string
+  melee: string[]
+  bow: string[]
+  magicBase: string[]
+  magicAdvanced: string[]
+  utility: string[]
   /** Per-ability instant-cast flags. Included when sending from loadout station. */
   instantCast?: Record<string, boolean>
 }

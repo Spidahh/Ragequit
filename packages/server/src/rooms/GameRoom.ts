@@ -52,6 +52,7 @@ import {
   getMap,
   type StaticMap,
   SWORD_M1_HIT_FRACTION,
+  SWORD_M1_COST_STAMINA,
   SWORD_M1_SWING_SEC,
   TERRAIN_GROUND_Y,
   TICK_MS,
@@ -64,6 +65,7 @@ import {
   bowChargeRatio,
   bowLerp,
   directionFromYawPitch,
+  finishSwordCombo,
   isInSwordM1Cone,
   makePlayerSimState,
   segmentVsAabb,
@@ -96,6 +98,11 @@ import {
   type SimInput,
   type Weapon,
   computeLoadoutMastery,
+  ClassId,
+  CLASS_IDS,
+  isAbilityLegalForClass,
+  getAbilitySlotFamily,
+  TARGET_CLASS_DEFS,
 } from '@ragequit/shared'
 
 import {
@@ -109,6 +116,9 @@ import {
   AbilityEngine,
   AIR_PUNISH_DAMAGE_MULT,
   BotController,
+  ClassMechanicRuntime,
+  FLOW_DAMAGE_BONUS_FRAC,
+  FURY_SURGE_DAMAGE_BONUS,
   MatchManager,
   RateLimiter,
   ReplayRecorder,
@@ -168,6 +178,7 @@ interface PendingSwing {
   fromAtTick: number // client-estimated server tick at fire time (for rewind)
   yaw: number
   damage: number
+  comboIndex: number
   originX: number
   originY: number
   originZ: number
@@ -191,7 +202,14 @@ interface PendingDamage {
   element: string // '' = physical; 'fire'/'ice'/etc. for elemental hits
   lifestealFraction?: number
   onDamageStatus?: { kind: StatusKind; durationSec: number; stacks: number; slowFraction?: number }
+  /** True when this damage entry carries a Flow +20% amplification (Pass 5). */
+  flowAmplified?: boolean
 }
+
+// Melee ability ids — used in drainDamage to gate Fury damage bonuses.
+const MELEE_ABILITY_IDS = new Set([
+  'uppercut', 'whirlwind', 'gap_closer', 'bleed_strike', 'guard_break', 'rending_dash',
+])
 
 interface ProjectileMeta {
   ownerId: string
@@ -261,6 +279,8 @@ export class GameRoom extends Room<GameState> {
   private engine!: AbilityEngine
   private statuses!: StatusRuntime
   private transmute!: TransmuteHandler
+  // Pass 5: class mechanic runtime (Fury / Momentum / Risonanza / Flow).
+  private mechanics!: ClassMechanicRuntime
   // Fase 7: BO5 round flow + ELO + scoreboard.
   private match!: MatchManager
   // Fase 9b: anti-cheat rate limiter + replay recorder.
@@ -412,6 +432,10 @@ export class GameRoom extends Room<GameState> {
       pendingDamage: pendingDamageBridge,
       broadcast: (type, message) => this.broadcast(type, message),
     })
+    this.transmute = new TransmuteHandler(
+      { state: this.state, broadcast: (t, m) => this.broadcast(t, m) },
+      this.statuses,
+    )
     this.engine = new AbilityEngine(
       {
         state: this.state,
@@ -428,12 +452,22 @@ export class GameRoom extends Room<GameState> {
         hasLineOfSight: (from, to) => this.hasLineOfSight(from, to),
         resolveDisplacement: (player, dx, dz, cancelOnCollision) =>
           this.resolveAbilityDisplacement(player, dx, dz, cancelOnCollision),
+        // Pass 5: class mechanic hooks wired after mechanics is instantiated below.
+        getAbilityCooldownMult: (sid) => {
+          const p = this.state.players.get(sid)
+          return p ? this.mechanics.getMomentumCooldownMult(p) : 1
+        },
+        getRecoveryHealBonus: (sid, abilityId, now) =>
+          this.mechanics.getRecoveryHealBonus(sid, abilityId, now),
       },
       this.statuses,
+      this.transmute,
     )
-    this.transmute = new TransmuteHandler(
-      { state: this.state, broadcast: (t, m) => this.broadcast(t, m) },
-      this.statuses,
+    // Pass 5: class mechanic runtime. Uses a callback so it can direct
+    // Risonanza proc resolution to GameRoom's existing status/damage path.
+    this.mechanics = new ClassMechanicRuntime(
+      this.state,
+      (req, now) => this.resolveRisonanzaProc(req, now),
     )
     // Fase 7: match manager — drives BO5 round flow + ELO + scoreboard.
     // Fase 9b: replay recorder. Records every broadcast tagged with state.tick.
@@ -643,6 +677,28 @@ export class GameRoom extends Room<GameState> {
       client.send('persistedInstantCast', persistedInstantCast)
     }
     {
+      // Derive the player's class from their loaded abilities.
+      // We find the most specific class that supports ALL non-empty abilities.
+      // A class is selected when it supports all abilities AND has at least one
+      // class-exclusive ability (not legal for hybrid), signalling intent.
+      const abilityIds = resolvedLoadout.filter((id) => id && ABILITY_DEFS[id])
+      let resolvedClassId: ClassId = 'hybrid'
+      for (const candidate of CLASS_IDS) {
+        if (candidate === 'hybrid') continue
+        const allLegal = abilityIds.every((id) => isAbilityLegalForClass(id, candidate))
+        const hasExclusive = abilityIds.some(
+          (id) => isAbilityLegalForClass(id, candidate) && !isAbilityLegalForClass(id, 'hybrid'),
+        )
+        if (allLegal && hasExclusive) {
+          resolvedClassId = candidate
+          break
+        }
+      }
+      player.classId = resolvedClassId
+      const maxima = TARGET_CLASS_DEFS[resolvedClassId].resourceMaxima
+      player.hp = maxima.hp
+      player.mana = maxima.mana
+      player.stamina = maxima.stamina
       const defs = resolvedLoadout.map((id) => ABILITY_DEFS[id])
       const mastery = computeLoadoutMastery(defs)
       player.masteryElement = mastery.element ?? ''
@@ -682,6 +738,7 @@ export class GameRoom extends Room<GameState> {
     this.parryPressTick.delete(sid)
     this.killStreaks.delete(sid)
     this.bots.delete(sid)
+    this.mechanics.forgetPlayer(sid)
     this.pendingSwings = this.pendingSwings.filter((s) => s.attackerId !== sid)
 
     // Clean up projectiles owned by the leaver.
@@ -767,6 +824,8 @@ export class GameRoom extends Room<GameState> {
       for (const [sid, player] of this.state.players) {
         if (!player.alive) continue
         this.tickRegen(sid, player, now)
+        // Pass 5: class mechanic tick (Fury decay, Momentum gain, Flow decay).
+        this.mechanics.tick(sid, player, dt, now)
       }
 
       // 9. Push position history snapshots for lag comp.
@@ -821,17 +880,16 @@ export class GameRoom extends Room<GameState> {
     player: Player,
     simState: PlayerSimState,
     dt: number,
-    now: number,
+    _now: number,
   ): void {
     const queue = this.inputQueues.get(sid)
     if (!queue) return
 
-    const airborne = now < player.airborneUntilTick
     const dead = !player.alive
 
     if (simState.onGround) simState.stamina = player.stamina
 
-    // Fase 4: status-derived movement caps + airborne knockup lock. Same
+    // Fase 4: status-derived movement caps. Same
     // derivation runs on the client for prediction so the kinematic step is
     // identical authoritatively + locally.
     const capsFromStatus = movementCapsFromStatuses(
@@ -846,7 +904,7 @@ export class GameRoom extends Room<GameState> {
       slowFraction: capsFromStatus.slowFraction,
       movementLocked: capsFromStatus.movementLocked,
       castLocked: capsFromStatus.castLocked,
-      airborneLocked: now < player.airborneUntilTick,
+      airborneLocked: false,
     }
 
     const lastSeq = this.lastSeqSeen.get(sid) ?? 0
@@ -865,22 +923,21 @@ export class GameRoom extends Room<GameState> {
       const msg = queue.shift()!
       if (msg.seq <= lastSeq) continue
 
-      const input: SimInput =
-        dead || airborne
-          ? {
-              moveX: 0,
-              moveZ: 0,
-              yaw: msg.yaw,
-              jump: false,
-              jumpHold: false,
-            }
-          : {
-              moveX: clamp(msg.moveX, -1, 1),
-              moveZ: clamp(msg.moveZ, -1, 1),
-              yaw: msg.yaw,
-              jump: !!msg.jump, // client already does edge detection
-              jumpHold: !!msg.jumpHold,
-            }
+      const input: SimInput = dead
+        ? {
+            moveX: 0,
+            moveZ: 0,
+            yaw: msg.yaw,
+            jump: false,
+            jumpHold: false,
+          }
+        : {
+            moveX: clamp(msg.moveX, -1, 1),
+            moveZ: clamp(msg.moveZ, -1, 1),
+            yaw: msg.yaw,
+            jump: !!msg.jump, // client already does edge detection
+            jumpHold: !!msg.jumpHold,
+          }
 
       simulatePlayer(simState, input, dt, this.activeMap, movementCaps)
 
@@ -897,7 +954,7 @@ export class GameRoom extends Room<GameState> {
         moveZ: 0,
         yaw: yawNow,
         jump: false,
-        jumpHold: !dead && !airborne && prevHeld,
+        jumpHold: !dead && prevHeld,
       }
       simulatePlayer(simState, input, dt, this.activeMap, movementCaps)
       effective = input
@@ -945,16 +1002,18 @@ export class GameRoom extends Room<GameState> {
 
   private tryStartSwing(sid: string, player: Player, msg: ClientSwingMessage, now: number): void {
     if (!player.alive) return
-    if (now < player.airborneUntilTick) return
     if (this.statuses.hasStatus(player, 'invulnerable')) return
     if (player.activeWeapon !== 'sword') return
     // Can't swing while a cast windup is in progress.
     if (player.casting) return
     // Can't start a new swing while the previous is still animating.
     if (now < player.swingEndsAtTick) return
-    // Note: onGround check removed — it was blocking swings due to minor
-    // ground-detection lag even when the player looks and feels grounded.
-    // The airborneUntilTick guard above already prevents swinging during knockup.
+    if (player.stamina < SWORD_M1_COST_STAMINA) {
+      this.sendAbilityFailed(sid, 'sword_m1', 'cost')
+      return
+    }
+    // Note: onGround is deliberately not a gate. Target air combat keeps sword
+    // input legal during a launch; actual reach and server hit tests decide it.
 
     const combo = advanceSwordCombo(player.comboIndex, player.lastSwingStartTick, now)
 
@@ -962,7 +1021,9 @@ export class GameRoom extends Room<GameState> {
     const hitTick = startTick + SWORD_HIT_OFFSET_TICKS
     const endTick = startTick + SWORD_SWING_TICKS
 
-    player.comboIndex = combo.nextStoredIndex
+    player.stamina = Math.max(0, player.stamina - SWORD_M1_COST_STAMINA)
+    const simState = this.sim.get(sid)
+    if (simState) simState.stamina = player.stamina
     player.lastSwingStartTick = startTick
     player.swingEndsAtTick = endTick
 
@@ -973,6 +1034,7 @@ export class GameRoom extends Room<GameState> {
       fromAtTick: msg.atTick,
       yaw: msg.yaw,
       damage: combo.damage,
+      comboIndex: combo.indexJustPlayed,
       originX: player.transform.x,
       originY: player.transform.y,
       originZ: player.transform.z,
@@ -983,11 +1045,38 @@ export class GameRoom extends Room<GameState> {
   private tryStartCast(sid: string, player: Player, msg: ClientCastMessage): void {
     // Every data-driven ability, including Uppercut, uses the same engine path
     // so cost, cooldown, weapon, parry, Phase Shift and aim rules cannot drift.
-    this.engine.tryCast(sid, msg.abilityId, {
+    // Pass 5: capture Flow bonus state before the cast commits to GCD/costs.
+    const hadFlowBonus = player.flowPendingBonus
+    const castTarget = {
       yaw: msg.targetYaw ?? player.transform.yaw,
       pitch: msg.targetPitch ?? player.transform.pitch,
       point: msg.targetPoint,
-    })
+    }
+    const succeeded = this.engine.tryCast(sid, msg.abilityId, castTarget)
+    if (!succeeded) return
+
+    // Pass 5: class mechanic post-cast processing.
+    const def = ABILITY_DEFS[msg.abilityId]
+
+    // Risonanza window arm / proc for Mago.
+    const element = def?.element && def.element !== 'none' ? def.element : undefined
+    this.mechanics.onAbilityCast(sid, msg.abilityId, element, castTarget, this.state.tick)
+
+    // Flow GCD skip + damage amplification.
+    if (hadFlowBonus) {
+      // Undo the GCD the engine just set — this cast costs 0 GCD.
+      player.gcdReadyAtTick = this.state.tick
+      // If the ability's heal effect consumed the Flow bonus (Adaptive Mend),
+      // flowPendingBonus is already false. Otherwise mark damage amplification.
+      if (player.flowPendingBonus) {
+        player.flowStacks = 0
+        player.flowPendingBonus = false
+        this.mechanics.markFlowDamagePending(sid)
+      } else {
+        // Recovery already consumed; just ensure stacks are cleared.
+        player.flowStacks = 0
+      }
+    }
   }
 
   private resolveSwings(now: number): void {
@@ -1009,6 +1098,7 @@ export class GameRoom extends Room<GameState> {
       )
       const rewindTargetTick = now - rewindTicks
       const origin = { x: swing.originX, y: swing.originY, z: swing.originZ }
+      let landed = false
 
       for (const [vid, victim] of this.state.players) {
         if (vid === swing.attackerId) continue
@@ -1029,9 +1119,17 @@ export class GameRoom extends Room<GameState> {
             canParry: true,
             element: '',
           })
+          landed = true
           break
         }
       }
+
+      if (landed) {
+        // Pass 5: Fury stack gain for Tank on every 3rd sword hit.
+        this.mechanics.onSwordHitLanded(swing.attackerId, now)
+      }
+      attacker.comboIndex = finishSwordCombo(swing.comboIndex, landed)
+      if (!landed) attacker.lastSwingStartTick = 0
     }
     this.pendingSwings = keep
   }
@@ -1048,8 +1146,8 @@ export class GameRoom extends Room<GameState> {
       // Phase Shift invulnerability: skip all damage while the status is active.
       if (this.statuses.hasStatus(victim, 'invulnerable')) continue
 
-      // Parry absorbs / reduces. Only active parries on non-airborne victims
-      // count — airborne victims can't parry per combat fundamentals.
+      // Parry absorbs / reduces whenever the protection state is active. Air
+      // displacement is pressure, not an implicit parry shutdown.
       let didParry = false
       let applied = d.damage
       // Curse of Weakness: attacker's outgoing damage is reduced.
@@ -1062,7 +1160,26 @@ export class GameRoom extends Room<GameState> {
       if (streakBonus > 0) {
         applied = Math.round(applied * (1 + streakBonus))
       }
-      if (d.canParry && victim.parrying && now >= victim.airborneUntilTick) {
+      // Pass 5: class mechanic damage modifiers.
+      if (attacker) {
+        const isMeleeHit = d.cause === 'sword_m1' || MELEE_ABILITY_IDS.has(d.cause)
+        if (isMeleeHit) {
+          // Fury stack bonus: +8% per stack for Tank melee hits.
+          const furyMult = this.mechanics.getMeleeDamageMult(attacker)
+          if (furyMult > 1) applied = Math.round(applied * furyMult)
+          // Fury surge: +40% burst on next melee hit after 5 stacks consumed.
+          if (this.mechanics.consumeSurge(attacker)) {
+            applied = Math.round(applied * (1 + FURY_SURGE_DAMAGE_BONUS))
+            // Brief stagger: apply a 0.3 s slow as a lightweight stagger proxy.
+            this.statuses.applyToPlayer(d.victimId, 'slow', 0.3, 1, d.attackerId, 0.5)
+          }
+        }
+        // Flow +20% damage on the flow-amplified cast's first hit.
+        if (d.cause !== 'sword_m1' && this.mechanics.consumeFlowDamagePending(d.attackerId)) {
+          applied = Math.round(applied * (1 + FLOW_DAMAGE_BONUS_FRAC))
+        }
+      }
+      if (d.canParry && victim.parrying) {
         const before = applied
         applied = applyParryReduction(
           applied,
@@ -1083,8 +1200,11 @@ export class GameRoom extends Room<GameState> {
         victim.hp = Math.max(0, victim.hp - applied)
         victim.lastDamageAtTick = now
         if (attacker) attacker.lastDamageAtTick = now
+        // Pass 5: Fury gain (Tank hit taken) + Momentum reset (Archer hit taken).
+        this.mechanics.onHitTaken(d.victimId, now)
         if (attacker && d.lifestealFraction && d.lifestealFraction > 0) {
-          attacker.hp = Math.min(HP_MAX, attacker.hp + applied * d.lifestealFraction)
+          const attackerMaxHp = TARGET_CLASS_DEFS[attacker.classId as ClassId]?.resourceMaxima.hp ?? HP_MAX
+          attacker.hp = Math.min(attackerMaxHp, attacker.hp + applied * d.lifestealFraction)
         }
         if (d.onDamageStatus && victim.hp > 0) {
           this.statuses.applyToPlayer(
@@ -1123,10 +1243,8 @@ export class GameRoom extends Room<GameState> {
           victim.vz = 0
         }
         victim.airborneUntilTick = now + UPPERCUT_AIRBORNE_TICKS
-        // Knockup interrupts parry and any active cast.
-        victim.parrying = false
-        victim.parryIsHold = false
-        victim.parryTapEndsAtTick = 0
+        // Knockup interrupts any active cast that took real damage. Parry is
+        // allowed to remain active in air when it did not block the launch.
         if (victim.casting) {
           this.engine.cancelCast(d.victimId, 'damage')
         }
@@ -1211,19 +1329,22 @@ export class GameRoom extends Room<GameState> {
 
   private tickRegen(_sid: string, player: Player, now: number): void {
     const dt = TICK_MS / 1000
-    if (player.hp < HP_MAX && now - player.lastDamageAtTick >= OOC_DELAY_TICKS) {
-      player.hp = Math.min(HP_MAX, player.hp + HP_REGEN_PER_SEC_OOC * dt)
+    const classId = player.classId as ClassId
+    const maxima = TARGET_CLASS_DEFS[classId]?.resourceMaxima ?? { hp: HP_MAX, mana: MANA_MAX, stamina: STAMINA_MAX }
+
+    if (player.hp < maxima.hp && now - player.lastDamageAtTick >= OOC_DELAY_TICKS) {
+      player.hp = Math.min(maxima.hp, player.hp + HP_REGEN_PER_SEC_OOC * dt)
     }
-    if (player.mana < MANA_MAX && now - player.lastManaSpendAtTick >= MANA_DELAY_TICKS) {
-      player.mana = Math.min(MANA_MAX, player.mana + MANA_REGEN_PER_SEC * dt)
+    if (player.mana < maxima.mana && now - player.lastManaSpendAtTick >= MANA_DELAY_TICKS) {
+      player.mana = Math.min(maxima.mana, player.mana + MANA_REGEN_PER_SEC * dt)
     }
     const vxz2 = player.vx * player.vx + player.vz * player.vz
     const moving = vxz2 > 0.25
     const rate = moving ? STAMINA_REGEN_PER_SEC_MOVING : STAMINA_REGEN_PER_SEC_IDLE
     // Hold-parry drains stamina continuously; don't regen at the same time or
     // the drain has zero net effect. The drain itself runs in tickParry.
-    if (player.stamina < STAMINA_MAX && !(player.parrying && player.parryIsHold)) {
-      player.stamina = Math.min(STAMINA_MAX, player.stamina + rate * dt)
+    if (player.stamina < maxima.stamina && !(player.parrying && player.parryIsHold)) {
+      player.stamina = Math.min(maxima.stamina, player.stamina + rate * dt)
       const simState = this.sim.get(_sid)
       if (simState) simState.stamina = player.stamina
     }
@@ -1277,9 +1398,13 @@ export class GameRoom extends Room<GameState> {
     player.vy = 0
     player.vz = 0
     player.onGround = true
-    player.hp = HP_MAX
-    player.mana = MANA_MAX
-    player.stamina = STAMINA_MAX
+
+    const classId = player.classId as ClassId
+    const maxima = TARGET_CLASS_DEFS[classId]?.resourceMaxima ?? { hp: HP_MAX, mana: MANA_MAX, stamina: STAMINA_MAX }
+    player.hp = maxima.hp
+    player.mana = maxima.mana
+    player.stamina = maxima.stamina
+
     player.alive = true
     player.respawnAtTick = 0
     player.invulnUntilTick = now + SPAWN_INVULN_TICKS
@@ -1305,13 +1430,15 @@ export class GameRoom extends Room<GameState> {
     this.statuses.clearAll(sid)
     player.abilityCooldowns.clear()
     this.transmute.reset(sid)
+    // Pass 5: reset all class mechanic state.
+    this.mechanics.reset(sid)
 
     const simState = this.sim.get(sid)
     if (simState) {
       simState.pos = { x: spawn.x, y: spawn.y, z: spawn.z }
       simState.vel = { x: 0, y: 0, z: 0 }
       simState.onGround = true
-      simState.stamina = STAMINA_MAX
+      simState.stamina = maxima.stamina
       simState.jumpHoldTicksLeft = 0
       simState.coyoteTicksLeft = 0
       simState.momentumTicks = 0
@@ -1397,6 +1524,9 @@ export class GameRoom extends Room<GameState> {
     player.bowChargeStartTick = 0
     player.staffNextFireTick = 0
 
+    // Pass 5: Flow stack accumulation for Hybrid (player-initiated swaps only).
+    this.mechanics.onWeaponSwap(sid, this.state.tick)
+
     const serverMsg: ServerWeaponSwappedMessage = {
       playerId: sid,
       weapon: msg.weapon,
@@ -1457,8 +1587,10 @@ export class GameRoom extends Room<GameState> {
     const chargeTicks = Math.max(0, this.state.tick - startTick)
     const chargeSec = chargeTicks * (TICK_MS / 1000)
     // No minimum gate — any tap fires an arrow (at reduced damage).
-    // ratio clamps from 0.15 (instant tap) to 1.0 (full 2 s charge).
-    const ratio = Math.max(0.15, bowChargeRatio(chargeSec, 0, BOW_CHARGE_FULL_SEC))
+    // ratio clamps from 0.15 (instant tap) to 1.0 (full charge).
+    // Pass 5: Momentum ≥ 60 reduces the full-charge time for Archer.
+    const effectiveChargeFullSec = this.mechanics.getBowChargeTimeSec(BOW_CHARGE_FULL_SEC, player)
+    const ratio = Math.max(0.15, bowChargeRatio(chargeSec, 0, effectiveChargeFullSec))
     const infusion = this.weaponInfusionFor(player, 'bow')
     const damage = bowLerp(BOW_DAMAGE_MIN, BOW_DAMAGE_FULL, ratio)
     const speed = bowLerp(BOW_SPEED_MIN_MPS, BOW_SPEED_FULL_MPS, ratio) * (infusion.speedMult ?? 1)
@@ -1485,10 +1617,6 @@ export class GameRoom extends Room<GameState> {
     if (!player || !player.alive) return
     if (player.activeWeapon !== 'staff') {
       this.sendAbilityFailed(sid, 'staff_m1', 'wrong_weapon')
-      return
-    }
-    if (this.state.tick < player.airborneUntilTick) {
-      this.sendAbilityFailed(sid, 'staff_m1', 'airborne')
       return
     }
     if (player.casting) {
@@ -1609,10 +1737,6 @@ export class GameRoom extends Room<GameState> {
       this.sendAbilityFailed(sid, 'parry', 'casting')
       return
     }
-    if (this.state.tick < player.airborneUntilTick) {
-      this.sendAbilityFailed(sid, 'parry', 'airborne')
-      return
-    }
     // Can't open a new parry while one is already in progress.
     if (player.parrying) {
       this.sendAbilityFailed(sid, 'parry', 'parrying')
@@ -1705,8 +1829,8 @@ export class GameRoom extends Room<GameState> {
         }
       }
 
-      // Airborne or dead cancels parry immediately.
-      if (!player.alive || now < player.airborneUntilTick) {
+      // Death cancels parry immediately.
+      if (!player.alive) {
         const wasHold = player.parryIsHold
         player.parrying = false
         player.parryIsHold = false
@@ -2058,70 +2182,99 @@ export class GameRoom extends Room<GameState> {
       })
       return
     }
-    // Build the canonical 11-slot array from the message + validate ids.
+
+    // Dynamic Class Validation
+    const classId: ClassId = (msg.classId && CLASS_IDS.includes(msg.classId as ClassId))
+      ? (msg.classId as ClassId)
+      : 'hybrid'
+
+    // Build the canonical flat ability list from the class-aware envelope.
+    // Each array contains ids for one slot family; order within arrays is
+    // preserved but the server validates by family budget, not position.
     const slots: string[] = [
-      msg.melee ?? '',
-      msg.bow ?? '',
-      msg.magic?.[0] ?? '',
-      msg.magic?.[1] ?? '',
-      msg.magic?.[2] ?? '',
-      msg.magic?.[3] ?? '',
-      msg.magic?.[4] ?? '',
-      msg.utility?.[0] ?? '',
-      msg.utility?.[1] ?? '',
-      msg.utility?.[2] ?? '',
-      msg.utility?.[3] ?? '',
+      ...(msg.melee ?? []),
+      ...(msg.bow ?? []),
+      ...(msg.magicBase ?? []),
+      ...(msg.magicAdvanced ?? []),
+      ...(msg.utility ?? []),
     ]
-    slots[7] = 'transfer_hp_mana'
-    slots[8] = 'transfer_mana_stam'
-    slots[9] = 'transfer_stam_hp'
-    // Validate: every non-empty slot must be a known id with the matching slot
-    // taxonomy. Reject silently with a server note when invalid (no partial
-    // commit — keep prior loadout intact).
-    const expectedSlot = [
-      'melee',
-      'bow',
-      'magic',
-      'magic',
-      'magic',
-      'magic',
-      'magic',
-      'utility',
-      'utility',
-      'utility',
-      'utility',
-    ]
+
+    // --- Budget-based family validation ---
+    // Instead of positional slot matching (which breaks for Tank that has 3 melee
+    // but the wire sends them all in different fields), we validate that the
+    // abilities provided fit within the class's declared family budget.
+    //
+    // E.g., Tank: { melee:3, bow:2, magicBase:0, magicAdvanced:0, utility:6 }
+    // We count how many of each family are in the submitted slots and ensure
+    // the class has enough room for each.
+    const classDef = TARGET_CLASS_DEFS[classId]
+    const budget = {
+      melee:        classDef.slots.melee,
+      bow:          classDef.slots.bow,
+      magicBase:    classDef.slots.magicBase,
+      magicAdvanced: classDef.slots.magicAdvanced,
+      utility:      classDef.slots.utility,
+    }
+    const used: Record<string, number> = {}
+    const seenIds = new Set<string>()
+
     for (let i = 0; i < slots.length; i++) {
       const id = slots[i]!
       if (id === '') continue
+
+      // 1. Known ability?
       const def = ABILITY_DEFS[id]
-      if (!def || def.slot !== expectedSlot[i]) {
+      if (!def) {
         client?.send(MessageTypes.ServerNote, {
           kind: 'warn',
-          text: `loadout rejected: slot ${i} expected ${expectedSlot[i]}, got "${id}"`,
+          text: `loadout rejected: unknown ability "${id}"`,
         })
         return
       }
-      if (i === 10 && id.startsWith('transfer_')) {
-        client?.send(MessageTypes.ServerNote, {
-          kind: 'warn',
-          text: 'loadout rejected: V is the flex utility slot; transfers are fixed on Z/X/F',
-        })
-        return
-      }
-      if (slots.findIndex((other) => other === id) !== i) {
+
+      // 2. Duplicate?
+      if (seenIds.has(id)) {
         client?.send(MessageTypes.ServerNote, {
           kind: 'warn',
           text: `loadout rejected: duplicate ability "${id}"`,
         })
         return
       }
+      seenIds.add(id)
+
+      // 3. Legal for this class?
+      if (!isAbilityLegalForClass(id, classId)) {
+        client?.send(MessageTypes.ServerNote, {
+          kind: 'warn',
+          text: `loadout rejected: ability "${id}" is not legal for class ${classId}`,
+        })
+        return
+      }
+
+      // 4. Family budget check — does the class have room for one more of this family?
+      const family = getAbilitySlotFamily(id)
+      used[family] = (used[family] ?? 0) + 1
+      if ((used[family] ?? 0) > (budget[family] ?? 0)) {
+        client?.send(MessageTypes.ServerNote, {
+          kind: 'warn',
+          text: `loadout rejected: class ${classId} has no ${family} slot for "${id}" (budget ${budget[family] ?? 0})`,
+        })
+        return
+      }
     }
-    // Commit.
+
+    // Commit class selection and resources immediately on server
+    player.classId = classId
+    const maxima = TARGET_CLASS_DEFS[classId].resourceMaxima
+    player.hp = maxima.hp
+    player.mana = maxima.mana
+    player.stamina = maxima.stamina
+
+    // Commit abilities
     while (player.loadout.length > 0) player.loadout.pop()
     for (const id of slots) player.loadout.push(id)
 
-    // Mastery is magic-only: exactly the 5 magic slots in the 11-slot loadout.
+    // Mastery is computed over the entire active build's abilities
     const allDefs = slots.map((id) => (id ? ABILITY_DEFS[id] : undefined))
     const newMastery = computeLoadoutMastery(allDefs)
     player.masteryElement = newMastery.element ?? ''
@@ -2132,8 +2285,96 @@ export class GameRoom extends Room<GameState> {
     player.abilityCooldowns.clear()
     this.statuses.clearAll(sid)
     console.info(
-      `[GameRoom ${this.roomId}] loadoutSet ${sid} mastery=${player.masteryElement || 'none'}/level${newMastery.level}`,
+      `[GameRoom ${this.roomId}] loadoutSet ${sid} class=${classId} mastery=${player.masteryElement || 'none'}/level${newMastery.level}`,
     )
+  }
+
+  // --- Pass 5: Risonanza proc resolution ------------------------------------
+
+  /**
+   * Fire the element-specific Risonanza bonus effect at the second impact
+   * location. Called by ClassMechanicRuntime when a Mago casts the same
+   * element twice inside the 2.5-second window.
+   *
+   * Proc radius is 3.5 m around the cast target point (or caster position
+   * for point-less casts). Each proc type is minimal:
+   *   Fire+Fire → Burn 3-stack burst to nearby enemies
+   *   Ice+Ice   → Freeze 1.5 s on nearest enemy (consumes Chill)
+   *   Lightning → 20 dmg chain to nearest enemy within 4 m
+   *   Dark      → instant +8 HP lifesteal on the caster
+   *   Nature    → Root 1.5 s on nearest enemy
+   */
+  private resolveRisonanzaProc(
+    req: { element: string; casterSid: string; target: { yaw: number; pitch: number; point?: { x: number; y: number; z: number }; targetId?: string } },
+    now: number,
+  ): void {
+    const casterPlayer = this.state.players.get(req.casterSid)
+    const origin = req.target.point ?? (casterPlayer
+      ? { x: casterPlayer.transform.x, y: casterPlayer.transform.y, z: casterPlayer.transform.z }
+      : null)
+    if (!origin) return
+
+    const PROC_RADIUS = 3.5
+
+    switch (req.element) {
+      case 'fire':
+        // Burn burst: apply Burn (3 stacks) to all enemies within proc radius.
+        this.state.players.forEach((victim, vid) => {
+          if (vid === req.casterSid || !victim.alive) return
+          if (now < victim.invulnUntilTick) return
+          const dx = victim.transform.x - origin.x
+          const dy = victim.transform.y - origin.y
+          const dz = victim.transform.z - origin.z
+          if (dx * dx + dy * dy + dz * dz <= PROC_RADIUS * PROC_RADIUS) {
+            this.statuses.applyToPlayer(vid, 'burn', 2, 3, req.casterSid)
+          }
+        })
+        break
+
+      case 'ice': {
+        // Freeze snap: Freeze the nearest enemy (consumes all Chill stacks).
+        const target = this.findChainVictims(req.casterSid, [], origin, PROC_RADIUS, 1)[0]
+        if (target) {
+          this.statuses.cleanse(target, 'chill')
+          this.statuses.applyToPlayer(target, 'freeze', 1.5, 1, req.casterSid)
+        }
+        break
+      }
+
+      case 'lightning': {
+        // Chain damage: deal 20 lightning dmg to nearest enemy within 4 m.
+        const target = this.findChainVictims(req.casterSid, [], origin, 4, 1)[0]
+        if (target) {
+          this.damageQueue.push({
+            attackerId: req.casterSid,
+            victimId: target,
+            damage: 20,
+            knockup: false,
+            cause: 'risonanza:lightning',
+            canParry: false,
+            element: 'lightning',
+          })
+        }
+        break
+      }
+
+      case 'dark':
+        // Lifesteal: heal the caster for 8 HP.
+        if (casterPlayer?.alive) {
+          const maxHp = TARGET_CLASS_DEFS[casterPlayer.classId as ClassId]?.resourceMaxima.hp ?? HP_MAX
+          casterPlayer.hp = Math.min(maxHp, casterPlayer.hp + 8)
+        }
+        break
+
+      case 'nature': {
+        // Root: apply Root 1.5 s to nearest enemy.
+        const target = this.findChainVictims(req.casterSid, [], origin, PROC_RADIUS, 1)[0]
+        if (target) {
+          this.statuses.applyToPlayer(target, 'root', 1.5, 1, req.casterSid)
+        }
+        break
+      }
+    }
   }
 
   // --- Fase 4 engine glue ---------------------------------------------------
@@ -2521,19 +2762,20 @@ export function computeProjectileOrigin(
 const BOT_NAMES = ['Shadow', 'Ember', 'Frost', 'Storm', 'Void', 'Blaze', 'Riven', 'Dusk'] as const
 
 // Default loadout applied at onJoin (and to bots). Matches the client's
-// DEFAULT_SLOTS in loadout-station.ts so new players start with the same
-// 11 starter slots on server and client.
-// Slot order: melee, bow, magic[5], fixed transfer utilities[3], flex utility[1].
+// DEFAULT_SLOTS in loadout-station.ts (Ibrido starter build).
+// Slot positions are packed by family: melee, bow, magicBase×2, magicAdvanced×2,
+// utility×5. Server validates by family budget, not wire position.
+// See 01_DESIGN/06_loadout_build.md for the starter build rationale.
 const DEFAULT_LOADOUT: readonly string[] = Object.freeze([
-  'uppercut', // melee
-  'piercing_shot', // bow
-  'fireball', // magic 1
-  'flame_wall', // magic 2
-  'frost_bolt', // magic 3
-  'chain_bolt', // magic 4
-  'shadow_bolt', // magic 5
-  'transfer_hp_mana', // fixed transfer Z
-  'transfer_mana_stam', // fixed transfer X
-  'transfer_stam_hp', // fixed transfer F
-  'quick_dash', // flex utility V
+  'uppercut',       // melee
+  'marksman_shot',  // bow
+  'fireball',       // magicBase
+  'lightning_dash', // magicBase
+  'arc_lift',       // magicAdvanced
+  'meteor',         // magicAdvanced
+  'adaptive_mend',  // utility — Ibrido Recovery
+  'quick_dash',     // utility
+  'cleanse_surge',  // utility
+  'barrier',        // utility
+  'smoke_screen',   // utility
 ])

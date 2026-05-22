@@ -72,7 +72,7 @@ const COMPILE_TIME_DEFAULTS: BalanceSnapshot = {
     staffM1Damage: STAFF_M1_DAMAGE,
     staffM1ManaCost: STAFF_M1_MANA_COST,
     staffM1CadenceSec: STAFF_M1_CADENCE_SEC,
-    swordM1Damage: [6, 6, 9],
+    swordM1Damage: [5, 5, 8],
   },
   parry: {
     tapWindowSec: PARRY_TAP_WINDOW_SEC,

@@ -17,7 +17,7 @@ interface Burst {
   startMs: number
   baseSlot: number
   velocities: Float32Array // vx,vy,vz per particle
-  origins: Float32Array    // ox,oy,oz per particle
+  origins: Float32Array // ox,oy,oz per particle
 }
 
 export class DeathBurst {
@@ -65,7 +65,7 @@ export class DeathBurst {
       const phi = Math.random() * Math.PI * 0.7 // 0..126° — skew upward
       const speed = 1.8 + Math.random() * 2.4
       const vx = Math.sin(phi) * Math.cos(theta) * speed
-      const vy = Math.cos(phi) * speed + 0.8  // upward bias
+      const vy = Math.cos(phi) * speed + 0.8 // upward bias
       const vz = Math.sin(phi) * Math.sin(theta) * speed
 
       velocities[i * 3] = vx
@@ -101,12 +101,12 @@ export class DeathBurst {
         continue
       }
 
-      const k = age / BURST_LIFE_MS          // 0 → 1
-      const gravity = 4.5                     // m/s² downward
-      const drag = 1 - k * 0.7               // velocity falloff
+      const k = age / BURST_LIFE_MS // 0 → 1
+      const gravity = 4.5 // m/s² downward
+      const drag = 1 - k * 0.7 // velocity falloff
 
       for (let i = 0; i < PARTICLES_PER_BURST; i++) {
-        const t = age / 1000                  // seconds elapsed
+        const t = age / 1000 // seconds elapsed
         const vx = burst.velocities[i * 3]! * drag
         const vy = burst.velocities[i * 3 + 1]! * drag - gravity * t
         const vz = burst.velocities[i * 3 + 2]! * drag

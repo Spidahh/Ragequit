@@ -31,19 +31,27 @@ describe('loadout slot helpers', () => {
     })
   })
 
-  it('builds the network payload with fixed transfers for the server loadout channel', () => {
-    expect(
-      buildLoadoutMessage(['m', 'b', 'a', 'b2', 'c', 'd', 'e', 'u1', 'u2', 'u3', 'u4']),
-    ).toEqual({
-      melee: 'm',
-      bow: 'b',
-      magic: ['a', 'b2', 'c', 'd', 'e'],
-      utility: ['transfer_hp_mana', 'transfer_mana_stam', 'transfer_stam_hp', 'u4'],
+  it('builds the class-aware envelope by classifying abilities by target family', () => {
+    // Hybrid starter build — abilities classified by getAbilitySlotFamily
+    const hybridBuild = [
+      'uppercut', 'marksman_shot', 'fireball', 'lightning_dash',
+      'arc_lift', 'meteor', 'adaptive_mend', 'quick_dash', 'cleanse_surge', 'barrier', 'smoke_screen',
+    ]
+    expect(buildLoadoutMessage(hybridBuild, undefined, 'hybrid')).toEqual({
+      classId: 'hybrid',
+      melee: ['uppercut'],
+      bow: ['marksman_shot'],
+      magicBase: ['fireball', 'lightning_dash'],
+      magicAdvanced: ['arc_lift', 'meteor'],
+      utility: ['adaptive_mend', 'quick_dash', 'cleanse_surge', 'barrier', 'smoke_screen'],
     })
+    // Default classId falls back to 'hybrid'
+    expect(buildLoadoutMessage(['quick_dash'], undefined, undefined)['classId']).toBe('hybrid')
+  })
+
+  it('normalizeLoadoutSlots pads to 11 without injecting transfers', () => {
     expect(
-      normalizeLoadoutSlots(['m', 'b', 'a', 'b2', 'c', 'd', 'e', '', '', '', 'quick_dash']).slice(
-        7,
-      ),
-    ).toEqual(['transfer_hp_mana', 'transfer_mana_stam', 'transfer_stam_hp', 'quick_dash'])
+      normalizeLoadoutSlots(['m', 'b', 'a', 'b2', 'c', 'd', 'e', '', '', '', 'quick_dash']).slice(7),
+    ).toEqual(['', '', '', 'quick_dash'])
   })
 })

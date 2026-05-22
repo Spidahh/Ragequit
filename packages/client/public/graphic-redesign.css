@@ -81,6 +81,10 @@ body.loadout-active canvas {
   text-align: left !important;
 }
 
+#main-menu.hidden {
+  display: none !important;
+}
+
 #main-menu h1 {
   display: none !important;
 }

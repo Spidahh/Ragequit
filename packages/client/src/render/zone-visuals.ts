@@ -167,7 +167,8 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
         if ('opacity' in aMat) aMat.opacity = 0.12 + pulse * 0.2
         vis.accent.rotation.z += vis.element === 'dark' ? -0.018 : 0.014
         if (vis.element === 'ice') vis.accent.scale.setScalar(1.0 + pulse * 0.05)
-        else if (vis.element === 'nature') vis.accent.scale.set(1.0 + pulse * 0.08, 1, 1.0 + pulse * 0.08)
+        else if (vis.element === 'nature')
+          vis.accent.scale.set(1.0 + pulse * 0.08, 1, 1.0 + pulse * 0.08)
       }
     })
   }

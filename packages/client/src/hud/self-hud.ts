@@ -11,6 +11,7 @@ import * as THREE from 'three'
 import { statusIcon } from '../icons.js'
 
 import { ELEMENT_COLOR, type CooldownStripController } from './cd-strip.js'
+import { renderDeathcam, type DeathcamData } from '../endgame.js'
 
 const RESPAWN_TIPS: readonly string[] = [
   'RMB: tap for a parry window, hold to block repeated hits.',
@@ -21,7 +22,7 @@ const RESPAWN_TIPS: readonly string[] = [
   'Space: hold for a higher jump, release early for a short hop.',
   'Sprint momentum: sustained running grants a small speed boost.',
   'Staff M1: instant low-cost projectile pressure.',
-  'Airborne targets cannot parry or cast until they recover.',
+  'Air launches pressure aim and positioning; keep fighting while you recover.',
   'Collision stops dash abilities; walls are hard cover.',
 ]
 
@@ -80,6 +81,7 @@ export interface SelfHudUpdateParams {
   setCastStartedAt: (ms: number) => void
   clearPrimedSlot: () => void
   cancelPlacementPreview: () => void
+  deathcamData?: DeathcamData | null
 }
 
 export interface SelfHudController {
@@ -125,6 +127,7 @@ export function initSelfHud({
     setCastStartedAt,
     clearPrimedSlot,
     cancelPlacementPreview,
+    deathcamData,
   }: SelfHudUpdateParams): void {
     if (!selfSchema) return
 
@@ -156,14 +159,30 @@ export function initSelfHud({
 
     if (!selfSchema.alive && selfSchema.respawnAtTick > 0) {
       const secLeft = Math.max(0, (selfSchema.respawnAtTick - tickNow) / TICK_RATE_HZ)
+      const secLeftMs = secLeft * 1000
       if (!respawnOverlay.classList.contains('active')) {
-        if (respawnTipEl)
-          respawnTipEl.textContent =
-            RESPAWN_TIPS[Math.floor(Math.random() * RESPAWN_TIPS.length)] ?? ''
+        if (deathcamData) {
+          renderDeathcam(respawnOverlay, {
+            ...deathcamData,
+            timeToNextMs: secLeftMs
+          })
+        } else {
+          if (respawnTipEl)
+            respawnTipEl.textContent =
+              RESPAWN_TIPS[Math.floor(Math.random() * RESPAWN_TIPS.length)] ?? ''
+          respawnSec.textContent = secLeft.toFixed(1)
+          respawnKillerEl.textContent = lastKillerName ? `⚔ killed by ${lastKillerName}` : ''
+        }
+      } else {
+        // Dynamically update the countdown within the deathcam interface to avoid reflicker
+        const countdownEl = respawnOverlay.querySelector('.dc-card:nth-child(2) .meta')
+        if (countdownEl) {
+          countdownEl.textContent = `Next round in ${Math.ceil(secLeft)}s`
+        } else {
+          respawnSec.textContent = secLeft.toFixed(1)
+        }
       }
       respawnOverlay.classList.add('active')
-      respawnSec.textContent = secLeft.toFixed(1)
-      respawnKillerEl.textContent = lastKillerName ? `⚔ killed by ${lastKillerName}` : ''
     } else {
       respawnOverlay.classList.remove('active')
     }

@@ -12,7 +12,7 @@
 export type StatusKind =
   | 'burn' // Fire DoT — 2 dmg/s per stack, 3 s, max 3 stacks
   | 'chill' // Ice slow — 5% per stack, 5 stacks → frozen, decays in 4 s
-  | 'bleed' // Melee DoT — 6 dmg/s for 3 s; cleansed by transmute
+  | 'bleed' // Melee DoT — 6 dmg/s for 3 s; cleansed by Cleanse Surge
   | 'poison' // Nature DoT — 3 dmg/s for 4 s, decays half-rate at 5/5 Mastery
   | 'slow' // Generic %-slow with explicit fraction
   | 'root' // No horizontal movement
@@ -68,7 +68,9 @@ export const STATUS_META: Readonly<Record<StatusKind, StatusMeta>> = {
     damagePerTick: 6,
     tickEverySec: 1,
     defaultDurationSec: 3,
-    cleansedByTransmute: true,
+    // Pass 4: bleed cleanse moved from transmute to Cleanse Surge / class utility.
+    // Fixed transfers are no longer in the target design; cleansedByTransmute = false.
+    cleansedByTransmute: false,
   },
   poison: {
     maxStacks: 5,

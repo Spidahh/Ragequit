@@ -3,15 +3,15 @@
 // All timings in seconds; damages are raw HP numbers tuned to the 20-30 s TTK window.
 
 // --- Sword M1 ---------------------------------------------------------------
-// 3-hit combo, 0.4 s per swing, 2.5 m arc of ~90° (cone half-angle = 45°).
-// Damage per swing: 6 / 6 / 9 (stagger bonus on third).
+// 3-hit combo, 0.4 s per swing. The hit chain advances only on a landed
+// contact so Sword M1 is pressure inside an exchange, not a free spam loop.
 
 export const SWORD_M1_SWING_SEC = 0.4 as const
-export const SWORD_M1_RANGE_M = 3.5 as const // 2.5→3.5: easier to hit in 3rd-person view
-// Half-angle of the hit cone (radians). 120° arc = 60° each side.
-export const SWORD_M1_CONE_HALF_ANGLE_RAD = Math.PI / 3 // was PI/4 (45°) → PI/3 (60°), wider arc
-// Damage per combo index.
-export const SWORD_M1_DAMAGE = [12, 12, 18] as const // was [6,6,9]; doubled to make melee viable
+export const SWORD_M1_RANGE_M = 1.8 as const
+// Half-angle of the hit cone (radians). 90° arc = 45° each side.
+export const SWORD_M1_CONE_HALF_ANGLE_RAD = Math.PI / 4
+export const SWORD_M1_DAMAGE = [5, 5, 8] as const
+export const SWORD_M1_COST_STAMINA = 8 as const
 // Combo chain window — next swing must start within this many seconds of the
 // previous swing's start to continue the chain (0.3 s per design doc).
 export const SWORD_M1_CHAIN_WINDOW_SEC = 0.3 as const
@@ -20,7 +20,8 @@ export const SWORD_M1_COMBO_RESET_SEC = 1.0 as const
 // When during the 0.4 s swing the hit-check fires (fraction of swing duration).
 // 0.5 puts the hitbox active at the peak of the arc.
 export const SWORD_M1_HIT_FRACTION = 0.5 as const
-// Sword is a melee weapon — cannot swing while airborne (design doc constraint).
+// Sword contact can happen in air. Distance, aim, stamina and server hit tests
+// decide whether the swing matters.
 
 // --- Uppercut ---------------------------------------------------------------
 // 0.4 s visible windup → vertical strike → 0.8 s airborne knockup on target.
@@ -109,8 +110,7 @@ export const TERRAIN_GROUND_Y = 0 as const
 // --- Parry -----------------------------------------------------------------
 // Tap parry = perfect block window (100% block), burns 20 stamina, 3 s CD.
 // Hold parry = continuous 70% block, drains 15 stam/s, no CD on release.
-// Parry does NOT protect against airborne follow-ups (already covered by
-// airborne lock in combat.md — player can't parry while airborne anyway).
+// Airborne state is not a universal parry lock in the arena-FPS target.
 
 export const PARRY_TAP_WINDOW_SEC = 0.5 as const
 export const PARRY_TAP_COST_STAMINA = 20 as const

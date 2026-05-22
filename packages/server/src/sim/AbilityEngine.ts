@@ -28,6 +28,8 @@ import {
   directionFromYawPitch,
   getMasteryBonus,
   isElementId,
+  ClassId,
+  TARGET_CLASS_DEFS,
   type AbilityDef,
   type AbilityComboRole,
   type ChannelEffect,
@@ -43,7 +45,6 @@ import {
   type ServerAbilityCastedMessage,
   type ServerAbilityFailedMessage,
   type ServerChannelInterruptedMessage,
-  type ServerTransmuteResultMessage,
   type StatusEffect,
   type StatusKind,
   type TransmuteEffect,
@@ -52,6 +53,7 @@ import {
 } from '@ragequit/shared'
 
 import type { PendingDamageEntry, StatusRuntime } from './StatusRuntime.js'
+import { TransmuteHandler } from './TransmuteHandler.js'
 
 // --- Host interface --------------------------------------------------------
 
@@ -127,6 +129,12 @@ export interface EngineHost {
     x: number
     z: number
   }
+  // Pass 5: optional hooks for class mechanic integration.
+  // Returning undefined (when not provided) means "no bonus / no multiplier."
+  /** Returns a cooldown multiplier for ability casts (e.g. Momentum CDR). */
+  getAbilityCooldownMult?: (sid: string) => number
+  /** Returns extra HP to grant the caster on top of the base heal amount. */
+  getRecoveryHealBonus?: (sid: string, abilityId: string, now: number) => number
 }
 
 // --- Pending windups -------------------------------------------------------
@@ -142,12 +150,18 @@ const GCD_TICKS = Math.round(GCD_SEC * TICK_RATE_HZ)
 const KNOCKUP_IMMUNITY_TICKS = Math.round(KNOCKUP_IMMUNITY_AFTER_LAND_SEC * TICK_RATE_HZ)
 export const AIR_PUNISH_DAMAGE_MULT = 1.25
 
+function getPlayerMaxima(player: Player): { hp: number; mana: number; stamina: number } {
+  const classId = (player.classId || 'hybrid') as ClassId
+  return TARGET_CLASS_DEFS[classId]?.resourceMaxima ?? { hp: HP_MAX, mana: MANA_MAX, stamina: STAMINA_MAX }
+}
+
 export class AbilityEngine {
   private readonly windups: PendingCast[] = []
 
   constructor(
     private readonly host: EngineHost,
     private readonly statuses: StatusRuntime,
+    private readonly transmute: TransmuteHandler,
   ) {}
 
   // Try to start a cast. Returns true if accepted (effects fired or windup
@@ -174,7 +188,7 @@ export class AbilityEngine {
       this.host.sendAbilityFailed(sid, abilityId, 'casting')
       return false
     }
-    if (now < player.airborneUntilTick) {
+    if (baseDef.airPolicy === 'groundedCaster' && now < player.airborneUntilTick) {
       this.host.sendAbilityFailed(sid, abilityId, 'airborne')
       return false
     }
@@ -208,14 +222,14 @@ export class AbilityEngine {
       (effect): effect is TransmuteEffect => effect.kind === 'transmute',
     )
     if (transmuteEffect) {
-      const transmuteFailure = this.transmuteFailureReason(player, transmuteEffect)
+      const transmuteFailure = this.transmute.getFailureReason(player, transmuteEffect.direction, true)
       if (transmuteFailure) {
         this.host.sendAbilityFailed(
           sid,
           abilityId,
           transmuteFailure === 'cost' ? 'cost' : 'cooldown',
         )
-        this.broadcastTransmuteResult(sid, transmuteEffect.direction, false, transmuteFailure)
+        this.transmute.broadcastFailure(sid, transmuteEffect.direction, transmuteFailure)
         return false
       }
     }
@@ -223,7 +237,8 @@ export class AbilityEngine {
     const def = baseDef
     const defElement: ElementId | undefined = isElementId(def.element) ? def.element : undefined
     const masteryBonus = this.masteryBonusFor(player, defElement)
-    const effectiveCdSec = def.cooldownSec * (masteryBonus?.cooldownMult ?? 1)
+    const cdMult = (masteryBonus?.cooldownMult ?? 1) * (this.host.getAbilityCooldownMult?.(sid) ?? 1)
+    const effectiveCdSec = def.cooldownSec * cdMult
     const effectiveMana = def.costMana
     const effectiveStam = def.costStamina
 
@@ -377,7 +392,7 @@ export class AbilityEngine {
       for (const e of def.effects) {
         if (e.at !== 'onCast' || e.kind !== 'lifesteal') continue
         const heal = damageDealtForLifesteal * e.fraction
-        caster.hp = Math.min(caster.hp + heal, HP_MAX)
+        caster.hp = Math.min(caster.hp + heal, getPlayerMaxima(caster).hp)
       }
     }
   }
@@ -400,7 +415,7 @@ export class AbilityEngine {
         this.effectKnockup(sid, def, effect, target)
         return 0
       case 'heal':
-        this.effectHeal(sid, effect)
+        this.effectHeal(sid, effect, def.id)
         return 0
       case 'lifesteal':
         return 0 // handled by the caller after damage aggregation
@@ -432,7 +447,7 @@ export class AbilityEngine {
       case 'restoreStamina': {
         const caster = this.host.state.players.get(sid)
         if (caster) {
-          caster.stamina = Math.min(caster.stamina + effect.amount, STAMINA_MAX)
+          caster.stamina = Math.min(caster.stamina + effect.amount, getPlayerMaxima(caster).stamina)
         }
         return 0
       }
@@ -447,62 +462,14 @@ export class AbilityEngine {
   private effectTransmute(sid: string, e: TransmuteEffect): void {
     const caster = this.host.state.players.get(sid)
     if (!caster) return
-    // Ratios from 04_transmutation.md.
-    // Respect per-direction cooldowns (transmuteCooldowns map).
-    const now = this.host.state.tick
-    const CD_TICKS = Math.round(5 * TICK_RATE_HZ)
-    switch (e.direction) {
-      case 'hp_mana':
-        caster.hp = Math.max(0, caster.hp - 20)
-        caster.mana = Math.min(caster.mana + 20, MANA_MAX)
-        break
-      case 'mana_stam':
-        caster.mana = Math.max(0, caster.mana - 20)
-        caster.stamina = Math.min(caster.stamina + 20, STAMINA_MAX)
-        break
-      case 'stam_hp':
-        caster.stamina = Math.max(0, caster.stamina - 30)
-        caster.hp = Math.min(caster.hp + 20, HP_MAX)
-        break
-    }
-    for (let i = caster.statuses.length - 1; i >= 0; i--) {
-      const k = caster.statuses[i]!.kind as StatusKind
-      if (STATUS_META[k]?.cleansedByTransmute) this.statuses.cleanse(sid, k)
-    }
-    caster.transmuteCooldowns.set(e.direction, now + CD_TICKS)
-    this.broadcastTransmuteResult(sid, e.direction, true)
-  }
 
-  private transmuteFailureReason(
-    caster: Player,
-    e: TransmuteEffect,
-  ): ServerTransmuteResultMessage['reason'] | null {
-    const cdReady = caster.transmuteCooldowns.get(e.direction) ?? 0
-    if (this.host.state.tick < cdReady) return 'cooldown'
-    switch (e.direction) {
-      case 'hp_mana':
-        return caster.hp <= 20 ? 'cost' : null
-      case 'mana_stam':
-        return caster.mana < 20 ? 'cost' : null
-      case 'stam_hp':
-        return caster.stamina < 30 ? 'cost' : null
+    const reason = this.transmute.getFailureReason(caster, e.direction, true)
+    if (reason) {
+      this.transmute.broadcastFailure(sid, e.direction, reason)
+      return
     }
-  }
 
-  private broadcastTransmuteResult(
-    sid: string,
-    direction: TransmuteEffect['direction'],
-    ok: boolean,
-    reason?: ServerTransmuteResultMessage['reason'],
-  ): void {
-    const out: ServerTransmuteResultMessage = {
-      playerId: sid,
-      direction,
-      ok,
-      reason,
-      atTick: this.host.state.tick,
-    }
-    this.host.broadcast(MessageTypes.TransmuteResult, out)
+    this.transmute.apply(sid, caster, e.direction)
   }
 
   private effectDamage(
@@ -702,13 +669,17 @@ export class AbilityEngine {
     return { x: dx, z: dz, distance }
   }
 
-  private effectHeal(sid: string, e: HealEffect): void {
+  private effectHeal(sid: string, e: HealEffect, abilityId?: string): void {
     const caster = this.host.state.players.get(sid)
     if (!caster) return
     if (e.overSec && e.overSec > 0) {
       // Channeled heal — modelled in Fase 5; for now apply instant.
     }
-    caster.hp = Math.min(caster.hp + e.amount, HP_MAX)
+    const bonus =
+      abilityId && this.host.getRecoveryHealBonus
+        ? (this.host.getRecoveryHealBonus(sid, abilityId, this.host.state.tick) ?? 0)
+        : 0
+    caster.hp = Math.min(caster.hp + e.amount + bonus, getPlayerMaxima(caster).hp)
   }
 
   private effectResourceDrain(
@@ -745,10 +716,10 @@ export class AbilityEngine {
       if (drained <= 0) continue
       if (e.resource === 'mana') {
         victim.mana -= drained
-        caster.mana = Math.min(caster.mana + drained * (e.gainFraction ?? 0), MANA_MAX)
+        caster.mana = Math.min(caster.mana + drained * (e.gainFraction ?? 0), getPlayerMaxima(caster).mana)
       } else {
         victim.stamina -= drained
-        caster.stamina = Math.min(caster.stamina + drained * (e.gainFraction ?? 0), STAMINA_MAX)
+        caster.stamina = Math.min(caster.stamina + drained * (e.gainFraction ?? 0), getPlayerMaxima(caster).stamina)
       }
     }
   }
@@ -1117,7 +1088,7 @@ export class AbilityEngine {
 
   private canApplyParryableFollowup(def: AbilityDef, victim: Player): boolean {
     if (!def.canParry) return true
-    return !(victim.parrying && this.host.state.tick >= victim.airborneUntilTick)
+    return !victim.parrying
   }
 
   private hasActiveChannel(casterId: string, abilityId: string): boolean {

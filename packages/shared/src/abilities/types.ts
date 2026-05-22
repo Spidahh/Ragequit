@@ -11,7 +11,7 @@
 // Each primitive maps 1:1 to a handler in the server engine. New primitives
 // can be added later but the existing ones never change shape.
 
-import type { ElementId } from '../constants/index.js'
+import type { ClassId, ElementId, TargetAbilitySlotFamily } from '../constants/index.js'
 import type { StatusKind } from '../status/types.js'
 
 // --- Slot taxonomy ----------------------------------------------------------
@@ -52,6 +52,10 @@ export type AbilityComboRole =
   | 'mobility'
   | 'drain'
   | 'resource'
+
+// Air casts are legal by default for the arena-FPS target. Set this only when
+// an ability truly requires the caster to stand on a support surface.
+export type AbilityAirPolicy = 'groundedCaster'
 
 // --- Effect primitive union -------------------------------------------------
 
@@ -228,6 +232,11 @@ export interface AbilityDef {
   // Human label for HUD tooltips.
   name: string
   slot: AbilitySlot
+  // Target redesign metadata. Runtime loadout validation still consumes the
+  // legacy `slot` field until the class-aware protocol pass lands.
+  targetSlotFamily?: TargetAbilitySlotFamily
+  targetLegalClasses?: readonly ClassId[]
+  airPolicy?: AbilityAirPolicy
   // Element tag — drives Mastery bonuses. 'none' for utility
   // abilities and the few melee/bow abilities that have no element.
   element: ElementId | 'none'
@@ -257,8 +266,8 @@ export interface AbilityDef {
   // True iff this ability can be parried. Defaults to false; set true for
   // melee abilities that travel into a parry window (Uppercut, Bleed Strike).
   canParry?: boolean
-  // True iff the ability counts as a knockup setup for the airborne lock
-  // bookkeeping. Mostly informational at the client level.
+  // True iff the ability counts as a knockup setup for launch bookkeeping.
+  // Mostly informational at the client level.
   isKnockup?: boolean
 }
 

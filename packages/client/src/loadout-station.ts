@@ -1,14 +1,21 @@
 // Loadout Station UI.
 //
-// Single-purpose build screen: pick 1 melee, 1 bow, 5 magic, 1 flex utility.
-// The three resource transfers are fixed utility slots.
-// Mastery: 4+ same-element magic abilities = Mastery 1. 5/5 = Mastery 2.
+// Class-aware build screen: the active class (Tank/Arciere/Mago/Ibrido) determines
+// which slot families are available, which abilities are legal, and which vitals
+// are displayed. 11 total slots; each slot is freely assignable within class
+// slot-family budget (no slot is ever locked). Fixed transfers are no longer
+// injected — they exist in the registry as legacy abilities for the current
+// runtime but are not part of any target starter build.
 
 import {
   ABILITY_DEFS,
   MASTERY_BONUSES,
   MessageTypes,
   computeLoadoutMastery,
+  CLASS_IDS,
+  TARGET_CLASS_DEFS,
+  isAbilityLegalForClass,
+  type ClassId,
   type AbilityDef,
   type ElementId,
   type MasteryLevel,
@@ -18,7 +25,6 @@ import type { Room } from 'colyseus.js'
 import { abilityIconMarkup } from './icons.js'
 import { actionLabel, onKeybindsChanged, slotKeybindEntries } from './input/keybinds.js'
 import {
-  FIXED_TRANSFER_SLOTS,
   LOADOUT_SLOT_ORDER,
   UTILITY_FLEX_SLOT_INDEX,
   buildLoadoutMessage,
@@ -27,25 +33,103 @@ import {
 
 const STORAGE_KEY = 'ragequit.loadout.v6'
 const INSTANT_CAST_STORAGE_KEY = 'ragequit.instantCast.v2'
+const CLASS_STORAGE_KEY = 'ragequit.loadout.classId'
 
+// Class-specific mechanic descriptions shown in the vitals console.
+const CLASS_MECHANIC_DESC: Record<ClassId, string> = {
+  tank: 'FURY — Ogni colpo subito senza parare accumula Fury. A 100 Fury scatta uno scudo automatico e il prossimo attacco Melee ignora il 30% di riduzione danni.',
+  archer: 'MOMENTUM — Ogni tiro in movimento senza fermarsi aumenta il Momentum. A 5 stack il prossimo attacco ottiene +40% velocità freccia e ignora lo scudo nemico.',
+  mage: 'RISONANZA — Incantesimi dello stesso elemento cast in sequenza aumentano la Risonanza. A 3 stack il prossimo cast è potenziato: +25% danno e costo mana dimezzato.',
+  hybrid: 'FLOW — Ogni abilità cast da una famiglia diversa dalla precedente aumenta il Flow. A 4 stack le prossime 2 abilità ignoreranno il GCD globale.',
+}
+
+// Starter preset builds per class — full 11-slot class-aware builds.
+// Slot positions are packed by family regardless of wire-field name; the server
+// validates by family budget (not position), so melee abilities may sit in
+// "magic" wire positions etc. See 01_DESIGN/06_loadout_build.md for rationale.
+// Each starter includes the class Recovery utility and no fixed transfers.
+const CLASS_STARTER_PRESETS: Record<ClassId, string[]> = {
+  // Tank: 3 melee + 2 bow + 6 utility = 11
+  tank: [
+    'uppercut',       // slot 0 — melee (Uppercut: knockup setup)
+    'piercing_shot',  // slot 1 — bow   (Piercing Shot: physical cashout)
+    'gap_closer',     // slot 2 — melee (Gap Closer: engage dash)
+    'guard_break',    // slot 3 — melee (Guard Break: short-range setup)
+    'disengage_shot', // slot 4 — bow   (Disengage Shot: spacing tool)
+    'brace_recovery', // slot 5 — utility (Recovery — always first in build)
+    'barrier',        // slot 6 — utility
+    'cleanse_surge',  // slot 7 — utility
+    'quick_dash',     // slot 8 — utility
+    'energize',       // slot 9 — utility (Stamina economy)
+    'smoke_screen',   // slot 10 — utility
+  ],
+  // Arciere: 3 bow + 4 magicBase + 4 utility = 11
+  archer: [
+    'dark_barrier',   // slot 0 — magicBase (protection without stopping ranged play)
+    'pin_shot',       // slot 1 — bow   (ranged setup)
+    'marksman_shot',  // slot 2 — bow   (precision cashout)
+    'disengage_shot', // slot 3 — bow   (spacing response)
+    'frost_bolt',     // slot 4 — magicBase (control projectile)
+    'fireball',       // slot 5 — magicBase (splash projectile)
+    'lightning_dash', // slot 6 — magicBase (magic movement)
+    'hunters_flow',   // slot 7 — utility (Recovery + Momentum spend)
+    'quick_dash',     // slot 8 — utility
+    'cleanse_surge',  // slot 9 — utility
+    'smoke_screen',   // slot 10 — utility
+  ],
+  // Mago: 4 magicBase + 4 magicAdvanced + 3 utility = 11
+  mage: [
+    'fireball',       // slot 0 — magicBase (Fire projectile pressure)
+    'ignite',         // slot 1 — magicBase (Fast Fire follow-up for Risonanza)
+    'frost_bolt',     // slot 2 — magicBase (Ice pressure)
+    'dark_barrier',   // slot 3 — magicBase (Magic protection)
+    'eruption',       // slot 4 — magicAdvanced (launch setup)
+    'meteor',         // slot 5 — magicAdvanced (high-commit Fire cashout)
+    'frost_pillar',   // slot 6 — magicAdvanced (windup launch path)
+    'blizzard',       // slot 7 — magicAdvanced (large control field)
+    'arcane_rebind',  // slot 8 — utility (Recovery — Mana/Risonanza survival)
+    'phase_shift',    // slot 9 — utility (timed survival counter)
+    'cleanse_surge',  // slot 10 — utility
+  ],
+  // Ibrido: 1 melee + 1 bow + 2 magicBase + 2 magicAdvanced + 5 utility = 11
+  hybrid: [
+    'uppercut',       // slot 0 — melee (sword setup)
+    'marksman_shot',  // slot 1 — bow   (bow cashout)
+    'fireball',       // slot 2 — magicBase (staff projectile pressure)
+    'lightning_dash', // slot 3 — magicBase (staff movement + weapon-swap reward)
+    'arc_lift',       // slot 4 — magicAdvanced (spell launch path)
+    'meteor',         // slot 5 — magicAdvanced (advanced cashout)
+    'adaptive_mend',  // slot 6 — utility (Recovery — Flow-spend)
+    'quick_dash',     // slot 7 — utility
+    'cleanse_surge',  // slot 8 — utility
+    'barrier',        // slot 9 — utility
+    'smoke_screen',   // slot 10 — utility
+  ],
+}
+
+// Default build used when no class is selected or no saved build exists.
+// Matches the Ibrido (hybrid) starter from 01_DESIGN/06_loadout_build.md.
+// Server DEFAULT_LOADOUT in GameRoom.ts must stay in sync with this.
 const DEFAULT_SLOTS: string[] = [
-  'uppercut',
-  'piercing_shot',
-  'fireball',
-  'flame_wall',
-  'frost_bolt',
-  'chain_bolt',
-  'shadow_bolt',
-  FIXED_TRANSFER_SLOTS[7],
-  FIXED_TRANSFER_SLOTS[8],
-  FIXED_TRANSFER_SLOTS[9],
-  'quick_dash',
+  'uppercut',       // melee
+  'marksman_shot',  // bow
+  'fireball',       // magicBase
+  'lightning_dash', // magicBase
+  'arc_lift',       // magicAdvanced
+  'meteor',         // magicAdvanced
+  'adaptive_mend',  // utility (Ibrido Recovery)
+  'quick_dash',     // utility
+  'cleanse_surge',  // utility
+  'barrier',        // utility
+  'smoke_screen',   // utility
 ]
 
 export interface LoadoutStationApi {
   open: () => void
   close: () => void
   getLoadout: () => readonly string[]
+  /** Returns the active class id for the current build. Used by sendLoadout. */
+  getClassId: () => ClassId
   isInstantCast: (abilityId: string) => boolean
   /** Merge server-persisted instant-cast flags into local state and save to localStorage. */
   applyPersistedInstantCast: (flags: Record<string, boolean>) => void
@@ -88,11 +172,26 @@ export function initLoadoutStation(
   const magicDeckKey = document.getElementById('ls-magic-deck-key')
   const utilityWheelKey = document.getElementById('ls-utility-wheel-key')
 
+  // Class selector DOM refs
+  const classTabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.ls-class-tab'))
+  // Class vitals DOM refs
+  const vitalsClassName = document.getElementById('ls-vitals-class-name')
+  const vitalsMechanicName = document.getElementById('ls-mechanic-name')
+  const vitalsMechanicDesc = document.getElementById('ls-mechanic-desc')
+  const vitalsBarHp = document.getElementById('ls-bar-hp') as HTMLElement | null
+  const vitalsBarMana = document.getElementById('ls-bar-mana') as HTMLElement | null
+  const vitalsBarStam = document.getElementById('ls-bar-stam') as HTMLElement | null
+  const vitalsValHp = document.getElementById('ls-val-hp')
+  const vitalsValMana = document.getElementById('ls-val-mana')
+  const vitalsValStam = document.getElementById('ls-val-stam')
+  const btnPreset = document.getElementById('ls-load-preset') as HTMLButtonElement | null
+
   let slots = loadSlots()
   let instantCast = loadInstantCastPrefs()
   let activeIdx = 0
   let poolFilterEl = 'all'
   let poolSearch = ''
+  let activeClassId: ClassId = loadClassId()
 
   function resetPoolFilters(): void {
     poolFilterEl = 'all'
@@ -126,6 +225,18 @@ export function initLoadoutStation(
       // Fall through to defaults.
     }
     return DEFAULT_SLOTS.slice()
+  }
+
+  function loadClassId(): ClassId {
+    try {
+      const raw = localStorage.getItem(CLASS_STORAGE_KEY)
+      if (raw && CLASS_IDS.includes(raw as ClassId)) return raw as ClassId
+    } catch { /* ignore */ }
+    return 'hybrid'
+  }
+
+  function saveClassId(id: ClassId): void {
+    try { localStorage.setItem(CLASS_STORAGE_KEY, id) } catch { /* ignore */ }
   }
 
   function save(): void {
@@ -223,10 +334,9 @@ export function initLoadoutStation(
   function makeSlotEl(idx: number): HTMLElement {
     const id = slots[idx] ?? ''
     const def = id ? ABILITY_DEFS[id] : undefined
-    const lockedTransfer = idx in FIXED_TRANSFER_SLOTS
     const el = document.createElement('button')
     el.type = 'button'
-    el.className = `ls-slot ${idx === activeIdx ? 'active' : ''} ${lockedTransfer ? 'locked-transfer' : ''} el-${def?.element ?? 'none'}`
+    el.className = `ls-slot ${idx === activeIdx ? 'active' : ''} el-${def?.element ?? 'none'}`
     el.dataset['idx'] = String(idx)
     const role = def ? abilityRole(def) : undefined
     const slotKind = LOADOUT_SLOT_ORDER[idx] ?? 'utility'
@@ -235,21 +345,12 @@ export function initLoadoutStation(
       `<span class="ls-slot-label">${slotKeyLabel(idx)}</span>`,
       `<span class="ls-slot-main"><span class="ls-slot-name">${def?.name ?? '— empty —'}</span><span class="ls-slot-role">${role?.title ?? slotPoolTitle(slotKind, idx)}</span></span>`,
       def ? `<span class="ls-slot-cost">${formatCost(def)} · ${def.cooldownSec}s</span>` : '',
-      def && !lockedTransfer
+      def
         ? `<span class="ls-slot-mode ${isInstantCast(def) ? 'instant' : 'preview'}">${isInstantCast(def) ? 'INSTANT' : 'PREVIEW'}</span>`
         : '',
-      lockedTransfer
-        ? '<span class="ls-slot-lock">FIXED</span>'
-        : id
-          ? '<button class="ls-slot-clear" title="Clear">×</button>'
-          : '',
+      id ? '<button class="ls-slot-clear" title="Clear">×</button>' : '',
     ].join('')
     el.addEventListener('click', (event) => {
-      if (lockedTransfer) {
-        setActiveSlot(idx)
-        rerender()
-        return
-      }
       if ((event.target as HTMLElement).classList.contains('ls-slot-clear')) {
         if (buildLocked()) return
         slots[idx] = ''
@@ -275,10 +376,10 @@ export function initLoadoutStation(
 
   function rebuildMastery(): void {
     const counts: Partial<Record<ElementId, number>> = {}
-    // Only magic slots count for mastery.
-    for (const id of slots.slice(2, 7)) {
+    // Only magic abilities count for mastery — filter by def.slot, not hardcoded indices.
+    for (const id of slots) {
       const def = id ? ABILITY_DEFS[id] : undefined
-      if (!def || def.element === 'none') continue
+      if (!def || def.slot !== 'magic' || def.element === 'none') continue
       counts[def.element as ElementId] = (counts[def.element as ElementId] ?? 0) + 1
     }
     const elements: ElementId[] = ['fire', 'ice', 'lightning', 'dark', 'nature']
@@ -311,8 +412,7 @@ export function initLoadoutStation(
       detailsMeta.textContent = (LOADOUT_SLOT_ORDER[activeIdx] ?? 'utility').toUpperCase() + ' SLOT'
       detailsDesc.replaceChildren()
       const empty = document.createElement('p')
-      empty.textContent =
-        'Pick a compatible ability. Transfer slots are fixed and always stay on Z, X and F.'
+      empty.textContent = 'Pick a compatible ability from the pool below.'
       detailsDesc.appendChild(empty)
       rebuildBuildCoach()
       detailsMalus.textContent = ''
@@ -356,7 +456,7 @@ export function initLoadoutStation(
 
   function rebuildBuildCoach(): void {
     if (!buildCoach) return
-    const report = analyzeBuild(slots)
+    const report = analyzeBuild(slots, activeClassId)
     buildCoach.replaceChildren()
 
     const head = document.createElement('div')
@@ -432,17 +532,12 @@ export function initLoadoutStation(
       poolSubtitle.textContent = locked
         ? 'Build editing is locked during live combat'
         : poolSubtitleFor(targetSlot, activeIdx)
-    if (activeIdx in FIXED_TRANSFER_SLOTS) {
-      const empty = document.createElement('div')
-      empty.className = 'pool-empty transfer-locked-copy'
-      empty.textContent = 'This is a fixed resource-conversion slot. Z, X and F cannot be replaced.'
-      lsPool.appendChild(empty)
-      return
-    }
     const defs = (Object.values(ABILITY_DEFS) as AbilityDef[])
       .filter((def) => def.slot === targetSlot)
       .filter((def) => activeIdx !== UTILITY_FLEX_SLOT_INDEX || !def.id.startsWith('transfer_'))
       .filter((def) => !slots.some((id, idx) => idx !== activeIdx && id === def.id))
+      // Class legality filter — only show abilities valid for the active class
+      .filter((def) => isAbilityLegalForClass(def.id, activeClassId))
       .filter((def) => {
         if (poolFilterEl === 'all') return true
         if (poolFilterEl === 'recommended')
@@ -523,10 +618,68 @@ export function initLoadoutStation(
     }
   }
 
+  // --- Class Selector Logic --------------------------------------------------
+
+  function applyClassId(id: ClassId): void {
+    activeClassId = id
+    saveClassId(id)
+    // Update active tab UI
+    classTabs.forEach((tab) => {
+      const isActive = tab.dataset['class'] === id
+      tab.classList.toggle('active', isActive)
+    })
+    // Apply class color token to the overlay
+    const CLASS_COLORS: Record<ClassId, string> = {
+      tank: '#d4a04a',
+      archer: '#2ecc71',
+      mage: '#3498db',
+      hybrid: '#00f0ff',
+    }
+    overlay.style.setProperty('--class-color', CLASS_COLORS[id])
+    rerender()
+  }
+
+  classTabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const id = tab.dataset['class'] as ClassId | undefined
+      if (id && CLASS_IDS.includes(id)) applyClassId(id)
+    })
+  })
+
+  // --- Class Vitals Console --------------------------------------------------
+
+  function rebuildClassVitals(): void {
+    const classDef = TARGET_CLASS_DEFS[activeClassId]
+    const { hp, mana, stamina } = classDef.resourceMaxima
+    const HP_REF = 250, MANA_REF = 160, STAM_REF = 150
+    if (vitalsClassName) vitalsClassName.textContent = classDef.label.toUpperCase()
+    if (vitalsMechanicName) vitalsMechanicName.textContent = classDef.mechanicId.toUpperCase()
+    if (vitalsMechanicDesc) vitalsMechanicDesc.textContent = CLASS_MECHANIC_DESC[activeClassId]
+    if (vitalsValHp) vitalsValHp.textContent = String(hp)
+    if (vitalsValMana) vitalsValMana.textContent = String(mana)
+    if (vitalsValStam) vitalsValStam.textContent = String(stamina)
+    if (vitalsBarHp) vitalsBarHp.style.width = `${Math.round((hp / HP_REF) * 100)}%`
+    if (vitalsBarMana) vitalsBarMana.style.width = `${Math.round((mana / MANA_REF) * 100)}%`
+    if (vitalsBarStam) vitalsBarStam.style.width = `${Math.round((stamina / STAM_REF) * 100)}%`
+  }
+
+  // --- Preset Loader ---------------------------------------------------------
+
+  btnPreset?.addEventListener('click', () => {
+    if (buildLocked()) return
+    slots = normalizeLoadoutSlots(CLASS_STARTER_PRESETS[activeClassId])
+    setActiveSlot(0)
+    save()
+    rerender()
+  })
+
+  // --- Rerender --------------------------------------------------------------
+
   function rerender(): void {
     refreshSectionKeyLabels()
     rebuildSlots()
     rebuildMastery()
+    rebuildClassVitals()
     rebuildDetails()
     rebuildPool()
   }
@@ -558,7 +711,7 @@ export function initLoadoutStation(
     save()
     const room = getRoom()
     if (room) {
-      room.send(MessageTypes.Loadout, buildLoadoutMessage(slots))
+      room.send(MessageTypes.Loadout, buildLoadoutMessage(slots, instantCast, activeClassId))
       document.body.classList.remove('loadout-active')
       overlay.classList.add('hidden')
       getCanvas?.()?.focus({ preventScroll: true })
@@ -577,7 +730,8 @@ export function initLoadoutStation(
 
   onKeybindsChanged(rerender)
 
-  rerender()
+  // Apply initial class on mount
+  applyClassId(activeClassId)
 
   return {
     open: () => {
@@ -599,6 +753,7 @@ export function initLoadoutStation(
       overlay.classList.add('hidden')
     },
     getLoadout: () => slots as readonly string[],
+    getClassId: () => activeClassId,
     isInstantCast,
     applyPersistedInstantCast: (flags: Record<string, boolean>) => {
       // Server flags win only for keys the server explicitly sent; local prefs
@@ -663,15 +818,10 @@ interface BuildCoachReport {
   lines: Array<{ text: string; kind: 'good' | 'warn' }>
 }
 
-function analyzeBuild(slotIds: readonly string[]): BuildCoachReport {
+function analyzeBuild(slotIds: readonly string[], classId: ClassId): BuildCoachReport {
   const defs = slotIds
     .map((id) => ABILITY_DEFS[id])
     .filter((def): def is AbilityDef => Boolean(def))
-  const magicDefs = slotIds
-    .slice(2, 7)
-    .map((id) => ABILITY_DEFS[id])
-    .filter((def): def is AbilityDef => Boolean(def))
-  const mastery = computeLoadoutMastery(slotIds.map((id) => ABILITY_DEFS[id]))
   const roleCount = (role: AbilityDef['comboRole']): number =>
     defs.filter((def) => def.comboRole === role).length
   const starters = roleCount('starter')
@@ -685,12 +835,16 @@ function analyzeBuild(slotIds: readonly string[]): BuildCoachReport {
   ).length
   const hasAirPunish = defs.some((def) => def.comboRole === 'finisher')
 
+  // Pass 4: Recovery check replaces Mastery as the build health indicator.
+  const recoveryId = TARGET_CLASS_DEFS[classId].recoveryId
+  const hasRecovery = slotIds.includes(recoveryId)
+
   let score = 0
   if (starters > 0) score++
   if (extenders > 0 || controls >= 2) score++
   if (finishers > 0) score++
   if (survival > 0) score++
-  if (mastery.level > 0) score++
+  if (hasRecovery) score++
   if (pointPreviews > 0 && instantHits > 0) score++
 
   const lines: BuildCoachReport['lines'] = []
@@ -721,11 +875,15 @@ function analyzeBuild(slotIds: readonly string[]): BuildCoachReport {
       kind: 'warn',
       text: 'You have placed previews but few instant hits; add a ray or fast shot for follow-up speed.',
     })
-  if (mastery.level === 0) lines.push({ kind: 'warn', text: masteryHint(magicDefs) })
+  if (!hasRecovery)
+    lines.push({
+      kind: 'warn',
+      text: `Add your class Recovery (${recoveryId.replace(/_/g, ' ')}) to sustain in fights.`,
+    })
   else
     lines.push({
       kind: 'good',
-      text: `${capitalize(mastery.element ?? 'magic')} mastery active: your magic deck has a readable element identity.`,
+      text: 'Recovery slotted: your class sustain is covered.',
     })
   if (survival === 0)
     lines.push({
@@ -746,9 +904,9 @@ function analyzeBuild(slotIds: readonly string[]): BuildCoachReport {
         ok: pointPreviews > 0,
       },
       {
-        label: 'Mastery',
-        value: mastery.level > 0 ? `T${mastery.level}` : 'OFF',
-        ok: mastery.level > 0,
+        label: 'Recovery',
+        value: hasRecovery ? 'YES' : 'MISS',
+        ok: hasRecovery,
       },
     ],
     lines: lines.slice(0, 5),
@@ -793,7 +951,6 @@ function recommendationTags(
   activeIdx: number,
   slotIds: readonly string[],
 ): string[] {
-  if (activeIdx in FIXED_TRANSFER_SLOTS) return []
   const otherDefs = slotIds
     .map((id, idx) => (idx === activeIdx ? undefined : ABILITY_DEFS[id]))
     .filter((def): def is AbilityDef => Boolean(def))
@@ -832,12 +989,16 @@ function closestMasteryElement(
   slotIds: readonly string[],
   activeIdx: number,
 ): ElementId | undefined {
-  if (LOADOUT_SLOT_ORDER[activeIdx] !== 'magic') return undefined
+  // Only suggest mastery when the active slot is a magic slot.
+  const activeDef = slotIds[activeIdx] ? ABILITY_DEFS[slotIds[activeIdx]!] : undefined
+  const isActiveMagic = activeDef?.slot === 'magic' || (!activeDef && LOADOUT_SLOT_ORDER[activeIdx] === 'magic')
+  if (!isActiveMagic) return undefined
   const counts: Partial<Record<ElementId, number>> = {}
-  for (let idx = 2; idx < 7; idx++) {
+  // Count magic abilities across all slots dynamically (not hardcoded 2..7)
+  for (let idx = 0; idx < slotIds.length; idx++) {
     if (idx === activeIdx) continue
     const def = ABILITY_DEFS[slotIds[idx] ?? '']
-    if (!def || def.element === 'none') continue
+    if (!def || def.slot !== 'magic' || def.element === 'none') continue
     counts[def.element as ElementId] = (counts[def.element as ElementId] ?? 0) + 1
   }
   const best = (Object.entries(counts) as Array<[ElementId, number]>).sort((a, b) => b[1] - a[1])[0]
@@ -845,19 +1006,6 @@ function closestMasteryElement(
   return best[0]
 }
 
-function masteryHint(magicDefs: readonly AbilityDef[]): string {
-  const counts: Partial<Record<ElementId, number>> = {}
-  for (const def of magicDefs) {
-    if (def.element === 'none') continue
-    counts[def.element as ElementId] = (counts[def.element as ElementId] ?? 0) + 1
-  }
-  const best = (Object.entries(counts) as Array<[ElementId, number]>).sort((a, b) => b[1] - a[1])[0]
-  if (!best) return 'No mastery path yet: stack 4 or 5 magic spells of one element.'
-  const needed = Math.max(0, 4 - best[1])
-  return needed === 0
-    ? `${capitalize(best[0])} mastery is one clean pick away from feeling complete.`
-    : `${capitalize(best[0])} is closest to mastery: add ${needed} more matching magic spell${needed > 1 ? 's' : ''}.`
-}
 
 function roleBlock(role: AbilityRoleInfo): HTMLDivElement {
   const block = document.createElement('div')
@@ -1199,16 +1347,14 @@ function tagClass(tag: string): string {
   return ''
 }
 
-function slotPoolTitle(slot: (typeof LOADOUT_SLOT_ORDER)[number], idx: number): string {
-  if (idx in FIXED_TRANSFER_SLOTS) return 'Fixed Resource Swap'
+function slotPoolTitle(slot: (typeof LOADOUT_SLOT_ORDER)[number], _idx: number): string {
   if (slot === 'melee') return 'Melee Ability'
   if (slot === 'bow') return 'Bow Ability'
   if (slot === 'magic') return 'Spell Slot'
   return 'Utility Slot'
 }
 
-function poolSubtitleFor(slot: (typeof LOADOUT_SLOT_ORDER)[number], idx: number): string {
-  if (idx in FIXED_TRANSFER_SLOTS) return 'Resource conversions are always locked to Z, X and F'
+function poolSubtitleFor(slot: (typeof LOADOUT_SLOT_ORDER)[number], _idx: number): string {
   if (slot === 'melee') return 'Close range pressure, launches, stuns and bleed'
   if (slot === 'bow') return 'Skill shots, roots, traps and ranged pressure'
   if (slot === 'magic') return 'Damage, status effects, zones and combo setup'

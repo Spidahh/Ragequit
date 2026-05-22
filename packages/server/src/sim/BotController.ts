@@ -6,7 +6,8 @@
 
 import {
   ABILITY_DEFS,
-  HP_MAX,
+  TARGET_CLASS_DEFS,
+  type ClassId,
   SWORD_M1_RANGE_M,
   TICK_MS,
   TICK_RATE_HZ,
@@ -61,10 +62,9 @@ export class BotController {
       this.strafeChangeTick = tick + Math.round((0.3 + Math.random() * 0.4) * TICK_RATE_HZ)
     }
 
-    // Movement: close to melee range so sword swings land, strafe around enemy.
-    // Bot stays at ~2m — within SWORD_M1_RANGE_M (3.5m) — so both parties can
-    // trade melee hits and test damage numbers easily.
-    const desiredRange = 2.0
+    // Movement: close into the short Sword M1 range before pressuring with a
+    // melee trade, then strafe around the enemy.
+    const desiredRange = 1.4
     let mz = 0
     if (dist > desiredRange + 0.5)
       mz = -1 // chase
@@ -91,7 +91,9 @@ export class BotController {
 
     if (tick < this.nextDecisionTick) return
 
-    const hpFraction = self.hp / HP_MAX
+    const classId = (self.classId ?? 'hybrid') as ClassId
+    const hpMax = TARGET_CLASS_DEFS[classId]?.resourceMaxima.hp ?? 200
+    const hpFraction = self.hp / hpMax
 
     // Priority 1: self-heal if low HP and not in melee range (stop to heal).
     if (hpFraction < 0.35) {

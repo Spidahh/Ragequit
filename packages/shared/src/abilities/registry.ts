@@ -864,7 +864,7 @@ export const ABILITY_D2_CURSE_OF_WEAKNESS: AbilityDef = {
   windupSec: 0.35,
   range: 15,
   targeting: 'forward',
-  comboRole: 'drain',
+  comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'applyStatus', status: 'curse', durationSec: 5, stacks: 1 },
     { at: 'onCast', kind: 'applyStatus', status: 'blind', durationSec: 2.4, stacks: 1 },
@@ -1301,6 +1301,96 @@ export const ABILITY_U8_SMOKE_SCREEN: AbilityDef = {
   miniMalus: 'No damage.',
 }
 
+export const ABILITY_U_BRACE_RECOVERY: AbilityDef = {
+  id: 'brace_recovery',
+  name: 'Brace Recovery',
+  slot: 'utility',
+  targetSlotFamily: 'utility',
+  targetLegalClasses: ['tank'],
+  element: 'none',
+  weapon: 'none',
+  costMana: 0,
+  costStamina: 40,
+  cooldownSec: 15,
+  windupSec: 0,
+  range: 0,
+  targeting: 'self',
+  comboRole: 'survival',
+  effects: [
+    { at: 'onCast', kind: 'heal', amount: 50 },
+    { at: 'onCast', kind: 'applyStatus', status: 'shield', durationSec: 3, stacks: 20 },
+  ],
+  description: 'Spend 40 Stamina to restore 50 HP and gain a 20 damage shield for 3.0s. If Fury is at 5, consumes it to heal 100 HP instead.',
+  miniMalus: 'High Stamina cost leaves you vulnerable to pressure.',
+}
+
+export const ABILITY_U_HUNTERS_FLOW: AbilityDef = {
+  id: 'hunters_flow',
+  name: "Hunter's Flow",
+  slot: 'utility',
+  targetSlotFamily: 'utility',
+  targetLegalClasses: ['archer'],
+  element: 'none',
+  weapon: 'none',
+  costMana: 20,
+  costStamina: 10,
+  cooldownSec: 14,
+  windupSec: 0,
+  range: 0,
+  targeting: 'self',
+  comboRole: 'survival',
+  effects: [
+    { at: 'onCast', kind: 'heal', amount: 35 },
+    { at: 'onCast', kind: 'move', mode: 'dash', distance: 3, useMovementDirection: true },
+  ],
+  description: 'Spend 20 Mana and 10 Stamina to restore 35 HP while performing a quick 3m dash in your movement direction. Gains +25 HP extra healing if Momentum is above 60.',
+  miniMalus: 'Dash has no invulnerability frames.',
+}
+
+export const ABILITY_U_ARCANE_REBIND: AbilityDef = {
+  id: 'arcane_rebind',
+  name: 'Arcane Rebind',
+  slot: 'utility',
+  targetSlotFamily: 'utility',
+  targetLegalClasses: ['mage'],
+  element: 'none',
+  weapon: 'none',
+  costMana: 45,
+  costStamina: 0,
+  cooldownSec: 16,
+  windupSec: 0.5,
+  range: 0,
+  targeting: 'self',
+  comboRole: 'survival',
+  effects: [
+    { at: 'onCast', kind: 'heal', amount: 60 },
+  ],
+  description: 'Spend 45 Mana to channel arcana for 0.5s, restoring 60 HP. If a Risonanza elemental window is active, consumes it to heal 110 HP instead.',
+  miniMalus: '0.5s windup leaves you vulnerable to interrupts.',
+}
+
+export const ABILITY_U_ADAPTIVE_MEND: AbilityDef = {
+  id: 'adaptive_mend',
+  name: 'Adaptive Mend',
+  slot: 'utility',
+  targetSlotFamily: 'utility',
+  targetLegalClasses: ['hybrid'],
+  element: 'none',
+  weapon: 'none',
+  costMana: 15,
+  costStamina: 15,
+  cooldownSec: 12,
+  windupSec: 0,
+  range: 0,
+  targeting: 'self',
+  comboRole: 'survival',
+  effects: [
+    { at: 'onCast', kind: 'heal', amount: 30 },
+  ],
+  description: 'Spend 15 Mana and 15 Stamina to restore 30 HP. If Flow stacks are at 3, consumes them to heal 70 HP instead.',
+  miniMalus: 'Low base healing if not amplified by weapon swaps.',
+}
+
 // ── Transfer (Transmutation) utilities ───────────────────────────────────────
 // These convert one resource to another at the ratios defined in
 // 04_transmutation.md. They occupy fixed utility slots and are cast via Z/X/F.
@@ -1421,6 +1511,10 @@ export const ABILITY_DEFS: AbilityRegistry = Object.freeze({
   energize: ABILITY_U6_ENERGIZE,
   phase_shift: ABILITY_U7_PHASE_SHIFT,
   smoke_screen: ABILITY_U8_SMOKE_SCREEN,
+  brace_recovery: ABILITY_U_BRACE_RECOVERY,
+  hunters_flow: ABILITY_U_HUNTERS_FLOW,
+  arcane_rebind: ABILITY_U_ARCANE_REBIND,
+  adaptive_mend: ABILITY_U_ADAPTIVE_MEND,
   // Transfers (Transmutation as utility)
   transfer_hp_mana: ABILITY_U9_TRANSFER_HP_MANA,
   transfer_mana_stam: ABILITY_U10_TRANSFER_MANA_STAM,

@@ -75,10 +75,15 @@ const base = inspect(baseRoot)
 console.log(`baseMeshes=${base.meshes}`)
 console.log(`baseSkinnedMeshes=${base.skinnedMeshes}`)
 console.log(`baseBones=${base.bones.size}`)
+console.log(`baseClips=${baseRoot.animations.length}`)
 
 let failed = false
 if (base.skinnedMeshes === 0 || base.bones.size === 0) {
   console.error('FAIL: base FBX is not a usable skinned character.')
+  failed = true
+}
+if (baseRoot.animations.length > 0) {
+  console.error('FAIL: base FBX must be the mesh/skin source, not a legacy animation FBX.')
   failed = true
 }
 

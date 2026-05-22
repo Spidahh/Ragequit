@@ -8,6 +8,7 @@ import {
   type ZoneSpawnRequest,
 } from './AbilityEngine.js'
 import { StatusRuntime } from './StatusRuntime.js'
+import { TransmuteHandler } from './TransmuteHandler.js'
 
 // Minimal hostable that wires StatusRuntime + AbilityEngine to a synthetic
 // GameState for unit testing. We keep the same `pendingDamage` array shared
@@ -132,7 +133,14 @@ function makeRoom(hostOverrides: Partial<Pick<EngineHost, 'hasLineOfSight'>> = {
     pendingDamage: sink,
     broadcast: (type, message) => broadcasts.push({ type, message }),
   })
-  const engine = new AbilityEngine(host, statuses)
+  const transmute = new TransmuteHandler(
+    {
+      state: state as unknown as { players: Map<string, Player>; tick: number },
+      broadcast: (type, message) => broadcasts.push({ type, message }),
+    },
+    statuses,
+  )
+  const engine = new AbilityEngine(host, statuses, transmute)
 
   return {
     state,
@@ -162,6 +170,13 @@ function makeRoomWithMoveResolver(
     },
     broadcast: (type, message) => r.broadcasts.push({ type, message }),
   })
+  const transmute = new TransmuteHandler(
+    {
+      state: r.state as unknown as { players: Map<string, Player>; tick: number },
+      broadcast: (type, message) => r.broadcasts.push({ type, message }),
+    },
+    statuses,
+  )
   r.engine = new AbilityEngine(
     {
       state: r.state as unknown as { players: Map<string, Player>; tick: number },
@@ -215,6 +230,7 @@ function makeRoomWithMoveResolver(
       resolveDisplacement,
     },
     statuses,
+    transmute,
   )
   return r
 }
@@ -417,6 +433,17 @@ describe('AbilityEngine — parryable followups', () => {
     expect(r.target.airborneUntilTick).toBe(0)
     expect(r.target.transform.z).toBe(-2)
   })
+
+  it('keeps airborne parry protection against parryable followups', () => {
+    const r = makeRoom()
+    r.target.parrying = true
+    r.target.parryIsHold = false
+    r.target.airborneUntilTick = r.state.tick + 120
+
+    expect(r.engine.tryCast('A', 'freeze_target', { yaw: 0, pitch: 0 })).toBe(true)
+
+    expect(r.target.statuses.some((s) => s.kind === 'freeze')).toBe(false)
+  })
 })
 
 describe('AbilityEngine — vision control', () => {
@@ -617,6 +644,21 @@ describe('AbilityEngine — Mastery bonuses', () => {
 
     const poisonTick = r.pendingDamage.find((d) => d.cause === 'status:poison')
     expect(poisonTick?.amount).toBeCloseTo(3.75)
+    expect(poisonTick?.element).toBe('nature')
+  })
+
+  it('applies fire element to burn status tick damage', () => {
+    const r = makeRoom()
+    r.statuses.applyToPlayer('B', 'burn', 3, 1, 'A')
+
+    for (let i = 0; i < 60; i++) {
+      r.state.tick += 1
+      r.statuses.tick(1 / 60)
+    }
+
+    const burnTick = r.pendingDamage.find((d) => d.cause === 'status:burn')
+    expect(burnTick?.amount).toBe(2)
+    expect(burnTick?.element).toBe('fire')
   })
 })
 
@@ -751,10 +793,10 @@ describe('AbilityEngine — gating', () => {
     ).toBeDefined()
   })
 
-  it('rejects when airborne', () => {
+  it('allows equipped ability casts while airborne unless the ability says otherwise', () => {
     r.caster.airborneUntilTick = 9999
-    expect(r.engine.tryCast('A', 'whirlwind', { yaw: 0, pitch: 0 })).toBe(false)
-    expect(r.failures.find((f) => f.reason === 'airborne')).toBeDefined()
+    expect(r.engine.tryCast('A', 'whirlwind', { yaw: 0, pitch: 0 })).toBe(true)
+    expect(r.failures.find((f) => f.reason === 'airborne')).toBeUndefined()
   })
 
   it('rejects when stamina is short', () => {

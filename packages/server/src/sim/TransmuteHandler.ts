@@ -30,6 +30,8 @@ import {
   TRANSMUTE_MANA_TO_STAM_GAIN_STAM,
   TRANSMUTE_STAM_TO_HP_COST_STAM,
   TRANSMUTE_STAM_TO_HP_GAIN_HP,
+  TARGET_CLASS_DEFS,
+  type ClassId,
   type ClientTransmuteMessage,
   type Player,
   type ServerTransmuteResultMessage,
@@ -54,56 +56,62 @@ export class TransmuteHandler {
     private readonly statuses: StatusRuntime,
   ) {}
 
-  // Validates and applies the transmute. Broadcasts ServerTransmuteResult.
-  // Returns true on success, false on rejection.
-  handle(sid: string, msg: ClientTransmuteMessage): boolean {
-    const player = this.host.state.players.get(sid)
-    if (!player) return false
-    const reject = (reason: ServerTransmuteResultMessage['reason']): false => {
-      const out: ServerTransmuteResultMessage = {
-        playerId: sid,
-        direction: msg.direction,
-        ok: false,
-        reason,
-        atTick: this.host.state.tick,
-      }
-      this.host.broadcast(MessageTypes.TransmuteResult, out)
-      return false
-    }
-    if (!TRANSMUTE_DIRECTIONS.includes(msg.direction)) return reject('cost')
-    if (!player.alive) return reject('dead')
-    if (this.host.state.tick < player.airborneUntilTick) return reject('airborne')
-    if (player.parrying) return reject('parrying')
-    if (player.casting) return reject('casting')
-    const cdReady = player.transmuteCooldowns.get(msg.direction) ?? 0
-    if (this.host.state.tick < cdReady) return reject('cooldown')
+  // Validates a player's transmutation request and returns a failure reason, or null if valid.
+  getFailureReason(
+    player: Player,
+    direction: TransmuteDirection,
+    skipLocks = false,
+  ): ServerTransmuteResultMessage['reason'] | null {
+    if (!TRANSMUTE_DIRECTIONS.includes(direction)) return 'cost'
+    if (!player.alive) return 'dead'
 
-    let ok = false
-    switch (msg.direction) {
+    if (!skipLocks) {
+      if (this.host.state.tick < player.airborneUntilTick) return 'airborne'
+      if (player.parrying) return 'parrying'
+      if (player.casting) return 'casting'
+    }
+
+    const cdReady = player.transmuteCooldowns.get(direction) ?? 0
+    if (this.host.state.tick < cdReady) return 'cooldown'
+
+    switch (direction) {
       case 'hp_mana':
-        // Require at least 1 HP to remain after the cost.
-        if (player.hp <= TRANSMUTE_HP_TO_MANA_COST_HP) return reject('cost')
-        player.hp -= TRANSMUTE_HP_TO_MANA_COST_HP
-        player.mana = Math.min(MANA_MAX, player.mana + TRANSMUTE_HP_TO_MANA_GAIN_MANA)
-        ok = true
+        if (player.hp <= TRANSMUTE_HP_TO_MANA_COST_HP) return 'cost'
         break
       case 'mana_stam':
-        if (player.mana < TRANSMUTE_MANA_TO_STAM_COST_MANA) return reject('cost')
-        player.mana -= TRANSMUTE_MANA_TO_STAM_COST_MANA
-        player.stamina = Math.min(STAMINA_MAX, player.stamina + TRANSMUTE_MANA_TO_STAM_GAIN_STAM)
-        ok = true
+        if (player.mana < TRANSMUTE_MANA_TO_STAM_COST_MANA) return 'cost'
         break
       case 'stam_hp':
-        if (player.stamina < TRANSMUTE_STAM_TO_HP_COST_STAM) return reject('cost')
-        player.stamina -= TRANSMUTE_STAM_TO_HP_COST_STAM
-        player.hp = Math.min(HP_MAX, player.hp + TRANSMUTE_STAM_TO_HP_GAIN_HP)
-        ok = true
+        if (player.stamina < TRANSMUTE_STAM_TO_HP_COST_STAM) return 'cost'
         break
     }
-    if (!ok) return reject('cost')
+    return null
+  }
 
-    player.transmuteCooldowns.set(msg.direction, this.host.state.tick + TRANSMUTE_CD_TICKS)
-    if (msg.direction === 'mana_stam' || msg.direction === 'hp_mana') {
+  // Authoritatively applies the transmutation effect and broadcasts a success message.
+  apply(sid: string, player: Player, direction: TransmuteDirection): void {
+    const classId = (player.classId ?? 'hybrid') as ClassId
+    const maxima = TARGET_CLASS_DEFS[classId]?.resourceMaxima
+    const hpMax = maxima?.hp ?? HP_MAX
+    const manaMax = maxima?.mana ?? MANA_MAX
+    const staminaMax = maxima?.stamina ?? STAMINA_MAX
+    switch (direction) {
+      case 'hp_mana':
+        player.hp -= TRANSMUTE_HP_TO_MANA_COST_HP
+        player.mana = Math.min(manaMax, player.mana + TRANSMUTE_HP_TO_MANA_GAIN_MANA)
+        break
+      case 'mana_stam':
+        player.mana -= TRANSMUTE_MANA_TO_STAM_COST_MANA
+        player.stamina = Math.min(staminaMax, player.stamina + TRANSMUTE_MANA_TO_STAM_GAIN_STAM)
+        break
+      case 'stam_hp':
+        player.stamina -= TRANSMUTE_STAM_TO_HP_COST_STAM
+        player.hp = Math.min(hpMax, player.hp + TRANSMUTE_STAM_TO_HP_GAIN_HP)
+        break
+    }
+
+    player.transmuteCooldowns.set(direction, this.host.state.tick + TRANSMUTE_CD_TICKS)
+    if (direction === 'mana_stam' || direction === 'hp_mana') {
       player.lastManaSpendAtTick = this.host.state.tick
     }
 
@@ -115,11 +123,42 @@ export class TransmuteHandler {
 
     const out: ServerTransmuteResultMessage = {
       playerId: sid,
-      direction: msg.direction,
+      direction,
       ok: true,
       atTick: this.host.state.tick,
     }
     this.host.broadcast(MessageTypes.TransmuteResult, out)
+  }
+
+  // Broadcasts a failed transmutation result.
+  broadcastFailure(
+    sid: string,
+    direction: TransmuteDirection,
+    reason: ServerTransmuteResultMessage['reason'],
+  ): void {
+    const out: ServerTransmuteResultMessage = {
+      playerId: sid,
+      direction,
+      ok: false,
+      reason,
+      atTick: this.host.state.tick,
+    }
+    this.host.broadcast(MessageTypes.TransmuteResult, out)
+  }
+
+  // Validates and applies the transmute. Broadcasts ServerTransmuteResult.
+  // Returns true on success, false on rejection.
+  handle(sid: string, msg: ClientTransmuteMessage): boolean {
+    const player = this.host.state.players.get(sid)
+    if (!player) return false
+
+    const reason = this.getFailureReason(player, msg.direction)
+    if (reason) {
+      this.broadcastFailure(sid, msg.direction, reason)
+      return false
+    }
+
+    this.apply(sid, player, msg.direction)
     return true
   }
 

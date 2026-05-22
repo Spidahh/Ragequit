@@ -73,7 +73,7 @@ describe('loadout station smoke', () => {
     expect(__loadoutStationSmoke.defaultSlots).toHaveLength(11)
   })
 
-  it('sends a clean loadout message without hidden build fields', () => {
+  it('sends a loadout message including classId and instantCast', () => {
     const send = vi.fn()
     const room = { send } as never
     const api = initLoadoutStation(() => room)
@@ -83,12 +83,17 @@ describe('loadout station smoke', () => {
 
     expect(send).toHaveBeenCalledOnce()
     expect(send.mock.calls[0]?.[0]).toBe(MessageTypes.Loadout)
-    expect(send.mock.calls[0]?.[1]).toEqual({
-      melee: 'uppercut',
-      bow: 'piercing_shot',
-      magic: ['fireball', 'flame_wall', 'frost_bolt', 'chain_bolt', 'shadow_bolt'],
-      utility: ['transfer_hp_mana', 'transfer_mana_stam', 'transfer_stam_hp', 'quick_dash'],
-    })
+    const msg = send.mock.calls[0]?.[1] as Record<string, unknown>
+    // classId must always be sent for server-side class validation
+    expect(msg['classId']).toBe('hybrid')
+    // class-aware envelope: arrays classified by target slot family
+    expect(msg['melee']).toEqual(['uppercut'])
+    expect(msg['bow']).toEqual(['marksman_shot'])
+    expect(msg['magicBase']).toEqual(['fireball', 'lightning_dash'])
+    expect(msg['magicAdvanced']).toEqual(['arc_lift', 'meteor'])
+    expect(msg['utility']).toEqual(['adaptive_mend', 'quick_dash', 'cleanse_surge', 'barrier', 'smoke_screen'])
+    // old positional magic field is gone
+    expect(msg['magic']).toBeUndefined()
     expect(api.getLoadout()).toHaveLength(11)
   })
 

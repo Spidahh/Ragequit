@@ -319,7 +319,7 @@ export class StatusRuntime {
               attackerId: inst.sourceId,
               victimId: sid,
               amount: meta.damagePerTick * inst.stacks * festerMul * natureDotMul,
-              element: '',
+              element: kind === 'burn' ? 'fire' : kind === 'poison' ? 'nature' : '',
               cause:
                 festering && festerMul > 1
                   ? 'combo:festering'

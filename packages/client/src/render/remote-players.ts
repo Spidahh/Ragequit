@@ -9,6 +9,7 @@ import {
   tickCharacterMixer,
   setCharAnimState,
   disposeCharacterMixer,
+  setParryShieldState,
 } from './characters.js'
 import { SWING_ARC_YAW_OFFSET, makeSwingArcMesh } from './factories.js'
 
@@ -35,8 +36,8 @@ export interface RemotePlayerSchema {
 
 // Team-colour table: self is always blue, remotes are red unless same team.
 const TEAM_COLORS: Record<string, number> = {
-  enemy: 0xe04a4a,   // red — default for non-team modes / opposing 5v5 team
-  ally:  0x3a8fde,   // blue — same 5v5 team as self
+  enemy: 0xe04a4a, // red — default for non-team modes / opposing 5v5 team
+  ally: 0x3a8fde, // blue — same 5v5 team as self
 }
 
 interface RemoteSnapshot {
@@ -281,15 +282,14 @@ export function initRemotePlayers({
       r.casting = !!p.casting && p.castEndsAtTick > schemaTick
       r.channeling =
         r.casting &&
-        (ABILITY_DEFS[p.castAbilityId ?? '']?.effects?.some((e) => e.kind === 'channel') ??
-          false)
+        (ABILITY_DEFS[p.castAbilityId ?? '']?.effects?.some((e) => e.kind === 'channel') ?? false)
       r.comboIndex = p.comboIndex ?? 0
       r.parrying = !!p.parrying
       // Jump / land animation transitions from server onGround field.
       if (p.alive) {
         const isOnGround = p.onGround !== false // default true when field absent
-        if (r.onGround && !isOnGround) r.jumpUntilMs = now + 500  // left ground
-        if (!r.onGround && isOnGround) r.landUntilMs = now + 400  // landed
+        if (r.onGround && !isOnGround) r.jumpUntilMs = now + 500 // left ground
+        if (!r.onGround && isOnGround) r.landUntilMs = now + 400 // landed
         r.onGround = isOnGround
       }
       if (r.lastWeapon !== remoteWeapon) {
@@ -391,6 +391,7 @@ export function initRemotePlayers({
         landing: now < r.landUntilMs,
         rolling: now < r.rollUntilMs,
       })
+      setParryShieldState(r.mesh, r.parrying, false, now)
       let dyaw = b.yaw - a.yaw
       if (dyaw > Math.PI) dyaw -= 2 * Math.PI
       if (dyaw < -Math.PI) dyaw += 2 * Math.PI

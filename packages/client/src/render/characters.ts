@@ -3,6 +3,13 @@ import * as THREE from 'three'
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js'
+import {
+  makeCharacter as proceduralMakeCharacter,
+  applyWeaponProp as newApplyWeaponProp,
+  ELEMENT_COLORS,
+  type CharacterOpts,
+  type ElementId
+} from '../character.js'
 
 // ---------------------------------------------------------------------------
 // Loaders — shared instances, one fetch per unique URL.
@@ -53,6 +60,7 @@ async function _fetchLegacyCharacter(): Promise<_LegacyCharacterData> {
   _legacyCharacterInflight = (async () => {
     const scene = await _loadFbx(_LEGACY_CHARACTER_FBX)
     const baseBoneNames = _collectBoneNames(scene)
+    const baseBoneQuaternions = _collectBoneQuaternions(scene)
     const clips: Partial<Record<_AnimName, THREE.AnimationClip>> = {}
     const uniqueUrls = [
       ...new Set(
@@ -68,7 +76,7 @@ async function _fetchLegacyCharacter(): Promise<_LegacyCharacterData> {
           const animRoot = await _loadFbx(url)
           const clip = animRoot.animations[0]
           if (!clip) throw new Error(`Legacy animation missing clip: ${url}`)
-          return [url, clip] as const
+          return [url, { clip, boneQuaternions: _collectBoneQuaternions(animRoot) }] as const
         }),
       ),
     )
@@ -76,9 +84,15 @@ async function _fetchLegacyCharacter(): Promise<_LegacyCharacterData> {
     for (const name of _ANIM_NAMES) {
       const url = _LEGACY_ANIM_FBX[name]
       if (!url) continue
-      const clip = loaded.get(url)
-      if (!clip) continue
-      clips[name] = _retargetLegacyClip(clip, name, baseBoneNames)
+      const source = loaded.get(url)
+      if (!source) continue
+      clips[name] = _retargetLegacyClip(
+        source.clip,
+        name,
+        baseBoneNames,
+        source.boneQuaternions,
+        baseBoneQuaternions,
+      )
     }
 
     _legacyCharacterData = { scene, clips }
@@ -187,6 +201,14 @@ function _collectBoneNames(root: THREE.Object3D): Set<string> {
   return names
 }
 
+function _collectBoneQuaternions(root: THREE.Object3D): Map<string, THREE.Quaternion> {
+  const quaternions = new Map<string, THREE.Quaternion>()
+  root.traverse((node) => {
+    if (node instanceof THREE.Bone) quaternions.set(node.name, node.quaternion.clone())
+  })
+  return quaternions
+}
+
 function _resolveLegacyTrackTarget(target: string, boneNames: Set<string>): string | null {
   if (boneNames.has(target)) return target
 
@@ -200,13 +222,19 @@ function _retargetLegacyClip(
   source: THREE.AnimationClip,
   name: _AnimName,
   boneNames: Set<string>,
+  sourceBoneQuaternions: Map<string, THREE.Quaternion>,
+  targetBoneQuaternions: Map<string, THREE.Quaternion>,
 ): THREE.AnimationClip {
   const tracks: THREE.KeyframeTrack[] = []
   const seen = new Set<string>()
 
   for (const track of source.tracks) {
-    const resolvedTarget = _resolveLegacyTrackTarget(_trackTargetName(track.name), boneNames)
+    const sourceTarget = _trackTargetName(track.name)
+    const resolvedTarget = _resolveLegacyTrackTarget(sourceTarget, boneNames)
     if (!resolvedTarget) continue
+    // Gameplay owns character translation. The legacy animation FBXs come from
+    // a Mixamo-scale rig whose Hips.position values do not match the base skin.
+    if (_trackPropertyName(track.name) === '.position') continue
 
     const remappedName = `${resolvedTarget}${_trackPropertyName(track.name)}`
     if (seen.has(remappedName)) continue
@@ -214,6 +242,18 @@ function _retargetLegacyClip(
 
     const remapped = track.clone()
     remapped.name = remappedName
+    if (_trackPropertyName(track.name) === '.quaternion') {
+      const sourceRest = sourceBoneQuaternions.get(sourceTarget)
+      const targetRest = targetBoneQuaternions.get(resolvedTarget)
+      if (sourceRest && targetRest) {
+        const restOffset = targetRest.clone().multiply(sourceRest.clone().invert())
+        const values = remapped.values
+        const quat = new THREE.Quaternion()
+        for (let offset = 0; offset < values.length; offset += 4) {
+          quat.fromArray(values, offset).premultiply(restOffset).toArray(values, offset)
+        }
+      }
+    }
     tracks.push(remapped)
   }
 
@@ -357,8 +397,7 @@ function _resolveClip(
   name: _AnimName,
 ): THREE.AnimationClip | undefined {
   return (
-    animations.find((a) => a.name === name) ??
-    animations.find((a) => a.name.endsWith('|' + name))
+    animations.find((a) => a.name === name) ?? animations.find((a) => a.name.endsWith('|' + name))
   )
 }
 
@@ -382,8 +421,7 @@ function _makeToonMaterial(
     gradientMap: toonGradient,
     emissive: new THREE.Color(teamColor),
     side: THREE.DoubleSide,
-    emissiveIntensity:
-      lowerName.includes('body') || lowerName.includes('character') ? 0.38 : 0.12,
+    emissiveIntensity: lowerName.includes('body') || lowerName.includes('character') ? 0.38 : 0.12,
   })
 }
 
@@ -459,7 +497,7 @@ function _installCharacterModel(
 
   const targetScale = CAPSULE_HEIGHT_M / nativeHeight
   model.scale.setScalar(targetScale)
-  const scaledBox = _measureRenderableBox(model)   // also calls updateMatrixWorld(true)
+  const scaledBox = _measureRenderableBox(model) // also calls updateMatrixWorld(true)
   model.position.y = -CAPSULE_HALF_HEIGHT_M - scaledBox.min.y
 
   // Do NOT call skeleton.calculateInverses() here.
@@ -488,7 +526,7 @@ function _installCharacterModel(
     child.frustumCulled = false
     const source = child.material
     if (Array.isArray(source)) {
-          const mats = source.map((mat) => _makeToonMaterial(mat, teamColor, toonGradient, child.name))
+      const mats = source.map((mat) => _makeToonMaterial(mat, teamColor, toonGradient, child.name))
       child.material = mats
       glbMaterials.push(...mats)
     } else {
@@ -566,12 +604,12 @@ export function loadCharacterGlb(
             else missing.push(name)
           }
           if (missing.length > 0) {
-            console.warn(`[character] GLB missing animations (${missing.length}): ${missing.join(', ')}`)
+            console.warn('[character] GLB animations missing:', missing)
           }
-          _installCharacterModel(charGroup, model, clips, teamColor, toonGradient, 'GLB')
+          _installCharacterModel(charGroup, model, clips, teamColor, toonGradient, 'player GLB')
         })
         .catch((glbErr) => {
-          console.warn('[character] GLB also failed, keeping procedural fallback', glbErr)
+          console.error('[character] GLB fallback failed as well:', glbErr)
         })
     })
 }
@@ -628,7 +666,23 @@ export function disposeCharacterMixer(charGroup: THREE.Group): void {
 // Group origin = capsule centre (transform.y = CAPSULE_HALF_HEIGHT_M above ground).
 // userData['armorMat'] → primary team-colour material (used for emissive flashes).
 // userData['weaponGroup'] → THREE.Group for weapon prop swapping.
-export function makeCharacter(teamColor: number, toonGradient: THREE.DataTexture): THREE.Group {
+export function makeCharacter(teamColor: number, optsOrToonGradient?: any): THREE.Group {
+  const opts = (optsOrToonGradient && !(optsOrToonGradient instanceof THREE.DataTexture))
+    ? optsOrToonGradient
+    : {};
+  const g = proceduralMakeCharacter(teamColor, opts);
+
+  // Simple static round parry shield attached at hips origin.
+  // Set visible on self parrying and remote player parrying.
+  const shield = makeParryShieldVisual(0.68)
+  shield.position.set(0, 0, -0.1)
+  g.add(shield)
+  g.userData['parryShield'] = shield
+
+  return g
+}
+
+function newMakeCharacter(teamColor: number, toonGradient: THREE.DataTexture): THREE.Group {
   const g = new THREE.Group()
 
   const armorMat = new THREE.MeshToonMaterial({
@@ -744,83 +798,96 @@ export function makeCharacter(teamColor: number, toonGradient: THREE.DataTexture
   g.userData['weaponGroup'] = weaponGroup
   g.add(weaponGroup)
 
+  const parryShield = makeParryShieldVisual()
+  parryShield.position.set(0, 0.08, -0.62)
+  g.userData['parryShield'] = parryShield
+  g.add(parryShield)
+
   return g
+}
+
+export function makeParryShieldVisual(radius = 0.62): THREE.Group {
+  const shield = new THREE.Group()
+  shield.visible = false
+  shield.renderOrder = 18
+
+  const coreMat = new THREE.MeshBasicMaterial({
+    color: 0x68ddff,
+    transparent: true,
+    opacity: 0.18,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  })
+  const edgeMat = new THREE.MeshBasicMaterial({
+    color: 0xffd260,
+    transparent: true,
+    opacity: 0.92,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  })
+  const runeMat = new THREE.MeshBasicMaterial({
+    color: 0x00d0ff,
+    transparent: true,
+    opacity: 0.78,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  })
+
+  const core = new THREE.Mesh(new THREE.CircleGeometry(radius, 8), coreMat)
+  const edge = new THREE.Mesh(new THREE.RingGeometry(radius * 0.84, radius, 8), edgeMat)
+  const rune = new THREE.Mesh(new THREE.RingGeometry(radius * 0.38, radius * 0.46, 6), runeMat)
+  core.userData['parryShieldCore'] = true
+  edge.userData['parryShieldEdge'] = true
+  rune.userData['parryShieldRune'] = true
+  shield.add(core, edge, rune)
+  return shield
+}
+
+export function setParryShieldState(
+  charGroup: THREE.Group,
+  active: boolean,
+  hold: boolean,
+  now: number,
+): void {
+  const shield = charGroup.userData['parryShield'] as THREE.Group | undefined
+  if (!shield) return
+  shield.visible = active
+  if (!active) return
+
+  const pulse = hold ? 0.5 + 0.5 * Math.sin(now * 0.008) : 1
+  shield.scale.setScalar(hold ? 1 + pulse * 0.04 : 1.04)
+  shield.rotation.z = hold ? Math.sin(now * 0.0025) * 0.07 : 0
+  shield.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return
+    const mat = child.material as THREE.MeshBasicMaterial
+    if (child.userData['parryShieldCore']) mat.opacity = hold ? 0.16 + pulse * 0.09 : 0.26
+    if (child.userData['parryShieldEdge']) mat.opacity = hold ? 0.68 + pulse * 0.22 : 0.96
+    if (child.userData['parryShieldRune']) mat.opacity = hold ? 0.58 + pulse * 0.2 : 0.9
+  })
 }
 
 export function applyWeaponProp(
   charGroup: THREE.Group,
-  weapon: string,
-  toonGradient: THREE.DataTexture,
+  weapon: any,
+  toonGradientOrElementHex?: any,
 ): void {
-  const wg = charGroup.userData['weaponGroup'] as THREE.Group | undefined
-  if (!wg) return
-
-  // Tag so the async GLB callback can detect stale replacements
-  wg.userData['weapon'] = weapon
-
-  _clearWeaponGroup(wg)
-
-  const addProp = (
-    geo: THREE.BufferGeometry,
-    mat: THREE.Material,
-    px = 0,
-    py = 0,
-    pz = 0,
-    rx = 0,
-    ry = 0,
-    rz = 0,
-  ) => {
-    const m = new THREE.Mesh(geo, mat)
-    m.position.set(px, py, pz)
-    m.rotation.set(rx, ry, rz)
-    m.castShadow = true
-    wg.add(m)
-  }
-  if (weapon === 'sword') {
-    const bladeMat = new THREE.MeshToonMaterial({ color: 0xc8daf0, gradientMap: toonGradient })
-    const edgeMat = new THREE.MeshBasicMaterial({
-      color: 0xe8f4ff,
-      transparent: true,
-      opacity: 0.85,
-    })
-    const guardMat = new THREE.MeshToonMaterial({ color: 0x9a8c38, gradientMap: toonGradient })
-    const handleMat = new THREE.MeshToonMaterial({ color: 0x4a2c10, gradientMap: toonGradient })
-    addProp(new THREE.BoxGeometry(0.042, 0.74, 0.06), bladeMat, 0, 0.48, 0)
-    addProp(new THREE.BoxGeometry(0.01, 0.74, 0.014), edgeMat, 0, 0.48, 0.034)
-    addProp(new THREE.BoxGeometry(0.24, 0.046, 0.06), guardMat, 0, 0.1, 0)
-    addProp(new THREE.CylinderGeometry(0.028, 0.024, 0.22, 8), handleMat, 0, -0.06, 0)
-    addProp(new THREE.SphereGeometry(0.038, 8, 6), guardMat, 0, -0.18, 0)
-  } else if (weapon === 'bow') {
-    const woodMat = new THREE.MeshToonMaterial({ color: 0x7a5428, gradientMap: toonGradient })
-    const stringMat = new THREE.MeshBasicMaterial({ color: 0xc8c090 })
-    const arc = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.024, 8, 22, Math.PI * 1.48), woodMat)
-    arc.rotation.set(-Math.PI * 0.25, 0, 0)
-    arc.castShadow = true
-    wg.add(arc)
-    addProp(new THREE.CylinderGeometry(0.005, 0.005, 0.68, 4), stringMat, 0, 0, 0)
-  } else if (weapon === 'staff') {
-    const woodMat = new THREE.MeshToonMaterial({ color: 0x2e2048, gradientMap: toonGradient })
-    const orbMat = new THREE.MeshStandardMaterial({
-      color: 0x90d8ff,
-      emissive: 0x4090ff,
-      emissiveIntensity: 0.8,
-      roughness: 0.2,
-      metalness: 0.1,
-    })
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0x70b8ff,
-      transparent: true,
-      opacity: 0.85,
-    })
-    addProp(new THREE.CylinderGeometry(0.028, 0.022, 1.2, 8), woodMat, 0, 0.6, 0)
-    addProp(new THREE.SphereGeometry(0.078, 12, 8), orbMat, 0, 1.28, 0)
-    const orbRing = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.012, 6, 20), ringMat)
-    orbRing.position.set(0, 1.28, 0)
-    orbRing.rotation.x = Math.PI / 3
-    orbRing.castShadow = false
-    wg.add(orbRing)
+  let elementHex = 0xffe080;
+  if (typeof toonGradientOrElementHex === 'number') {
+    elementHex = toonGradientOrElementHex;
+  } else {
+    const element = charGroup.userData['element'] as ElementId | undefined;
+    if (element) {
+      elementHex = ELEMENT_COLORS[element] ?? 0xffe080;
+    }
   }
 
+  let weaponId: 'sword' | 'bow' | 'staff' = 'sword';
+  const wStr = String(weapon).toLowerCase();
+  if (wStr.includes('bow')) weaponId = 'bow';
+  else if (wStr.includes('staff')) weaponId = 'staff';
+  else weaponId = 'sword';
+
+  newApplyWeaponProp(charGroup, weaponId, elementHex);
 }
 
 export function makeCastRing(): THREE.Mesh {

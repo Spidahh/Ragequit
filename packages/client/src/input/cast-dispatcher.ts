@@ -38,7 +38,6 @@ export interface CastDispatchParams {
   schemaTick: number
   combatLive: boolean
   dead: boolean
-  airborne: boolean
   activeWeapon: string
 }
 
@@ -106,7 +105,6 @@ export function initCastDispatcher({
     schemaTick,
     combatLive,
     dead,
-    airborne,
     activeWeapon,
   }: CastDispatchParams): void {
     if (!combatLive) {
@@ -115,7 +113,7 @@ export function initCastDispatcher({
     }
 
     // --- Primed ability fire (placement confirm) ---------------------------------
-    if (combatLive && inp.lmbPressEdge && placementAbilityId && !dead && !airborne) {
+    if (combatLive && inp.lmbPressEdge && placementAbilityId && !dead) {
       sendCast(placementAbilityId, schemaTick + 1)
       cancelPlacementPreview()
       inp.lmbPressEdge = false
@@ -123,7 +121,7 @@ export function initCastDispatcher({
     }
 
     // --- Primed ability fire (wheel selection) -----------------------------------
-    if (combatLive && inp.lmbPressEdge && primedSlotIdx !== null && !dead && !airborne) {
+    if (combatLive && inp.lmbPressEdge && primedSlotIdx !== null && !dead) {
       const loadout = getLoadout()
       const id = loadout[primedSlotIdx] ?? ''
       primedSlotIdx = null
@@ -136,7 +134,8 @@ export function initCastDispatcher({
     }
 
     // --- LMB weapon behaviour ---------------------------------------------------
-    // Bow charge release is allowed even while airborne (design: bow can fire mid-air).
+    // All weapon M1 families stay legal in air unless the server rejects for a
+    // specific real state such as death, CC, parry or an explicit air policy.
     if (combatLive && !dead && activeWeapon === 'bow') {
       if (inp.lmbPressEdge) {
         const msg: ClientChargeStartMessage = { atTick: schemaTick + 1 }
@@ -157,7 +156,7 @@ export function initCastDispatcher({
       }
     }
 
-    if (combatLive && !dead && !airborne) {
+    if (combatLive && !dead) {
       if (activeWeapon === 'sword') {
         if (inp.lmbPressEdge) {
           // Swing yaw: use inp.mouseYaw directly — it is the horizontal facing direction
@@ -196,7 +195,7 @@ export function initCastDispatcher({
       inp.rmbReleaseEdge = false
     }
 
-    if (combatLive && !dead && !airborne) {
+    if (combatLive && !dead) {
       if (inp.rmbPressEdge) {
         const msg: ClientParryPressMessage = { atTick: schemaTick + 1 }
         room.send(MessageTypes.ParryPress, msg)
@@ -210,9 +209,8 @@ export function initCastDispatcher({
     // --- Drain queued ability casts (one per tick, max 2 queued) ---------------
     // Capping to 1/tick prevents macro-spam; cap 2 lets a "queue next cast"
     // feel responsive during short windups (standard arena-game practice).
-    // Airborne here means knockup/launch lock, not a normal jump.
-    if (airborne || !combatLive) abilityCastQueue.length = 0
-    if (abilityCastQueue.length > 0 && combatLive && !dead && !airborne) {
+    if (!combatLive) abilityCastQueue.length = 0
+    if (abilityCastQueue.length > 0 && combatLive && !dead) {
       const id = abilityCastQueue.shift()!
       sendCast(id, schemaTick + 1)
     }

@@ -73,9 +73,12 @@ import {
   tickCharacterMixer,
   setCharAnimState,
   disposeCharacterMixer,
+  makeParryShieldVisual,
+  setParryShieldState,
 } from './render/characters.js'
 import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
 import { initPlacementPreview } from './render/placement-preview.js'
+import { type ScoreboardData, type DeathcamData } from './endgame.js'
 import { initProjectileVisuals, type SchemaProjectile } from './render/projectile-visuals.js'
 import { initRemotePlayers, type RemotePlayerSchema } from './render/remote-players.js'
 import { initSelfEmissive, STATUS_EMISSIVE } from './render/self-emissive.js'
@@ -381,6 +384,10 @@ const toonGradient = makeToonGradient()
 
 const firstPersonViewModel = new THREE.Group()
 camera.add(firstPersonViewModel)
+const firstPersonParryShield = makeParryShieldVisual(0.42)
+firstPersonParryShield.position.set(0, -0.03, -0.8)
+firstPersonParryShield.userData['parryShield'] = firstPersonParryShield
+camera.add(firstPersonParryShield)
 scene.add(camera)
 let firstPersonViewWeapon: Weapon | null = null
 
@@ -440,14 +447,29 @@ function rebuildFirstPersonViewModel(weapon: Weapon): void {
     arc.rotation.set(0.2, 0.15, -0.48)
     arc.renderOrder = 999
     firstPersonViewModel.add(arc)
-    addViewMesh(new THREE.CylinderGeometry(0.003, 0.003, 0.32, 4), stringMat, [0.05, 0.04, -0.05], [0.15, 0.05, -0.08])
+    addViewMesh(
+      new THREE.CylinderGeometry(0.003, 0.003, 0.32, 4),
+      stringMat,
+      [0.05, 0.04, -0.05],
+      [0.15, 0.05, -0.08],
+    )
   } else if (weapon === 'staff') {
     const staffMat = viewMat(0x241a3a, 0.96)
     const orbMat = viewMat(0x00d0ff, 0.86)
     const ringMat = viewMat(0xffd260, 0.58)
-    addViewMesh(new THREE.CylinderGeometry(0.014, 0.018, 0.52, 8), staffMat, [0.12, 0.08, -0.05], [0.38, 0.05, -0.28])
+    addViewMesh(
+      new THREE.CylinderGeometry(0.014, 0.018, 0.52, 8),
+      staffMat,
+      [0.12, 0.08, -0.05],
+      [0.38, 0.05, -0.28],
+    )
     addViewMesh(new THREE.SphereGeometry(0.052, 10, 8), orbMat, [0.19, 0.3, -0.15])
-    addViewMesh(new THREE.TorusGeometry(0.075, 0.007, 6, 20), ringMat, [0.19, 0.3, -0.15], [Math.PI / 3, 0.2, 0])
+    addViewMesh(
+      new THREE.TorusGeometry(0.075, 0.007, 6, 20),
+      ringMat,
+      [0.19, 0.3, -0.15],
+      [Math.PI / 3, 0.2, 0],
+    )
   }
 }
 
@@ -743,6 +765,26 @@ let connectSeq = 0
 let ping = 0
 let matchStartMs = 0
 
+// Cumulative match stats
+interface MatchStats {
+  kills: number
+  yourHits: number
+  damageDealt: number
+  damageTaken: number
+  knockups: number
+  parries: number
+  masteryProcs: number
+}
+let selfStats: MatchStats = { kills: 0, yourHits: 0, damageDealt: 0, damageTaken: 0, knockups: 0, parries: 0, masteryProcs: 0 }
+let opponentStats: MatchStats = { kills: 0, yourHits: 0, damageDealt: 0, damageTaken: 0, knockups: 0, parries: 0, masteryProcs: 0 }
+
+let lastHitDetails = {
+  killer: '',
+  ability: '',
+  element: '',
+  damage: 0,
+}
+
 function isMatchPhase(value: unknown): value is ServerMatchPhaseMessage['phase'] {
   return (
     value === 'lobby' ||
@@ -767,11 +809,96 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
     roundTimer.textContent = ''
     roundTimer.classList.remove('urgent')
   }
+  if (msg.phase === 'lobby' || msg.phase === 'countdown') {
+    selfStats = { kills: 0, yourHits: 0, damageDealt: 0, damageTaken: 0, knockups: 0, parries: 0, masteryProcs: 0 }
+    opponentStats = { kills: 0, yourHits: 0, damageDealt: 0, damageTaken: 0, knockups: 0, parries: 0, masteryProcs: 0 }
+    lastHitDetails = { killer: '', ability: '', element: '', damage: 0 }
+    matchStartMs = performance.now()
+  }
   if (msg.phase === 'matchEnd') {
     // Release pointer lock so the cursor is visible and the scoreboard
     // buttons (BACK TO MENU) are clickable.
     if (document.pointerLockElement) document.exitPointerLock()
-    menu.showScoreboard(selfId)
+    
+    // Construct ScoreboardData dynamically
+    const players = getSchemaPlayers()
+    const selfSchema = players?.get(selfId)
+    
+    let otherId = ''
+    players?.forEach((_p, sid) => {
+      if (sid !== selfId) otherId = sid
+    })
+    const otherSchema = otherId ? players?.get(otherId) : null
+    
+    const selfName = selfSchema?.name || 'Player'
+    const opponentName = otherSchema?.name || 'Opponent'
+    
+    // Retrieve build names based on active mastery/weapons
+    const selfElement = (selfSchema as any)?.masteryElement || 'PHYSICAL'
+    const selfLevel = (selfSchema as any)?.masteryLevel || 0
+    const selfBuild = `${selfElement.toUpperCase()} ${selfLevel}/5 · ${selfSchema?.activeWeapon?.toUpperCase() || 'SWORD'} MAIN`
+    
+    const oppElement = (otherSchema as any)?.masteryElement || 'PHYSICAL'
+    const oppLevel = (otherSchema as any)?.masteryLevel || 0
+    const oppBuild = `${oppElement.toUpperCase()} ${oppLevel}/5 · ${otherSchema?.activeWeapon?.toUpperCase() || 'SWORD'} MAIN`
+    
+    // Determine winner based on score or kills
+    const isWin = selfStats.kills >= opponentStats.kills
+    const eloDelta = isWin ? 25 : -18
+    const eloBefore = 1500
+    
+    // Get current map name
+    const arenaName = (room?.state as any)?.map?.name || 'OCTAGON'
+    const matchMs = performance.now() - matchStartMs
+    
+    const scoreboardData: ScoreboardData = {
+      arena: arenaName.toUpperCase(),
+      matchMs: matchMs > 0 ? matchMs : 120000,
+      rounds: `${selfStats.kills}-${opponentStats.kills} rounds`,
+      league: 'Gold III',
+      winner: isWin ? {
+        name: selfName,
+        build: selfBuild,
+        kills: selfStats.kills,
+        damageDealt: selfStats.damageDealt,
+        damageTaken: selfStats.damageTaken,
+        knockups: selfStats.knockups,
+        parries: selfStats.parries,
+        masteryProcs: selfStats.masteryProcs
+      } : {
+        name: opponentName,
+        build: oppBuild,
+        kills: opponentStats.kills,
+        damageDealt: opponentStats.damageDealt,
+        damageTaken: opponentStats.damageTaken,
+        knockups: opponentStats.knockups,
+        parries: opponentStats.parries,
+        masteryProcs: opponentStats.masteryProcs
+      },
+      loser: isWin ? {
+        name: opponentName,
+        build: oppBuild,
+        kills: opponentStats.kills,
+        damageDealt: opponentStats.damageDealt,
+        damageTaken: opponentStats.damageTaken,
+        knockups: opponentStats.knockups,
+        parries: opponentStats.parries,
+        masteryProcs: opponentStats.masteryProcs
+      } : {
+        name: selfName,
+        build: selfBuild,
+        kills: selfStats.kills,
+        damageDealt: selfStats.damageDealt,
+        damageTaken: selfStats.damageTaken,
+        knockups: selfStats.knockups,
+        parries: selfStats.parries,
+        masteryProcs: selfStats.masteryProcs
+      },
+      eloBefore,
+      eloDelta
+    }
+    
+    menu.showScoreboard(selfId, scoreboardData)
   }
 }
 
@@ -875,7 +1002,9 @@ const loadoutStation = initLoadoutStation(
       ? 'START TRAINING'
       : pendingLaunchMode === 'duel_arena'
         ? 'START 1V1'
-        : null,
+        : pendingLaunchMode === 'ffa'
+          ? 'START FFA'
+          : null,
 )
 const radialWheels = initRadialWheels({
   abilityWheelEl,
@@ -1087,7 +1216,10 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
       (msg: { casterId: string; abilityId: string; atTick: number }) => {
         if (!isCurrentRoom()) return
         const def = ABILITY_DEFS[msg.abilityId]
-        const isDash = def?.effects?.some((e) => e.kind === 'move' && (e as {mode?:string}).mode === 'dash') ?? false
+        const isDash =
+          def?.effects?.some(
+            (e) => e.kind === 'move' && (e as { mode?: string }).mode === 'dash',
+          ) ?? false
         // Play cast sound for self only; remote cast VFX can be expanded in a later polish pass.
         if (msg.casterId === self?.sessionId) {
           soundEngine.playCast(def?.element ?? 'none')
@@ -1161,7 +1293,7 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
 }
 
 function pushPersistedLoadout(): void {
-  sendLoadout(room, loadoutStation.getLoadout())
+  sendLoadout(room, loadoutStation.getLoadout(), loadoutStation.getClassId())
 }
 
 // -----------------------------------------------------------------------
@@ -1175,6 +1307,55 @@ function onHit(msg: ServerHitMessage): void {
   const isAirPunish = isAirPunishCause(msg.cause)
   // Normalise power 0–1 against typical hit ceiling (~40 damage = full power).
   const power = Math.min(1, msg.damage / (isAirPunish ? 55 : 40))
+
+  // Accumulate stats
+  if (msg.damage > 0) {
+    if (msg.didParry) {
+      if (amISelf) {
+        selfStats.parries++
+      } else {
+        opponentStats.parries++
+      }
+    } else {
+      if (amIAttacker && !amISelf) {
+        selfStats.damageDealt += msg.damage
+        selfStats.yourHits++
+        if (msg.cause === 'uppercut' || isAirPunish) {
+          selfStats.knockups++
+        }
+        if (msg.cause.startsWith('combo:')) {
+          selfStats.masteryProcs++
+        }
+      } else if (amISelf && !amIAttacker) {
+        selfStats.damageTaken += msg.damage
+        
+        // Cache victim hit details for deathcam
+        const players = getSchemaPlayers()
+        const killerName = players?.get(msg.attackerId)?.name || msg.attackerId.slice(0, 6)
+        lastHitDetails = {
+          killer: killerName,
+          ability: ABILITY_DEFS[msg.cause]?.name || msg.cause.toUpperCase(),
+          element: msg.element || 'PHYSICAL',
+          damage: msg.damage
+        }
+      } else {
+        // Opponent or other players
+        if (msg.attackerId !== self?.sessionId && msg.attackerId !== '') {
+          opponentStats.damageDealt += msg.damage
+          opponentStats.yourHits++
+          if (msg.cause === 'uppercut' || isAirPunish) {
+            opponentStats.knockups++
+          }
+          if (msg.cause.startsWith('combo:')) {
+            opponentStats.masteryProcs++
+          }
+        }
+        if (msg.victimId !== self?.sessionId) {
+          opponentStats.damageTaken += msg.damage
+        }
+      }
+    }
+  }
 
   // --- Parry sound: victim side already handled by ParryEvent; play for others. ---
   if (msg.didParry && !amISelf) {
@@ -1348,6 +1529,13 @@ function onDeath(msg: ServerDeathMessage): void {
   const victimName = players?.get(msg.victimId)?.name || msg.victimId.slice(0, 6)
 
   combatFeedHud.addKillFeedEntry(killerName, victimName, isSelfKill, isSelfDied)
+
+  // Track match score stats
+  if (isSelfKill) {
+    selfStats.kills++
+  } else if (msg.killerId !== '' && msg.killerId !== selfId) {
+    opponentStats.kills++
+  }
 
   // World-space death burst — red particle explosion at victim position.
   const deathPos = getPlayerWorldPos(msg.victimId)
@@ -1682,8 +1870,7 @@ function simStep(): void {
   const schemaTick = getSchemaTick()
   const airborne = !!selfSchema && selfSchema.airborneUntilTick > schemaTick
   const dead = !!selfSchema && !selfSchema.alive
-  if ((dead || airborne) && castDispatcher.getPlacementAbilityId())
-    castDispatcher.cancelPlacementPreview()
+  if (dead && castDispatcher.getPlacementAbilityId()) castDispatcher.cancelPlacementPreview()
   if (inp.optimisticWeapon && selfSchema?.activeWeapon === inp.optimisticWeapon)
     inp.optimisticWeapon = null
   const activeWeapon: Weapon = currentWeaponForInput()
@@ -1724,7 +1911,7 @@ function simStep(): void {
     slowFraction: capsFromStatus.slowFraction,
     movementLocked: capsFromStatus.movementLocked,
     castLocked: capsFromStatus.castLocked,
-    airborneLocked: airborne,
+    airborneLocked: false,
   }
 
   // Jump sound — fire exactly once per jump edge (not every tick).
@@ -1759,7 +1946,6 @@ function simStep(): void {
     schemaTick,
     combatLive,
     dead,
-    airborne,
     activeWeapon,
   })
 
@@ -1901,8 +2087,8 @@ function render(now: number): void {
   // Fall back to "on ground" when dead or self is not yet initialised.
   const selfOnGround = dead || !self || self.sim.onGround
   if (!dead) {
-    if (selfPrevOnGround && !selfOnGround) selfJumpUntilMs = now + 500  // left ground
-    if (!selfPrevOnGround && selfOnGround) selfLandUntilMs = now + 400  // landed
+    if (selfPrevOnGround && !selfOnGround) selfJumpUntilMs = now + 500 // left ground
+    if (!selfPrevOnGround && selfOnGround) selfLandUntilMs = now + 400 // landed
   }
   selfPrevOnGround = selfOnGround
 
@@ -1953,7 +2139,9 @@ function render(now: number): void {
       attacking: !!(selfArc?.visible && now < selfArcExpiresAt),
       attackVariant: selfSchema?.comboIndex ?? 0,
       airborne,
-      bowCharging: wSchema === 'bow' && (self.bowChargeStartMs > 0 || (selfSchema?.bowChargeStartTick ?? 0) > 0),
+      bowCharging:
+        wSchema === 'bow' &&
+        (self.bowChargeStartMs > 0 || (selfSchema?.bowChargeStartTick ?? 0) > 0),
       casting: !!selfSchema?.casting && selfSchema.castEndsAtTick > tickNow,
       channeling:
         !!selfSchema?.casting &&
@@ -1998,6 +2186,13 @@ function render(now: number): void {
 
     selfMesh.visible = !dead && !firstPersonWeapon
     firstPersonViewModel.visible = !dead && firstPersonWeapon
+    setParryShieldState(selfMesh, !dead && !!selfSchema?.parrying, !!selfSchema?.parryIsHold, now)
+    setParryShieldState(
+      firstPersonParryShield,
+      !dead && firstPersonWeapon && !!selfSchema?.parrying,
+      !!selfSchema?.parryIsHold,
+      now,
+    )
     if (firstPersonWeapon && firstPersonViewWeapon !== wSchema) rebuildFirstPersonViewModel(wSchema)
     if (!firstPersonWeapon && firstPersonViewModel.visible) firstPersonViewModel.visible = false
 
@@ -2143,6 +2338,19 @@ function render(now: number): void {
     () => getSchemaPlayers() as unknown as Map<string, RemotePlayerSchema> | null,
   )
 
+  const deathcamData: DeathcamData = {
+    killer: lastHitDetails.killer || lastKillerName || 'ANONYMOUS',
+    ability: lastHitDetails.ability || 'PHYSICAL',
+    element: lastHitDetails.element || 'PHYSICAL',
+    damage: lastHitDetails.damage || 0,
+    round: `${selfStats.kills + opponentStats.kills + 1} / 3`,
+    yourDamage: selfStats.damageDealt,
+    yourHits: selfStats.yourHits,
+    yourProcs: selfStats.masteryProcs,
+    yourParries: selfStats.parries,
+    timeToNextMs: 5000,
+  }
+
   selfHud.update({
     selfSchema,
     now,
@@ -2161,6 +2369,7 @@ function render(now: number): void {
       castDispatcher.clearQueue()
     },
     cancelPlacementPreview: () => castDispatcher.cancelPlacementPreview(),
+    deathcamData,
   })
 
   renderer.render(scene, camera)

@@ -3,7 +3,7 @@
   "version": 1,
   "ttk": { "min_sec": 20, "max_sec": 30 },
   "weapons": {
-    "sword_m1_damage": [6, 6, 9],
+    "sword_m1_damage": [5, 5, 8],
     "bow_charge_min_sec": 0.3,
     "bow_charge_full_sec": 2.0,
     "bow_damage_min": 4,

@@ -98,7 +98,8 @@ export function uppercutBallisticAirtimeSec(): number {
 // ---------------------------------------------------------------------------
 
 // Returns the damage that should be dealt for a swing launched NOW, given the
-// attacker's last swing state. Also returns the next combo index to store.
+// attacker's last landed chain state. The caller must store the next combo
+// index only after the swing contacts a victim.
 // Spec:
 //   - if more than SWORD_M1_COMBO_RESET_SEC has elapsed since the last swing,
 //     index resets to 0 (swing 1 again).
@@ -120,4 +121,9 @@ export function advanceSwordCombo(
   const nextStoredIndex = (indexJustPlayed + 1) % SWORD_M1_DAMAGE.length
   const damage = SWORD_M1_DAMAGE[indexJustPlayed] ?? 0
   return { indexJustPlayed, nextStoredIndex, damage }
+}
+
+export function finishSwordCombo(indexJustPlayed: number, landed: boolean): number {
+  if (!landed) return 0
+  return (indexJustPlayed + 1) % SWORD_M1_DAMAGE.length
 }
