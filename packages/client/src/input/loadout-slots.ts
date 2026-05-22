@@ -16,17 +16,6 @@ export const LOADOUT_SLOT_ORDER: readonly AbilitySlot[] = [
 ]
 
 export const LOADOUT_SLOT_LABELS = ['R', 'G', '1', '2', '3', '4', '5', 'Z', 'X', 'F', 'V'] as const
-/**
- * @deprecated Pass 4 — transfer abilities have been removed from target class
- * legality. This const is kept only for the legacy `cd-strip` HUD which still
- * renders the `transfer-pip` CSS class for any player using old saved builds.
- * Remove together with cd-strip in Pass 6.
- */
-export const FIXED_TRANSFER_SLOTS = {
-  7: 'transfer_hp_mana',
-  8: 'transfer_mana_stam',
-  9: 'transfer_stam_hp',
-} as const
 export const UTILITY_FLEX_SLOT_INDEX = 10
 
 export const KEY_SLOT: ReadonlyArray<readonly [code: string, label: string, slotIdx: number]> = [
@@ -69,11 +58,21 @@ export function buildLoadoutMessage(
     if (!id) continue
     const family = getAbilitySlotFamily(id)
     switch (family) {
-      case 'melee':        melee.push(id);        break
-      case 'bow':          bow.push(id);           break
-      case 'magicBase':    magicBase.push(id);     break
-      case 'magicAdvanced': magicAdvanced.push(id); break
-      default:             utility.push(id);       break
+      case 'melee':
+        melee.push(id)
+        break
+      case 'bow':
+        bow.push(id)
+        break
+      case 'magicBase':
+        magicBase.push(id)
+        break
+      case 'magicAdvanced':
+        magicAdvanced.push(id)
+        break
+      default:
+        utility.push(id)
+        break
     }
   }
 

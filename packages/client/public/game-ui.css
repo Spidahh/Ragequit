@@ -472,10 +472,6 @@ body.main-menu-active #round-hud,  body.loadout-active #round-hud {
   --elem-color: var(--brass);
   --elem-dim:   rgba(212,160,74,0.16);
 }
-.cd-pip.transfer-pip {
-  --elem-color: var(--brass);
-  --elem-dim:   rgba(212,160,74,0.18);
-}
 .cd-pip.ready {
   opacity: 1;
   box-shadow: 0 2px 0 0 var(--elem-color), 0 0 8px rgba(0,0,0,0.4);

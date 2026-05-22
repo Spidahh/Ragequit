@@ -206,7 +206,7 @@ const combatFeedHud = createCombatFeedHud({
 })
 
 // -----------------------------------------------------------------------
-// Radial wheels — Q for fixed transfers/flex utility, E for combat abilities
+// Radial wheels — Q for utility loadout slots, E for combat abilities.
 // -----------------------------------------------------------------------
 
 function currentLoadoutArray(): string[] {

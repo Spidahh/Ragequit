@@ -2,7 +2,7 @@ import { ABILITY_DEFS, TICK_RATE_HZ } from '@ragequit/shared'
 
 import { abilityIconMarkup } from '../icons.js'
 import { slotKeybindEntries } from '../input/keybinds.js'
-import { FIXED_TRANSFER_SLOTS, normalizeLoadoutSlots } from '../input/loadout-slots.js'
+import { normalizeLoadoutSlots } from '../input/loadout-slots.js'
 
 export const ELEMENT_COLOR: Record<string, string> = {
   fire: '#ff6a2a',
@@ -23,7 +23,6 @@ export interface CooldownStripController {
   markPending: (abilityId: string) => void
   rebuild: (loadout: ReadonlyArray<string>) => void
   signature: (loadout: ReadonlyArray<string>) => string
-  setTransferCooldown: (abilityId: string, remainingMs: number) => void
   updateAbilityCooldowns: (options: {
     abilityCooldowns: CooldownLookup | undefined
     placementAbilityId: string | null
@@ -94,8 +93,7 @@ export function initCooldownStrip(
 
       const pip = document.createElement('div')
       const isUtility = slotIdx >= 7
-      const isFixedTransfer = slotIdx in FIXED_TRANSFER_SLOTS
-      pip.className = `cd-pip ready ${isUtility ? 'utility-pip' : 'ability-pip'} ${isFixedTransfer ? 'transfer-pip' : ''}`
+      pip.className = `cd-pip ready ${isUtility ? 'utility-pip' : 'ability-pip'}`
       pip.dataset['abilityId'] = id
       pip.dataset['slotIdx'] = String(slotIdx)
       pip.title = tooltip
@@ -147,21 +145,6 @@ export function initCooldownStrip(
     pip.classList.remove('pending')
     pip.classList.add('fail-flash')
     setTimeout(() => pip.classList.remove('fail-flash'), 400)
-  }
-
-  function setTransferCooldown(abilityId: string, remainingMs: number): void {
-    const pip = pipEls.get(abilityId)
-    if (!pip?.classList.contains('transfer-pip')) return
-    const timerEl = pip.querySelector<HTMLElement>('.cd-timer')
-    if (remainingMs > 0) {
-      pip.classList.remove('ready')
-      pip.classList.add('cooling')
-      if (timerEl) timerEl.textContent = (remainingMs / 1000).toFixed(1)
-    } else {
-      pip.classList.remove('cooling')
-      pip.classList.add('ready')
-      if (timerEl) timerEl.textContent = ''
-    }
   }
 
   function updateAbilityCooldowns({
@@ -233,7 +216,6 @@ export function initCooldownStrip(
     flashFailed,
     markPending,
     rebuild,
-    setTransferCooldown,
     signature,
     updateAbilityCooldowns,
   }

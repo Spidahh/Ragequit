@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  FIXED_TRANSFER_SLOTS,
   KEY_SLOT,
   LOADOUT_SLOT_ORDER,
   buildLoadoutMessage,
@@ -24,18 +23,22 @@ describe('loadout slot helpers', () => {
       { code: 'KeyV', label: 'V', slotIdx: 10 },
     ])
     expect(LOADOUT_SLOT_ORDER).toHaveLength(11)
-    expect(FIXED_TRANSFER_SLOTS).toEqual({
-      7: 'transfer_hp_mana',
-      8: 'transfer_mana_stam',
-      9: 'transfer_stam_hp',
-    })
   })
 
   it('builds the class-aware envelope by classifying abilities by target family', () => {
     // Hybrid starter build — abilities classified by getAbilitySlotFamily
     const hybridBuild = [
-      'uppercut', 'marksman_shot', 'fireball', 'lightning_dash',
-      'arc_lift', 'meteor', 'adaptive_mend', 'quick_dash', 'cleanse_surge', 'barrier', 'smoke_screen',
+      'uppercut',
+      'marksman_shot',
+      'fireball',
+      'lightning_dash',
+      'arc_lift',
+      'meteor',
+      'adaptive_mend',
+      'quick_dash',
+      'cleanse_surge',
+      'barrier',
+      'smoke_screen',
     ]
     expect(buildLoadoutMessage(hybridBuild, undefined, 'hybrid')).toEqual({
       classId: 'hybrid',
@@ -51,7 +54,9 @@ describe('loadout slot helpers', () => {
 
   it('normalizeLoadoutSlots pads to 11 without injecting transfers', () => {
     expect(
-      normalizeLoadoutSlots(['m', 'b', 'a', 'b2', 'c', 'd', 'e', '', '', '', 'quick_dash']).slice(7),
+      normalizeLoadoutSlots(['m', 'b', 'a', 'b2', 'c', 'd', 'e', '', '', '', 'quick_dash']).slice(
+        7,
+      ),
     ).toEqual(['', '', '', 'quick_dash'])
   })
 })
