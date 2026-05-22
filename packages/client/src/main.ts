@@ -299,6 +299,8 @@ onKeybindsChanged(() => {
 
 const soundEngine = new SoundEngine()
 soundEngine.muted = true
+window.addEventListener('pointerdown', () => soundEngine.unlock(), { capture: true, passive: true })
+window.addEventListener('keydown', () => soundEngine.unlock(), { capture: true })
 initTelemetry()
 // Boot Supabase auth in the background — resolves before the player can click Play.
 initSupabaseAuth().catch((e: unknown) => console.warn('[supabase] auth init failed:', e))

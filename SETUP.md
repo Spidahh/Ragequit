@@ -85,10 +85,15 @@ Output atteso: Vite espone il client su `http://localhost:5173/` o `http://127.0
 **Cosa devi vedere**:
 
 - Il menu principale del gioco, non una pagina bootstrap.
-- Play 1v1 e Training aprono prima la Loadout Station; la partita parte dopo `SAVE BUILD`.
-- FFA è visibile come modalità non pronta, ma disabilitata.
+- Play 1v1 e Training aprono prima la Loadout Station; la partita parte dalla CTA di lancio (`START 1V1` / `START TRAINING`).
+- Free For All apre la Loadout Station e avvia la modalità kill-based senza bot fill.
 - In partita, `Esc` apre il pause menu; non deve buttarti direttamente in lobby.
 - Settings permette di modificare FOV, sensibilità, volume, qualità e keybind. I valori persistono nel browser.
+
+Supabase resta opzionale per il vertical slice locale. Se configuri il client con
+`VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`, abilita
+`VITE_SUPABASE_ANON_SIGNIN=true` solo su un progetto Supabase dove gli anonymous
+sign-ins sono attivi; altrimenti il client gioca senza token e senza persistenza DB.
 
 ## Passo 6 — quando vuoi committare
 

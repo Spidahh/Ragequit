@@ -30,7 +30,7 @@ Implementato:
 - Bot training, match phases, replay scaffolding, rate limiter.
 - Colyseus monitor admin opt-in: disabled by default and protected by Basic Auth when enabled.
 - Combat actions are accepted only during the live phase; loadout changes are locked during live combat.
-- Free For All / 5v5 remain product targets; FFA is visibly disabled in the client until the mode is real.
+- Free For All has a menu/loadout launch path and kill-based runtime without bot fill; matchmaking/persistence polish is still deferred. 5v5 remains a product target.
 - Smoke/unit coverage su shared/server/client.
 
 ## Priorità Aperte
@@ -51,7 +51,7 @@ Implementato:
 
 ### 3. Client Modularization ✅ Completata (vedi M3)
 
-Tutti i moduli estratti. `main.ts` a 1824 linee (da 2896). Moduli attivi: `hud/` (10), `input/` (6), `render/` (7), `net/` (1), `vfx/` (1), `world/` (arena + maps).
+Tutti i moduli estratti. `main.ts` a 1981 linee (da 2896). Moduli attivi: `hud/` (10), `input/` (6), `render/` (7), `net/` (1), `vfx/` (1), `world/` (arena + maps).
 
 ### 4. Content Consistency ✅ Verificata
 
@@ -99,7 +99,7 @@ DoD:
 
 DoD:
 
-- `main.ts` ridotto a orchestration/bootstrap. ✅ 1824 linee (da 2896). Nucleo rimasto: connect, simStep, render, reconcileSelf, onHit, onDeath.
+- `main.ts` ridotto a orchestration/bootstrap. ✅ 1981 linee (da 2896). Nucleo rimasto: connect, simStep, render, reconcileSelf, onHit, onDeath.
 - Input/HUD/render/net/VFX in moduli dedicati. ✅ `hud/` (10 moduli), `input/` (6 moduli), `render/` (7 moduli), `net/loadout-sync.ts`, `vfx/impact-pool.ts`.
 - Smoke test client su keybind, loadout, radial prime/fire. ✅ `keybinds.test.ts` (2), `loadout-slots.test.ts` (2), `loadout-station.test.ts` (10) — tutti verdi.
 

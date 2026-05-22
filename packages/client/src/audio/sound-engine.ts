@@ -7,6 +7,16 @@ export class SoundEngine {
   private masterGain: GainNode | null = null
   private _muted = false
 
+  private canResumeAudio(): boolean {
+    return navigator.userActivation?.isActive ?? true
+  }
+
+  /** Create/resume the audio graph from a real keyboard or pointer gesture. */
+  unlock(): void {
+    if (!this.ctx && !this.canResumeAudio()) return
+    void this.ac
+  }
+
   private get ac(): AudioContext {
     if (!this.ctx) {
       this.ctx = new AudioContext()
@@ -14,7 +24,7 @@ export class SoundEngine {
       this.masterGain.gain.value = this._volume
       this.masterGain.connect(this.ctx.destination)
     }
-    if (this.ctx.state === 'suspended') void this.ctx.resume()
+    if (this.ctx.state === 'suspended' && this.canResumeAudio()) void this.ctx.resume()
     return this.ctx
   }
   private get out(): AudioNode {

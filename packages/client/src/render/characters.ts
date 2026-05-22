@@ -456,7 +456,6 @@ function _installCharacterModel(
 
   const nativeBox = _measureRenderableBox(model)
   const nativeHeight = _validBoxHeight(nativeBox)
-  console.info(`[character] ${sourceLabel}: nativeHeight=${nativeHeight.toFixed(3)} box.min.y=${nativeBox.min.y.toFixed(3)}`)
 
   const targetScale = CAPSULE_HEIGHT_M / nativeHeight
   model.scale.setScalar(targetScale)
@@ -479,8 +478,6 @@ function _installCharacterModel(
   // produce boneInverses in a different (scaled) space from bindMatrix (still
   // at cm scale), breaking the rest-pose invariant and causing visible mesh
   // deformation (or invisibility when the mismatch is extreme).
-  console.info(`[character] ${sourceLabel}: scale=${targetScale.toFixed(6)} pos.y=${model.position.y.toFixed(4)}`)
-
   const glbMaterials: THREE.MeshToonMaterial[] = []
   let renderableMeshes = 0
   let skinnedMeshes = 0
@@ -551,19 +548,15 @@ export function loadCharacterGlb(
   teamColor: number,
   toonGradient: THREE.DataTexture,
 ): void {
-  console.info('[character] loadCharacterGlb called, fetching legacy FBX...')
   _fetchLegacyCharacter()
     .then(({ scene, clips }) => {
-      console.info('[character] Legacy FBX loaded OK, cloning skeleton...')
       const model = skeletonClone(scene) as THREE.Group
       _installCharacterModel(charGroup, model, clips, teamColor, toonGradient, 'legacy FBX')
-      console.info('[character] Legacy FBX installed OK')
     })
     .catch((legacyErr) => {
       console.warn('[character] Legacy FBX failed, trying GLB fallback', legacyErr)
       _fetchCharGlb()
         .then(({ scene, animations }) => {
-          console.info('[character] GLB loaded OK, cloning...')
           const model = skeletonClone(scene) as THREE.Group
           const clips: Partial<Record<_AnimName, THREE.AnimationClip>> = {}
           const missing: _AnimName[] = []
@@ -576,7 +569,6 @@ export function loadCharacterGlb(
             console.warn(`[character] GLB missing animations (${missing.length}): ${missing.join(', ')}`)
           }
           _installCharacterModel(charGroup, model, clips, teamColor, toonGradient, 'GLB')
-          console.info('[character] GLB installed OK')
         })
         .catch((glbErr) => {
           console.warn('[character] GLB also failed, keeping procedural fallback', glbErr)

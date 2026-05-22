@@ -3,14 +3,15 @@ import * as THREE from 'three'
 
 export function makeToonGradient(): THREE.DataTexture {
   const steps = 6
-  const data = new Uint8Array(steps * 3)
+  const data = new Uint8Array(steps * 4)
   const ramp = [28, 68, 120, 172, 220, 255]
   for (let i = 0; i < steps; i++) {
-    data[i * 3] = ramp[i]!
-    data[i * 3 + 1] = ramp[i]!
-    data[i * 3 + 2] = ramp[i]!
+    data[i * 4] = ramp[i]!
+    data[i * 4 + 1] = ramp[i]!
+    data[i * 4 + 2] = ramp[i]!
+    data[i * 4 + 3] = 255
   }
-  const tex = new THREE.DataTexture(data, steps, 1, THREE.RGBFormat)
+  const tex = new THREE.DataTexture(data, steps, 1, THREE.RGBAFormat)
   tex.minFilter = THREE.NearestFilter
   tex.magFilter = THREE.NearestFilter
   tex.needsUpdate = true

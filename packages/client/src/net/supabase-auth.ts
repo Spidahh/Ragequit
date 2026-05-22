@@ -2,6 +2,8 @@ import { createClient, type SupabaseClient, type Session } from '@supabase/supab
 
 const SUPABASE_URL = import.meta.env['VITE_SUPABASE_URL'] as string | undefined
 const SUPABASE_ANON_KEY = import.meta.env['VITE_SUPABASE_ANON_KEY'] as string | undefined
+const SUPABASE_ANON_SIGNIN =
+  (import.meta.env['VITE_SUPABASE_ANON_SIGNIN'] as string | undefined) === 'true'
 
 let _client: SupabaseClient | null = null
 let _session: Session | null = null
@@ -34,6 +36,10 @@ export async function initSupabaseAuth(): Promise<string | null> {
     console.info('[supabase] restored session, userId:', session.user.id)
     return session.access_token
   }
+
+  // Anonymous auth is optional for the local vertical slice. Only request it
+  // when the Supabase project has anonymous sign-ins explicitly enabled.
+  if (!SUPABASE_ANON_SIGNIN) return null
 
   // No session — sign in anonymously (creates a persistent guest account).
   const { data, error } = await sb.auth.signInAnonymously()
