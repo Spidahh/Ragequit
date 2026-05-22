@@ -239,6 +239,44 @@ export function isAbilityLegalForClass(abilityId: string, classId: ClassId): boo
   return allowed.includes(classId)
 }
 
+export function classLoadoutFitsSlotGrammar(
+  classId: ClassId,
+  abilityIds: readonly string[],
+): boolean {
+  const seenIds = new Set<string>()
+  const usedFamilies = new Map<TargetAbilitySlotFamily, number>()
+  const budget = TARGET_CLASS_DEFS[classId].slots
+
+  for (const id of abilityIds) {
+    if (!id) continue
+    if (seenIds.has(id) || !isAbilityLegalForClass(id, classId)) return false
+
+    seenIds.add(id)
+    const family = getAbilitySlotFamily(id)
+    const used = (usedFamilies.get(family) ?? 0) + 1
+    if (used > budget[family]) return false
+    usedFamilies.set(family, used)
+  }
+
+  return true
+}
+
+export function inferClassFromLoadout(abilityIds: readonly string[]): ClassId | null {
+  const activeIds = abilityIds.filter(Boolean)
+  const hybridFits = classLoadoutFitsSlotGrammar('hybrid', activeIds)
+
+  for (const candidate of CLASS_IDS) {
+    if (candidate === 'hybrid' || !classLoadoutFitsSlotGrammar(candidate, activeIds)) continue
+
+    const hasClassExclusiveAbility = activeIds.some(
+      (id) => isAbilityLegalForClass(id, candidate) && !isAbilityLegalForClass(id, 'hybrid'),
+    )
+    if (hasClassExclusiveAbility || !hybridFits) return candidate
+  }
+
+  return hybridFits ? 'hybrid' : null
+}
+
 export function getClassSlotOrder(classId: ClassId): TargetAbilitySlotFamily[] {
   const slots = TARGET_CLASS_DEFS[classId].slots
   const order: TargetAbilitySlotFamily[] = []
@@ -250,4 +288,3 @@ export function getClassSlotOrder(classId: ClassId): TargetAbilitySlotFamily[] {
   }
   return order
 }
-

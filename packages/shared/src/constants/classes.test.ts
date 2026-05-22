@@ -4,7 +4,9 @@ import {
   CLASS_IDS,
   TARGET_CLASS_DEFS,
   TARGET_LOADOUT_SLOT_COUNT,
+  classLoadoutFitsSlotGrammar,
   getAbilitySlotFamily,
+  inferClassFromLoadout,
   isAbilityLegalForClass,
   targetClassSlotCount,
 } from './classes.js'
@@ -87,27 +89,92 @@ describe('ability slot family and class legality (Pass 3 validation)', () => {
     }
   })
 
+  it('rejects duplicate, cross-class and over-budget loadouts with one shared rule', () => {
+    expect(
+      classLoadoutFitsSlotGrammar('hybrid', [
+        'uppercut',
+        'marksman_shot',
+        'fireball',
+        'lightning_dash',
+        'arc_lift',
+        'meteor',
+      ]),
+    ).toBe(true)
+    expect(classLoadoutFitsSlotGrammar('hybrid', ['uppercut', 'uppercut'])).toBe(false)
+    expect(classLoadoutFitsSlotGrammar('tank', ['fireball'])).toBe(false)
+    expect(
+      classLoadoutFitsSlotGrammar('hybrid', ['fireball', 'lightning_dash', 'chain_bolt']),
+    ).toBe(false)
+  })
+
+  it('infers a persisted class only when the loadout still fits a class grammar', () => {
+    expect(inferClassFromLoadout(['brace_recovery', 'uppercut'])).toBe('tank')
+    expect(
+      inferClassFromLoadout(['pin_shot', 'marksman_shot', 'frost_bolt', 'fireball', 'chain_bolt']),
+    ).toBe('archer')
+    expect(inferClassFromLoadout(['uppercut', 'fireball', 'arc_lift', 'adaptive_mend'])).toBe(
+      'hybrid',
+    )
+    expect(inferClassFromLoadout(['uppercut', 'fireball', 'lightning_dash', 'chain_bolt'])).toBe(
+      null,
+    )
+  })
+
   it('validates the Pass 3 starter build family budgets for all four classes', () => {
     // Verify each starter build satisfies its class slot budget.
     // These are the same builds used in CLASS_STARTER_PRESETS and DEFAULT_LOADOUT.
     const starters: Record<string, string[]> = {
       tank: [
-        'uppercut', 'piercing_shot', 'gap_closer', 'guard_break', 'disengage_shot',
-        'brace_recovery', 'barrier', 'cleanse_surge', 'quick_dash', 'energize', 'smoke_screen',
+        'uppercut',
+        'piercing_shot',
+        'gap_closer',
+        'guard_break',
+        'disengage_shot',
+        'brace_recovery',
+        'barrier',
+        'cleanse_surge',
+        'quick_dash',
+        'energize',
+        'smoke_screen',
       ],
       archer: [
-        'dark_barrier', 'pin_shot', 'marksman_shot', 'disengage_shot',
-        'frost_bolt', 'fireball', 'lightning_dash',
-        'hunters_flow', 'quick_dash', 'cleanse_surge', 'smoke_screen',
+        'dark_barrier',
+        'pin_shot',
+        'marksman_shot',
+        'disengage_shot',
+        'frost_bolt',
+        'fireball',
+        'lightning_dash',
+        'hunters_flow',
+        'quick_dash',
+        'cleanse_surge',
+        'smoke_screen',
       ],
       mage: [
-        'fireball', 'ignite', 'frost_bolt', 'dark_barrier',
-        'eruption', 'meteor', 'frost_pillar', 'blizzard',
-        'arcane_rebind', 'phase_shift', 'cleanse_surge',
+        'fireball',
+        'ignite',
+        'frost_bolt',
+        'dark_barrier',
+        'eruption',
+        'meteor',
+        'frost_pillar',
+        'blizzard',
+        'arcane_rebind',
+        'phase_shift',
+        'cleanse_surge',
       ],
       hybrid: [
-        'uppercut', 'marksman_shot', 'fireball', 'lightning_dash', 'arc_lift', 'meteor',
-        'adaptive_mend', 'quick_dash', 'cleanse_surge', 'barrier', 'smoke_screen',
+        'uppercut',
+        'marksman_shot',
+        'fireball',
+        'lightning_dash',
+        'arc_lift',
+        'meteor',
+        'adaptive_mend',
+        'quick_dash',
+        'cleanse_surge',
+        'barrier',
+        'smoke_screen',
       ],
     }
 

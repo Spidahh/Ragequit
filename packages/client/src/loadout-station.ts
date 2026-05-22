@@ -14,7 +14,7 @@ import {
   computeLoadoutMastery,
   CLASS_IDS,
   TARGET_CLASS_DEFS,
-  getAbilitySlotFamily,
+  classLoadoutFitsSlotGrammar,
   isAbilityLegalForClass,
   type ClassId,
   type AbilityDef,
@@ -255,27 +255,6 @@ export function initLoadoutStation(
     } catch {
       // Storage is optional.
     }
-  }
-
-  function slotsFitClass(classId: ClassId, candidateSlots: readonly string[]): boolean {
-    const usedFamilies = new Map<string, number>()
-    const usedAbilities = new Set<string>()
-    const budget = TARGET_CLASS_DEFS[classId].slots
-
-    for (const id of normalizeLoadoutSlots(candidateSlots)) {
-      if (!id) continue
-      if (usedAbilities.has(id) || !ABILITY_DEFS[id] || !isAbilityLegalForClass(id, classId)) {
-        return false
-      }
-
-      usedAbilities.add(id)
-      const family = getAbilitySlotFamily(id)
-      const used = (usedFamilies.get(family) ?? 0) + 1
-      if (used > budget[family]) return false
-      usedFamilies.set(family, used)
-    }
-
-    return true
   }
 
   function resetSlotsForClass(classId: ClassId): void {
@@ -659,7 +638,7 @@ export function initLoadoutStation(
   function applyClassId(id: ClassId): void {
     activeClassId = id
     saveClassId(id)
-    if (!slotsFitClass(id, slots)) resetSlotsForClass(id)
+    if (!classLoadoutFitsSlotGrammar(id, slots)) resetSlotsForClass(id)
     // Update active tab UI
     classTabs.forEach((tab) => {
       const isActive = tab.dataset['class'] === id

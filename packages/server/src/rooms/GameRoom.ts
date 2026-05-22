@@ -102,6 +102,7 @@ import {
   CLASS_IDS,
   isAbilityLegalForClass,
   getAbilitySlotFamily,
+  inferClassFromLoadout,
   TARGET_CLASS_DEFS,
 } from '@ragequit/shared'
 
@@ -671,29 +672,17 @@ export class GameRoom extends Room<GameState> {
         persistedInstantCast = saved.instant_cast_data ?? {}
       }
     }
+    let resolvedClassId = inferClassFromLoadout(resolvedLoadout)
+    if (!resolvedClassId) {
+      resolvedLoadout = DEFAULT_LOADOUT
+      resolvedClassId = 'hybrid'
+    }
     for (const id of resolvedLoadout) player.loadout.push(id)
     // Broadcast persisted instant-cast settings back to this client.
     if (Object.keys(persistedInstantCast).length > 0) {
       client.send('persistedInstantCast', persistedInstantCast)
     }
     {
-      // Derive the player's class from their loaded abilities.
-      // We find the most specific class that supports ALL non-empty abilities.
-      // A class is selected when it supports all abilities AND has at least one
-      // class-exclusive ability (not legal for hybrid), signalling intent.
-      const abilityIds = resolvedLoadout.filter((id) => id && ABILITY_DEFS[id])
-      let resolvedClassId: ClassId = 'hybrid'
-      for (const candidate of CLASS_IDS) {
-        if (candidate === 'hybrid') continue
-        const allLegal = abilityIds.every((id) => isAbilityLegalForClass(id, candidate))
-        const hasExclusive = abilityIds.some(
-          (id) => isAbilityLegalForClass(id, candidate) && !isAbilityLegalForClass(id, 'hybrid'),
-        )
-        if (allLegal && hasExclusive) {
-          resolvedClassId = candidate
-          break
-        }
-      }
       player.classId = resolvedClassId
       const maxima = TARGET_CLASS_DEFS[resolvedClassId].resourceMaxima
       player.hp = maxima.hp
