@@ -235,7 +235,7 @@ body.main-menu-active #round-hud,  body.loadout-active #round-hud {
   color: var(--text); text-shadow: 0 1px 4px #000;
 }
 
-/* ── Vitals HUD (resource bars + transmute) ─────────────────────────── */
+/* ── Vitals HUD (resource bars) ─────────────────────────────────────── */
 #hud {
   position: fixed;
   left: 24px; bottom: clamp(140px, 18vh, 180px);
@@ -351,55 +351,6 @@ body.main-menu-active #round-hud,  body.loadout-active #round-hud {
   color: var(--brass-hi);
   box-shadow: 0 0 12px rgba(212,160,74,0.35);
 }
-
-/* Transmute bar — Z/X/F resource conversions */
-#transmute-bar {
-  display: flex; gap: 4px; margin-top: 4px;
-}
-.t-slot {
-  flex: 1; display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 4px; align-items: center;
-  padding: 4px 7px;
-  background: rgba(6, 9, 18, 0.92);
-  border: 1px solid var(--line-2);
-  border-bottom: 2px solid var(--line-hot);
-  font: 8px/1 var(--font-mono);
-  letter-spacing: 0.12em; text-transform: uppercase;
-  color: var(--muted);
-  transition: border-color 0.12s, opacity 0.12s;
-}
-.t-slot.ready {
-  border-bottom-color: var(--brass);
-  background: rgba(20, 22, 30, 0.92);
-  opacity: 1;
-}
-.t-slot.cooling {
-  border-bottom-color: rgba(160, 80, 20, 0.55);
-  background: rgba(20, 10, 4, 0.88);
-  opacity: 0.7;
-}
-.t-slot.ready:hover {
-  border-bottom-color: var(--brass-hi);
-  background: rgba(28, 30, 44, 0.95);
-  transform: translateY(-1px);
-}
-.t-slot .t-key {
-  font: 900 12px/1 var(--font-display);
-  color: var(--brass); letter-spacing: 0.04em;
-}
-.t-slot .t-arrow {
-  font: 900 10px/1 var(--font-mono);
-  text-align: center; white-space: nowrap;
-}
-.t-slot .res-hp   { color: var(--hp); }
-.t-slot .res-mana { color: var(--mana); }
-.t-slot .res-stam { color: var(--stam); }
-.t-slot .t-cd-text {
-  font: 700 10px/1 var(--font-mono);
-  color: var(--brass); min-height: 11px; text-align: right;
-}
-.t-slot .t-label { display: none; }
 
 /* ── Weapons (bottom center, above CD strip) ────────────────────────── */
 #weapons {

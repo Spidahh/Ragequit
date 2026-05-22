@@ -77,7 +77,6 @@ export interface SelfHudUpdateParams {
   lastKillerName: string
   selfMesh: THREE.Group | null
   getCurrentLoadout: () => string[]
-  updateTransmuteBar: () => void
   setCastStartedAt: (ms: number) => void
   clearPrimedSlot: () => void
   cancelPlacementPreview: () => void
@@ -123,7 +122,6 @@ export function initSelfHud({
     lastKillerName,
     selfMesh,
     getCurrentLoadout,
-    updateTransmuteBar,
     setCastStartedAt,
     clearPrimedSlot,
     cancelPlacementPreview,
@@ -143,8 +141,6 @@ export function initSelfHud({
     hudHpBar?.classList.toggle('warn', hpPct < 0.25)
     hudManaBar?.classList.toggle('warn', mpPct < 0.2)
     hudStamBar?.classList.toggle('warn', spPct < 0.15)
-
-    updateTransmuteBar()
 
     const nextIdx = selfSchema.comboIndex
     const elapsedSec = (tickNow - selfSchema.lastSwingStartTick) / TICK_RATE_HZ

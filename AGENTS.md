@@ -85,6 +85,10 @@ Le seguenti sono decisioni documentate nei design docs. Non riaprirle, non tratt
   deve ricadere sullo Starter Build di quella classe prima del send al server.
   Il server applica la stessa grammatica al loadout persistito in join e ricade
   sul default Ibrido se il salvataggio non permette un'inferenza valida.
+- **HUD client senza transfer fissi**: il client target non mostra la vecchia
+  transmute bar HP/Mana/Stamina e i tasti legacy `Z/X/F` sono utility slot
+  class-aware. Il runtime server conserva ancora il path transmute solo finché
+  il pass abilities/protocol non lo rimuove.
 - **Master bot in Training deve eseguire knockup → follow-up combo**. Novice: solo M1. Competent: abilità ma no combo. Master: KNOCKUP → instant follow-up nella finestra aerea. Spec completa in `07_modes.md`.
 - **Training deve mostrare end-screen stats** anche senza auth: time alive, damage dealt/taken, knockup conversions, parry successes, abilities used.
 

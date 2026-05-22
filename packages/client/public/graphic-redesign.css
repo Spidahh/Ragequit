@@ -811,24 +811,6 @@ body:not(.main-menu-active):not(.loadout-active) .bar .label {
   color: rgba(237, 241, 251, 0.94) !important;
 }
 
-body:not(.main-menu-active):not(.loadout-active) #transmute-bar {
-  display: flex !important;
-  margin-top: 6px !important;
-}
-
-body:not(.main-menu-active):not(.loadout-active) .t-slot {
-  min-height: 32px !important;
-  border-radius: 3px !important;
-  border: 1px solid rgba(140, 165, 210, 0.15) !important;
-  border-bottom: 2px solid rgba(255, 210, 96, 0.22) !important;
-  background: rgba(7, 10, 17, 0.82) !important;
-}
-
-body:not(.main-menu-active):not(.loadout-active) .t-slot .t-key {
-  color: var(--rq-gold) !important;
-  text-shadow: none !important;
-}
-
 body:not(.main-menu-active):not(.loadout-active) #status-strip {
   left: 28px !important;
   bottom: 204px !important;

@@ -107,27 +107,6 @@
         </div>
       </div>
       <div id="mastery-badge"></div>
-      <!-- Transmute bar: fixed conversions between HP/Mana/Stamina -->
-      <div id="transmute-bar">
-        <div class="t-slot ready" id="t-hp-mana" data-dir="hp_mana">
-          <span class="t-key">Z</span>
-          <span class="t-arrow"><b class="res-hp">HP</b>→<b class="res-mana">MP</b></span>
-          <span class="t-label">HP to Mana</span>
-          <span class="t-cd-text"></span>
-        </div>
-        <div class="t-slot ready" id="t-mana-stam" data-dir="mana_stam">
-          <span class="t-key">X</span>
-          <span class="t-arrow"><b class="res-mana">MP</b>→<b class="res-stam">ST</b></span>
-          <span class="t-label">Mana to Stamina</span>
-          <span class="t-cd-text"></span>
-        </div>
-        <div class="t-slot ready" id="t-stam-hp" data-dir="stam_hp">
-          <span class="t-key">F</span>
-          <span class="t-arrow"><b class="res-stam">ST</b>→<b class="res-hp">HP</b></span>
-          <span class="t-label">Stamina to HP</span>
-          <span class="t-cd-text"></span>
-        </div>
-      </div>
       <div id="hud-resize-handle" title="Resize HUD"></div>
     </div>
 
@@ -220,7 +199,7 @@
           <div><b>RMB</b><span>Parry</span></div>
           <div><b data-keybind-label="swapWeapon">Tab</b><span>Swap weapon</span></div>
           <div><b><span data-keybind-label="wheelAbility">E</span> / <span data-keybind-label="wheelUtility">Q</span> hold</b><span>Wheels</span></div>
-          <div><b><span data-keybind-label="transferHpMana">Z</span> <span data-keybind-label="transferManaStam">X</span> <span data-keybind-label="transferStamHp">F</span></b><span>Resource swaps</span></div>
+          <div><b><span data-keybind-label="transferHpMana">Z</span> <span data-keybind-label="transferManaStam">X</span> <span data-keybind-label="transferStamHp">F</span></b><span>Utility slots</span></div>
           <div><b data-keybind-label="openLoadout">L</b><span>Loadout</span></div>
         </div>
       </div>
@@ -249,7 +228,7 @@
           <span class="menu-info-title">Wheel Controls</span>
           <div class="menu-info-line"><b><span data-keybind-label="wheelAbility">E</span> hold</b><span>abilities</span></div>
           <div class="menu-info-line"><b><span data-keybind-label="wheelUtility">Q</span> hold</b><span>utilities</span></div>
-          <div class="menu-info-line"><b><span data-keybind-label="transferHpMana">Z</span> <span data-keybind-label="transferManaStam">X</span> <span data-keybind-label="transferStamHp">F</span></b><span>fixed resource swaps</span></div>
+          <div class="menu-info-line"><b><span data-keybind-label="transferHpMana">Z</span> <span data-keybind-label="transferManaStam">X</span> <span data-keybind-label="transferStamHp">F</span></b><span>utility slots</span></div>
         </div>
       </div>
       <div class="footnote">Build your kit · master movement · win the duel</div>
@@ -313,9 +292,9 @@
             <div class="keybind-row"><button class="keybind-btn" data-keybind-action="spell5"></button> Spell 5</div>
             <div class="keybind-row"><button class="keybind-btn" data-keybind-action="wheelUtility"></button> Utility wheel</div>
             <div class="keybind-row"><button class="keybind-btn" data-keybind-action="wheelAbility"></button> Ability wheel</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="transferHpMana"></button> HP to Mana</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="transferManaStam"></button> Mana to Stamina</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="transferStamHp"></button> Stamina to HP</div>
+            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="transferHpMana"></button> Utility slot Z</div>
+            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="transferManaStam"></button> Utility slot X</div>
+            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="transferStamHp"></button> Utility slot F</div>
             <div class="keybind-row"><button class="keybind-btn" data-keybind-action="utilityAbility"></button> Utility</div>
             <div class="keybind-row"><button class="keybind-btn" data-keybind-action="openLoadout"></button> Loadout</div>
             <div class="keybind-row"><button class="keybind-btn" data-keybind-action="sensDown"></button> Sens -</div>

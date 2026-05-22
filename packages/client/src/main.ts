@@ -23,7 +23,6 @@ import {
   type ServerScoreMessage,
   type ServerStatusAppliedMessage,
   type ServerStatusExpiredMessage,
-  type ServerTransmuteResultMessage,
   type ServerZoneExpiredMessage,
   type ServerZoneSpawnedMessage,
   type StatusKind,
@@ -56,7 +55,6 @@ import { initHitFeedback } from './hud/hit-feedback.js'
 import { initDraggableHud } from './hud/hud-drag.js'
 import { initSelfHud } from './hud/self-hud.js'
 import { initStatusOverlay } from './hud/status-overlay.js'
-import { initTransmuteHud } from './hud/transmute-hud.js'
 import { ensureIconSprite, weaponIcon } from './icons.js'
 import { initCastDispatcher } from './input/cast-dispatcher.js'
 import { initGameInput, makeGameInputState } from './input/game-input.js'
@@ -184,19 +182,7 @@ const pauseSettingsBtn = document.getElementById('pause-settings') as HTMLButton
 const pauseLobbyBtn = document.getElementById('pause-lobby') as HTMLButtonElement
 const settingsOverlay = document.getElementById('settings-overlay')!
 
-// Transmute bar elements.
-const transmuteSlotEls: Record<string, HTMLElement> = {
-  hp_mana: document.getElementById('t-hp-mana')!,
-  mana_stam: document.getElementById('t-mana-stam')!,
-  stam_hp: document.getElementById('t-stam-hp')!,
-}
 function refreshKeybindHudLabels(): void {
-  transmuteSlotEls['hp_mana']!.querySelector<HTMLElement>('.t-key')!.textContent =
-    actionLabel('transferHpMana')
-  transmuteSlotEls['mana_stam']!.querySelector<HTMLElement>('.t-key')!.textContent =
-    actionLabel('transferManaStam')
-  transmuteSlotEls['stam_hp']!.querySelector<HTMLElement>('.t-key')!.textContent =
-    actionLabel('transferStamHp')
   weaponSlots.sword.querySelector<HTMLElement>('.key')!.textContent = actionLabel('swapWeapon')
   weaponSlots.bow.querySelector<HTMLElement>('.key')!.textContent = actionLabel('swapWeapon')
   weaponSlots.staff.querySelector<HTMLElement>('.key')!.textContent = actionLabel('swapWeapon')
@@ -283,16 +269,6 @@ const selfHud = initSelfHud({
 })
 
 const abilityFailHud = initAbilityFailHud({ statusStrip, gcdRingEl, serverToast, cooldownStrip })
-
-const transmuteHud = initTransmuteHud({
-  hudHpFill,
-  hudManaFill,
-  hudStamFill,
-  transmuteSlotEls,
-  cooldownStrip,
-  onWarn: (text) => abilityFailHud.onServerNote({ kind: 'warn', text }),
-  getSelfId: () => self?.sessionId,
-})
 
 onKeybindsChanged(() => {
   radialWheels.refreshAll()
@@ -1230,15 +1206,12 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
       if (msg.playerId === self?.sessionId) soundEngine.playParry()
     })
 
-    // Status / transmute / zone event listeners.
+    // Status / zone event listeners.
     joinedRoom.onMessage(MessageTypes.StatusApplied, (msg: ServerStatusAppliedMessage) => {
       if (isCurrentRoom()) statusOverlay.onStatusApplied(msg)
     })
     joinedRoom.onMessage(MessageTypes.StatusExpired, (msg: ServerStatusExpiredMessage) => {
       if (isCurrentRoom()) statusOverlay.onStatusExpired(msg)
-    })
-    joinedRoom.onMessage(MessageTypes.TransmuteResult, (msg: ServerTransmuteResultMessage) => {
-      if (isCurrentRoom()) transmuteHud.onTransmuteResult(msg)
     })
     joinedRoom.onMessage(MessageTypes.ZoneSpawned, (msg: ServerZoneSpawnedMessage) => {
       if (isCurrentRoom()) zoneVfx.onSpawned(msg)
@@ -1726,7 +1699,6 @@ function clearLocalMatchState(): void {
   victimHitStopUntilMs = 0
   shakeOffset.set(0, 0, 0)
   shakeDecay = 0
-  transmuteHud.reset()
   clearGameplayInputState()
   clearGameplayUi()
   projectileVfx.clear()
@@ -2396,7 +2368,6 @@ function render(now: number): void {
     lastKillerName,
     selfMesh,
     getCurrentLoadout: currentLoadoutArray,
-    updateTransmuteBar: transmuteHud.updateBar,
     setCastStartedAt: (ms) => {
       castStartedAtMs = ms
     },
