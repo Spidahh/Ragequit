@@ -46,6 +46,7 @@ import { Client, type Room } from 'colyseus.js'
 import * as THREE from 'three'
 
 import { SoundEngine } from './audio/sound-engine.js'
+import { type DeathcamData, type ScoreboardData } from './endgame.js'
 import { initAbilityFailHud } from './hud/ability-fail-hud.js'
 import { initCooldownStrip } from './hud/cd-strip.js'
 import { createCombatFeedHud } from './hud/combat-feed.js'
@@ -78,7 +79,6 @@ import {
 } from './render/characters.js'
 import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
 import { initPlacementPreview } from './render/placement-preview.js'
-import { type ScoreboardData, type DeathcamData } from './endgame.js'
 import { initProjectileVisuals, type SchemaProjectile } from './render/projectile-visuals.js'
 import { initRemotePlayers, type RemotePlayerSchema } from './render/remote-players.js'
 import { initSelfEmissive, STATUS_EMISSIVE } from './render/self-emissive.js'
@@ -775,8 +775,24 @@ interface MatchStats {
   parries: number
   masteryProcs: number
 }
-let selfStats: MatchStats = { kills: 0, yourHits: 0, damageDealt: 0, damageTaken: 0, knockups: 0, parries: 0, masteryProcs: 0 }
-let opponentStats: MatchStats = { kills: 0, yourHits: 0, damageDealt: 0, damageTaken: 0, knockups: 0, parries: 0, masteryProcs: 0 }
+let selfStats: MatchStats = {
+  kills: 0,
+  yourHits: 0,
+  damageDealt: 0,
+  damageTaken: 0,
+  knockups: 0,
+  parries: 0,
+  masteryProcs: 0,
+}
+let opponentStats: MatchStats = {
+  kills: 0,
+  yourHits: 0,
+  damageDealt: 0,
+  damageTaken: 0,
+  knockups: 0,
+  parries: 0,
+  masteryProcs: 0,
+}
 
 let lastHitDetails = {
   killer: '',
@@ -810,8 +826,24 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
     roundTimer.classList.remove('urgent')
   }
   if (msg.phase === 'lobby' || msg.phase === 'countdown') {
-    selfStats = { kills: 0, yourHits: 0, damageDealt: 0, damageTaken: 0, knockups: 0, parries: 0, masteryProcs: 0 }
-    opponentStats = { kills: 0, yourHits: 0, damageDealt: 0, damageTaken: 0, knockups: 0, parries: 0, masteryProcs: 0 }
+    selfStats = {
+      kills: 0,
+      yourHits: 0,
+      damageDealt: 0,
+      damageTaken: 0,
+      knockups: 0,
+      parries: 0,
+      masteryProcs: 0,
+    }
+    opponentStats = {
+      kills: 0,
+      yourHits: 0,
+      damageDealt: 0,
+      damageTaken: 0,
+      knockups: 0,
+      parries: 0,
+      masteryProcs: 0,
+    }
     lastHitDetails = { killer: '', ability: '', element: '', damage: 0 }
     matchStartMs = performance.now()
   }
@@ -819,85 +851,88 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
     // Release pointer lock so the cursor is visible and the scoreboard
     // buttons (BACK TO MENU) are clickable.
     if (document.pointerLockElement) document.exitPointerLock()
-    
+
     // Construct ScoreboardData dynamically
     const players = getSchemaPlayers()
     const selfSchema = players?.get(selfId)
-    
+
     let otherId = ''
     players?.forEach((_p, sid) => {
       if (sid !== selfId) otherId = sid
     })
     const otherSchema = otherId ? players?.get(otherId) : null
-    
+
     const selfName = selfSchema?.name || 'Player'
     const opponentName = otherSchema?.name || 'Opponent'
-    
-    // Retrieve build names based on active mastery/weapons
-    const selfElement = (selfSchema as any)?.masteryElement || 'PHYSICAL'
-    const selfLevel = (selfSchema as any)?.masteryLevel || 0
+
+    // Retrieve build names based on active mastery/weapons.
+    const selfElement = selfSchema?.masteryElement || 'PHYSICAL'
+    const selfLevel = selfSchema?.masteryLevel || 0
     const selfBuild = `${selfElement.toUpperCase()} ${selfLevel}/5 · ${selfSchema?.activeWeapon?.toUpperCase() || 'SWORD'} MAIN`
-    
-    const oppElement = (otherSchema as any)?.masteryElement || 'PHYSICAL'
-    const oppLevel = (otherSchema as any)?.masteryLevel || 0
+
+    const oppElement = otherSchema?.masteryElement || 'PHYSICAL'
+    const oppLevel = otherSchema?.masteryLevel || 0
     const oppBuild = `${oppElement.toUpperCase()} ${oppLevel}/5 · ${otherSchema?.activeWeapon?.toUpperCase() || 'SWORD'} MAIN`
-    
+
     // Determine winner based on score or kills
     const isWin = selfStats.kills >= opponentStats.kills
     const eloDelta = isWin ? 25 : -18
     const eloBefore = 1500
-    
-    // Get current map name
-    const arenaName = (room?.state as any)?.map?.name || 'OCTAGON'
+
+    const arenaName = getSchemaMapId()
     const matchMs = performance.now() - matchStartMs
-    
+
     const scoreboardData: ScoreboardData = {
       arena: arenaName.toUpperCase(),
       matchMs: matchMs > 0 ? matchMs : 120000,
       rounds: `${selfStats.kills}-${opponentStats.kills} rounds`,
       league: 'Gold III',
-      winner: isWin ? {
-        name: selfName,
-        build: selfBuild,
-        kills: selfStats.kills,
-        damageDealt: selfStats.damageDealt,
-        damageTaken: selfStats.damageTaken,
-        knockups: selfStats.knockups,
-        parries: selfStats.parries,
-        masteryProcs: selfStats.masteryProcs
-      } : {
-        name: opponentName,
-        build: oppBuild,
-        kills: opponentStats.kills,
-        damageDealt: opponentStats.damageDealt,
-        damageTaken: opponentStats.damageTaken,
-        knockups: opponentStats.knockups,
-        parries: opponentStats.parries,
-        masteryProcs: opponentStats.masteryProcs
-      },
-      loser: isWin ? {
-        name: opponentName,
-        build: oppBuild,
-        kills: opponentStats.kills,
-        damageDealt: opponentStats.damageDealt,
-        damageTaken: opponentStats.damageTaken,
-        knockups: opponentStats.knockups,
-        parries: opponentStats.parries,
-        masteryProcs: opponentStats.masteryProcs
-      } : {
-        name: selfName,
-        build: selfBuild,
-        kills: selfStats.kills,
-        damageDealt: selfStats.damageDealt,
-        damageTaken: selfStats.damageTaken,
-        knockups: selfStats.knockups,
-        parries: selfStats.parries,
-        masteryProcs: selfStats.masteryProcs
-      },
+      winner: isWin
+        ? {
+            name: selfName,
+            build: selfBuild,
+            kills: selfStats.kills,
+            damageDealt: selfStats.damageDealt,
+            damageTaken: selfStats.damageTaken,
+            knockups: selfStats.knockups,
+            parries: selfStats.parries,
+            masteryProcs: selfStats.masteryProcs,
+          }
+        : {
+            name: opponentName,
+            build: oppBuild,
+            kills: opponentStats.kills,
+            damageDealt: opponentStats.damageDealt,
+            damageTaken: opponentStats.damageTaken,
+            knockups: opponentStats.knockups,
+            parries: opponentStats.parries,
+            masteryProcs: opponentStats.masteryProcs,
+          },
+      loser: isWin
+        ? {
+            name: opponentName,
+            build: oppBuild,
+            kills: opponentStats.kills,
+            damageDealt: opponentStats.damageDealt,
+            damageTaken: opponentStats.damageTaken,
+            knockups: opponentStats.knockups,
+            parries: opponentStats.parries,
+            masteryProcs: opponentStats.masteryProcs,
+          }
+        : {
+            name: selfName,
+            build: selfBuild,
+            kills: selfStats.kills,
+            damageDealt: selfStats.damageDealt,
+            damageTaken: selfStats.damageTaken,
+            knockups: selfStats.knockups,
+            parries: selfStats.parries,
+            masteryProcs: selfStats.masteryProcs,
+          },
       eloBefore,
-      eloDelta
+      eloDelta,
     }
-    
+
     menu.showScoreboard(selfId, scoreboardData)
   }
 }
@@ -1328,7 +1363,7 @@ function onHit(msg: ServerHitMessage): void {
         }
       } else if (amISelf && !amIAttacker) {
         selfStats.damageTaken += msg.damage
-        
+
         // Cache victim hit details for deathcam
         const players = getSchemaPlayers()
         const killerName = players?.get(msg.attackerId)?.name || msg.attackerId.slice(0, 6)
@@ -1336,7 +1371,7 @@ function onHit(msg: ServerHitMessage): void {
           killer: killerName,
           ability: ABILITY_DEFS[msg.cause]?.name || msg.cause.toUpperCase(),
           element: msg.element || 'PHYSICAL',
-          damage: msg.damage
+          damage: msg.damage,
         }
       } else {
         // Opponent or other players

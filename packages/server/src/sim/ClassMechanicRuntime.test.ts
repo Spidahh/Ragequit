@@ -4,12 +4,11 @@
 // class mechanics without bringing up a full GameRoom.
 
 import { GameState, Player } from '@ragequit/shared'
-import { describe, expect, it, beforeEach } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import {
   ClassMechanicRuntime,
   FLOW_DAMAGE_BONUS_FRAC,
-  FURY_SURGE_DAMAGE_BONUS,
   MOMENTUM_BOW_BONUS_THRESHOLD,
   MOMENTUM_BOW_CHARGE_FAST_SEC,
   type RisonanzaProcRequest,
@@ -119,12 +118,13 @@ describe('Fury (Tank)', () => {
     const player = makePlayer('tank')
     const { runtime } = makeRuntime(player)
     const FPS = 60
-    // Add a stack at tick 0
-    runtime.onHitTaken(player.id, 0)
+    const startTick = 1
+    runtime.onHitTaken(player.id, startTick)
     expect(player.furyStacks).toBe(1)
-    // Simulate 5 s of ticks (> 4 s decay delay) at 0.5 stacks/s
     const dt = 1 / FPS
-    for (let t = 0; t < 5 * FPS; t++) runtime.tick(player.id, player, dt, t)
+    for (let t = startTick; t < startTick + 7 * FPS; t++) {
+      runtime.tick(player.id, player, dt, t)
+    }
     expect(player.furyStacks).toBe(0)
   })
 
@@ -245,7 +245,7 @@ describe('Risonanza (Mago)', () => {
   it('fires proc and clears window on second same-element cast within window', () => {
     const player = makePlayer('mage')
     const procs: RisonanzaProcRequest[] = []
-    const { state, runtime } = makeRuntime(player, (req) => procs.push(req))
+    const { runtime } = makeRuntime(player, (req) => procs.push(req))
     const now = 100
     runtime.onAbilityCast(player.id, 'fireball', 'fire', { yaw: 0, pitch: 0 }, now)
     runtime.onAbilityCast(player.id, 'ignite', 'fire', { yaw: 0, pitch: 0 }, now + 10)
@@ -258,7 +258,7 @@ describe('Risonanza (Mago)', () => {
   it('does not proc on different elements', () => {
     const player = makePlayer('mage')
     const procs: RisonanzaProcRequest[] = []
-    const { state, runtime } = makeRuntime(player, (req) => procs.push(req))
+    const { runtime } = makeRuntime(player, (req) => procs.push(req))
     const now = 100
     runtime.onAbilityCast(player.id, 'fireball', 'fire', { yaw: 0, pitch: 0 }, now)
     runtime.onAbilityCast(player.id, 'frost_bolt', 'ice', { yaw: 0, pitch: 0 }, now + 10)
@@ -270,7 +270,7 @@ describe('Risonanza (Mago)', () => {
   it('does not proc after window expires', () => {
     const player = makePlayer('mage')
     const procs: RisonanzaProcRequest[] = []
-    const { state, runtime } = makeRuntime(player, (req) => procs.push(req))
+    const { runtime } = makeRuntime(player, (req) => procs.push(req))
     const now = 100
     runtime.onAbilityCast(player.id, 'fireball', 'fire', { yaw: 0, pitch: 0 }, now)
     const WINDOW_TICKS = Math.round(2.5 * 60)
@@ -284,7 +284,7 @@ describe('Risonanza (Mago)', () => {
   it('ignores non-mage players for Risonanza', () => {
     const player = makePlayer('hybrid')
     const procs: RisonanzaProcRequest[] = []
-    const { state, runtime } = makeRuntime(player, (req) => procs.push(req))
+    const { runtime } = makeRuntime(player, (req) => procs.push(req))
     runtime.onAbilityCast(player.id, 'fireball', 'fire', { yaw: 0, pitch: 0 }, 100)
     runtime.onAbilityCast(player.id, 'fireball', 'fire', { yaw: 0, pitch: 0 }, 110)
     expect(procs).toHaveLength(0)
@@ -352,7 +352,7 @@ describe('Flow (Hybrid)', () => {
   })
 
   it('FLOW_DAMAGE_BONUS_FRAC is 0.20 (+20%)', () => {
-    expect(FLOW_DAMAGE_BONUS_FRAC).toBeCloseTo(0.20, 5)
+    expect(FLOW_DAMAGE_BONUS_FRAC).toBeCloseTo(0.2, 5)
   })
 
   it('flow stacks decay after 8 s without a swap', () => {

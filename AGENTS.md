@@ -19,7 +19,9 @@ Questa sezione va letta prima di tutto il resto. Contiene fatti già decisi e ve
 - `packages/client/public/ui/ragequit-logo-full.png` — **ESISTE**
 - `packages/client/public/ui/ragequit-logo-small.png` — **ESISTE**
 - `packages/client/public/icons-sprite.svg` — **ESISTE**
-- `packages/client/public/graphic-redesign.css` — **ESISTE**
+- `packages/client/public/graphic-redesign.css` — **ESISTE** ed è importato da
+  `packages/client/public/game-ui.css`; senza quell'override logo/menu/loadout
+  tornano alle dimensioni CSS legacy.
 - Il logo è già usato in `index.html`: `<img src="/ui/ragequit-logo-full.png" alt="RAGEQUIT">`
 
 ### Stato visivo — non è placeholder/bianco
@@ -78,6 +80,9 @@ Le seguenti sono decisioni documentate nei design docs. Non riaprirle, non tratt
   build in localStorage). Le build target sono per classe in
   `06_loadout_build.md`; il runtime classless conserva ancora lo snapshot
   legacy.
+- **Loadout salvato class-aware**: se una build locale legacy o di altra classe
+  non rispetta legalità, duplicati o budget slot della classe attiva, il client
+  deve ricadere sullo Starter Build di quella classe prima del send al server.
 - **Master bot in Training deve eseguire knockup → follow-up combo**. Novice: solo M1. Competent: abilità ma no combo. Master: KNOCKUP → instant follow-up nella finestra aerea. Spec completa in `07_modes.md`.
 - **Training deve mostrare end-screen stats** anche senza auth: time alive, damage dealt/taken, knockup conversions, parry successes, abilities used.
 

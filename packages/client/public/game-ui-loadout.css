@@ -852,3 +852,43 @@
   color: #08090d;
   box-shadow: 0 0 14px var(--class-color, rgba(212,160,74,0.4));
 }
+
+@media (max-width: 1399px) {
+  #ls-header,
+  #ls-body,
+  .station-buttons {
+    min-width: 0;
+  }
+
+  #ls-header {
+    grid-template-columns: minmax(236px, 0.82fr) minmax(0, 1fr);
+    gap: 12px;
+    align-content: end;
+    padding: 14px 24px;
+  }
+
+  #ls-class-selector,
+  #ls-flow-strip,
+  #mastery-pills {
+    min-width: 0;
+  }
+
+  #ls-class-selector {
+    flex-wrap: wrap;
+  }
+
+  .ls-class-tab {
+    flex: 1 1 138px;
+    min-width: 0;
+  }
+
+  #ls-body {
+    grid-template-columns: 250px minmax(360px, 0.95fr) minmax(390px, 1fr);
+    gap: 12px;
+    padding-inline: 24px;
+  }
+
+  .station-buttons {
+    padding-inline: 24px;
+  }
+}

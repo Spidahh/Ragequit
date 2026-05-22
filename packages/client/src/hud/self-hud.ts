@@ -8,10 +8,10 @@ import {
 } from '@ragequit/shared'
 import * as THREE from 'three'
 
+import { renderDeathcam, type DeathcamData } from '../endgame.js'
 import { statusIcon } from '../icons.js'
 
 import { ELEMENT_COLOR, type CooldownStripController } from './cd-strip.js'
-import { renderDeathcam, type DeathcamData } from '../endgame.js'
 
 const RESPAWN_TIPS: readonly string[] = [
   'RMB: tap for a parry window, hold to block repeated hits.',
@@ -164,7 +164,7 @@ export function initSelfHud({
         if (deathcamData) {
           renderDeathcam(respawnOverlay, {
             ...deathcamData,
-            timeToNextMs: secLeftMs
+            timeToNextMs: secLeftMs,
           })
         } else {
           if (respawnTipEl)

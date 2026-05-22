@@ -1,14 +1,16 @@
-import { CAPSULE_HALF_HEIGHT_M, CAPSULE_HEIGHT_M, CAPSULE_RADIUS_M } from '@ragequit/shared'
+import { CAPSULE_HALF_HEIGHT_M, CAPSULE_HEIGHT_M } from '@ragequit/shared'
 import * as THREE from 'three'
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js'
+
 import {
-  makeCharacter as proceduralMakeCharacter,
-  applyWeaponProp as newApplyWeaponProp,
   ELEMENT_COLORS,
+  applyWeaponProp as newApplyWeaponProp,
+  makeCharacter as proceduralMakeCharacter,
   type CharacterOpts,
-  type ElementId
+  type ElementId,
+  type WeaponId as CharacterWeaponId,
 } from '../character.js'
 
 // ---------------------------------------------------------------------------
@@ -666,11 +668,15 @@ export function disposeCharacterMixer(charGroup: THREE.Group): void {
 // Group origin = capsule centre (transform.y = CAPSULE_HALF_HEIGHT_M above ground).
 // userData['armorMat'] → primary team-colour material (used for emissive flashes).
 // userData['weaponGroup'] → THREE.Group for weapon prop swapping.
-export function makeCharacter(teamColor: number, optsOrToonGradient?: any): THREE.Group {
-  const opts = (optsOrToonGradient && !(optsOrToonGradient instanceof THREE.DataTexture))
-    ? optsOrToonGradient
-    : {};
-  const g = proceduralMakeCharacter(teamColor, opts);
+export function makeCharacter(
+  teamColor: number,
+  optsOrToonGradient?: CharacterOpts | THREE.DataTexture,
+): THREE.Group {
+  const opts =
+    optsOrToonGradient && !(optsOrToonGradient instanceof THREE.DataTexture)
+      ? optsOrToonGradient
+      : {}
+  const g = proceduralMakeCharacter(teamColor, opts)
 
   // Simple static round parry shield attached at hips origin.
   // Set visible on self parrying and remote player parrying.
@@ -678,130 +684,6 @@ export function makeCharacter(teamColor: number, optsOrToonGradient?: any): THRE
   shield.position.set(0, 0, -0.1)
   g.add(shield)
   g.userData['parryShield'] = shield
-
-  return g
-}
-
-function newMakeCharacter(teamColor: number, toonGradient: THREE.DataTexture): THREE.Group {
-  const g = new THREE.Group()
-
-  const armorMat = new THREE.MeshToonMaterial({
-    color: teamColor,
-    gradientMap: toonGradient,
-    emissive: teamColor,
-    emissiveIntensity: 0.1,
-  })
-  const darkMat = new THREE.MeshToonMaterial({ color: 0x1a1e2e, gradientMap: toonGradient })
-  const visorMat = new THREE.MeshBasicMaterial({
-    color: 0x70e8ff,
-    transparent: true,
-    opacity: 0.95,
-    side: THREE.DoubleSide,
-  })
-  const crestMat = new THREE.MeshToonMaterial({ color: 0xd8c060, gradientMap: toonGradient })
-  const detailMat = new THREE.MeshBasicMaterial({
-    color: 0x2a9de0,
-    transparent: true,
-    opacity: 0.8,
-  })
-
-  g.userData['armorMat'] = armorMat
-  g.userData['darkMat'] = darkMat
-
-  const addPart = (
-    geo: THREE.BufferGeometry,
-    mat: THREE.Material,
-    px: number,
-    py: number,
-    pz: number,
-    rx = 0,
-    ry = 0,
-    rz = 0,
-  ): THREE.Mesh => {
-    const m = new THREE.Mesh(geo, mat)
-    m.position.set(px, py, pz)
-    if (rx || ry || rz) m.rotation.set(rx, ry, rz)
-    m.castShadow = true
-    g.add(m)
-    return m
-  }
-
-  // Head — slightly larger for heroic look.
-  addPart(new THREE.SphereGeometry(0.2, 14, 10), armorMat, 0, 0.72, 0)
-  // Visor eye slits (angled inward for a fierce look).
-  addPart(new THREE.CircleGeometry(0.07, 10), visorMat, -0.075, 0.74, -0.195, 0, 0.12, 0)
-  addPart(new THREE.CircleGeometry(0.07, 10), visorMat, 0.075, 0.74, -0.195, 0, -0.12, 0)
-  // Helmet crest — a gold fin running front-to-back along the top.
-  addPart(new THREE.BoxGeometry(0.04, 0.12, 0.28), crestMat, 0, 0.895, 0)
-  addPart(new THREE.CylinderGeometry(0.025, 0.025, 0.28, 6), crestMat, 0, 0.895, 0, 0, 0, 0)
-  // Neck connector
-  addPart(new THREE.CylinderGeometry(0.068, 0.068, 0.12, 8), darkMat, 0, 0.54, 0)
-  // Torso (slightly taller).
-  addPart(new THREE.BoxGeometry(0.52, 0.6, 0.27), armorMat, 0, 0.17, 0)
-  // Chest accent stripe — gives detail without texture.
-  addPart(new THREE.BoxGeometry(0.1, 0.4, 0.28), detailMat, 0, 0.24, 0)
-  // Shoulder pauldrons (larger for heroic silhouette).
-  addPart(new THREE.BoxGeometry(0.16, 0.1, 0.22), armorMat, -0.36, 0.47, 0)
-  addPart(new THREE.BoxGeometry(0.16, 0.1, 0.22), armorMat, 0.36, 0.47, 0)
-  // Upper arms
-  addPart(new THREE.CylinderGeometry(0.075, 0.068, 0.3, 8), darkMat, -0.33, 0.22, 0, 0, 0, 0.24)
-  addPart(new THREE.CylinderGeometry(0.075, 0.068, 0.3, 8), darkMat, 0.33, 0.22, 0, 0, 0, -0.24)
-  // Lower arms
-  addPart(
-    new THREE.CylinderGeometry(0.064, 0.058, 0.26, 8),
-    darkMat,
-    -0.35,
-    -0.07,
-    0.03,
-    0.22,
-    0,
-    0.1,
-  )
-  addPart(
-    new THREE.CylinderGeometry(0.064, 0.058, 0.26, 8),
-    darkMat,
-    0.35,
-    -0.07,
-    0.03,
-    0.22,
-    0,
-    -0.1,
-  )
-  // Belt
-  addPart(new THREE.BoxGeometry(0.48, 0.09, 0.24), armorMat, 0, -0.12, 0)
-  // Upper legs
-  addPart(new THREE.CylinderGeometry(0.095, 0.084, 0.36, 8), darkMat, -0.13, -0.39, 0)
-  addPart(new THREE.CylinderGeometry(0.095, 0.084, 0.36, 8), darkMat, 0.13, -0.39, 0)
-  // Lower legs
-  addPart(new THREE.CylinderGeometry(0.082, 0.07, 0.31, 8), darkMat, -0.12, -0.72, 0.02, 0.07, 0, 0)
-  addPart(new THREE.CylinderGeometry(0.082, 0.07, 0.31, 8), darkMat, 0.12, -0.72, 0.02, 0.07, 0, 0)
-  // Boots
-  addPart(new THREE.BoxGeometry(0.18, 0.11, 0.32), darkMat, -0.12, -0.9, 0.04)
-  addPart(new THREE.BoxGeometry(0.18, 0.11, 0.32), darkMat, 0.12, -0.9, 0.04)
-
-  const shadow = new THREE.Mesh(
-    new THREE.CircleGeometry(CAPSULE_RADIUS_M * 1.15, 24),
-    new THREE.MeshBasicMaterial({
-      color: 0x000000,
-      transparent: true,
-      opacity: 0.55,
-      depthWrite: false,
-    }),
-  )
-  shadow.rotation.x = -Math.PI / 2
-  shadow.position.y = -CAPSULE_HEIGHT_M / 2 + 0.015
-  g.add(shadow)
-
-  const weaponGroup = new THREE.Group()
-  weaponGroup.position.set(0.38, -0.22, -0.08)
-  weaponGroup.rotation.set(0.25, 0, -0.18)
-  g.userData['weaponGroup'] = weaponGroup
-  g.add(weaponGroup)
-
-  const parryShield = makeParryShieldVisual()
-  parryShield.position.set(0, 0.08, -0.62)
-  g.userData['parryShield'] = parryShield
-  g.add(parryShield)
 
   return g
 }
@@ -868,26 +750,26 @@ export function setParryShieldState(
 
 export function applyWeaponProp(
   charGroup: THREE.Group,
-  weapon: any,
-  toonGradientOrElementHex?: any,
+  weapon: CharacterWeaponId | string,
+  toonGradientOrElementHex?: THREE.DataTexture | number,
 ): void {
-  let elementHex = 0xffe080;
+  let elementHex = 0xffe080
   if (typeof toonGradientOrElementHex === 'number') {
-    elementHex = toonGradientOrElementHex;
+    elementHex = toonGradientOrElementHex
   } else {
-    const element = charGroup.userData['element'] as ElementId | undefined;
+    const element = charGroup.userData['element'] as ElementId | undefined
     if (element) {
-      elementHex = ELEMENT_COLORS[element] ?? 0xffe080;
+      elementHex = ELEMENT_COLORS[element] ?? 0xffe080
     }
   }
 
-  let weaponId: 'sword' | 'bow' | 'staff' = 'sword';
-  const wStr = String(weapon).toLowerCase();
-  if (wStr.includes('bow')) weaponId = 'bow';
-  else if (wStr.includes('staff')) weaponId = 'staff';
-  else weaponId = 'sword';
+  let weaponId: 'sword' | 'bow' | 'staff' = 'sword'
+  const wStr = String(weapon).toLowerCase()
+  if (wStr.includes('bow')) weaponId = 'bow'
+  else if (wStr.includes('staff')) weaponId = 'staff'
+  else weaponId = 'sword'
 
-  newApplyWeaponProp(charGroup, weaponId, elementHex);
+  newApplyWeaponProp(charGroup, weaponId, elementHex)
 }
 
 export function makeCastRing(): THREE.Mesh {

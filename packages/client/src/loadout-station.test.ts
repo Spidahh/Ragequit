@@ -91,10 +91,57 @@ describe('loadout station smoke', () => {
     expect(msg['bow']).toEqual(['marksman_shot'])
     expect(msg['magicBase']).toEqual(['fireball', 'lightning_dash'])
     expect(msg['magicAdvanced']).toEqual(['arc_lift', 'meteor'])
-    expect(msg['utility']).toEqual(['adaptive_mend', 'quick_dash', 'cleanse_surge', 'barrier', 'smoke_screen'])
+    expect(msg['utility']).toEqual([
+      'adaptive_mend',
+      'quick_dash',
+      'cleanse_surge',
+      'barrier',
+      'smoke_screen',
+    ])
     // old positional magic field is gone
     expect(msg['magic']).toBeUndefined()
     expect(api.getLoadout()).toHaveLength(11)
+  })
+
+  it('resets an incompatible saved build before sending the active class loadout', () => {
+    localStorage.setItem(__loadoutStationSmoke.classStorageKey, 'hybrid')
+    localStorage.setItem(
+      __loadoutStationSmoke.storageKey,
+      JSON.stringify({
+        slots: [
+          'uppercut',
+          'marksman_shot',
+          'fireball',
+          'lightning_dash',
+          'chain_bolt',
+          'arc_lift',
+          'meteor',
+          'adaptive_mend',
+          'quick_dash',
+          'cleanse_surge',
+          'barrier',
+        ],
+      }),
+    )
+
+    const send = vi.fn()
+    const room = { send } as never
+    const api = initLoadoutStation(() => room)
+
+    api.open()
+    document.getElementById('ls-confirm')?.click()
+
+    const msg = send.mock.calls[0]?.[1] as Record<string, unknown>
+    expect(msg['magicBase']).toEqual(['fireball', 'lightning_dash'])
+    expect(msg['magicAdvanced']).toEqual(['arc_lift', 'meteor'])
+    expect(msg['utility']).toEqual([
+      'adaptive_mend',
+      'quick_dash',
+      'cleanse_surge',
+      'barrier',
+      'smoke_screen',
+    ])
+    expect(api.getLoadout()).not.toContain('chain_bolt')
   })
 
   it('saves local builds before connecting without treating it as a back action', () => {

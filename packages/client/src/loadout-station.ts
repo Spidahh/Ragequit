@@ -14,6 +14,7 @@ import {
   computeLoadoutMastery,
   CLASS_IDS,
   TARGET_CLASS_DEFS,
+  getAbilitySlotFamily,
   isAbilityLegalForClass,
   type ClassId,
   type AbilityDef,
@@ -38,9 +39,11 @@ const CLASS_STORAGE_KEY = 'ragequit.loadout.classId'
 // Class-specific mechanic descriptions shown in the vitals console.
 const CLASS_MECHANIC_DESC: Record<ClassId, string> = {
   tank: 'FURY — Ogni colpo subito senza parare accumula Fury. A 100 Fury scatta uno scudo automatico e il prossimo attacco Melee ignora il 30% di riduzione danni.',
-  archer: 'MOMENTUM — Ogni tiro in movimento senza fermarsi aumenta il Momentum. A 5 stack il prossimo attacco ottiene +40% velocità freccia e ignora lo scudo nemico.',
+  archer:
+    'MOMENTUM — Ogni tiro in movimento senza fermarsi aumenta il Momentum. A 5 stack il prossimo attacco ottiene +40% velocità freccia e ignora lo scudo nemico.',
   mage: 'RISONANZA — Incantesimi dello stesso elemento cast in sequenza aumentano la Risonanza. A 3 stack il prossimo cast è potenziato: +25% danno e costo mana dimezzato.',
-  hybrid: 'FLOW — Ogni abilità cast da una famiglia diversa dalla precedente aumenta il Flow. A 4 stack le prossime 2 abilità ignoreranno il GCD globale.',
+  hybrid:
+    'FLOW — Ogni abilità cast da una famiglia diversa dalla precedente aumenta il Flow. A 4 stack le prossime 2 abilità ignoreranno il GCD globale.',
 }
 
 // Starter preset builds per class — full 11-slot class-aware builds.
@@ -51,59 +54,59 @@ const CLASS_MECHANIC_DESC: Record<ClassId, string> = {
 const CLASS_STARTER_PRESETS: Record<ClassId, string[]> = {
   // Tank: 3 melee + 2 bow + 6 utility = 11
   tank: [
-    'uppercut',       // slot 0 — melee (Uppercut: knockup setup)
-    'piercing_shot',  // slot 1 — bow   (Piercing Shot: physical cashout)
-    'gap_closer',     // slot 2 — melee (Gap Closer: engage dash)
-    'guard_break',    // slot 3 — melee (Guard Break: short-range setup)
+    'uppercut', // slot 0 — melee (Uppercut: knockup setup)
+    'piercing_shot', // slot 1 — bow   (Piercing Shot: physical cashout)
+    'gap_closer', // slot 2 — melee (Gap Closer: engage dash)
+    'guard_break', // slot 3 — melee (Guard Break: short-range setup)
     'disengage_shot', // slot 4 — bow   (Disengage Shot: spacing tool)
     'brace_recovery', // slot 5 — utility (Recovery — always first in build)
-    'barrier',        // slot 6 — utility
-    'cleanse_surge',  // slot 7 — utility
-    'quick_dash',     // slot 8 — utility
-    'energize',       // slot 9 — utility (Stamina economy)
-    'smoke_screen',   // slot 10 — utility
+    'barrier', // slot 6 — utility
+    'cleanse_surge', // slot 7 — utility
+    'quick_dash', // slot 8 — utility
+    'energize', // slot 9 — utility (Stamina economy)
+    'smoke_screen', // slot 10 — utility
   ],
   // Arciere: 3 bow + 4 magicBase + 4 utility = 11
   archer: [
-    'dark_barrier',   // slot 0 — magicBase (protection without stopping ranged play)
-    'pin_shot',       // slot 1 — bow   (ranged setup)
-    'marksman_shot',  // slot 2 — bow   (precision cashout)
+    'dark_barrier', // slot 0 — magicBase (protection without stopping ranged play)
+    'pin_shot', // slot 1 — bow   (ranged setup)
+    'marksman_shot', // slot 2 — bow   (precision cashout)
     'disengage_shot', // slot 3 — bow   (spacing response)
-    'frost_bolt',     // slot 4 — magicBase (control projectile)
-    'fireball',       // slot 5 — magicBase (splash projectile)
+    'frost_bolt', // slot 4 — magicBase (control projectile)
+    'fireball', // slot 5 — magicBase (splash projectile)
     'lightning_dash', // slot 6 — magicBase (magic movement)
-    'hunters_flow',   // slot 7 — utility (Recovery + Momentum spend)
-    'quick_dash',     // slot 8 — utility
-    'cleanse_surge',  // slot 9 — utility
-    'smoke_screen',   // slot 10 — utility
+    'hunters_flow', // slot 7 — utility (Recovery + Momentum spend)
+    'quick_dash', // slot 8 — utility
+    'cleanse_surge', // slot 9 — utility
+    'smoke_screen', // slot 10 — utility
   ],
   // Mago: 4 magicBase + 4 magicAdvanced + 3 utility = 11
   mage: [
-    'fireball',       // slot 0 — magicBase (Fire projectile pressure)
-    'ignite',         // slot 1 — magicBase (Fast Fire follow-up for Risonanza)
-    'frost_bolt',     // slot 2 — magicBase (Ice pressure)
-    'dark_barrier',   // slot 3 — magicBase (Magic protection)
-    'eruption',       // slot 4 — magicAdvanced (launch setup)
-    'meteor',         // slot 5 — magicAdvanced (high-commit Fire cashout)
-    'frost_pillar',   // slot 6 — magicAdvanced (windup launch path)
-    'blizzard',       // slot 7 — magicAdvanced (large control field)
-    'arcane_rebind',  // slot 8 — utility (Recovery — Mana/Risonanza survival)
-    'phase_shift',    // slot 9 — utility (timed survival counter)
-    'cleanse_surge',  // slot 10 — utility
+    'fireball', // slot 0 — magicBase (Fire projectile pressure)
+    'ignite', // slot 1 — magicBase (Fast Fire follow-up for Risonanza)
+    'frost_bolt', // slot 2 — magicBase (Ice pressure)
+    'dark_barrier', // slot 3 — magicBase (Magic protection)
+    'eruption', // slot 4 — magicAdvanced (launch setup)
+    'meteor', // slot 5 — magicAdvanced (high-commit Fire cashout)
+    'frost_pillar', // slot 6 — magicAdvanced (windup launch path)
+    'blizzard', // slot 7 — magicAdvanced (large control field)
+    'arcane_rebind', // slot 8 — utility (Recovery — Mana/Risonanza survival)
+    'phase_shift', // slot 9 — utility (timed survival counter)
+    'cleanse_surge', // slot 10 — utility
   ],
   // Ibrido: 1 melee + 1 bow + 2 magicBase + 2 magicAdvanced + 5 utility = 11
   hybrid: [
-    'uppercut',       // slot 0 — melee (sword setup)
-    'marksman_shot',  // slot 1 — bow   (bow cashout)
-    'fireball',       // slot 2 — magicBase (staff projectile pressure)
+    'uppercut', // slot 0 — melee (sword setup)
+    'marksman_shot', // slot 1 — bow   (bow cashout)
+    'fireball', // slot 2 — magicBase (staff projectile pressure)
     'lightning_dash', // slot 3 — magicBase (staff movement + weapon-swap reward)
-    'arc_lift',       // slot 4 — magicAdvanced (spell launch path)
-    'meteor',         // slot 5 — magicAdvanced (advanced cashout)
-    'adaptive_mend',  // slot 6 — utility (Recovery — Flow-spend)
-    'quick_dash',     // slot 7 — utility
-    'cleanse_surge',  // slot 8 — utility
-    'barrier',        // slot 9 — utility
-    'smoke_screen',   // slot 10 — utility
+    'arc_lift', // slot 4 — magicAdvanced (spell launch path)
+    'meteor', // slot 5 — magicAdvanced (advanced cashout)
+    'adaptive_mend', // slot 6 — utility (Recovery — Flow-spend)
+    'quick_dash', // slot 7 — utility
+    'cleanse_surge', // slot 8 — utility
+    'barrier', // slot 9 — utility
+    'smoke_screen', // slot 10 — utility
   ],
 }
 
@@ -111,17 +114,17 @@ const CLASS_STARTER_PRESETS: Record<ClassId, string[]> = {
 // Matches the Ibrido (hybrid) starter from 01_DESIGN/06_loadout_build.md.
 // Server DEFAULT_LOADOUT in GameRoom.ts must stay in sync with this.
 const DEFAULT_SLOTS: string[] = [
-  'uppercut',       // melee
-  'marksman_shot',  // bow
-  'fireball',       // magicBase
+  'uppercut', // melee
+  'marksman_shot', // bow
+  'fireball', // magicBase
   'lightning_dash', // magicBase
-  'arc_lift',       // magicAdvanced
-  'meteor',         // magicAdvanced
-  'adaptive_mend',  // utility (Ibrido Recovery)
-  'quick_dash',     // utility
-  'cleanse_surge',  // utility
-  'barrier',        // utility
-  'smoke_screen',   // utility
+  'arc_lift', // magicAdvanced
+  'meteor', // magicAdvanced
+  'adaptive_mend', // utility (Ibrido Recovery)
+  'quick_dash', // utility
+  'cleanse_surge', // utility
+  'barrier', // utility
+  'smoke_screen', // utility
 ]
 
 export interface LoadoutStationApi {
@@ -231,12 +234,18 @@ export function initLoadoutStation(
     try {
       const raw = localStorage.getItem(CLASS_STORAGE_KEY)
       if (raw && CLASS_IDS.includes(raw as ClassId)) return raw as ClassId
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     return 'hybrid'
   }
 
   function saveClassId(id: ClassId): void {
-    try { localStorage.setItem(CLASS_STORAGE_KEY, id) } catch { /* ignore */ }
+    try {
+      localStorage.setItem(CLASS_STORAGE_KEY, id)
+    } catch {
+      /* ignore */
+    }
   }
 
   function save(): void {
@@ -246,6 +255,33 @@ export function initLoadoutStation(
     } catch {
       // Storage is optional.
     }
+  }
+
+  function slotsFitClass(classId: ClassId, candidateSlots: readonly string[]): boolean {
+    const usedFamilies = new Map<string, number>()
+    const usedAbilities = new Set<string>()
+    const budget = TARGET_CLASS_DEFS[classId].slots
+
+    for (const id of normalizeLoadoutSlots(candidateSlots)) {
+      if (!id) continue
+      if (usedAbilities.has(id) || !ABILITY_DEFS[id] || !isAbilityLegalForClass(id, classId)) {
+        return false
+      }
+
+      usedAbilities.add(id)
+      const family = getAbilitySlotFamily(id)
+      const used = (usedFamilies.get(family) ?? 0) + 1
+      if (used > budget[family]) return false
+      usedFamilies.set(family, used)
+    }
+
+    return true
+  }
+
+  function resetSlotsForClass(classId: ClassId): void {
+    slots = normalizeLoadoutSlots(CLASS_STARTER_PRESETS[classId])
+    setActiveSlot(0)
+    save()
   }
 
   function loadInstantCastPrefs(): Record<string, boolean> {
@@ -623,6 +659,7 @@ export function initLoadoutStation(
   function applyClassId(id: ClassId): void {
     activeClassId = id
     saveClassId(id)
+    if (!slotsFitClass(id, slots)) resetSlotsForClass(id)
     // Update active tab UI
     classTabs.forEach((tab) => {
       const isActive = tab.dataset['class'] === id
@@ -651,7 +688,9 @@ export function initLoadoutStation(
   function rebuildClassVitals(): void {
     const classDef = TARGET_CLASS_DEFS[activeClassId]
     const { hp, mana, stamina } = classDef.resourceMaxima
-    const HP_REF = 250, MANA_REF = 160, STAM_REF = 150
+    const HP_REF = 250,
+      MANA_REF = 160,
+      STAM_REF = 150
     if (vitalsClassName) vitalsClassName.textContent = classDef.label.toUpperCase()
     if (vitalsMechanicName) vitalsMechanicName.textContent = classDef.mechanicId.toUpperCase()
     if (vitalsMechanicDesc) vitalsMechanicDesc.textContent = CLASS_MECHANIC_DESC[activeClassId]
@@ -667,9 +706,7 @@ export function initLoadoutStation(
 
   btnPreset?.addEventListener('click', () => {
     if (buildLocked()) return
-    slots = normalizeLoadoutSlots(CLASS_STARTER_PRESETS[activeClassId])
-    setActiveSlot(0)
-    save()
+    resetSlotsForClass(activeClassId)
     rerender()
   })
 
@@ -686,9 +723,7 @@ export function initLoadoutStation(
 
   btnDefault.addEventListener('click', () => {
     if (buildLocked()) return
-    slots = normalizeLoadoutSlots(DEFAULT_SLOTS)
-    setActiveSlot(0)
-    save()
+    resetSlotsForClass(activeClassId)
     rerender()
   })
 
@@ -991,7 +1026,8 @@ function closestMasteryElement(
 ): ElementId | undefined {
   // Only suggest mastery when the active slot is a magic slot.
   const activeDef = slotIds[activeIdx] ? ABILITY_DEFS[slotIds[activeIdx]!] : undefined
-  const isActiveMagic = activeDef?.slot === 'magic' || (!activeDef && LOADOUT_SLOT_ORDER[activeIdx] === 'magic')
+  const isActiveMagic =
+    activeDef?.slot === 'magic' || (!activeDef && LOADOUT_SLOT_ORDER[activeIdx] === 'magic')
   if (!isActiveMagic) return undefined
   const counts: Partial<Record<ElementId, number>> = {}
   // Count magic abilities across all slots dynamically (not hardcoded 2..7)
@@ -1005,7 +1041,6 @@ function closestMasteryElement(
   if (!best || best[1] < 1) return undefined
   return best[0]
 }
-
 
 function roleBlock(role: AbilityRoleInfo): HTMLDivElement {
   const block = document.createElement('div')
@@ -1367,6 +1402,7 @@ function capitalize(value: string): string {
 
 export const __loadoutStationSmoke = {
   storageKey: STORAGE_KEY,
+  classStorageKey: CLASS_STORAGE_KEY,
   instantCastStorageKey: INSTANT_CAST_STORAGE_KEY,
   slotOrder: LOADOUT_SLOT_ORDER,
   defaultSlots: DEFAULT_SLOTS,

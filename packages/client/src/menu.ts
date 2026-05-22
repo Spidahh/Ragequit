@@ -17,8 +17,8 @@ import {
   type ServerScoreMessage,
 } from '@ragequit/shared'
 
-import { initKeybindLabels, initKeybindSettings } from './input/keybinds.js'
 import { renderScoreboard, type ScoreboardData } from './endgame.js'
+import { initKeybindLabels, initKeybindSettings } from './input/keybinds.js'
 
 export type MenuChoice = 'play1v1' | 'training' | 'loadout' | 'stats' | 'settings'
 export type GraphicsQuality = 'low' | 'med' | 'high'
@@ -86,7 +86,6 @@ export function initMenu(handlers: {
   const sbWinner = document.getElementById('scoreboard-winner')!
   const sbSelf = document.getElementById('scoreboard-self')!
   const sbOther = document.getElementById('scoreboard-other')!
-  const sbBack = document.getElementById('scoreboard-back') as HTMLButtonElement
   const settingsOverlay = document.getElementById('settings-overlay')!
   initKeybindLabels()
   document.body.classList.add('main-menu-active')

@@ -688,6 +688,41 @@ body.loadout-active canvas {
   border-top: 1px solid rgba(255, 210, 96, 0.12) !important;
 }
 
+@media (max-width: 1399px) {
+  #ls-header,
+  #ls-body,
+  .station-buttons {
+    min-width: 0 !important;
+  }
+
+  #ls-header {
+    height: auto !important;
+    min-height: 178px !important;
+    grid-template-columns: minmax(238px, 0.82fr) minmax(0, 1fr) !important;
+    align-content: end !important;
+  }
+
+  #ls-class-selector,
+  #ls-flow-strip,
+  #mastery-pills {
+    min-width: 0 !important;
+  }
+
+  #ls-class-selector {
+    flex-wrap: wrap !important;
+  }
+
+  .ls-class-tab {
+    flex: 1 1 138px !important;
+    min-width: 0 !important;
+  }
+
+  #ls-body {
+    height: calc(100vh - 264px) !important;
+    grid-template-columns: 250px minmax(360px, 0.95fr) minmax(390px, 1fr) !important;
+  }
+}
+
 @media (min-width: 1700px) {
   .rq-menu-brand { left: 96px; top: 136px; width: 470px; }
   #main-menu .tagline { left: 104px; top: 468px; }
