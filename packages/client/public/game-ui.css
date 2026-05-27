@@ -1421,7 +1421,24 @@ button.locked {
   font-size: 11px;
 }
 
-
+/* Combo chain hint — mostra la catena STARTER → FINISHER */
+.combo-chain-hint {
+  display: block;
+  margin-top: 6px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  border-left: 2px solid rgba(255, 210, 96, 0.6);
+  background: rgba(255, 210, 96, 0.06);
+  color: rgba(255, 210, 96, 0.85);
+  font: 700 9px/1.4 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.combo-chain-hint--finisher {
+  border-left-color: rgba(255, 80, 80, 0.6);
+  background: rgba(255, 80, 80, 0.06);
+  color: rgba(255, 160, 130, 0.9);
+}
 
 /* Station footer button row */
 .station-buttons {

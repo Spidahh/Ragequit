@@ -398,7 +398,7 @@ export function initLoadoutStation(
       def.range > 0 ? `${def.range}m` : 'self',
     ].join(' · ')
     detailsDesc.replaceChildren(
-      roleBlock(role),
+      roleBlock(role, def.comboRole),
       castModeBlock(def, isInstantCast(def)),
       renderEffectTags(def),
       quickStatBlock(quickStats),
@@ -806,7 +806,7 @@ function recommendationTags(
   return Array.from(new Set(tags)).slice(0, 2)
 }
 
-function roleBlock(role: AbilityRoleInfo): HTMLDivElement {
+function roleBlock(role: AbilityRoleInfo, comboRole?: AbilityDef['comboRole']): HTMLDivElement {
   const block = document.createElement('div')
   block.className = 'ability-role'
   const icon = document.createElement('span')
@@ -819,6 +819,20 @@ function roleBlock(role: AbilityRoleInfo): HTMLDivElement {
   const line = document.createElement('small')
   line.textContent = role.line
   copy.append(title, line)
+  // Combo chain hint: mostra la catena STARTER → FINISHER
+  if (comboRole === 'starter' || comboRole === 'extender') {
+    const chain = document.createElement('span')
+    chain.className = 'combo-chain-hint'
+    chain.textContent = comboRole === 'starter'
+      ? 'CATENA: QUESTO  →  [EXTENDER]  →  FINISHER  =  +25% DMG'
+      : 'CATENA: STARTER  →  QUESTO  →  FINISHER  =  +25% DMG'
+    copy.appendChild(chain)
+  } else if (comboRole === 'finisher' || comboRole === 'ray') {
+    const chain = document.createElement('span')
+    chain.className = 'combo-chain-hint combo-chain-hint--finisher'
+    chain.textContent = 'CATENA: STARTER  →  [EXTENDER]  →  QUESTO  =  +25% DMG'
+    copy.appendChild(chain)
+  }
   block.append(icon, copy)
   return block
 }
@@ -854,53 +868,53 @@ function renderEffectTags(def: AbilityDef): HTMLDivElement {
 const COMBO_ROLE_INFO: Record<AbilityDef['comboRole'], AbilityRoleInfo> = {
   starter: {
     icon: '^',
-    title: 'Combo Starter',
-    line: 'Applies launch, root, freeze, blind or stun.',
+    title: 'STARTER — Apri il combo',
+    line: 'Lancia in aria, radica o stordisce il nemico. Subito dopo usa un FINISHER per +25% danno bonus.',
   },
   extender: {
     icon: '[]',
-    title: 'Combo Extender',
-    line: 'Controls space with zones, slows or repeated ticks.',
+    title: 'EXTENDER — Prolunga il combo',
+    line: 'Zone persistenti, rallentamenti o tick ripetuti che tengono il nemico in combo window tra STARTER e FINISHER.',
   },
   finisher: {
     icon: '!',
-    title: 'Finisher',
-    line: 'High-value hit that gains +25% damage against airborne targets.',
+    title: 'FINISHER — Chiudi il combo',
+    line: 'Infligge +25% danno se il nemico è in aria o sotto CC. Usa un STARTER prima per attivare il bonus.',
   },
   ray: {
     icon: '|',
-    title: 'Instant Ray',
-    line: 'Instant line-of-sight hit if the target is under the crosshair.',
+    title: 'INSTANT RAY — Colpo diretto',
+    line: 'Colpisce istantaneamente se il nemico è sotto il mirino. Ottimo FINISHER contro bersagli lanciati in aria.',
   },
   pressure: {
     icon: '*',
-    title: 'Pressure',
-    line: 'Applies direct damage, bleed, burn, poison or fast threat.',
+    title: 'PRESSURE — Danno diretto',
+    line: 'Danno grezzo, bleed, burn o veleno. Funziona da solo senza richiedere setup.',
   },
   survival: {
     icon: '+',
-    title: 'Survival Tool',
-    line: 'Keeps you alive through healing, shield, sustain, or recovery.',
+    title: 'SURVIVAL — Tieniti vivo',
+    line: 'Healing, scudo o recupero risorse. Usa quando sei a bassa vita o hai bisogno di reset.',
   },
   counter: {
     icon: '<>',
-    title: 'Counter Tool',
-    line: 'Breaks pressure, cleanses, phases, disengages, or interrupts.',
+    title: 'COUNTER — Risposta al burst',
+    line: 'Cleanse, fase di invulnerabilità, interruzione o disimpegno. Reagisci al burst nemico.',
   },
   mobility: {
     icon: '>>',
-    title: 'Mobility',
-    line: 'Moves, dashes, teleports or repositions the player.',
+    title: 'MOBILITY — Spostamento',
+    line: 'Dash, teleport o riposizionamento. Utile sia per aggredire che per sfuggire.',
   },
   drain: {
     icon: '-',
-    title: 'Resource Drain',
-    line: 'Attacks enemy Mana or Stamina while creating tempo.',
+    title: 'DRAIN — Prosciuga risorse',
+    line: 'Attacca Mana o Stamina nemico. Se rimane senza risorse non può castare o schivare.',
   },
   resource: {
     icon: '=',
-    title: 'Resource Tool',
-    line: 'Converts or restores resources on a fixed utility rhythm.',
+    title: 'RECOVERY — Risorse proprie',
+    line: 'Recupero fisso di Mana/Stamina. Fondamentale per sostenere il ritmo di combattimento.',
   },
 }
 
