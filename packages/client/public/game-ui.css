@@ -1825,16 +1825,21 @@ button.locked {
 .tag-resource { color: #9ff4ff; border-color: rgba(0, 208, 255, 0.22); }
 
 /* ════════════════════════════════════════════════════════════
-   GAME UI OVERRIDES — slot e pool come in un vero videogioco
-   Icone compatte, griglia densa, sezioni per arma colorate
+/* ════════════════════════════════════════════════════════════
+   GAME UI OVERRIDES — layout videogioco, batte tutte le media query
    ════════════════════════════════════════════════════════════ */
+
+/* ── Forza il layout 2 colonne corretto su tutti i viewport ── */
+#ls-body {
+  grid-template-columns: 380px minmax(0, 1fr) !important;
+}
 
 /* ── Slot list: riga orizzontale wrap ── */
 .slot-list {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 6px;
   padding: 6px 8px 10px;
 }
 
@@ -1842,7 +1847,7 @@ button.locked {
 #ls-melee:not(:empty)::before        { content: "MELEE";    color: #d4824a; }
 #ls-bow:not(:empty)::before          { content: "BOW";      color: #5ab97a; }
 #ls-magic-base:not(:empty)::before   { content: "SPELL";    color: #9b6cf4; }
-#ls-magic-advanced:not(:empty)::before { content: "ADV";    color: #00d0ff; }
+#ls-magic-advanced:not(:empty)::before { content: "ADVANCED"; color: #00d0ff; }
 #ls-utility:not(:empty)::before      { content: "UTILITY";  color: #ffd260; }
 
 #ls-melee::before, #ls-bow::before,
@@ -1851,9 +1856,9 @@ button.locked {
   display: block;
   width: 100%;
   padding: 4px 8px;
-  font: 900 9px/1.4 var(--font-mono);
+  font: 900 9px/1.5 var(--font-mono);
   text-transform: uppercase;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.22em;
   border-left: 3px solid currentColor;
   background: color-mix(in srgb, currentColor 10%, transparent);
   opacity: 0.9;
@@ -1867,18 +1872,18 @@ button.locked {
 #ls-magic-advanced { --fam: #00d0ff; --fam-bg: rgba(0,208,255,0.05); }
 #ls-utility        { --fam: #ffd260; --fam-bg: rgba(255,210,96,0.05); }
 
-/* ── Slot card: icona grande stile videogioco ── */
+/* ── Slot card: icona game-style ── */
 .ls-slot {
   position: relative;
-  width: 88px;
-  min-height: 108px;
+  width: 92px;
+  min-height: 112px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0;
   padding: 0;
-  border: 1px solid color-mix(in srgb, var(--fam, var(--line)) 45%, var(--line));
-  border-top: 2px solid color-mix(in srgb, var(--fam, var(--gold)) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--fam, var(--line)) 40%, var(--line));
+  border-top: 2px solid color-mix(in srgb, var(--fam, var(--gold)) 65%, transparent);
   border-radius: 4px;
   background: var(--fam-bg, rgba(4, 6, 14, 0.88));
   cursor: pointer;
@@ -1892,18 +1897,19 @@ button.locked {
 
 .ls-slot:hover {
   transform: translateY(-2px);
-  background: color-mix(in srgb, var(--fam, #ffffff) 6%, rgba(12, 16, 28, 0.95));
-  box-shadow: 0 4px 18px rgba(0,0,0,0.55);
+  background: color-mix(in srgb, var(--fam, #8899cc) 8%, rgba(12, 16, 28, 0.97));
+  box-shadow: 0 6px 20px rgba(0,0,0,0.6),
+              0 0 10px color-mix(in srgb, var(--fam, #8899cc) 20%, transparent);
 }
 
 .ls-slot.active {
   border-top-color: var(--gold);
-  border-color: rgba(255, 210, 96, 0.55);
-  background: rgba(255, 210, 96, 0.07);
+  border-color: rgba(255, 210, 96, 0.6);
+  background: rgba(255, 210, 96, 0.08);
   box-shadow:
-    0 0 0 1px rgba(255,210,96,0.35),
-    0 0 20px rgba(255,210,96,0.2),
-    inset 0 0 14px rgba(255,210,96,0.05);
+    0 0 0 1px rgba(255,210,96,0.3),
+    0 0 22px rgba(255,210,96,0.25),
+    inset 0 0 16px rgba(255,210,96,0.06);
 }
 
 /* Element top-border accent */
@@ -1913,15 +1919,15 @@ button.locked {
 .ls-slot.el-dark      { border-top-color: #c060ff; }
 .ls-slot.el-nature    { border-top-color: var(--nature); }
 
-/* Icon area: grande e prominente */
+/* Icon area */
 .ls-slot-icon {
   grid-area: unset;
   align-self: unset;
   width: 100%;
-  height: 62px;
+  height: 64px;
   display: grid;
   place-items: center;
-  font-size: 28px;
+  font-size: 30px;
   border: none;
   border-bottom: 1px solid rgba(145, 170, 220, 0.1);
   border-radius: 3px 3px 0 0;
@@ -1939,7 +1945,7 @@ button.locked {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
-  font: 700 8.5px/1.2 var(--font-mono);
+  font: 700 8.5px/1.25 var(--font-mono);
   text-transform: uppercase;
   text-overflow: unset;
   white-space: normal;
@@ -1947,10 +1953,10 @@ button.locked {
   text-align: center;
 }
 
-/* Role: nascosto */
+/* Role: hidden */
 .ls-slot-role { display: none; }
 
-/* Cost: minuscolo sotto il nome */
+/* Cost */
 .ls-slot-cost {
   grid-area: unset;
   width: 100%;
@@ -1963,7 +1969,7 @@ button.locked {
   text-overflow: ellipsis;
 }
 
-/* Keybind badge: absolute bottom-right */
+/* Keybind badge */
 .ls-slot-label {
   grid-area: unset;
   position: absolute;
@@ -1975,13 +1981,13 @@ button.locked {
   min-height: 14px;
   border: 1px solid rgba(255, 210, 96, 0.3);
   border-radius: 2px;
-  background: rgba(0,0,0,0.6);
-  color: rgba(255, 210, 96, 0.7);
+  background: rgba(0,0,0,0.65);
+  color: rgba(255, 210, 96, 0.75);
   font: 900 7px/14px var(--font-mono);
   padding: 0 2px;
 }
 
-/* Cast mode badge: absolute top-left */
+/* Cast mode badge */
 .ls-slot-mode {
   grid-area: unset;
   justify-self: unset;
@@ -1998,7 +2004,7 @@ button.locked {
 .ls-slot-mode.instant { color: #39ff14; }
 .ls-slot-mode.preview { color: var(--gold); }
 
-/* Clear X: absolute top-right */
+/* Clear X */
 .ls-slot-clear {
   grid-area: unset;
   position: absolute;
@@ -2018,32 +2024,32 @@ button.locked {
 /* Empty slot */
 .ls-slot:not([data-idx]) .ls-slot-icon,
 .ls-slot .ls-slot-name:empty {
-  opacity: 0.3;
+  opacity: 0.28;
 }
 
-/* ── Pool: griglia icone compatte ── */
+/* ── Pool: griglia icone — forza dimensione corretta ── */
 .pool-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
   align-content: start;
-  gap: 5px;
+  gap: 6px;
   padding: 10px;
   overflow-y: auto;
   flex: 1 1 auto;
   min-height: 0;
 }
 
-/* Pool card: tile icona */
+/* Pool card */
 .pool-card {
   position: relative;
   --ability-color: var(--gold);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0 0 5px;
+  padding: 0 0 6px;
   border: 1px solid color-mix(in srgb, var(--ability-color) 30%, rgba(145,170,220,0.1));
   border-top: 2px solid color-mix(in srgb, var(--ability-color) 55%, transparent);
-  border-radius: 3px;
+  border-radius: 4px;
   background: rgba(6, 8, 16, 0.92);
   cursor: pointer;
   text-align: center;
@@ -2058,43 +2064,36 @@ button.locked {
 
 .pool-card:hover {
   transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--ability-color) 65%, transparent);
-  background: color-mix(in srgb, var(--ability-color) 8%, rgba(6,8,16,0.96));
-  box-shadow: 0 0 14px color-mix(in srgb, var(--ability-color) 28%, transparent);
+  border-color: color-mix(in srgb, var(--ability-color) 70%, transparent);
+  background: color-mix(in srgb, var(--ability-color) 8%, rgba(6,8,16,0.97));
+  box-shadow: 0 0 16px color-mix(in srgb, var(--ability-color) 30%, transparent),
+              0 4px 12px rgba(0,0,0,0.5);
 }
 
 .pool-card.recommended {
   border-color: rgba(0, 255, 136, 0.45);
   border-top-color: rgba(0, 255, 136, 0.7);
-  background: rgba(6, 8, 16, 0.92);
 }
 .pool-card.equipped {
-  border-color: rgba(255, 210, 96, 0.5);
-  border-top-color: rgba(255, 210, 96, 0.8);
-  background: rgba(255, 210, 96, 0.06);
-  opacity: 1;
-}
-.pool-card.equipped::after {
-  content: 'E';
-  position: absolute;
-  top: 4px; right: 5px;
-  font: 900 9px/1 var(--font-mono);
-  color: var(--gold);
+  border-color: rgba(255, 210, 96, 0.55);
+  border-top-color: rgba(255, 210, 96, 0.85);
+  background: rgba(255, 210, 96, 0.07);
+  box-shadow: 0 0 10px rgba(255,210,96,0.15);
 }
 
-/* Pool icon: grande */
+/* Pool icon */
 .pool-icon,
 .pool-icon-box {
   grid-area: unset;
   width: 100%;
-  height: 64px;
+  height: 68px;
   display: grid;
   place-items: center;
   border: none;
   border-bottom: 1px solid color-mix(in srgb, var(--ability-color) 18%, rgba(145,170,220,0.08));
-  border-radius: 2px 2px 0 0;
+  border-radius: 3px 3px 0 0;
   background: color-mix(in srgb, var(--ability-color) 10%, rgba(0,0,0,0.45));
-  font-size: 28px;
+  font-size: 30px;
 }
 
 /* Pool name */
@@ -2105,13 +2104,13 @@ button.locked {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
-  font: 700 8px/1.2 var(--font-mono);
+  font: 700 8.5px/1.25 var(--font-mono);
   text-transform: uppercase;
   text-overflow: unset;
   white-space: normal;
   color: var(--text);
-  padding: 4px 3px 0;
-  min-height: 20px;
+  padding: 4px 4px 0;
+  min-height: 21px;
   text-align: center;
 }
 
@@ -2119,15 +2118,15 @@ button.locked {
 .pool-meta {
   grid-area: unset;
   grid-column: unset;
-  font: 700 7px/1 var(--font-mono);
+  font: 600 7px/1 var(--font-mono);
   color: var(--muted);
-  padding: 1px 3px 0;
+  padding: 2px 4px 0;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
 }
 
-/* Nascondi contenuto verboso nel pool */
+/* Nascondi contenuto verboso */
 .pool-topline,
 .pool-summary,
 .pool-bars,
@@ -2137,7 +2136,7 @@ button.locked {
 .starter-tag,
 .pool-card .pool-topline { display: none; }
 
-/* Element colors per pool card */
+/* Element colors */
 .pool-card.el-fire      { --ability-color: #ff6b35; }
 .pool-card.el-ice       { --ability-color: #44d4ff; }
 .pool-card.el-lightning { --ability-color: #f4e040; }
