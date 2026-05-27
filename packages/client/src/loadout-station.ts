@@ -316,10 +316,14 @@ export function initLoadoutStation(
     el.dataset['idx'] = String(idx)
     const role = def ? abilityRole(def) : undefined
     const slotKind = currentSlotOrder()[idx] ?? 'utility'
+    const SLOT_TYPE_LABELS: Record<string, string> = {
+      melee: 'MELEE', bow: 'BOW', magicBase: 'SPELL', magicAdvanced: 'ADVANCED', utility: 'UTILITY',
+    }
+    const emptyTypeLabel = SLOT_TYPE_LABELS[slotKind] ?? slotKind.toUpperCase()
     el.innerHTML = [
-      `<span class="ls-slot-icon">${def ? abilityIconMarkup(def.id) : slotKind.slice(0, 1).toUpperCase()}</span>`,
+      `<span class="ls-slot-icon">${def ? abilityIconMarkup(def.id) : `<span class="ls-slot-empty-type">${emptyTypeLabel}</span>`}</span>`,
       `<span class="ls-slot-label">${slotKeyLabel(idx)}</span>`,
-      `<span class="ls-slot-main"><span class="ls-slot-name">${def?.name ?? '— empty —'}</span><span class="ls-slot-role">${role?.title ?? slotPoolTitle(slotKind, idx)}</span></span>`,
+      `<span class="ls-slot-main"><span class="ls-slot-name">${def?.name ?? emptyTypeLabel}</span><span class="ls-slot-role">${role?.title ?? slotPoolTitle(slotKind, idx)}</span></span>`,
       def ? `<span class="ls-slot-cost">${formatCost(def)} · ${def.cooldownSec}s</span>` : '',
       def
         ? `<span class="ls-slot-mode ${isInstantCast(def) ? 'instant' : 'preview'}">${isInstantCast(def) ? 'INSTANT' : 'PREVIEW'}</span>`

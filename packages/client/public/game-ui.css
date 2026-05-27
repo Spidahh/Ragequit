@@ -2031,6 +2031,19 @@ button.locked {
   opacity: 0.28;
 }
 
+/* Etichetta tipo slot vuoto — es. "SPELL", "MELEE", "BOW" */
+.ls-slot-empty-type {
+  display: block;
+  font: 900 8px/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: color-mix(in srgb, var(--fam, var(--muted)) 85%, var(--text));
+  opacity: 0.65;
+  padding: 0 2px;
+  text-align: center;
+  word-break: break-all;
+}
+
 /* ── Pool: griglia icone — forza dimensione corretta ── */
 .pool-grid {
   display: grid;
