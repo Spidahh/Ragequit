@@ -1455,15 +1455,15 @@ button.locked {
 }
 
 .filter-btn {
-  min-height: 26px;
-  padding: 0 10px;
+  min-height: 30px;
+  padding: 0 13px;
   border: 1px solid var(--line);
-  border-radius: 3px;
+  border-radius: 4px;
   background: rgba(0, 0, 0, 0.2);
   color: var(--text-soft);
-  font: 900 9px/1 var(--font-mono);
+  font: 900 10px/1 var(--font-mono);
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   cursor: pointer;
   transition: all 0.12s;
 }
@@ -1793,13 +1793,13 @@ button.locked {
   word-break: break-all;
 }
 
-/* ── Pool: card più larghe, descrizione leggibile ── */
+/* ── Pool: card larghe e alte, tutto leggibile ── */
 .pool-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
   align-content: start;
-  gap: 6px;
-  padding: 8px;
+  gap: 8px;
+  padding: 10px;
   overflow: hidden;
   flex: 1 1 auto;
   min-height: 0;
