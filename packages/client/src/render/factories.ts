@@ -1,6 +1,8 @@
 import { SWORD_M1_CONE_HALF_ANGLE_RAD, SWORD_M1_RANGE_M } from '@ragequit/shared'
 import * as THREE from 'three'
 
+import { VfxTextures } from './vfx-textures.js'
+
 export function makeToonGradient(): THREE.DataTexture {
   const steps = 2
   const data = new Uint8Array(steps * 4)
@@ -31,8 +33,17 @@ export const SWING_ARC_SPAN = SWORD_M1_CONE_HALF_ANGLE_RAD * 2 // 120° = full c
 export const SWING_ARC_YAW_OFFSET = Math.PI / 2 + SWORD_M1_CONE_HALF_ANGLE_RAD // ≈ 2.618
 
 export function makeSwingArcMesh(): THREE.Mesh {
+  VfxTextures.init()
   const geo = new THREE.TorusGeometry(SWORD_M1_RANGE_M * 0.72, 0.14, 8, 22, SWING_ARC_SPAN)
-  const mat = new THREE.MeshBasicMaterial({ color: 0xfff0a0, transparent: true, opacity: 0 })
+  const mat = new THREE.MeshBasicMaterial({
+    map: VfxTextures.slash,
+    color: 0xffd260, // glowing gold tint matching active weapon palette
+    transparent: true,
+    opacity: 0,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide
+  })
   const m = new THREE.Mesh(geo, mat)
   m.visible = false
   return m

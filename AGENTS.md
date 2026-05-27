@@ -111,7 +111,7 @@ assunzioni precedenti come autorita.
   selezionare la N-esima magia viva nel loadout corrente, non indici hardcoded.
 - Le classi non possono esporre piu di 5 slot magia totali
   (`magicBase` + `magicAdvanced`), perche le magie vive hanno solo tasti
-  diretti `1`-`5`. Il Mago usa 3 Magic Base, 2 Magic Advanced, 3 Utility.
+  diretti `1`-`5`. Il Mago usa 3 Magic Base, 2 Magic Advanced, 3 Utility. Il Tank usa 4 Melee, 1 Bow, 3 Utility. L'Arciere usa 4 Bow, 2 Magic Base, 2 Utility. L'Ibrido usa 1 Melee, 1 Bow, 2 Magic Base, 2 Magic Advanced, 2 Utility.
 - Classi consentite nella UI: solo Tank, Arciere, Mago, Ibrido.
 - Conservare nel progetto solo asset runtime e contratti presenti approvati.
 - Le icone abilita vive sono PNG in `packages/client/public/ability-icons/`

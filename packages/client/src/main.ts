@@ -3,6 +3,7 @@
 
 import {
   ABILITY_DEFS,
+  CLASS_IDS,
   BOW_CHARGE_FULL_SEC,
   BOW_CHARGE_MIN_SEC,
   CAPSULE_HALF_HEIGHT_M,
@@ -87,12 +88,15 @@ import {
   disposeCharacterMixer,
   makeParryShieldVisual,
   setParryShieldState,
+  fetchWeaponGlb,
 } from './render/characters.js'
 import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
+import { createOutlineMesh } from './render/outlines.js'
 import { initPlacementPreview } from './render/placement-preview.js'
 import { initProjectileVisuals, type SchemaProjectile } from './render/projectile-visuals.js'
 import { initRemotePlayers, type RemotePlayerSchema } from './render/remote-players.js'
 import { initSelfEmissive, STATUS_EMISSIVE } from './render/self-emissive.js'
+import { VfxTextures } from './render/vfx-textures.js'
 import { initZoneVisuals, zoneColorForElement } from './render/zone-visuals.js'
 import {
   initTelemetry,
@@ -284,7 +288,7 @@ const abilityFailHud = initAbilityFailHud({ statusStrip, gcdRingEl, serverToast,
 
 onKeybindsChanged(() => {
   radialWheels.refreshAll()
-  cooldownStrip.rebuild(currentLoadoutArray())
+  cooldownStrip.rebuild(currentLoadoutArray(), getCurrentClassId())
   refreshKeybindHudLabels()
 })
 
@@ -303,6 +307,8 @@ const statusOverlay = initStatusOverlay({
 // -----------------------------------------------------------------------
 // Three.js scene
 // -----------------------------------------------------------------------
+
+VfxTextures.init()
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false })
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
@@ -393,72 +399,86 @@ function clearFirstPersonViewModel(): void {
   }
 }
 
-function viewMat(color: number, opacity = 1): THREE.MeshBasicMaterial {
-  return new THREE.MeshBasicMaterial({
-    color,
-    transparent: opacity < 1,
-    opacity,
-    depthTest: false,
-    depthWrite: false,
-  })
-}
-
-function addViewMesh(
-  geo: THREE.BufferGeometry,
-  mat: THREE.Material,
-  pos: THREE.Vector3Tuple,
-  rot: THREE.Vector3Tuple = [0, 0, 0],
-): void {
-  const mesh = new THREE.Mesh(geo, mat)
-  mesh.position.set(pos[0], pos[1], pos[2])
-  mesh.rotation.set(rot[0], rot[1], rot[2])
-  mesh.renderOrder = 999
-  firstPersonViewModel.add(mesh)
-}
-
 function rebuildFirstPersonViewModel(weapon: Weapon): void {
   clearFirstPersonViewModel()
   firstPersonViewWeapon = weapon
-  firstPersonViewModel.position.set(0.52, -0.46, -1.05)
-  firstPersonViewModel.rotation.set(-0.06, -0.1, 0.04)
 
-  const glove = viewMat(0x121826, 0.96)
-  const trim = viewMat(0xffd260, 0.88)
-  addViewMesh(new THREE.BoxGeometry(0.07, 0.09, 0.09), glove, [-0.05, -0.02, 0.03], [0.15, 0, 0.1])
-  addViewMesh(new THREE.BoxGeometry(0.018, 0.08, 0.1), trim, [-0.012, 0.0, 0.025], [0.15, 0, 0.1])
+  // Re-use the same weapon GLB cache as third-person props.
+  fetchWeaponGlb(weapon)
+    .then((scene) => {
+      // Guard against race conditions (if player swapped weapons while loading)
+      if (firstPersonViewWeapon !== weapon) return
 
-  if (weapon === 'bow') {
-    const bowMat = viewMat(0x8a5a2c, 0.96)
-    const stringMat = viewMat(0xd8d0a0, 0.9)
-    const arc = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.014, 8, 22, Math.PI * 1.45), bowMat)
-    arc.position.set(0.14, 0.04, -0.06)
-    arc.rotation.set(0.2, 0.15, -0.48)
-    arc.renderOrder = 999
-    firstPersonViewModel.add(arc)
-    addViewMesh(
-      new THREE.CylinderGeometry(0.003, 0.003, 0.32, 4),
-      stringMat,
-      [0.05, 0.04, -0.05],
-      [0.15, 0.05, -0.08],
-    )
-  } else if (weapon === 'staff') {
-    const staffMat = viewMat(0x241a3a, 0.96)
-    const orbMat = viewMat(0x00d0ff, 0.86)
-    const ringMat = viewMat(0xffd260, 0.58)
-    addViewMesh(
-      new THREE.CylinderGeometry(0.014, 0.018, 0.52, 8),
-      staffMat,
-      [0.12, 0.08, -0.05],
-      [0.38, 0.05, -0.28],
-    )
-    addViewMesh(new THREE.SphereGeometry(0.052, 10, 8), orbMat, [0.19, 0.3, -0.15])
-    addViewMesh(
-      new THREE.TorusGeometry(0.075, 0.007, 6, 20),
-      ringMat,
-      [0.19, 0.3, -0.15],
-      [Math.PI / 3, 0.2, 0],
-    )
-  }
+      clearFirstPersonViewModel()
+      const model = scene.clone()
+
+      // Reset firstPersonViewModel base transforms to avoid double offsets
+      firstPersonViewModel.position.set(0, 0, 0)
+      firstPersonViewModel.rotation.set(0, 0, 0)
+
+      // Use overlay-safe materials so first-person weapons never clip into arena walls.
+      model.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.renderOrder = 999 // render on top of environment
+          const src = child.material as THREE.MeshStandardMaterial | THREE.MeshToonMaterial | undefined
+          const hasMap = !!(src && 'map' in src && src.map && !(src.map instanceof Function))
+          const color = src?.color?.clone() ?? new THREE.Color(0xffffff)
+
+          const nameLower = child.name.toLowerCase()
+          const isGlowing =
+            nameLower.includes('glow') ||
+            nameLower.includes('glyph') ||
+            nameLower.includes('orb') ||
+            nameLower.includes('element')
+
+          child.material = new THREE.MeshBasicMaterial({
+            color: isGlowing ? new THREE.Color(0x00d0ff) : color,
+            map: hasMap ? src.map : null,
+            transparent: src?.transparent ?? false,
+            opacity: src?.opacity ?? 1.0,
+            depthTest: false, // first person weapon shouldn't clip into walls
+            depthWrite: false,
+          })
+        }
+      })
+
+      // Add outlines to keep weapon silhouettes readable in dark arenas.
+      const outlines: THREE.Mesh[] = []
+      model.traverse((child) => {
+        if (child instanceof THREE.Mesh && !child.name.endsWith('_outline')) {
+          const outline = createOutlineMesh(child, 0.016, 0x0a0a0f)
+          outline.renderOrder = 999
+          if (outline.material instanceof THREE.Material) {
+            outline.material.depthTest = false
+            outline.material.depthWrite = false
+          }
+          outlines.push(outline)
+        }
+      })
+      for (const outline of outlines) {
+        outline.parent?.add(outline)
+      }
+
+      // Weapon-specific first-person positions and orientations.
+      if (weapon === 'sword') {
+        model.position.set(0.18, -0.25, -0.5)
+        model.rotation.set(-0.25, -0.4, 0.1)
+        model.scale.setScalar(0.55)
+      } else if (weapon === 'bow') {
+        model.position.set(0.16, -0.22, -0.5)
+        model.rotation.set(-0.1, -0.2, -0.2)
+        model.scale.setScalar(0.5)
+      } else if (weapon === 'staff') {
+        model.position.set(0.19, -0.25, -0.5)
+        model.rotation.set(-0.15, -0.3, -0.05)
+        model.scale.setScalar(0.52)
+      }
+
+      firstPersonViewModel.add(model)
+    })
+    .catch((err) => {
+      console.error(`[first-person] Failed to load weapon model ${weapon}:`, err)
+    })
 }
 
 const { loadMapGeometry, getActiveMapId, animateArena } = buildArena(scene, toonGradient)
@@ -1218,7 +1238,7 @@ function initPlayerProfile(): void {
     if (savedClass && savedSlotsRaw) {
       try {
         const parsed = JSON.parse(savedSlotsRaw) as { slots?: string[] }
-        if (parsed.slots && parsed.slots.length === 11 && parsed.slots.some(Boolean)) {
+        if (parsed.slots && parsed.slots.length === 8 && parsed.slots.some(Boolean)) {
           localStorage.setItem('ragequit.profile.configured', 'true')
           isConfigured = true
         }
@@ -1377,6 +1397,14 @@ const loadoutStation = initLoadoutStation(
           ? 'START FFA'
           : null,
 )
+function getCurrentClassId(): ClassId {
+  const schemaPlayer = getSelfSchemaPlayer?.()
+  if (schemaPlayer?.classId && (CLASS_IDS as readonly string[]).includes(schemaPlayer.classId)) {
+    return schemaPlayer.classId as ClassId
+  }
+  return loadoutStation.getClassId()
+}
+
 const radialWheels = initRadialWheels({
   abilityWheelEl,
   getLoadout: currentLoadoutArray,
@@ -1395,6 +1423,7 @@ const radialWheels = initRadialWheels({
     return Math.max(0, remaining)
   },
   isInstantCast: (abilityId) => loadoutStation.isInstantCast(abilityId),
+  getClassId: getCurrentClassId,
 })
 
 async function connectWithMode(mode: string, reopenLoadout = true): Promise<void> {
@@ -2585,6 +2614,9 @@ function reconcileSelf(): void {
 
 const simTimer = setInterval(simStep, TICK_MS)
 
+const renderPos = new THREE.Vector3()
+let renderPosInitialized = false
+
 // -----------------------------------------------------------------------
 // Render loop
 // -----------------------------------------------------------------------
@@ -2669,14 +2701,24 @@ function render(now: number): void {
     // when the camera is very close so you never clip through your own head.
     selfMesh.visible = !dead
 
-    let x = self.sim.pos.x
-    let y = self.sim.pos.y
-    let z = self.sim.pos.z
+    const distToSim = Math.hypot(self.sim.pos.x - renderPos.x, self.sim.pos.y - renderPos.y, self.sim.pos.z - renderPos.z)
     if (dead && selfSchema) {
-      x = selfSchema.transform.x
-      y = selfSchema.transform.y
-      z = selfSchema.transform.z
+      renderPos.set(selfSchema.transform.x, selfSchema.transform.y, selfSchema.transform.z)
+      renderPosInitialized = true
+    } else if (!renderPosInitialized || distToSim > 10) {
+      renderPos.set(self.sim.pos.x, self.sim.pos.y, self.sim.pos.z)
+      renderPosInitialized = true
+    } else {
+      const lerpSpeed = 25
+      const lerpFactor = Math.min(1, lerpSpeed * dt)
+      renderPos.x += (self.sim.pos.x - renderPos.x) * lerpFactor
+      renderPos.y += (self.sim.pos.y - renderPos.y) * lerpFactor
+      renderPos.z += (self.sim.pos.z - renderPos.z) * lerpFactor
     }
+
+    const x = renderPos.x
+    const y = renderPos.y
+    const z = renderPos.z
     // Idle breathing bob — tiny vertical sine when grounded, skipped airborne.
     const idleBob = !airborne && !dead ? Math.sin(now * 0.0028) * 0.014 : 0
     selfMesh.position.set(x, y + idleBob, z)
@@ -2930,6 +2972,7 @@ function render(now: number): void {
     lastKillerName,
     selfMesh,
     getCurrentLoadout: currentLoadoutArray,
+    getCurrentClassId,
     setCastStartedAt: (ms) => {
       castStartedAtMs = ms
     },

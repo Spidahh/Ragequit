@@ -1,6 +1,8 @@
 import { type ServerZoneSpawnedMessage, type ServerZoneExpiredMessage } from '@ragequit/shared'
 import * as THREE from 'three'
 
+import { VfxTextures } from './vfx-textures.js'
+
 interface ZoneVisual {
   mesh: THREE.Mesh
   extra?: THREE.Mesh
@@ -23,15 +25,15 @@ export interface ZoneVisualsController {
 export function zoneColorForElement(element: string): number {
   switch (element) {
     case 'fire':
-      return 0xff6a32
+      return 0xff5511 // warmer orange-red
     case 'ice':
-      return 0x9adfff
+      return 0x00d0ff
     case 'lightning':
-      return 0xfff066
+      return 0xffd200 // electric yellow
     case 'dark':
-      return 0x9060c0
+      return 0x9922ff // deep magic violet
     case 'nature':
-      return 0x7adf6a
+      return 0x39ff14 // emerald green
     default:
       return 0xc0c0c0
   }
@@ -44,18 +46,37 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
     if (zoneVisuals.has(msg.id)) return
     let mesh: THREE.Mesh
     const zColor = zoneColorForElement(msg.element)
+
     if (msg.shape === 'wall' && msg.width > 0) {
       const geo = new THREE.BoxGeometry(msg.width, 1.6, 0.4)
-      const mat = new THREE.MeshBasicMaterial({ color: zColor, transparent: true, opacity: 0.7 })
+
+      // Select the best texture map for the wall barrier
+      let wallMap: THREE.Texture
+      if (msg.element === 'fire') wallMap = VfxTextures.fire
+      else if (msg.element === 'ice') wallMap = VfxTextures.ice
+      else if (msg.element === 'nature') wallMap = VfxTextures.nature
+      else wallMap = VfxTextures.shield
+
+      const mat = new THREE.MeshBasicMaterial({
+        map: wallMap,
+        color: zColor,
+        transparent: true,
+        opacity: 0.85,
+        blending: THREE.AdditiveBlending, // glowing barriers
+        depthWrite: false,
+        side: THREE.DoubleSide
+      })
       mesh = new THREE.Mesh(geo, mat)
       mesh.position.set(msg.pos.x, msg.pos.y + 0.8, msg.pos.z)
       mesh.rotation.y = msg.yaw
 
       const edgeGeo = new THREE.BoxGeometry(msg.width + 0.08, 1.72, 0.06)
       const edgeMat = new THREE.MeshBasicMaterial({
+        map: VfxTextures.shield,
         color: 0xffffff,
         transparent: true,
-        opacity: 0.28,
+        opacity: 0.35,
+        blending: THREE.AdditiveBlending,
         depthWrite: false,
       })
       const edge = new THREE.Mesh(edgeGeo, edgeMat)
@@ -64,105 +85,73 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
       edge.position.x += Math.sin(msg.yaw) * 0.23
       edge.position.z += Math.cos(msg.yaw) * 0.23
 
-      // Draw stylized comic outline around the wall (thickness: 0.02)
-      const wallOutline = new THREE.Mesh(
-        mesh.geometry.clone(),
-        new THREE.ShaderMaterial({
-          uniforms: {
-            thickness: { value: 0.025 },
-            outlineColor: { value: new THREE.Color(0x050508) },
-          },
-          vertexShader: `
-            uniform float thickness;
-            void main() {
-              vec3 pos = position + normal * thickness;
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
-            }
-          `,
-          fragmentShader: `
-            uniform vec3 outlineColor;
-            void main() {
-              gl_FragColor = vec4(outlineColor, 1.0);
-            }
-          `,
-          side: THREE.BackSide,
-          depthWrite: true,
-        }),
-      )
-      mesh.add(wallOutline)
-
       scene.add(mesh)
       scene.add(edge)
       zoneVisuals.set(msg.id, { mesh, extra: edge, element: msg.element })
       return
     } else {
+      // Cylinder AoE zones (Blizzard, Storm Field, Thorn Field, etc.)
       const cylinderGeo = new THREE.CylinderGeometry(msg.radius, msg.radius, 1.8, 28, 1, true)
+
+      // Mapped with our glowing shield grid or elemental patterns
+      let domeMap: THREE.Texture
+      if (msg.element === 'fire') domeMap = VfxTextures.fire
+      else if (msg.element === 'ice') domeMap = VfxTextures.ice
+      else if (msg.element === 'nature') domeMap = VfxTextures.nature
+      else if (msg.element === 'dark') domeMap = VfxTextures.dark
+      else domeMap = VfxTextures.shield
+
       const cylinderMat = new THREE.MeshBasicMaterial({
+        map: domeMap,
         color: zColor,
         transparent: true,
-        opacity: 0.28,
+        opacity: 0.32,
+        blending: THREE.AdditiveBlending,
         side: THREE.DoubleSide,
+        depthWrite: false,
       })
       mesh = new THREE.Mesh(cylinderGeo, cylinderMat)
       mesh.position.set(msg.pos.x, msg.pos.y + 0.9, msg.pos.z)
-
-      // Draw stylized comic outline around the cylinder AoE bounds (thickness: 0.03)
-      const cylinderOutline = new THREE.Mesh(
-        cylinderGeo.clone(),
-        new THREE.ShaderMaterial({
-          uniforms: {
-            thickness: { value: 0.035 },
-            outlineColor: { value: new THREE.Color(0x050508) },
-          },
-          vertexShader: `
-            uniform float thickness;
-            void main() {
-              vec3 pos = position + normal * thickness;
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
-            }
-          `,
-          fragmentShader: `
-            uniform vec3 outlineColor;
-            void main() {
-              gl_FragColor = vec4(outlineColor, 1.0);
-            }
-          `,
-          side: THREE.BackSide,
-          depthWrite: true,
-        }),
-      )
-      mesh.add(cylinderOutline)
-
       scene.add(mesh)
 
-      const floorGeo = new THREE.RingGeometry(Math.max(0.1, msg.radius - 0.18), msg.radius, 28)
+      // Floor decal ring for readable zone ownership and radius.
+      const floorGeo = new THREE.RingGeometry(Math.max(0.1, msg.radius - 0.24), msg.radius, 28)
       floorGeo.rotateX(-Math.PI / 2)
+
+      let floorMap = VfxTextures.ring
+      if (msg.element === 'nature') floorMap = VfxTextures.nature
+
       const floorMat = new THREE.MeshBasicMaterial({
+        map: floorMap,
         color: zColor,
         transparent: true,
-        opacity: 0.55,
+        opacity: 0.82,
+        blending: THREE.AdditiveBlending,
         side: THREE.DoubleSide,
+        depthWrite: false,
       })
       const floorMesh = new THREE.Mesh(floorGeo, floorMat)
       floorMesh.position.set(msg.pos.x, msg.pos.y + 0.018, msg.pos.z)
       scene.add(floorMesh)
 
+      // Accent inner ring
       const accentGeo = new THREE.TorusGeometry(msg.radius * 0.72, 0.035, 6, 24)
       accentGeo.rotateX(-Math.PI / 2)
       const accentMat = new THREE.MeshBasicMaterial({
-        color: msg.element === 'dark' ? 0x170021 : 0xffffff,
+        map: VfxTextures.shield,
+        color: msg.element === 'dark' ? 0x9922ff : 0xffffff,
         transparent: true,
-        opacity: msg.element === 'dark' ? 0.34 : 0.22,
+        opacity: msg.element === 'dark' ? 0.45 : 0.35,
+        blending: THREE.AdditiveBlending,
         depthWrite: false,
       })
       const accentMesh = new THREE.Mesh(accentGeo, accentMat)
       accentMesh.position.set(msg.pos.x, msg.pos.y + 0.055, msg.pos.z)
       scene.add(accentMesh)
+
       zoneVisuals.set(msg.id, { mesh, extra: floorMesh, accent: accentMesh, element: msg.element })
       return
     }
-    scene.add(mesh)
-    zoneVisuals.set(msg.id, { mesh, element: msg.element })
   }
 
   function onExpired(msg: ServerZoneExpiredMessage): void {
@@ -205,26 +194,28 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
 
   function animateFrame(now: number): void {
     zoneVisuals.forEach((vis) => {
-      // Use a faster pulse for dangerous/aggressive elements (fire/lightning),
-      // slower for nature/ice zones — gives each element a distinct rhythm.
       const isFireOrLightning = vis.element === 'fire' || vis.element === 'lightning'
       const freq = isFireOrLightning ? 0.007 : 0.0035
       const pulse = 0.5 + 0.5 * Math.sin(now * freq)
+
       const mat = vis.mesh.material as THREE.MeshBasicMaterial
-      if ('opacity' in mat) mat.opacity = 0.16 + pulse * 0.2
-      vis.mesh.rotation.y += isFireOrLightning ? 0.01 : 0.006
+      if ('opacity' in mat) mat.opacity = 0.18 + pulse * 0.18
+      vis.mesh.rotation.y += isFireOrLightning ? 0.008 : 0.004
+
       if (vis.extra) {
-        // Floor ring pulses with slightly higher opacity for clear AoE boundary.
         const eMat = vis.extra.material as THREE.MeshBasicMaterial
-        if ('opacity' in eMat) eMat.opacity = 0.4 + pulse * 0.28
+        if ('opacity' in eMat) eMat.opacity = 0.52 + pulse * 0.28
+
+        // Keep the floor decal moving without changing the gameplay radius.
+        vis.extra.rotation.y += vis.element === 'dark' ? -0.006 : 0.004
       }
       if (vis.accent) {
         const aMat = vis.accent.material as THREE.MeshBasicMaterial
-        if ('opacity' in aMat) aMat.opacity = 0.12 + pulse * 0.2
-        vis.accent.rotation.z += vis.element === 'dark' ? -0.018 : 0.014
-        if (vis.element === 'ice') vis.accent.scale.setScalar(1.0 + pulse * 0.05)
+        if ('opacity' in aMat) aMat.opacity = 0.18 + pulse * 0.2
+        vis.accent.rotation.y += vis.element === 'dark' ? -0.012 : 0.008
+        if (vis.element === 'ice') vis.accent.scale.setScalar(1.0 + pulse * 0.04)
         else if (vis.element === 'nature')
-          vis.accent.scale.set(1.0 + pulse * 0.08, 1, 1.0 + pulse * 0.08)
+          vis.accent.scale.set(1.0 + pulse * 0.06, 1, 1.0 + pulse * 0.06)
       }
     })
   }

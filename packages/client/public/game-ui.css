@@ -2372,8 +2372,6 @@ button.locked {
   position: relative;
   width: 58px;
   height: 58px;
-  display: grid;
-  place-items: center;
   border: 1px solid var(--line);
   border-bottom: 3px solid var(--elem-color, var(--gold));
   border-radius: 5px;
@@ -2405,15 +2403,41 @@ button.locked {
   left: 5px;
   color: var(--gold);
   font: 900 9px/1 var(--font-mono);
+  z-index: 10;
+}
+
+.cd-pip .cd-arc {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) translateY(-2px);
+  z-index: 3;
 }
 
 .cd-pip .ability-icon {
-  width: 34px;
-  height: 34px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) translateY(-2px);
+  width: 32px;
+  height: 32px;
   display: grid;
   place-items: center;
   overflow: hidden;
   border-radius: 4px;
+  z-index: 2;
+}
+
+.cd-pip .cd-timer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) translateY(-2px);
+  z-index: 5;
+  color: #ffffff;
+  font: 900 13px/1 var(--font-mono);
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
 }
 
 .cd-pip .ability-name {
@@ -2428,6 +2452,7 @@ button.locked {
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
+  z-index: 10;
 }
 
 .cd-pip .icon {

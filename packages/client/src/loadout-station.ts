@@ -38,25 +38,25 @@ const CLASS_STORAGE_KEY = 'ragequit.loadout.classId'
 // validates by family budget (not position). See 01_DESIGN/06_loadout_build.md for rationale.
 // Each starter includes the class Recovery utility.
 const CLASS_STARTER_PRESETS: Record<ClassId, string[]> = {
-  // Tank: 3 melee + 2 bow + 3 utility = 8
+  // Tank: 4 melee + 1 bow + 3 utility = 8
   tank: [
     'uppercut', // slot 0 — melee (Uppercut: knockup setup)
     'gap_closer', // slot 1 — melee (Gap Closer: engage dash)
     'guard_break', // slot 2 — melee (Guard Break: short-range setup)
-    'piercing_shot', // slot 3 — bow (Piercing Shot: physical cashout)
-    'disengage_shot', // slot 4 — bow (Disengage Shot: spacing tool)
+    'whirlwind', // slot 3 — melee (Whirlwind: physical spinning pressure)
+    'piercing_shot', // slot 4 — bow (Piercing Shot: physical cashout)
     'brace_recovery', // slot 5 — utility (Recovery)
     'barrier', // slot 6 — utility
     'quick_dash', // slot 7 — utility
   ],
-  // Arciere: 3 bow + 3 magicBase + 2 utility = 8
+  // Arciere: 4 bow + 2 magicBase + 2 utility = 8
   archer: [
     'pin_shot', // slot 0 — bow (ranged setup)
     'marksman_shot', // slot 1 — bow (precision cashout)
     'disengage_shot', // slot 2 — bow (spacing response)
-    'frost_bolt', // slot 3 — magicBase (control projectile)
-    'fireball', // slot 4 — magicBase (splash projectile)
-    'lightning_dash', // slot 5 — magicBase (magic movement)
+    'volley', // slot 3 — bow (volley of arrows)
+    'frost_bolt', // slot 4 — magicBase (control projectile)
+    'fireball', // slot 5 — magicBase (splash projectile)
     'hunters_flow', // slot 6 — utility (Recovery)
     'quick_dash', // slot 7 — utility
   ],
@@ -629,6 +629,11 @@ export function initLoadoutStation(
       return
     }
     save()
+    try {
+      localStorage.setItem('ragequit.profile.configured', 'true')
+    } catch {
+      // ignore
+    }
     const room = getRoom()
     if (room) {
       room.send(MessageTypes.Loadout, buildLoadoutMessage(slots, instantCast, activeClassId))

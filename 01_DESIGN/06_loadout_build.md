@@ -8,8 +8,8 @@ Every class has 8 total slots. Slot legality is fixed by class:
 
 | Class   | Melee | Bow | Magic Base | Magic Advanced | Utility |
 | ------- | ----- | --- | ---------- | -------------- | ------- |
-| Tank    | 3     | 2   | 0          | 0              | 3       |
-| Arciere | 0     | 3   | 3          | 0              | 2       |
+| Tank    | 4     | 1   | 0          | 0              | 3       |
+| Arciere | 0     | 4   | 2          | 0              | 2       |
 | Mago    | 0     | 0   | 3          | 2              | 3       |
 | Ibrido  | 1     | 1   | 2          | 2              | 2       |
 
@@ -48,7 +48,7 @@ utility/recovery only. Magic slots are direct keys:
 | Class   | Weapon Wheel `E` abilities | Spell keys `1-5` | Utility Wheel `Q` |
 | ------- | -------------------------- | ---------------- | ----------------- |
 | Tank    | 5                          | 0                | 3                 |
-| Arciere | 3                          | 3                | 2                 |
+| Arciere | 4                          | 2                | 2                 |
 | Mago    | 0                          | 5                | 3                 |
 | Ibrido  | 2                          | 4                | 2                 |
 
@@ -78,8 +78,8 @@ Starter builds are teaching builds, not ranked recommendations.
 | Melee       | Uppercut       |
 | Melee       | Gap Closer     |
 | Melee       | Guard Break    |
+| Melee       | Whirlwind      |
 | Bow         | Piercing Shot  |
-| Bow         | Disengage Shot |
 | Utility     | Brace Recovery |
 | Utility     | Barrier        |
 | Utility     | Quick Dash     |
@@ -91,9 +91,9 @@ Starter builds are teaching builds, not ranked recommendations.
 | Bow         | Pin Shot       |
 | Bow         | Marksman Shot  |
 | Bow         | Disengage Shot |
+| Bow         | Volley         |
 | Magic Base  | Frost Bolt     |
 | Magic Base  | Fireball       |
-| Magic Base  | Lightning Dash |
 | Utility     | Hunter's Flow  |
 | Utility     | Quick Dash     |
 

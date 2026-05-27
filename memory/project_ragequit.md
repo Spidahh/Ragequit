@@ -105,6 +105,6 @@ astratte.
   realmente equipaggiata nel loadout corrente.
 - Regola slot magia 2026-05-27: nessuna classe puo avere piu di 5 slot magia
   totali (`magicBase` + `magicAdvanced`), perche solo `1`-`5` sono input vivi.
-  Il Mago e 3 Magic Base, 2 Magic Advanced, 3 Utility.
+  Il Mago e 3 Magic Base, 2 Magic Advanced, 3 Utility. Il Tank e 4 Melee, 1 Bow, 3 Utility. L'Arciere e 4 Bow, 2 Magic Base, 2 Utility. L'Ibrido e 1 Melee, 1 Bow, 2 Magic Base, 2 Magic Advanced, 2 Utility.
 - Nella UI Loadout le uniche classi valide sono Tank, Arciere, Mago e Ibrido.
 - Conservare nel progetto solo asset runtime e contratti presenti approvati.

@@ -7,6 +7,7 @@ import * as THREE from 'three'
 import type { ImpactProfile } from '../vfx/impact-pool.js'
 
 import { makeProjectileMesh } from './factories.js'
+import { VfxTextures } from './vfx-textures.js'
 
 export interface SchemaProjectile {
   id: string
@@ -57,27 +58,18 @@ function projectileColor(style: ProjectileStyle): number {
     case 'arrow':
       return 0xffa040
     case 'fire':
-      return 0xff4500
+      return 0xff5511 // more vibrant fire
     case 'ice':
       return 0x00e5ff
     case 'lightning':
       return 0xffe600
     case 'dark':
-      return 0x6a0dad
+      return 0x9922ff // brighter violet
     case 'nature':
       return 0x39ff14
     default:
       return 0x00d0ff
   }
-}
-
-function makeBasicMat(color: number, opacity = 0.94): THREE.MeshBasicMaterial {
-  return new THREE.MeshBasicMaterial({
-    color,
-    transparent: true,
-    opacity,
-    depthWrite: false,
-  })
 }
 
 function makeProjectileObject(
@@ -91,87 +83,97 @@ function makeProjectileObject(
   const elemColor = projectileColor(style)
   const group = new THREE.Group()
 
-  let baseMesh: THREE.Mesh
   if (style === 'arrow') {
-    baseMesh = makeProjectileMesh('arrow')
+    const baseMesh = makeProjectileMesh('arrow')
     baseMesh.userData['pulse'] = false
-  } else if (style === 'fire') {
-    baseMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(0.18, 0), makeBasicMat(elemColor, 0.96))
-    const flame = new THREE.Mesh(
-      new THREE.ConeGeometry(0.13, 0.38, 5),
-      makeBasicMat(0xffb000, 0.72),
-    )
-    flame.rotation.x = -Math.PI / 2
-    flame.position.z = 0.22
-    group.add(flame)
-  } else if (style === 'ice') {
-    baseMesh = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.62, 5), makeBasicMat(elemColor, 0.9))
-    baseMesh.rotation.x = Math.PI / 2
-    const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.13), makeBasicMat(0xffffff, 0.44))
-    group.add(core)
-  } else if (style === 'lightning') {
-    baseMesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.035, 0.07, 0.82, 5),
-      makeBasicMat(elemColor, 0.96),
-    )
-    baseMesh.rotation.x = Math.PI / 2
-    const cross = new THREE.Mesh(
-      new THREE.BoxGeometry(0.42, 0.035, 0.035),
-      makeBasicMat(0xffffff, 0.68),
-    )
-    group.add(cross)
-  } else if (style === 'dark') {
-    baseMesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), makeBasicMat(elemColor, 0.92))
-    baseMesh.scale.set(0.8, 0.8, 1.35)
-    const core = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), makeBasicMat(0x170021, 0.86))
-    group.add(core)
-  } else if (style === 'nature') {
-    baseMesh = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.58, 6), makeBasicMat(elemColor, 0.9))
-    baseMesh.rotation.x = Math.PI / 2
-    const leaf = new THREE.Mesh(
-      new THREE.BoxGeometry(0.22, 0.035, 0.1),
-      makeBasicMat(0xb8ff5a, 0.62),
-    )
-    leaf.position.z = -0.16
-    group.add(leaf)
-  } else {
-    baseMesh = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 8), makeBasicMat(elemColor, 0.92))
-    const halo = new THREE.Mesh(
-      new THREE.TorusGeometry(0.22, 0.018, 6, 16),
-      makeBasicMat(0x80f0ff, 0.52),
-    )
-    group.add(halo)
-  }
 
-  // Draw outline directly around the primary projectile body (thickness: 0.02)
-  const projOutline = new THREE.Mesh(
-    baseMesh.geometry.clone(),
-    new THREE.ShaderMaterial({
-      uniforms: {
-        thickness: { value: 0.02 },
-        outlineColor: { value: new THREE.Color(0x050508) },
-      },
-      vertexShader: `
-        uniform float thickness;
-        void main() {
-          vec3 pos = position + normal * thickness;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform vec3 outlineColor;
-        void main() {
-          gl_FragColor = vec4(outlineColor, 1.0);
-        }
-      `,
-      side: THREE.BackSide,
-      depthWrite: true,
-    }),
-  )
-  projOutline.scale.copy(baseMesh.scale)
-  projOutline.rotation.copy(baseMesh.rotation)
-  baseMesh.add(projOutline)
-  group.add(baseMesh)
+    // Draw outline directly around the physical arrow body (thickness: 0.02)
+    const projOutline = new THREE.Mesh(
+      baseMesh.geometry.clone(),
+      new THREE.ShaderMaterial({
+        uniforms: {
+          thickness: { value: 0.02 },
+          outlineColor: { value: new THREE.Color(0x050508) },
+        },
+        vertexShader: `
+          uniform float thickness;
+          void main() {
+            vec3 pos = position + normal * thickness;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform vec3 outlineColor;
+          void main() {
+            gl_FragColor = vec4(outlineColor, 1.0);
+          }
+        `,
+        side: THREE.BackSide,
+        depthWrite: true,
+      }),
+    )
+    projOutline.scale.copy(baseMesh.scale)
+    projOutline.rotation.copy(baseMesh.rotation)
+    baseMesh.add(projOutline)
+    group.add(baseMesh)
+  } else {
+    // Spells are rendered as volumetric Crossed Planes (Overwatch style) using additive blending
+    let texture: THREE.Texture
+    let scaleX = 0.38
+    let scaleY = 0.38
+
+    switch (style) {
+      case 'fire':
+        texture = VfxTextures.fire
+        scaleX = 0.46
+        scaleY = 0.46
+        break
+      case 'ice':
+        texture = VfxTextures.ice
+        scaleX = 0.42
+        scaleY = 0.42
+        break
+      case 'lightning':
+        texture = VfxTextures.lightning
+        scaleX = 0.45
+        scaleY = 0.45
+        break
+      case 'dark':
+        texture = VfxTextures.dark
+        scaleX = 0.48
+        scaleY = 0.48
+        break
+      case 'nature':
+        texture = VfxTextures.nature
+        scaleX = 0.40
+        scaleY = 0.40
+        break
+      default:
+        texture = VfxTextures.fire
+    }
+
+    const mat = new THREE.MeshBasicMaterial({
+      map: texture,
+      color: elemColor,
+      transparent: true,
+      opacity: 0.98,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    })
+
+    const geo = new THREE.PlaneGeometry(scaleX, scaleY)
+
+    // Plane 1 (Horizontal slice along movement)
+    const p1 = new THREE.Mesh(geo, mat)
+    p1.rotation.y = 0
+    group.add(p1)
+
+    // Plane 2 (Vertical slice along movement)
+    const p2 = new THREE.Mesh(geo, mat)
+    p2.rotation.y = Math.PI / 2
+    group.add(p2)
+  }
 
   return { object: group, style }
 }
@@ -193,10 +195,12 @@ function makeTrailLine(style: ProjectileStyle): THREE.Line {
   const geo = new THREE.BufferGeometry()
   geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRAIL_LEN * 3), 3))
   const color = projectileColor(style)
+
   const mat = new THREE.LineBasicMaterial({
     color,
     transparent: true,
-    opacity: style === 'lightning' ? 0.72 : style === 'dark' ? 0.56 : 0.48,
+    opacity: style === 'lightning' ? 0.85 : style === 'dark' ? 0.65 : 0.58,
+    blending: THREE.AdditiveBlending, // additive glow trails
     depthWrite: false,
   })
   const line = new THREE.Line(geo, mat)
@@ -233,7 +237,6 @@ export function initProjectileVisuals({
     scene.add(object)
     scene.add(trail)
     const buf = new Float32Array(TRAIL_LEN * 3)
-    // Initialise all trail points at spawn origin.
     for (let i = 0; i < TRAIL_LEN; i++) {
       buf[i * 3] = msg.origin.x
       buf[i * 3 + 1] = msg.origin.y
@@ -273,19 +276,13 @@ export function initProjectileVisuals({
     spawnImpact(new THREE.Vector3(msg.pos.x, msg.pos.y, msg.pos.z), color, impactProfile)
   }
 
-  function clear(): void {
-    projectileVisuals.forEach((vis) => disposeVisual(vis))
-    projectileVisuals.clear()
-  }
-
+  // Shift existing points toward index 0 (oldest), write new at end.
   function updateTrail(vis: ProjectileVisual, x: number, y: number, z: number): void {
-    // Shift existing points toward index 0 (oldest), write new at end.
     for (let i = 0; i < (TRAIL_LEN - 1) * 3; i++) vis.trailBuf[i] = vis.trailBuf[i + 3]!
     vis.trailBuf[(TRAIL_LEN - 1) * 3] = x
     vis.trailBuf[(TRAIL_LEN - 1) * 3 + 1] = y
     vis.trailBuf[(TRAIL_LEN - 1) * 3 + 2] = z
     vis.trailCount = Math.min(vis.trailCount + 1, TRAIL_LEN)
-    // Write the valid slice into the BufferAttribute.
     const attr = vis.trail.geometry.attributes['position'] as THREE.BufferAttribute
     const start = TRAIL_LEN - vis.trailCount
     for (let i = 0; i < vis.trailCount; i++) {
@@ -294,6 +291,11 @@ export function initProjectileVisuals({
     }
     attr.needsUpdate = true
     vis.trail.geometry.setDrawRange(0, Math.max(2, vis.trailCount))
+  }
+
+  function clear(): void {
+    projectileVisuals.forEach((vis) => disposeVisual(vis))
+    projectileVisuals.clear()
   }
 
   function renderFrame(
@@ -337,58 +339,41 @@ export function initProjectileVisuals({
         const pulse = 1.0 + 0.08 * Math.sin(now * 0.022)
         vis.object.scale.setScalar(pulse)
 
-        const child0 = vis.object.children[0] as THREE.Mesh | undefined
         const child1 = vis.object.children[1] as THREE.Mesh | undefined
 
+        // Organic swirling rotation and scale modulation on crossed planes
         if (vis.style === 'fire') {
-          vis.object.rotation.z += 0.11
-          if (child0) {
-            child0.rotation.x += 0.05
-            child0.rotation.y += 0.03
-          }
+          vis.object.rotation.z += 0.09
           if (child1) {
-            const f = now * 0.05
-            child1.scale.set(
-              1.0 + 0.12 * Math.sin(f),
-              1.0 + 0.12 * Math.sin(f),
-              1.0 + 0.18 * Math.cos(f),
-            )
+            const f = now * 0.035
+            child1.scale.setScalar(1.0 + 0.08 * Math.sin(f))
           }
         } else if (vis.style === 'ice') {
-          vis.object.rotation.z += 0.025
-          if (child0) {
-            child0.rotation.z += 0.01
-          }
+          vis.object.rotation.z += 0.04
           if (child1) {
-            child1.rotation.y += 0.07
-            child1.rotation.x += 0.04
+            child1.scale.setScalar(1.0 + 0.05 * Math.sin(now * 0.02))
           }
         } else if (vis.style === 'lightning') {
-          vis.object.rotation.z += 0.24
+          vis.object.rotation.z += 0.22
           if (child1) {
             const jit = 0.85 + 0.3 * Math.random()
             child1.scale.set(jit, 1.0, jit)
           }
         } else if (vis.style === 'dark') {
-          vis.object.rotation.z -= 0.06
-          if (child0) {
-            child0.rotation.x -= 0.03
-            child0.rotation.y -= 0.02
-          }
+          vis.object.rotation.z -= 0.05
           if (child1) {
-            const ds = 0.9 + 0.18 * Math.sin(now * 0.03)
+            const ds = 0.95 + 0.12 * Math.sin(now * 0.025)
             child1.scale.setScalar(ds)
           }
         } else if (vis.style === 'nature') {
-          vis.object.rotation.z += 0.045
+          vis.object.rotation.z += 0.035
           if (child1) {
-            child1.rotation.z = 0.25 * Math.sin(now * 0.06)
+            child1.scale.setScalar(1.0 + 0.06 * Math.sin(now * 0.018))
           }
         } else {
           vis.object.rotation.z += 0.045
           if (child1) {
-            child1.rotation.y -= 0.05
-            child1.scale.setScalar(1.0 + 0.08 * Math.sin(now * 0.015))
+            child1.scale.setScalar(1.0 + 0.06 * Math.sin(now * 0.015))
           }
         }
       }

@@ -68,6 +68,7 @@ export interface SelfHudUpdateParams {
   lastKillerName: string
   selfMesh: THREE.Group | null
   getCurrentLoadout: () => string[]
+  getCurrentClassId?: () => ClassId
   setCastStartedAt: (ms: number) => void
   clearPrimedSlot: () => void
   cancelPlacementPreview: () => void
@@ -114,6 +115,7 @@ export function initSelfHud({
     lastKillerName,
     selfMesh,
     getCurrentLoadout,
+    getCurrentClassId,
     setCastStartedAt,
     clearPrimedSlot,
     cancelPlacementPreview,
@@ -213,7 +215,7 @@ export function initSelfHud({
     const currentLoadout = getCurrentLoadout()
     const currentLoadoutSig = cooldownStrip.signature(currentLoadout)
     if (currentLoadoutSig !== cooldownStrip.currentSignature()) {
-      cooldownStrip.rebuild(currentLoadout)
+      cooldownStrip.rebuild(currentLoadout, getCurrentClassId?.() ?? 'hybrid')
       clearPrimedSlot()
       cancelPlacementPreview()
     }

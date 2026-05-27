@@ -1,4 +1,5 @@
-import { ABILITY_DEFS, getAbilitySlotFamily } from '@ragequit/shared'
+import { ABILITY_DEFS, getAbilitySlotFamily, getClassSlotOrder } from '@ragequit/shared'
+import type { ClassId } from '@ragequit/shared'
 
 import { abilityIcon } from '../icons.js'
 
@@ -36,6 +37,7 @@ export interface RadialWheelControllerOptions {
   getCooldownSec?: (abilityId: string) => number
   /** Returns true when the ability is set to instant-cast mode. */
   isInstantCast?: (abilityId: string) => boolean
+  getClassId: () => ClassId
 }
 
 const utilitySectors: readonly WheelSector[] = [
@@ -47,10 +49,9 @@ const utilitySectors: readonly WheelSector[] = [
 
 const abilitySectors: readonly WheelSector[] = [
   { dir: 'top', angleDeg: -90 },
-  { dir: 'right', angleDeg: -18 },
-  { dir: 'bottom-right', angleDeg: 54 },
-  { dir: 'bottom-left', angleDeg: 126 },
-  { dir: 'left', angleDeg: -162 },
+  { dir: 'right', angleDeg: 0 },
+  { dir: 'bottom', angleDeg: 90 },
+  { dir: 'left', angleDeg: 180 },
 ]
 
 export function initRadialWheels({
@@ -61,6 +62,7 @@ export function initRadialWheels({
   utilityWheelEl,
   getCooldownSec,
   isInstantCast,
+  getClassId,
 }: RadialWheelControllerOptions): RadialWheelController {
   const utilityWheel: RadialWheel = { el: utilityWheelEl, sectors: utilitySectors, kind: 'utility' }
   const abilityWheel: RadialWheel = { el: abilityWheelEl, sectors: abilitySectors, kind: 'ability' }
@@ -72,15 +74,17 @@ export function initRadialWheels({
   let activeKey: string | null = null
   let selectedDir: string | null = null
 
-  function wheelSlotIndices(wheel: RadialWheel, loadout: readonly string[]): number[] {
+  function wheelSlotIndices(wheel: RadialWheel, _loadout: readonly string[]): number[] {
+    const classId = getClassId()
+    const order = getClassSlotOrder(classId)
     const indices: number[] = []
-    for (let idx = 0; idx < loadout.length; idx++) {
-      const id = loadout[idx]
-      if (!id) continue
-      const family = getAbilitySlotFamily(id)
+    for (let idx = 0; idx < order.length; idx++) {
+      const family = order[idx]!
       const utility = family === 'utility'
       const weaponAbility = family === 'melee' || family === 'bow'
-      if (wheel.kind === 'utility' ? utility : weaponAbility) indices.push(idx)
+      if (wheel.kind === 'utility' ? utility : weaponAbility) {
+        indices.push(idx)
+      }
     }
     return indices.slice(0, wheel.sectors.length)
   }

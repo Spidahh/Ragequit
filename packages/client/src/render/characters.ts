@@ -750,7 +750,7 @@ export function setParryShieldState(
 const _weaponCache = new Map<string, THREE.Group>()
 const _weaponInflightMap = new Map<string, Promise<THREE.Group>>()
 
-function _fetchWeaponGlb(weaponId: 'sword' | 'bow' | 'staff'): Promise<THREE.Group> {
+export function fetchWeaponGlb(weaponId: 'sword' | 'bow' | 'staff'): Promise<THREE.Group> {
   const cached = _weaponCache.get(weaponId)
   if (cached) return Promise.resolve(cached)
 
@@ -809,7 +809,7 @@ export function applyWeaponProp(
   _clearWeaponGroup(wg)
 
   // Fetch the GLB weapon model
-  _fetchWeaponGlb(weaponId)
+  fetchWeaponGlb(weaponId)
     .then((scene) => {
       // Guard against race conditions: if weapon changed while loading, skip
       if (charGroup.userData['activeWeaponProp'] !== weaponId) {

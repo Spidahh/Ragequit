@@ -102,7 +102,7 @@ describe('ability slot family and class legality', () => {
   it('infers a persisted class only when the loadout still fits a class grammar', () => {
     expect(inferClassFromLoadout(['brace_recovery', 'uppercut'])).toBe('tank')
     expect(
-      inferClassFromLoadout(['pin_shot', 'marksman_shot', 'frost_bolt', 'fireball', 'chain_bolt']),
+      inferClassFromLoadout(['pin_shot', 'marksman_shot', 'volley', 'frost_bolt', 'fireball']),
     ).toBe('archer')
     expect(inferClassFromLoadout(['uppercut', 'fireball', 'arc_lift', 'adaptive_mend'])).toBe(
       'hybrid',
@@ -120,8 +120,8 @@ describe('ability slot family and class legality', () => {
         'uppercut',
         'gap_closer',
         'guard_break',
+        'whirlwind',
         'piercing_shot',
-        'disengage_shot',
         'brace_recovery',
         'barrier',
         'quick_dash',
@@ -130,9 +130,9 @@ describe('ability slot family and class legality', () => {
         'pin_shot',
         'marksman_shot',
         'disengage_shot',
+        'volley',
         'frost_bolt',
         'fireball',
-        'lightning_dash',
         'hunters_flow',
         'quick_dash',
       ],
