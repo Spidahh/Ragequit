@@ -1517,24 +1517,28 @@ button.locked {
   color: var(--text);
   background: rgba(255, 255, 255, 0.05);
 }
-.filter-btn.active {
+/* active-filter = classe aggiunta da JS; .active legacy non usata */
+.filter-btn.active-filter {
   border-color: rgba(255, 210, 96, 0.55);
   background: rgba(255, 210, 96, 0.08);
   color: var(--gold);
 }
+/* SMART e STARTER: stile neutro di default, colore solo se attivi */
 .filter-btn.smart {
-  border-color: rgba(0, 255, 136, 0.3);
+  /* nessun colore speciale di default — sembrava pre-selezionato */
+}
+.filter-btn.smart.active-filter {
+  border-color: rgba(0, 255, 136, 0.55);
+  background: rgba(0, 255, 136, 0.1);
   color: var(--stamina);
 }
-.filter-btn.smart.active {
-  background: rgba(0, 255, 136, 0.1);
-}
 .filter-btn.starter {
-  border-color: rgba(255, 210, 96, 0.3);
-  color: var(--gold);
+  /* nessun colore speciale di default */
 }
-.filter-btn.starter.active {
+.filter-btn.starter.active-filter {
+  border-color: rgba(255, 210, 96, 0.55);
   background: rgba(255, 210, 96, 0.1);
+  color: var(--gold);
 }
 
 #ls-search {
@@ -2144,6 +2148,21 @@ button.locked {
 .pool-card.el-nature    { --ability-color: #39ff14; }
 .pool-card.el-none      { --ability-color: #888896; }
 
+/* ── SVG sprite icons: contenute nel box, non escono dal riquadro ── */
+.pool-icon-box,
+.pool-icon,
+.ls-slot-icon {
+  overflow: hidden;
+}
+.pool-icon-box svg,
+.pool-icon svg,
+.ls-slot-icon svg {
+  display: block;
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+}
 
 @media (max-width: 1180px) {
   #main-menu {
