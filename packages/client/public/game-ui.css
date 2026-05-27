@@ -979,13 +979,6 @@ button.locked {
   text-transform: uppercase;
 }
 
-.ls-pool-subtitle {
-  margin: 6px 0 0;
-  color: var(--text-soft);
-  font: 800 11px/1.25 var(--font-mono);
-  text-transform: uppercase;
-}
-
 .ls-sub-title-main,
 .ls-sub-title-sub,
 .step-num {

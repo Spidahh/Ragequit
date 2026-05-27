@@ -137,10 +137,7 @@ export function initLoadoutStation(
   const detailsDesc = document.getElementById('ls-detail-desc')
   const detailsMalus = document.getElementById('ls-detail-malus')
   const detailsInstant = document.getElementById('ls-detail-instant') as HTMLButtonElement | null
-  const poolTitle = document.getElementById('ls-pool-title')
-  const poolSubtitle = document.getElementById('ls-pool-subtitle')
   const abilityWheelKey = document.getElementById('ls-ability-wheel-key')
-  const magicDeckKey = document.getElementById('ls-magic-deck-key')
   const utilityWheelKey = document.getElementById('ls-utility-wheel-key')
 
   // Class selector DOM refs
@@ -310,15 +307,6 @@ export function initLoadoutStation(
 
   function refreshSectionKeyLabels(): void {
     if (abilityWheelKey) abilityWheelKey.textContent = `${actionLabel('wheelAbility')} HOLD`
-    if (magicDeckKey) {
-      magicDeckKey.textContent = [
-        actionLabel('spell1'),
-        actionLabel('spell2'),
-        actionLabel('spell3'),
-        actionLabel('spell4'),
-        actionLabel('spell5'),
-      ].join(' ')
-    }
     if (utilityWheelKey) utilityWheelKey.textContent = `${actionLabel('wheelUtility')} HOLD`
   }
 
@@ -435,12 +423,6 @@ export function initLoadoutStation(
 
     const targetSlot = currentSlotOrder()[activeIdx]!
     const locked = buildLocked()
-    const targetLabel = slotPoolTitle(targetSlot, activeIdx)
-    if (poolTitle) poolTitle.textContent = targetLabel
-    if (poolSubtitle)
-      poolSubtitle.textContent = locked
-        ? 'Build editing is locked during live combat'
-        : poolSubtitleFor(targetSlot, activeIdx)
     const defs = (Object.values(ABILITY_DEFS) as AbilityDef[])
       .filter((def) => getAbilitySlotFamily(def.id) === targetSlot)
       .filter((def) => !slots.some((id, idx) => idx !== activeIdx && id === def.id))
@@ -997,7 +979,7 @@ function tagClass(tag: string): string {
   )
     return 'tag-role'
   if (/\b(SELF|POINT AREA|SKILL SHOT|AIM LOCK|TARGET)\b/.test(tag)) return 'tag-targeting'
-  if (/\b(DMG|DAMAGE|PROJECTILE|SPLASH|TICK)\b/.test(tag)) return 'tag-damage'
+  if (/\b(DMG|DAMAGE|PROJECTILE|SPLASH|TICK|ZONE)\b/.test(tag)) return 'tag-damage'
   if (/\b(AIRBORNE|KNOCKBACK|ROOT|STUN|FREEZE|SLOW|BLIND|MARK|CURSE)\b/.test(tag))
     return 'tag-control'
   if (/\b(BURN|BLEED|POISON|CHILL|SHIELD|HASTE|CLEANSE|INVULNERABLE)\b/.test(tag))
@@ -1014,14 +996,6 @@ function slotPoolTitle(slot: TargetAbilitySlotFamily, _idx: number): string {
   if (slot === 'magicBase') return 'Magic Base'
   if (slot === 'magicAdvanced') return 'Magic Advanced'
   return 'Utility Slot'
-}
-
-function poolSubtitleFor(slot: TargetAbilitySlotFamily, _idx: number): string {
-  if (slot === 'melee') return 'Close range pressure, launches, stuns and bleed'
-  if (slot === 'bow') return 'Skill shots, roots, traps and ranged pressure'
-  if (slot === 'magicBase') return 'Frequent spells, movement, simple control and pressure'
-  if (slot === 'magicAdvanced') return 'High-commitment zones, launches, cashouts and sustain'
-  return 'Survival, cleanse, mobility and resource tools'
 }
 
 export const __loadoutStationSmoke = {

@@ -252,7 +252,6 @@ describe('loadout station smoke', () => {
 
     api.open()
 
-    expect(document.getElementById('ls-pool-title')?.textContent).toBeFalsy()
     expect(document.getElementById('ls-pool')?.textContent).toContain('Fireball')
     expect(document.getElementById('ls-pool')?.textContent).not.toContain(
       'No abilities available for this slot.',
