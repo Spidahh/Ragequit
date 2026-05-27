@@ -5,6 +5,9 @@ Ultimo riallineamento: 2026-05-26.
 ## Fatti Vivi
 
 - Server gia live su Fly.io: app `ragequit-server`, regione `ams`, porta 8080.
+- Il 2026-05-27 e stato ripristinato `ClassMechanicRuntime` server-side:
+  Fury, Momentum, Risonanza e Flow sono cablati a `GameRoom` e ai campi
+  replicati di `Player`.
 - Supabase gia configurato come Fly secrets.
 - Client destinato a Cloudflare Pages.
 - Classi vive: Tank, Arciere, Mago, Ibrido.
@@ -35,6 +38,10 @@ Ultimo riallineamento: 2026-05-26.
 - Il 2026-05-27 sono stati risolti i disallineamenti del Loadout Forge (correzione del footer pulsanti `.ls-center-footer`, tab classe `.card-icon/title/desc` e pannello `.class-vitals-panel`).
 - Il 2026-05-27 è stata abilitata la sincronizzazione del nome giocatore tramite `roomOptions.name` su Colyseus, includendo il salvataggio immediato al `change`/`blur` del campo input.
 - Il 2026-05-27 sono stati eliminati tutti i residui fisici dei tasti disattivati Z, X, F, V, R nel file HTML e corretti i refusi negli esempi di documentazione (`01_controls.md`).
+- Il 2026-05-27 le 53 abilita vive usano icone PNG in
+  `packages/client/public/ability-icons/<ability_id>.png`. Il colore dell'icona
+  identifica il tipo/elemento e queste icone sono usate da Loadout Station,
+  ruote abilita e hotbar/cooldown.
 
 
 ## Regola Documentale
@@ -69,5 +76,29 @@ astratte.
   flusso principale. Deve permettere di cambiare tutta la build da una vista
   unica, con lane e alternative compatibili visibili insieme. Le stats classe
   non devono occupare spazio centrale nel Loadout.
+- Feedback UX Loadout 2026-05-27: la scelta classe sopra deve essere evidente e
+  non piatta. Le lane devono mostrare chiaramente il mapping reale in game:
+  Sword/Bow su `E` wheel, spell su `1`-`5`, Utility/Recovery su `Q` wheel.
+- Feedback UX Loadout 2026-05-27: le card abilita devono mostrare descrizione,
+  input, elemento, costo, cooldown e tag direttamente nel pool; il nome deve
+  stare sotto l'icona e l'icona PNG non deve essere tagliata.
+- Regola asset icone 2026-05-27: ogni lista/export per generare icone abilita
+  deve includere la natura funzionale oltre all'elemento: damage,
+  control/setup, mobility, zone pressure, survival/recovery, drain/lifesteal,
+  projectile, status/DoT e tag effetto reali.
+- Feedback UX Loadout 2026-05-27: la barra sinistra deve essere piu larga e
+  compatta, con slot orizzontali e testi principali su una riga; non deve
+  comportarsi come una pagina HTML stretta da leggere a capo.
+- Feedback UX Loadout 2026-05-27: non mostrare `FINISHER`, `STARTER`,
+  `INSTANT` o `PREVIEW` accanto ai nomi delle abilita nelle card/slot.
+  Usare natura funzionale leggibile (`CONTROL`, `PROJECTILE`, `RECOVERY`,
+  `ZONE`, `MOBILITY`, `DRAIN`) e tag effetto separati.
+- Feedback UX Loadout 2026-05-27: la Forge deve stare in una schermata da
+  videogioco; niente pannello dettagli separato che ruba spazio, niente scroll
+  del build sinistro, niente filtri `STARTER`/`INSTANT`/`PREVIEW` nel pool.
+  Le info necessarie devono stare direttamente nelle card compatte.
+- Mapping runtime wheel 2026-05-27: `E` wheel usa solo `melee`/`bow`, `Q` wheel
+  usa solo `utility`, le spell `magicBase`/`magicAdvanced` sono sui tasti
+  diretti `1`-`5` derivati dal loadout corrente.
 - Nella UI Loadout le uniche classi valide sono Tank, Arciere, Mago e Ibrido.
 - Conservare nel progetto solo asset runtime e contratti presenti approvati.

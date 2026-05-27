@@ -34,6 +34,9 @@ assunzioni precedenti come autorita.
 - Output abilita deterministico. Zero RNG.
 - Sangue fisico rosso `#FF3344`.
 - TTK reale desiderato: 20-30s con difesa attiva.
+- Le meccaniche classe server-side (`ClassMechanicRuntime`) sono attive:
+  Fury, Momentum, Risonanza e Flow devono restare cablate a `GameRoom` e ai
+  campi replicati di `Player`.
 
 ## Loadout
 
@@ -77,8 +80,39 @@ assunzioni precedenti come autorita.
   vista unica, con lane editabili e pool/alternative per famiglia visibili
   insieme. Le stats/vitals della classe non sono il centro della schermata e non
   devono rubare spazio al cambio build.
+- La scelta classe nella Loadout Forge deve essere visivamente evidente sopra
+  al build, non una riga piatta di tab. Ogni lane deve dichiarare dove finisce
+  in game: Sword/Bow su `E` wheel, spell su tasti `1`-`5`, Utility/Recovery su
+  `Q` wheel.
+- Le card abilita del Loadout Forge mostrano direttamente descrizione, input,
+  elemento, costo, cooldown e tag; non nascondere queste informazioni in un
+  dettaglio separato o in una micro-riga.
+- Gli export/liste per icone abilita devono includere sempre la natura
+  funzionale dell'abilita oltre all'elemento: damage, control/setup,
+  mobility, zone pressure, survival/recovery, drain/lifesteal, projectile,
+  status/DoT e tag effetto reali.
+- Nelle card Loadout il nome dell'abilita sta sotto l'icona. L'icona PNG non
+  deve essere croppata, stirata o coperta dal nome.
+- La barra sinistra del Loadout Forge deve essere larga e compatta: gli slot
+  devono leggere su righe orizzontali da UI di gioco, senza testi principali
+  spezzati a capo per mancanza di spazio.
+- Non mostrare badge `FINISHER`, `STARTER`, `INSTANT` o `PREVIEW` accanto al
+  nome delle abilita nelle card/slot del Loadout. Per la lettura rapida usare
+  la natura funzionale (`CONTROL`, `PROJECTILE`, `RECOVERY`, `ZONE`,
+  `MOBILITY`, `DRAIN`, ecc.) e i tag effetto separati.
+- La Loadout Forge deve stare in una schermata da videogioco: niente pannello
+  dettagli separato che ruba spazio, niente scroll del build sinistro, niente
+  filtri `STARTER`/`INSTANT`/`PREVIEW` nel pool. Le informazioni necessarie
+  stanno direttamente nelle card compatte.
+- Mapping runtime wheel: `E` wheel contiene solo abilita weapon (`melee`/`bow`),
+  `Q` wheel contiene solo `utility`, le spell `magicBase`/`magicAdvanced` sono
+  sui tasti diretti `1`-`5` calcolati dal loadout corrente.
 - Classi consentite nella UI: solo Tank, Arciere, Mago, Ibrido.
 - Conservare nel progetto solo asset runtime e contratti presenti approvati.
+- Le icone abilita vive sono PNG in `packages/client/public/ability-icons/`
+  con nome file uguale all'ability id (`<ability_id>.png`). Il colore
+  identifica il tipo/elemento: fire, ice, lightning, dark, nature, melee/bow
+  fisico e utility.
 - Se l'utente dice che un layout/stile fa schifo, va trattato come feedback
   vincolante: aggiornare subito UI e memoria, poi verificare.
 - Quando l'utente ordina di eliminare una cosa, eliminarla dal gioco e dai

@@ -99,4 +99,17 @@ export class Player extends Schema {
 
   @type('string') classId = 'hybrid'
 
+  // --- Class mechanic state ------------------------------------------------
+  // Replicated so client HUD can render class identity without extra messages.
+  @type('number') furyStacks: number = 0
+  @type('boolean') furyNextMeleeIsSurge = false
+
+  @type('number') momentum: number = 0
+
+  @type('string') risonanzaElement = ''
+  @type('number') risonanzaArmedUntilTick: number = 0
+
+  @type('number') flowStacks: number = 0
+  @type('boolean') flowPendingBonus = false
+
 }

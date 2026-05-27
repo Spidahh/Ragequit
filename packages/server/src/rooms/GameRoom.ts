@@ -115,6 +115,9 @@ import {
   AbilityEngine,
   AIR_PUNISH_DAMAGE_MULT,
   BotController,
+  ClassMechanicRuntime,
+  FLOW_DAMAGE_BONUS_FRAC,
+  FURY_SURGE_DAMAGE_BONUS,
   MatchManager,
   RateLimiter,
   ReplayRecorder,
@@ -276,6 +279,7 @@ export class GameRoom extends Room<GameState> {
 
   private engine!: AbilityEngine
   private statuses!: StatusRuntime
+  private mechanics!: ClassMechanicRuntime
   // BO5 round flow + ELO + scoreboard.
   private match!: MatchManager
   // Anti-cheat rate limiter + replay recorder.
@@ -436,6 +440,9 @@ export class GameRoom extends Room<GameState> {
       pendingDamage: pendingDamageBridge,
       broadcast: (type, message) => this.broadcast(type, message),
     })
+    this.mechanics = new ClassMechanicRuntime(this.state, (req, now) =>
+      this.resolveRisonanzaProc(req, now),
+    )
     this.engine = new AbilityEngine(
       {
         state: this.state,
@@ -452,9 +459,12 @@ export class GameRoom extends Room<GameState> {
         hasLineOfSight: (from, to) => this.hasLineOfSight(from, to),
         resolveDisplacement: (player, dx, dz, cancelOnCollision) =>
           this.resolveAbilityDisplacement(player, dx, dz, cancelOnCollision),
-        // Class mechanic hooks simplified to no-bonus baseline.
-        getAbilityCooldownMult: (sid) => 1,
-        getRecoveryHealBonus: (sid, abilityId, now) => 0,
+        getAbilityCooldownMult: (sid) => {
+          const player = this.state.players.get(sid)
+          return player ? this.mechanics.getMomentumCooldownMult(player) : 1
+        },
+        getRecoveryHealBonus: (sid, abilityId, now) =>
+          this.mechanics.getRecoveryHealBonus(sid, abilityId, now),
       },
       this.statuses,
     )
@@ -695,6 +705,7 @@ export class GameRoom extends Room<GameState> {
     this.parryPressTick.delete(sid)
     this.killStreaks.delete(sid)
     this.bots.delete(sid)
+    this.mechanics.forgetPlayer(sid)
     this.pendingSwings = this.pendingSwings.filter((s) => s.attackerId !== sid)
 
     // Clean up projectiles owned by the leaver.
@@ -777,6 +788,7 @@ export class GameRoom extends Room<GameState> {
       for (const [sid, player] of this.state.players) {
         if (!player.alive) continue
         this.tickRegen(sid, player, now)
+        this.mechanics.tick(sid, player, dt, now)
       }
 
       // 9. Push position history snapshots for lag comp.
