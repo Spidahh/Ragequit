@@ -339,9 +339,9 @@ export function initLoadoutStation(
     }
     const emptyTypeLabel = SLOT_TYPE_LABELS[slotKind] ?? slotKind.toUpperCase()
     el.innerHTML = [
-      `<span class="ls-slot-portrait"><span class="ls-slot-icon">${def ? abilityIconMarkup(def.id) : `<span class="ls-slot-empty-type">${emptyTypeLabel}</span>`}</span><span class="ls-slot-name">${def?.name ?? emptyTypeLabel}</span></span>`,
+      `<span class="ls-slot-portrait"><span class="ls-slot-icon">${def ? abilityIconMarkup(def.id) : `<span class="ls-slot-empty-type">${emptyTypeLabel}</span>`}</span></span>`,
       `<span class="ls-slot-label">${slotKeyLabel(idx)}</span>`,
-      `<span class="ls-slot-main"><span class="ls-slot-nature">${def ? abilityNatureLabel(def) : slotPoolTitle(slotKind, idx)}</span></span>`,
+      `<span class="ls-slot-main"><span class="ls-slot-name">${def ? escapeHtml(def.name) : emptyTypeLabel}</span><span class="ls-slot-nature">${def ? abilityNatureLabel(def) : slotPoolTitle(slotKind, idx)}</span></span>`,
       `<span class="ls-slot-route">${slotRouteLabel(slotKind, idx)}</span>`,
       def ? `<span class="ls-slot-cost">${formatCost(def)} · ${def.cooldownSec}s</span>` : '',
       id ? '<span class="ls-slot-clear" title="Clear">×</span>' : '',
@@ -491,7 +491,7 @@ export function initLoadoutStation(
         `<span class="pool-visual"><span class="pool-icon-box">${abilityIconMarkup(def.id)}</span><span class="pool-name">${escapeHtml(def.name)}</span></span>`,
         `<span class="pool-nature"><b>${escapeHtml(nature)}</b>${recTags.length > 0 ? ` <span class="recommend-tag">${escapeHtml(recTags[0]!)}</span>` : ''}</span>`,
         `<span class="pool-meta"><b>${poolInputLabel}</b> · ${def.element !== 'none' ? def.element.toUpperCase() : 'PHYSICAL'} · ${formatCost(def)} · ${def.cooldownSec}s CD</span>`,
-        `<span class="pool-summary">${escapeHtml(def.description)}</span>`,
+        `<span class="pool-summary">${formatDesc(def.description)}</span>`,
         `<span class="effect-tags">${formatEffectTags(def)
           .map((tag) => `<span class="${tagClass(tag)}">${escapeHtml(tag)}</span>`)
           .join('')}</span>`,
@@ -959,6 +959,34 @@ function escapeHtml(text: string): string {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;')
+}
+
+/** Formats an ability description with highlighted status names and bold numbers. */
+function formatDesc(text: string): string {
+  let s = escapeHtml(text)
+  // Bold numbers: damage amounts, distances (m), durations (s)
+  s = s.replace(/\b(\d+(?:\.\d+)?[ms]?)\b/g, '<b>$1</b>')
+  // Status effects — color-coded
+  const STATUS_MAP: [RegExp, string][] = [
+    [/\b(Burn(?:ing)?)\b/gi, 'ds-fire'],
+    [/\b(Chill(?:ed)?|Freeze|Frozen)\b/gi, 'ds-ice'],
+    [/\b(Bleed(?:ing)?)\b/gi, 'ds-bleed'],
+    [/\b(Stun(?:ned)?)\b/gi, 'ds-stun'],
+    [/\b(Root(?:ed)?)\b/gi, 'ds-root'],
+    [/\b(Slow(?:ed)?)\b/gi, 'ds-slow'],
+    [/\b(Poison(?:ed)?)\b/gi, 'ds-nature'],
+    [/\b(Blind(?:ed)?)\b/gi, 'ds-dark'],
+    [/\b(Shield)\b/gi, 'ds-shield'],
+    [/\b(Heal(?:ing)?|Lifesteal)\b/gi, 'ds-heal'],
+    [/\b(Airborne|Knockback|Knockup)\b/gi, 'ds-cc'],
+    [/\b(Curse)\b/gi, 'ds-dark'],
+    [/\b(Teleport|Blink)\b/gi, 'ds-move'],
+    [/\b(Dash)\b/gi, 'ds-move'],
+  ]
+  for (const [re, cls] of STATUS_MAP) {
+    s = s.replace(re, `<span class="${cls}">$1</span>`)
+  }
+  return s
 }
 
 function tagClass(tag: string): string {

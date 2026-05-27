@@ -1668,9 +1668,7 @@ button.locked {
   grid-area: portrait;
   width: 46px;
   display: grid;
-  grid-template-rows: 36px 10px;
-  gap: 2px;
-  justify-items: center;
+  place-items: center;
   align-self: center;
 }
 
@@ -1687,35 +1685,37 @@ button.locked {
   background: rgba(0, 0, 0, 0.3);
 }
 
-/* Name */
+/* Main column: name + nature */
 .ls-slot-main {
   grid-area: main;
   min-width: 0;
-  display: grid;
-  gap: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
   align-self: center;
 }
+
+/* Ability name — prominent primary text */
 .ls-slot-name {
   display: block;
   overflow: hidden;
-  max-width: 46px;
-  font: 800 7px/1 var(--font-mono);
+  font: 900 13px/1.1 var(--font-hud);
   text-transform: uppercase;
-  text-overflow: unset;
+  text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text);
-  text-align: center;
-  text-overflow: ellipsis;
 }
 
+/* Category — small muted subtitle */
 .ls-slot-nature {
   display: block;
   overflow: hidden;
-  color: var(--text);
-  font: 900 11px/1 var(--font-hud);
+  color: var(--muted);
+  font: 800 8px/1 var(--font-mono);
   text-transform: uppercase;
   text-overflow: ellipsis;
   white-space: nowrap;
+  letter-spacing: 0.04em;
 }
 
 .ls-slot-route {
@@ -1949,6 +1949,26 @@ button.locked {
   text-transform: none;
   letter-spacing: 0.01em;
 }
+
+/* Bold numbers in descriptions */
+.pool-summary b {
+  font-weight: 800;
+  color: var(--text);
+}
+
+/* Status effect highlights in descriptions */
+.ds-fire    { color: var(--fire);       font-weight: 800; }
+.ds-ice     { color: var(--ice);        font-weight: 800; }
+.ds-bleed   { color: #ff5566;           font-weight: 800; }
+.ds-stun    { color: var(--lightning);  font-weight: 800; }
+.ds-root    { color: var(--nature);     font-weight: 800; }
+.ds-slow    { color: #a0c8ff;           font-weight: 800; }
+.ds-nature  { color: var(--nature);     font-weight: 800; }
+.ds-dark    { color: #c060ff;           font-weight: 800; }
+.ds-shield  { color: var(--gold);       font-weight: 800; }
+.ds-heal    { color: #7fff88;           font-weight: 800; }
+.ds-cc      { color: var(--lightning);  font-weight: 800; }
+.ds-move    { color: var(--stamina);    font-weight: 800; }
 
 .pool-card .effect-tags {
   grid-area: tags;
