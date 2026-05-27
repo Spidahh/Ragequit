@@ -1,5 +1,5 @@
 {
-  "$comment": "Fase 10 balance overrides — production tuning lands here after closed playtest data. Server reads this file at boot and overrides the default constants in stats.ts / weapons.ts / combat.ts. Fase 9 telemetry (PostHog match length + TTK + pickrate per ability) feeds the next balance pass.",
+  "$comment": "Runtime balance overrides. Server reads this file at boot and overrides the default constants in stats.ts, weapons.ts and combat.ts. Telemetry from match length, TTK and ability pickrate feeds balance tuning.",
   "version": 1,
   "ttk": { "min_sec": 20, "max_sec": 30 },
   "weapons": {

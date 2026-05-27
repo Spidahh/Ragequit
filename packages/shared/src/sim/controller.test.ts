@@ -93,7 +93,6 @@ describe('simulatePlayer', () => {
         slowFraction: 0,
         movementLocked: false,
         castLocked: false,
-        airborneLocked: true,
       },
     )
 

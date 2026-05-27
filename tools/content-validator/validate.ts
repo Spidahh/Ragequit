@@ -1,7 +1,9 @@
 // RAGEQUIT content validator — run with: pnpm validate:content
 //
-// Checks ability registry, balance config, and map data for consistency.
+// Checks ability registry, ability icon coverage, balance config, and map data.
 // Exits with code 1 and prints all issues if any validation fails.
+
+import { readFileSync } from 'node:fs'
 
 import {
   ABILITY_DEFS,
@@ -28,6 +30,8 @@ const VALID_EFFECT_KINDS = new Set([
   'move',
   'channel',
   'cleanse',
+  'resourceDrain',
+  'restoreStamina',
 ])
 
 const issues: string[] = []
@@ -69,6 +73,21 @@ for (const def of defs) {
 }
 
 console.info(`ability registry: ${defs.length} abilities, ${seenIds.size} unique ids`)
+
+// --- Ability icons ----------------------------------------------------------
+
+const iconSprite = readFileSync('packages/client/public/icons-sprite.svg', 'utf8')
+const abilityIconIds = new Set(
+  Array.from(iconSprite.matchAll(/<symbol id="ability-([^"]+)"/g), (match) => match[1]!),
+)
+
+for (const def of defs) {
+  if (!abilityIconIds.has(def.id)) fail(`icons: missing symbol for ability '${def.id}'`)
+}
+for (const iconId of abilityIconIds) {
+  if (!seenIds.has(iconId)) fail(`icons: stale ability symbol '${iconId}'`)
+}
+console.info(`ability icons: ${abilityIconIds.size} symbols checked`)
 
 // --- Balance config ---------------------------------------------------------
 

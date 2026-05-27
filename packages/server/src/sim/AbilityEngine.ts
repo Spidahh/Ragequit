@@ -1,4 +1,4 @@
-// Server-side ability engine (Fase 4).
+// Server-side ability engine.
 //
 // Consumes an `AbilityDef` from the shared registry and orchestrates:
 //   1. validation (cost, CD, weapon, locks, range)
@@ -22,11 +22,9 @@ import {
   MessageTypes,
   PLAYER_CAPSULE_HEIGHT_M,
   STAMINA_MAX,
-  STATUS_META,
   TICK_MS,
   TICK_RATE_HZ,
   directionFromYawPitch,
-  getMasteryBonus,
   isElementId,
   ClassId,
   TARGET_CLASS_DEFS,
@@ -47,13 +45,11 @@ import {
   type ServerChannelInterruptedMessage,
   type StatusEffect,
   type StatusKind,
-  type TransmuteEffect,
   type Vec3,
   type ZoneEffect,
 } from '@ragequit/shared'
 
 import type { PendingDamageEntry, StatusRuntime } from './StatusRuntime.js'
-import { TransmuteHandler } from './TransmuteHandler.js'
 
 // --- Host interface --------------------------------------------------------
 
@@ -111,9 +107,9 @@ export interface EngineHost {
   broadcast: (type: string, message: unknown) => void
   // Player capsule foot offset that projectile origin uses (eye-height shoulder).
   computeProjectileOrigin: (player: Player, dir: Vec3) => Vec3
-  // Trigger an atomic weapon swap (Fase 3 logic) without GCD penalty.
+  // Trigger an atomic weapon swap without GCD penalty.
   forceWeaponSwap: (sid: string, weapon: 'sword' | 'bow' | 'staff') => void
-  // Apply knockup using the existing Fase 2 helpers (player.airborneUntilTick + vy).
+  // Apply knockup using the movement helpers (player.airborneUntilTick + vy).
   applyKnockup: (
     player: Player,
     airborneSec: number,
@@ -129,7 +125,7 @@ export interface EngineHost {
     x: number
     z: number
   }
-  // Pass 5: optional hooks for class mechanic integration.
+  // Optional hooks for class mechanic integration.
   // Returning undefined (when not provided) means "no bonus / no multiplier."
   /** Returns a cooldown multiplier for ability casts (e.g. Momentum CDR). */
   getAbilityCooldownMult?: (sid: string) => number
@@ -152,7 +148,13 @@ export const AIR_PUNISH_DAMAGE_MULT = 1.25
 
 function getPlayerMaxima(player: Player): { hp: number; mana: number; stamina: number } {
   const classId = (player.classId || 'hybrid') as ClassId
-  return TARGET_CLASS_DEFS[classId]?.resourceMaxima ?? { hp: HP_MAX, mana: MANA_MAX, stamina: STAMINA_MAX }
+  return (
+    TARGET_CLASS_DEFS[classId]?.resourceMaxima ?? {
+      hp: HP_MAX,
+      mana: MANA_MAX,
+      stamina: STAMINA_MAX,
+    }
+  )
 }
 
 export class AbilityEngine {
@@ -161,7 +163,6 @@ export class AbilityEngine {
   constructor(
     private readonly host: EngineHost,
     private readonly statuses: StatusRuntime,
-    private readonly transmute: TransmuteHandler,
   ) {}
 
   // Try to start a cast. Returns true if accepted (effects fired or windup
@@ -218,26 +219,8 @@ export class AbilityEngine {
       return false
     }
 
-    const transmuteEffect = baseDef.effects.find(
-      (effect): effect is TransmuteEffect => effect.kind === 'transmute',
-    )
-    if (transmuteEffect) {
-      const transmuteFailure = this.transmute.getFailureReason(player, transmuteEffect.direction, true)
-      if (transmuteFailure) {
-        this.host.sendAbilityFailed(
-          sid,
-          abilityId,
-          transmuteFailure === 'cost' ? 'cost' : 'cooldown',
-        )
-        this.transmute.broadcastFailure(sid, transmuteEffect.direction, transmuteFailure)
-        return false
-      }
-    }
-
     const def = baseDef
-    const defElement: ElementId | undefined = isElementId(def.element) ? def.element : undefined
-    const masteryBonus = this.masteryBonusFor(player, defElement)
-    const cdMult = (masteryBonus?.cooldownMult ?? 1) * (this.host.getAbilityCooldownMult?.(sid) ?? 1)
+    const cdMult = this.host.getAbilityCooldownMult?.(sid) ?? 1
     const effectiveCdSec = def.cooldownSec * cdMult
     const effectiveMana = def.costMana
     const effectiveStam = def.costStamina
@@ -274,7 +257,7 @@ export class AbilityEngine {
     }
     player.gcdReadyAtTick = now + GCD_TICKS
     player.abilityCooldowns.set(def.id, now + Math.round(effectiveCdSec * TICK_RATE_HZ))
-    // Mirror the legacy uppercut field for back-compat with the Fase 2 client.
+    // Mirror the uppercut field used by the HUD.
     if (def.id === 'uppercut') player.uppercutReadyAtTick = player.abilityCooldowns.get(def.id)!
 
     if (def.windupSec > 0) {
@@ -379,7 +362,7 @@ export class AbilityEngine {
     // For abilities that don't spawn a projectile, `onLand` effects fire
     // immediately at cast time (point-targeted zones, instant teleports, etc).
     // Projectile-bearing abilities defer onLand until impact resolution
-    // server-side in stepProjectiles (Fase 5 wiring).
+    // server-side in stepProjectiles.
     const hasProjectile = def.effects.some((e) => e.kind === 'projectile')
     let damageDealtForLifesteal = 0
     for (const e of def.effects) {
@@ -397,7 +380,7 @@ export class AbilityEngine {
     }
   }
 
-  // Returns the damage dealt (used by the lifesteal aggregation pass).
+  // Returns the damage dealt for lifesteal aggregation.
   private applyEffect(
     sid: string,
     def: AbilityDef,
@@ -451,25 +434,9 @@ export class AbilityEngine {
         }
         return 0
       }
-      case 'transmute':
-        this.effectTransmute(sid, effect)
-        return 0
       default:
         return 0
     }
-  }
-
-  private effectTransmute(sid: string, e: TransmuteEffect): void {
-    const caster = this.host.state.players.get(sid)
-    if (!caster) return
-
-    const reason = this.transmute.getFailureReason(caster, e.direction, true)
-    if (reason) {
-      this.transmute.broadcastFailure(sid, e.direction, reason)
-      return
-    }
-
-    this.transmute.apply(sid, caster, e.direction)
   }
 
   private effectDamage(
@@ -490,11 +457,9 @@ export class AbilityEngine {
     const element: ElementId | undefined =
       e.element ?? (isElementId(def.element) ? def.element : undefined)
 
-    const bonus = this.masteryBonusFor(caster, element)
-    const masteryMul = bonus?.damageMult ?? 1
-    const lifestealFraction = opts.lifestealFraction ?? bonus?.lifestealAdd ?? 0
+    const lifestealFraction = opts.lifestealFraction ?? 0
 
-    const amount = e.amount * masteryMul
+    const amount = e.amount
     let totalDealt = 0
     if (radius === 0) {
       const victimId = this.resolveSingleTarget(sid, caster, target, def)
@@ -556,17 +521,7 @@ export class AbilityEngine {
         ? this.resolveAreaCenter(sid, caster, target, def)
         : this.resolveAnchor(caster, target, def)
     if (!center) return
-    const element: ElementId | undefined = isElementId(def.element) ? def.element : undefined
-    let dur = e.durationSec
-    if (element && caster.masteryElement === element && caster.masteryLevel >= 1) {
-      const bonus = getMasteryBonus(caster.masteryElement)
-      if (bonus && bonus.ccDurationMult !== 1) {
-        const meta = STATUS_META[e.status]
-        if (meta.incapacitates || meta.rootsMovement || meta.slowFraction) {
-          dur *= bonus.ccDurationMult
-        }
-      }
-    }
+    const dur = e.durationSec
     if (radius === 0) {
       // Apply to the resolved single target (forward = aimed enemy in range).
       const nearest = this.resolveSingleTarget(sid, caster, target, def)
@@ -673,7 +628,7 @@ export class AbilityEngine {
     const caster = this.host.state.players.get(sid)
     if (!caster) return
     if (e.overSec && e.overSec > 0) {
-      // Channeled heal — modelled in Fase 5; for now apply instant.
+      // Channeled heal applies through the current instant server path.
     }
     const bonus =
       abilityId && this.host.getRecoveryHealBonus
@@ -716,10 +671,16 @@ export class AbilityEngine {
       if (drained <= 0) continue
       if (e.resource === 'mana') {
         victim.mana -= drained
-        caster.mana = Math.min(caster.mana + drained * (e.gainFraction ?? 0), getPlayerMaxima(caster).mana)
+        caster.mana = Math.min(
+          caster.mana + drained * (e.gainFraction ?? 0),
+          getPlayerMaxima(caster).mana,
+        )
       } else {
         victim.stamina -= drained
-        caster.stamina = Math.min(caster.stamina + drained * (e.gainFraction ?? 0), getPlayerMaxima(caster).stamina)
+        caster.stamina = Math.min(
+          caster.stamina + drained * (e.gainFraction ?? 0),
+          getPlayerMaxima(caster).stamina,
+        )
       }
     }
   }
@@ -738,9 +699,8 @@ export class AbilityEngine {
     const lifetimeSec = (def.range * 2) / e.speedMps + 0.5 // headroom for arc
     const lifetimeTicks = Math.round(lifetimeSec * TICK_RATE_HZ)
     const element = e.element ?? (isElementId(def.element) ? def.element : undefined)
-    const bonus = this.masteryBonusFor(caster, element)
-    const damage = e.damage * (bonus?.damageMult ?? 1)
-    const lifestealFraction = (e.lifestealFraction ?? 0) + (bonus?.lifestealAdd ?? 0)
+    const damage = e.damage
+    const lifestealFraction = e.lifestealFraction ?? 0
     this.host.spawnProjectile({
       ownerId: sid,
       abilityId: def.id,
@@ -826,7 +786,7 @@ export class AbilityEngine {
       return
     }
     // Dash with naive cancel-on-collision: try in 0.5 m steps and stop on
-    // entering any static AABB. (More principled physics in Fase 5.)
+    // entering any static AABB.
     const steps = Math.max(2, Math.round(e.distance * 2))
     for (let i = 1; i <= steps; i++) {
       const t = i / steps
@@ -858,9 +818,7 @@ export class AbilityEngine {
     const start = this.host.state.tick
     const endsAt = start + Math.max(1, Math.round(e.durationSec * TICK_RATE_HZ))
     const intervalTicks = Math.max(1, Math.round(e.tickEverySec * TICK_RATE_HZ))
-    const element = isElementId(def.element) ? def.element : undefined
-    const bonus = this.masteryBonusFor(caster, element)
-    const lifestealFraction = (e.lifestealFraction ?? 0) + (bonus?.lifestealAdd ?? 0)
+    const lifestealFraction = e.lifestealFraction ?? 0
     caster.casting = true
     caster.castAbilityId = def.id
     caster.castEndsAtTick = endsAt
@@ -1079,11 +1037,6 @@ export class AbilityEngine {
       }
     })
     return bestId
-  }
-
-  private masteryBonusFor(player: Player, element: ElementId | undefined) {
-    if (!element || player.masteryElement !== element || player.masteryLevel < 1) return null
-    return getMasteryBonus(player.masteryElement)
   }
 
   private canApplyParryableFollowup(def: AbilityDef, victim: Player): boolean {

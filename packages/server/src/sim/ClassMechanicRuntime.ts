@@ -1,4 +1,4 @@
-// Pass 5 — Class mechanic runtime.
+// Class mechanic runtime.
 //
 // Authoritative server-side logic for the four class identity mechanics:
 //
@@ -7,7 +7,7 @@
 //   Mago    → RISONANZA  (same-element spell combo proc)
 //   Ibrido  → FLOW       (weapon-swap stack, GCD skip + damage burst)
 //
-// Fields the HUD needs are replicated directly on the Player schema (Pass 5
+// Fields the HUD needs are replicated directly on the Player schema
 // additions). Non-replicated tracking (sword-hit counters, decay timers) lives
 // in per-player Maps here so the schema stays lean.
 //
@@ -22,18 +22,18 @@ import { TICK_RATE_HZ, type ClassId, type Player } from '@ragequit/shared'
 /** Fury: each stack adds this fraction to melee damage (+8% per stack). */
 export const FURY_STACK_DAMAGE_FRAC = 0.08
 /** Fury: surge burst adds this additional fraction (+40%) on top of stack bonus. */
-export const FURY_SURGE_DAMAGE_BONUS = 0.40
+export const FURY_SURGE_DAMAGE_BONUS = 0.4
 /** Flow: pending damage bonus fraction (+20%). */
-export const FLOW_DAMAGE_BONUS_FRAC = 0.20
+export const FLOW_DAMAGE_BONUS_FRAC = 0.2
 
 // ---------------------------------------------------------------------------
 // Internal constants
 // ---------------------------------------------------------------------------
 
 const FURY_MAX_STACKS = 5
-const FURY_DECAY_DELAY_SEC = 4.0   // idle seconds before decay starts
-const FURY_DECAY_PER_SEC = 0.5     // stacks lost per second during decay
-const FURY_HITS_PER_STACK = 3      // sword M1 hits between Fury stack gains
+const FURY_DECAY_DELAY_SEC = 4.0 // idle seconds before decay starts
+const FURY_DECAY_PER_SEC = 0.5 // stacks lost per second during decay
+const FURY_HITS_PER_STACK = 3 // sword M1 hits between Fury stack gains
 
 const MOMENTUM_MAX = 100
 const MOMENTUM_GAIN_PER_SEC = 12
@@ -106,9 +106,15 @@ export class ClassMechanicRuntime {
 
   tick(sid: string, player: Player, dt: number, now: number): void {
     switch (player.classId as ClassId) {
-      case 'tank':   this.tickFury(sid, player, dt, now); break
-      case 'archer': this.tickMomentum(player, dt); break
-      case 'hybrid': this.tickFlow(sid, player, now); break
+      case 'tank':
+        this.tickFury(sid, player, dt, now)
+        break
+      case 'archer':
+        this.tickMomentum(player, dt)
+        break
+      case 'hybrid':
+        this.tickFlow(sid, player, now)
+        break
       // 'mage': Risonanza window expiry is passive — checked at read time via risonanzaArmedUntilTick
     }
   }
@@ -418,5 +424,4 @@ export class ClassMechanicRuntime {
     this.ps.delete(sid)
     this.flowDamagePending.delete(sid)
   }
-
 }

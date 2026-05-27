@@ -80,6 +80,8 @@ export function initAbilityFailHud({
         return `Cannot ${actionVerb} while dead`
       case 'unknown_ability':
         return 'Unknown ability'
+      case 'swapping':
+        return 'weapon swapping in progress'
     }
   }
 
@@ -96,7 +98,7 @@ export function initAbilityFailHud({
 
   // Reasons that are already fully communicated by the slot flash / resource
   // bar / GCD ring — no toast needed. Everything else gets a 1.5 s compact
-  // note rather than the old 5 s persistent label.
+  // note rather than a long persistent label.
   const SILENT_REASONS = new Set(['cooldown', 'gcd', 'parrying'])
 
   function showAbilityFailNote(msg: ServerAbilityFailedMessage): void {

@@ -1,4 +1,4 @@
-// Main menu + round HUD + scoreboard (Fase 7).
+// Main menu + round HUD + scoreboard.
 //
 // Three small overlays driven from server MatchPhase + Score events:
 //   - main-menu: shown pre-connect; PLAY routes through the loadout station
@@ -15,10 +15,12 @@ import {
   TEAM_KILLS_TO_WIN,
   type ServerMatchPhaseMessage,
   type ServerScoreMessage,
+  type ClassId,
 } from '@ragequit/shared'
 
 import { renderScoreboard, type ScoreboardData } from './endgame.js'
 import { initKeybindLabels, initKeybindSettings } from './input/keybinds.js'
+import { initMenuBackground } from './menu-bg.js'
 
 export type MenuChoice = 'play1v1' | 'training' | 'loadout' | 'stats' | 'settings'
 export type GraphicsQuality = 'low' | 'med' | 'high'
@@ -62,12 +64,13 @@ export interface MenuApi {
   onMatchPhase: (msg: ServerMatchPhaseMessage, selfId: string) => void
   onScore: (msg: ServerScoreMessage, selfId: string, otherId: string) => void
   getSettings: () => SettingsData
+  updateProfile: (profile: { currentClass: ClassId | null; equippedSpells: string[] }) => void
 }
 
 export function initMenu(handlers: {
   onPlay: () => void
   onFfa: () => void
-  onTraining: () => void
+  onTraining: (difficulty: 'novice' | 'competent' | 'master') => void
   onLoadout: () => void
   onScoreboardBack: () => void
   onFovChange: (fov: number) => void
@@ -90,9 +93,30 @@ export function initMenu(handlers: {
   initKeybindLabels()
   document.body.classList.add('main-menu-active')
 
+  // Initialize live 3D menu background
+  const menuBg = initMenuBackground()
+  menuBg.start()
+
   document.getElementById('menu-play')?.addEventListener('click', () => handlers.onPlay())
   document.getElementById('menu-ffa')?.addEventListener('click', () => handlers.onFfa())
-  document.getElementById('menu-train')?.addEventListener('click', () => handlers.onTraining())
+
+  // Toggle the training options sub-menu container
+  const menuTrain = document.getElementById('menu-train')!
+  const menuTrainOptions = document.getElementById('menu-train-options')!
+  menuTrain.addEventListener('click', () => {
+    menuTrainOptions.classList.toggle('hidden')
+  })
+
+  document
+    .getElementById('menu-train-novice')
+    ?.addEventListener('click', () => handlers.onTraining('novice'))
+  document
+    .getElementById('menu-train-competent')
+    ?.addEventListener('click', () => handlers.onTraining('competent'))
+  document
+    .getElementById('menu-train-master')
+    ?.addEventListener('click', () => handlers.onTraining('master'))
+
   document.getElementById('menu-loadout')?.addEventListener('click', () => handlers.onLoadout())
   // Delegated click listener on scoreboard to support dynamic scoreboard templates
   scoreboard.addEventListener('click', (e) => {
@@ -272,10 +296,12 @@ export function initMenu(handlers: {
       setPhase('lobby')
       document.body.classList.add('main-menu-active')
       mainMenu.classList.remove('hidden')
+      menuBg.start()
     },
     hideMain: () => {
       document.body.classList.remove('main-menu-active')
       mainMenu.classList.add('hidden')
+      menuBg.stop()
     },
     showScoreboard: (_selfId, scoreboardData) => {
       if (scoreboardData) {
@@ -335,6 +361,89 @@ export function initMenu(handlers: {
         sbOther.textContent = `Blue ${blue}`
         sbWinner.textContent =
           red >= TEAM_KILLS_TO_WIN ? 'RED WINS' : blue >= TEAM_KILLS_TO_WIN ? 'BLUE WINS' : ''
+      }
+    },
+    updateProfile: (profile) => {
+      const playBtn = document.getElementById('menu-play') as HTMLButtonElement
+      const ffaBtn = document.getElementById('menu-ffa') as HTMLButtonElement
+      const trainBtn = document.getElementById('menu-train') as HTMLButtonElement
+      const noviceBtn = document.getElementById('menu-train-novice') as HTMLButtonElement
+      const competentBtn = document.getElementById('menu-train-competent') as HTMLButtonElement
+      const masterBtn = document.getElementById('menu-train-master') as HTMLButtonElement
+      const forgeBtn = document.getElementById('menu-loadout') as HTMLButtonElement | null
+      const statusEl = document.getElementById('pc-loadout-status')
+      const statusTextEl = document.getElementById('pc-loadout-text')
+
+      const isValid =
+        !!profile.currentClass &&
+        Array.isArray(profile.equippedSpells) &&
+        profile.equippedSpells.some(Boolean)
+
+      if (!isValid) {
+        const previewEl = document.getElementById('menu-loadout-preview')
+        if (previewEl) previewEl.style.removeProperty('--class-color')
+
+        if (statusEl) statusEl.className = 'pc-loadout-status pc-loadout-status--unconfigured'
+        const iconEl = statusEl?.querySelector('.pc-loadout-icon')
+        if (iconEl) iconEl.textContent = '⚠'
+        if (statusTextEl) statusTextEl.textContent = 'Configura il loadout nel Forge'
+
+        // Forge pulses to guide the user towards configuring their loadout
+        forgeBtn?.classList.add('forge-tile--cta')
+
+        // Lock competitive modes only — training redirects to Forge by itself
+        ;[playBtn, ffaBtn].forEach((btn) => {
+          if (btn) {
+            btn.disabled = true
+            btn.classList.add('locked')
+            if (!btn.querySelector('.lock-icon')) {
+              const lock = document.createElement('span')
+              lock.className = 'lock-icon'
+              lock.textContent = '🔒'
+              btn.appendChild(lock)
+            }
+            btn.title = 'Configura il tuo Loadout Forge prima di giocare'
+          }
+        })
+        // Training is always accessible — handler redirects to Forge if needed
+        ;[trainBtn, noviceBtn, competentBtn, masterBtn].forEach((btn) => {
+          if (btn) {
+            btn.disabled = false
+            btn.classList.remove('locked')
+            btn.classList.add('mode-tile--available')
+            btn.querySelector('.lock-icon')?.remove()
+            btn.title = ''
+          }
+        })
+      } else {
+        const classId = profile.currentClass as ClassId
+        const CLASS_COLORS: Record<ClassId, string> = {
+          tank: '#d4a04a',
+          archer: '#2ecc71',
+          mage: '#3498db',
+          hybrid: '#00f0ff',
+        }
+        const previewEl = document.getElementById('menu-loadout-preview')
+        if (previewEl) previewEl.style.setProperty('--class-color', CLASS_COLORS[classId] || '#ffd260')
+
+        menuBg.updateClass(classId)
+
+        // Loadout ready — stop forge pulse
+        forgeBtn?.classList.remove('forge-tile--cta')
+
+        if (statusEl) statusEl.className = 'pc-loadout-status pc-loadout-status--ready'
+        const iconEl = statusEl?.querySelector('.pc-loadout-icon')
+        if (iconEl) iconEl.textContent = '✓'
+        if (statusTextEl) statusTextEl.textContent = 'Loadout pronto'
+
+        ;[playBtn, ffaBtn, trainBtn, noviceBtn, competentBtn, masterBtn].forEach((btn) => {
+          if (btn) {
+            btn.disabled = false
+            btn.classList.remove('locked', 'mode-tile--available')
+            btn.querySelector('.lock-icon')?.remove()
+            btn.title = ''
+          }
+        })
       }
     },
   }

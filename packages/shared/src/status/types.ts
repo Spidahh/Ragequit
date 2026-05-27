@@ -13,11 +13,11 @@ export type StatusKind =
   | 'burn' // Fire DoT — 2 dmg/s per stack, 3 s, max 3 stacks
   | 'chill' // Ice slow — 5% per stack, 5 stacks → frozen, decays in 4 s
   | 'bleed' // Melee DoT — 6 dmg/s for 3 s; cleansed by Cleanse Surge
-  | 'poison' // Nature DoT — 3 dmg/s for 4 s, decays half-rate at 5/5 Mastery
+  | 'poison' // Nature DoT — 3 dmg/s for 4 s
   | 'slow' // Generic %-slow with explicit fraction
   | 'root' // No horizontal movement
   | 'stun' // No movement, no cast, no parry
-  | 'freeze' // Like stun, ice-themed (5/5 Ice Mastery transition from chill)
+  | 'freeze' // Like stun, ice-themed
   | 'curse' // Outgoing damage debuff (Curse of Weakness)
   | 'blind' // Severe vision reduction for a short punish/setup window
   | 'mark' // Visual/team marker — no combat effect
@@ -37,8 +37,6 @@ export interface StatusMeta {
   tickEverySec: number
   // Default duration from one application (some abilities override).
   defaultDurationSec: number
-  // True if a transmute cast clears this status from the caster (Bleed cleanse).
-  cleansedByTransmute: boolean
   // Movement-related effect: explicit slow fraction OR full lock. Engine sums
   // slow fractions across active statuses (clamped to 1).
   slowFraction?: number
@@ -53,14 +51,12 @@ export const STATUS_META: Readonly<Record<StatusKind, StatusMeta>> = {
     damagePerTick: 2,
     tickEverySec: 1,
     defaultDurationSec: 3,
-    cleansedByTransmute: false,
   },
   chill: {
     maxStacks: 5,
     damagePerTick: 0,
     tickEverySec: 1,
     defaultDurationSec: 4,
-    cleansedByTransmute: false,
     slowFraction: 0.05, // per stack — engine multiplies by stacks
   },
   bleed: {
@@ -68,23 +64,18 @@ export const STATUS_META: Readonly<Record<StatusKind, StatusMeta>> = {
     damagePerTick: 6,
     tickEverySec: 1,
     defaultDurationSec: 3,
-    // Pass 4: bleed cleanse moved from transmute to Cleanse Surge / class utility.
-    // Fixed transfers are no longer in the target design; cleansedByTransmute = false.
-    cleansedByTransmute: false,
   },
   poison: {
     maxStacks: 5,
     damagePerTick: 3,
     tickEverySec: 1,
     defaultDurationSec: 4,
-    cleansedByTransmute: false,
   },
   slow: {
     maxStacks: 1,
     damagePerTick: 0,
     tickEverySec: 1,
     defaultDurationSec: 2,
-    cleansedByTransmute: false,
     // slowFraction comes from the StatusInstance itself for explicit %-slows.
   },
   root: {
@@ -92,7 +83,6 @@ export const STATUS_META: Readonly<Record<StatusKind, StatusMeta>> = {
     damagePerTick: 0,
     tickEverySec: 1,
     defaultDurationSec: 1.5,
-    cleansedByTransmute: false,
     rootsMovement: true,
   },
   stun: {
@@ -100,7 +90,6 @@ export const STATUS_META: Readonly<Record<StatusKind, StatusMeta>> = {
     damagePerTick: 0,
     tickEverySec: 1,
     defaultDurationSec: 0.5,
-    cleansedByTransmute: false,
     incapacitates: true,
     rootsMovement: true,
   },
@@ -109,7 +98,6 @@ export const STATUS_META: Readonly<Record<StatusKind, StatusMeta>> = {
     damagePerTick: 0,
     tickEverySec: 1,
     defaultDurationSec: 1.2,
-    cleansedByTransmute: false,
     incapacitates: true,
     rootsMovement: true,
   },
@@ -118,21 +106,18 @@ export const STATUS_META: Readonly<Record<StatusKind, StatusMeta>> = {
     damagePerTick: 0,
     tickEverySec: 1,
     defaultDurationSec: 5,
-    cleansedByTransmute: false,
   },
   blind: {
     maxStacks: 1,
     damagePerTick: 0,
     tickEverySec: 1,
     defaultDurationSec: 2,
-    cleansedByTransmute: false,
   },
   mark: {
     maxStacks: 1,
     damagePerTick: 0,
     tickEverySec: 1,
     defaultDurationSec: 5,
-    cleansedByTransmute: false,
   },
   // shield: stacks hold the remaining HP pool; decremented by drainDamage before
   // applying HP loss. Not a movement modifier.
@@ -141,7 +126,6 @@ export const STATUS_META: Readonly<Record<StatusKind, StatusMeta>> = {
     damagePerTick: 0,
     tickEverySec: 999,
     defaultDurationSec: 5,
-    cleansedByTransmute: false,
   },
   // haste: applied as a negative slow fraction. stacks = fraction × 100 (int).
   // Engine clamps net speed after summing slow − haste fractions.
@@ -150,7 +134,6 @@ export const STATUS_META: Readonly<Record<StatusKind, StatusMeta>> = {
     damagePerTick: 0,
     tickEverySec: 1,
     defaultDurationSec: 2,
-    cleansedByTransmute: false,
     slowFraction: -0.4, // +40% effective speed while active
   },
   // invulnerable: used by Phase Shift. Engine skips all incoming damage
@@ -160,7 +143,6 @@ export const STATUS_META: Readonly<Record<StatusKind, StatusMeta>> = {
     damagePerTick: 0,
     tickEverySec: 999,
     defaultDurationSec: 0.6,
-    cleansedByTransmute: false,
   },
 }
 

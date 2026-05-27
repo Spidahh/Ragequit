@@ -16,7 +16,6 @@ export const LOADOUT_SLOT_ORDER: readonly AbilitySlot[] = [
 ]
 
 export const LOADOUT_SLOT_LABELS = ['R', 'G', '1', '2', '3', '4', '5', 'Z', 'X', 'F', 'V'] as const
-export const UTILITY_FLEX_SLOT_INDEX = 10
 
 export const KEY_SLOT: ReadonlyArray<readonly [code: string, label: string, slotIdx: number]> = [
   ['KeyR', 'R', 0],

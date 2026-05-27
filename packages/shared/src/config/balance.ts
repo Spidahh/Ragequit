@@ -1,4 +1,4 @@
-// Runtime balance config loader (Fase 10b).
+// Runtime balance config loader.
 //
 // `packages/shared/src/constants/balance.json` is the SINGLE SOURCE OF
 // TRUTH for tunable numbers post-launch. The server reads it at boot and
@@ -6,7 +6,7 @@
 // module exposes a typed shape + a default value built from the on-disk
 // JSON so:
 //   - server: import `RUNTIME_BALANCE` from this module to read live values.
-//   - tests: pass a custom JSON path to `loadBalance()` to verify overrides.
+//   - tests: provide a custom JSON path to `loadBalance()` to verify overrides.
 //   - client: imports the JSON directly via vite for cosmetic display
 //     (tooltip text, ranked thresholds in lobby UI, etc).
 

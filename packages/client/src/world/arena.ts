@@ -1,6 +1,8 @@
 import { getMap, type AABB } from '@ragequit/shared'
 import * as THREE from 'three'
 
+import { createOutlineMesh } from '../render/outlines.js'
+
 // The ArenaObjects interface returned by buildArena for main.ts.
 export interface ArenaObjects {
   loadMapGeometry: (mapId: string) => void
@@ -21,6 +23,11 @@ function makeBoxMesh(box: AABB, color: number, toonGradient: THREE.DataTexture):
   m.position.set((box.minX + box.maxX) / 2, (box.minY + box.maxY) / 2, (box.minZ + box.maxZ) / 2)
   m.castShadow = true
   m.receiveShadow = true
+
+  // Create crisp outline border around map geometry blocks (thickness: 0.024)
+  const outline = createOutlineMesh(m, 0.024, 0x050508)
+  m.add(outline)
+
   return m
 }
 
@@ -111,12 +118,18 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
     p.castShadow = true
     p.receiveShadow = true
     arenaVisualGroup.add(p)
+
+    // Add high-fidelity outline mesh to pillar shaft (thickness: 0.03)
+    p.add(createOutlineMesh(p, 0.03, 0x050508))
     
     // Polished heavy brass cap
     const cap = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.6, 2.0), brassMat)
     cap.position.set(x, 11.3, z)
     cap.castShadow = true
     arenaVisualGroup.add(cap)
+
+    // Add high-fidelity outline mesh to pillar cap (thickness: 0.03)
+    cap.add(createOutlineMesh(cap, 0.03, 0x050508))
   }
 
   // ── 5. Outer wall segments — heavy stone slabs framing the battlefield ──
@@ -131,6 +144,9 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
     wall.castShadow = true
     wall.receiveShadow = true
     arenaVisualGroup.add(wall)
+
+    // Add high-fidelity outline mesh to wall slabs (thickness: 0.024)
+    wall.add(createOutlineMesh(wall, 0.024, 0x050508))
   }
 
   // ── 6. Center sigil — decorative brass ring on the floor ──
@@ -180,7 +196,7 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
     if (mapId === activeMapId) return
     activeMapId = mapId
     
-    // Clean up old box meshes
+    // Clean up inactive box meshes
     for (const m of mapBoxMeshes) {
       scene.remove(m)
       m.geometry.dispose()

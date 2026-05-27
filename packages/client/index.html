@@ -106,7 +106,6 @@
           <span id="hud-stam-num">100 / 100</span>
         </div>
       </div>
-      <div id="mastery-badge"></div>
       <div id="hud-resize-handle" title="Resize HUD"></div>
     </div>
 
@@ -199,39 +198,148 @@
           <div><b>RMB</b><span>Parry</span></div>
           <div><b data-keybind-label="swapWeapon">Tab</b><span>Swap weapon</span></div>
           <div><b><span data-keybind-label="wheelAbility">E</span> / <span data-keybind-label="wheelUtility">Q</span> hold</b><span>Wheels</span></div>
-          <div><b><span data-keybind-label="transferHpMana">Z</span> <span data-keybind-label="transferManaStam">X</span> <span data-keybind-label="transferStamHp">F</span></b><span>Utility slots</span></div>
+          <div><b><span data-keybind-label="utilityQuick1">Z</span> <span data-keybind-label="utilityQuick2">X</span> <span data-keybind-label="utilityQuick3">F</span></b><span>Utility slots</span></div>
           <div><b data-keybind-label="openLoadout">L</b><span>Loadout</span></div>
         </div>
       </div>
     </div>
 
     <div id="main-menu">
-      <div class="rq-menu-brand" aria-label="RAGEQUIT">
-        <img src="/ui/ragequit-logo-full.png" alt="RAGEQUIT">
-      </div>
-      <p class="tagline">PvP arena combat</p>
-      <div class="menu-grid">
-        <button class="menu-btn primary" id="menu-play" data-desc="duel rules">Play 1v1</button>
-        <button class="menu-btn" id="menu-ffa" data-desc="up to 8 players">Free For All</button>
-        <button class="menu-btn" id="menu-train" data-desc="practice run">Training</button>
-        <button class="menu-btn" id="menu-loadout" data-desc="build editor">Loadout</button>
-        <button class="menu-btn" id="menu-settings" data-desc="video, audio, input">Settings</button>
-      </div>
-      <div class="menu-info">
-        <div class="menu-info-block">
-          <span class="menu-info-title">Core Controls</span>
-          <div class="menu-info-line"><b><span data-keybind-label="moveForward">W</span><span data-keybind-label="moveLeft">A</span><span data-keybind-label="moveBack">S</span><span data-keybind-label="moveRight">D</span></b><span>move</span></div>
-          <div class="menu-info-line"><b>LMB / RMB</b><span>attack / parry</span></div>
-          <div class="menu-info-line"><b><span data-keybind-label="swapWeapon">Tab</span> / Scroll</b><span>swap weapon</span></div>
+
+      <!-- ── CENTRO: logo · tile modalità · forge ───────────────────── -->
+      <div class="mm-center">
+
+        <header class="mm-header">
+          <div class="rq-menu-brand" aria-label="RAGEQUIT">
+            <img src="/ui/ragequit-logo-full.png" alt="RAGEQUIT">
+          </div>
+          <p class="tagline">BUILD IT. BREAK THEM.</p>
+        </header>
+
+        <!-- 3 tile modalità di gioco -->
+        <div class="mm-modes-row">
+
+          <button class="mode-tile mode-tile--pvp" id="menu-play">
+            <span class="mode-tile-glow"></span>
+            <span class="mode-tile-tag">RANKED</span>
+            <span class="mode-tile-icon">⚔</span>
+            <span class="mode-tile-name">Gioca 1v1</span>
+            <span class="mode-tile-sub">Duello · 3 round per vincere</span>
+          </button>
+
+          <button class="mode-tile mode-tile--ffa" id="menu-ffa">
+            <span class="mode-tile-glow"></span>
+            <span class="mode-tile-tag mode-tile-tag--red">CHAOS</span>
+            <span class="mode-tile-icon">💀</span>
+            <span class="mode-tile-name">Multiplayer FFA</span>
+            <span class="mode-tile-sub">Fino a 8 giocatori · tutti contro tutti</span>
+          </button>
+
+          <button class="mode-tile mode-tile--training" id="menu-train">
+            <span class="mode-tile-glow"></span>
+            <span class="mode-tile-tag mode-tile-tag--cyan">LIBERO</span>
+            <span class="mode-tile-icon">🎯</span>
+            <span class="mode-tile-name">Allenamento</span>
+            <span class="mode-tile-sub">Pratica contro AI · bot avversari</span>
+          </button>
+
         </div>
-        <div class="menu-info-block">
-          <span class="menu-info-title">Wheel Controls</span>
-          <div class="menu-info-line"><b><span data-keybind-label="wheelAbility">E</span> hold</b><span>abilities</span></div>
-          <div class="menu-info-line"><b><span data-keybind-label="wheelUtility">Q</span> hold</b><span>utilities</span></div>
-          <div class="menu-info-line"><b><span data-keybind-label="transferHpMana">Z</span> <span data-keybind-label="transferManaStam">X</span> <span data-keybind-label="transferStamHp">F</span></b><span>utility slots</span></div>
+
+        <!-- Sub-opzioni difficoltà training (espandibile) -->
+        <div id="menu-train-options" class="mm-subnav hidden">
+          <button class="mode-tile mode-tile--mini" id="menu-train-novice">
+            <span class="mode-tile-icon">⚔</span>
+            <span class="mode-tile-name">Novizio</span>
+            <span class="mode-tile-sub">Bot base</span>
+          </button>
+          <button class="mode-tile mode-tile--mini" id="menu-train-competent">
+            <span class="mode-tile-icon">🛡</span>
+            <span class="mode-tile-name">Competente</span>
+            <span class="mode-tile-sub">Bot medio</span>
+          </button>
+          <button class="mode-tile mode-tile--mini mode-tile--danger" id="menu-train-master">
+            <span class="mode-tile-icon">🔥</span>
+            <span class="mode-tile-name">Maestro</span>
+            <span class="mode-tile-sub">Bot letale</span>
+          </button>
         </div>
+
+        <!-- Loadout Forge: full-width, separato, protagonista -->
+        <button class="forge-tile forge-tile--hero" id="menu-loadout">
+          <span class="forge-tile-bg"></span>
+          <span class="forge-tile-icon">⚙</span>
+          <span class="forge-tile-text">
+            <span class="forge-tile-name">Loadout Forge</span>
+            <span class="forge-tile-sub">costruisci la classe · scegli gli incantesimi · personalizza il build</span>
+          </span>
+          <span class="forge-tile-arrow">›</span>
+        </button>
+
+        <!-- ── PANNELLO PROFILO — barra orizzontale integrata ──────── -->
+        <div id="menu-loadout-preview" class="profile-card-floating">
+
+          <!-- Avatar + nome -->
+          <div class="pc-head">
+            <div class="pc-avatar" id="pc-avatar">?</div>
+            <div class="pc-ident">
+              <div class="pc-name-field">
+                <input type="text" id="pc-display-name" class="pc-name-input"
+                  value="" maxlength="16" placeholder="Nome…"
+                  spellcheck="false" autocomplete="off">
+                <span class="pc-name-saved" id="pc-name-saved" aria-hidden="true">✓</span>
+              </div>
+              <span class="pc-name-sub">nome in gioco</span>
+            </div>
+          </div>
+
+          <div class="pc-sep"></div>
+
+          <!-- Stats -->
+          <div class="pc-stats-row">
+            <div class="pc-stat-box">
+              <span class="pc-stat-lbl">ELO</span>
+              <span class="pc-stat-val" id="profile-stat-elo">1000</span>
+            </div>
+            <div class="pc-stat-box">
+              <span class="pc-stat-lbl">W</span>
+              <span class="pc-stat-val" id="profile-stat-wins">0</span>
+            </div>
+            <div class="pc-stat-box">
+              <span class="pc-stat-lbl">L</span>
+              <span class="pc-stat-val" id="profile-stat-losses">0</span>
+            </div>
+          </div>
+
+          <div class="pc-sep"></div>
+
+          <!-- Badge grado -->
+          <div id="profile-rank-badge" class="rank-badge">
+            <div class="rank-badge-top">
+              <span class="rank-icon">🪣</span>
+              <div class="rank-badge-info">
+                <span class="rank-name">Fresh Meat</span>
+                <span class="rank-subtitle">Statisticamente già morto</span>
+              </div>
+            </div>
+            <div class="rank-progress-track"><div class="rank-progress-fill"></div></div>
+            <div class="rank-next-label">5 vitt. → Bone Collector</div>
+          </div>
+
+          <div class="pc-sep"></div>
+
+          <!-- Auth + loadout status — push a destra -->
+          <div class="pc-right-group">
+            <div id="profile-auth-section"></div>
+            <div id="pc-loadout-status" class="pc-loadout-status pc-loadout-status--unconfigured">
+              <span class="pc-loadout-icon">⚠</span>
+              <span id="pc-loadout-text" class="pc-loadout-text">Configura loadout</span>
+            </div>
+          </div>
+
+        </div>
+
       </div>
-      <div class="footnote">Build your kit · master movement · win the duel</div>
+
     </div>
 
     <!-- Settings overlay -->
@@ -283,8 +391,6 @@
             <div><span class="key">LMB</span> Attack</div>
             <div><span class="key">RMB</span> Parry</div>
             <div class="keybind-row"><button class="keybind-btn" data-keybind-action="swapWeapon"></button> Cycle weapon</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="meleeAbility"></button> Melee ability</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="bowAbility"></button> Bow ability</div>
             <div class="keybind-row"><button class="keybind-btn" data-keybind-action="spell1"></button> Spell 1</div>
             <div class="keybind-row"><button class="keybind-btn" data-keybind-action="spell2"></button> Spell 2</div>
             <div class="keybind-row"><button class="keybind-btn" data-keybind-action="spell3"></button> Spell 3</div>
@@ -292,10 +398,6 @@
             <div class="keybind-row"><button class="keybind-btn" data-keybind-action="spell5"></button> Spell 5</div>
             <div class="keybind-row"><button class="keybind-btn" data-keybind-action="wheelUtility"></button> Utility wheel</div>
             <div class="keybind-row"><button class="keybind-btn" data-keybind-action="wheelAbility"></button> Ability wheel</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="transferHpMana"></button> Utility slot Z</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="transferManaStam"></button> Utility slot X</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="transferStamHp"></button> Utility slot F</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="utilityAbility"></button> Utility</div>
             <div class="keybind-row"><button class="keybind-btn" data-keybind-action="openLoadout"></button> Loadout</div>
             <div class="keybind-row"><button class="keybind-btn" data-keybind-action="sensDown"></button> Sens -</div>
             <div class="keybind-row"><button class="keybind-btn" data-keybind-action="sensUp"></button> Sens +</div>
@@ -319,22 +421,22 @@
 
         <!-- Class Selector — 4 metallic arcane tabs -->
         <div id="ls-class-selector" aria-label="Seleziona classe">
-          <button class="ls-class-tab active" data-class="tank" id="ls-class-tank" type="button">
+          <button class="class-select-card active" data-class="tank" id="ls-class-tank" type="button">
             <span class="class-tab-icon">🛡️</span>
             <span class="class-tab-name">TANK</span>
             <span class="class-tab-sub">Fury · 250 HP</span>
           </button>
-          <button class="ls-class-tab" data-class="archer" id="ls-class-archer" type="button">
+          <button class="class-select-card" data-class="archer" id="ls-class-archer" type="button">
             <span class="class-tab-icon">🏹</span>
             <span class="class-tab-name">ARCIERE</span>
             <span class="class-tab-sub">Momentum · 175 HP</span>
           </button>
-          <button class="ls-class-tab" data-class="mage" id="ls-class-mage" type="button">
+          <button class="class-select-card" data-class="mage" id="ls-class-mage" type="button">
             <span class="class-tab-icon">🔮</span>
             <span class="class-tab-name">MAGO</span>
             <span class="class-tab-sub">Risonanza · 150 HP</span>
           </button>
-          <button class="ls-class-tab" data-class="hybrid" id="ls-class-hybrid" type="button">
+          <button class="class-select-card" data-class="hybrid" id="ls-class-hybrid" type="button">
             <span class="class-tab-icon">⚡</span>
             <span class="class-tab-name">IBRIDO</span>
             <span class="class-tab-sub">Flow · 200 HP</span>
@@ -347,14 +449,6 @@
           <span data-flow="cashout">Cashout</span>
           <span data-flow="reset">Reset</span>
         </div>
-        <div id="mastery-pills">
-          <span class="mpill" data-el="fire">Fire 0/5</span>
-          <span class="mpill" data-el="ice">Ice 0/5</span>
-          <span class="mpill" data-el="lightning">Lightning 0/5</span>
-          <span class="mpill" data-el="dark">Dark 0/5</span>
-          <span class="mpill" data-el="nature">Nature 0/5</span>
-        </div>
-        <div id="ls-mastery-badge" class="mastery-badge tier-0">NO MASTERY</div>
       </div>
 
       <div id="ls-body">
@@ -366,7 +460,8 @@
           </div>
           <div class="ls-section">
             <div class="ls-section-label"><span>Magic Deck</span><span class="ls-key" id="ls-magic-deck-key">1 2 3 4 5</span></div>
-            <div class="slot-list" id="ls-magic"></div>
+            <div class="slot-list" id="ls-magic-base"></div>
+            <div class="slot-list" id="ls-magic-advanced"></div>
           </div>
           <div class="ls-section">
             <div class="ls-section-label"><span>Utility Wheel</span><span class="ls-key" id="ls-utility-wheel-key">Q HOLD</span></div>
@@ -392,6 +487,22 @@
               <span class="mechanic-label">Meccanica Unica</span>
               <span class="mechanic-name" id="ls-mechanic-name">FLOW</span>
               <p class="mechanic-desc" id="ls-mechanic-desc"></p>
+            </div>
+
+            <!-- Allowed Weapons panel -->
+            <div class="vitals-weapons-container">
+              <span class="vitals-section-title">ALLOWED WEAPONS</span>
+              <div id="ls-vitals-weapons" class="vitals-weapons-row">
+                <div class="vitals-weapon-icon" data-weapon="sword" title="Sword ⚔️">⚔️ <span>SWORD</span></div>
+                <div class="vitals-weapon-icon" data-weapon="bow" title="Bow 🏹">🏹 <span>BOW</span></div>
+                <div class="vitals-weapon-icon" data-weapon="staff" title="Staff 🔮">🔮 <span>STAFF</span></div>
+              </div>
+            </div>
+
+            <!-- Spell Budget panel -->
+            <div class="vitals-spells-container">
+              <span class="vitals-section-title">SPELL SLOT BUDGET</span>
+              <div id="ls-vitals-spells" class="vitals-spells-grid"></div>
             </div>
             <div class="vitals-bars">
               <div class="vital-row">

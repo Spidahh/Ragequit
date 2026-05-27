@@ -6,23 +6,10 @@ import { __loadoutStationSmoke, initLoadoutStation } from './loadout-station.js'
 function mountLoadoutDom(): void {
   document.body.innerHTML = `
       <div id="loadout-station" class="hidden">
-      <div id="ls-flow-strip">
-        <span data-flow="opener"></span>
-        <span data-flow="control"></span>
-        <span data-flow="cashout"></span>
-        <span data-flow="reset"></span>
-      </div>
-      <div id="mastery-pills">
-        <span class="mpill" data-el="fire"></span>
-        <span class="mpill" data-el="ice"></span>
-        <span class="mpill" data-el="lightning"></span>
-        <span class="mpill" data-el="dark"></span>
-        <span class="mpill" data-el="nature"></span>
-      </div>
-      <span id="ls-mastery-badge"></span>
       <div id="ls-melee"></div>
       <div id="ls-bow"></div>
-      <div id="ls-magic"></div>
+      <div id="ls-magic-base"></div>
+      <div id="ls-magic-advanced"></div>
       <div id="ls-utility"></div>
       <div id="ls-detail-name"></div>
       <div id="ls-detail-meta"></div>
@@ -30,10 +17,7 @@ function mountLoadoutDom(): void {
       <div id="ls-detail-malus"></div>
       <button id="ls-detail-instant"></button>
       <input id="ls-search" />
-      <button data-filter="recommended"></button>
       <button data-filter="all"></button>
-      <button data-filter="starter"></button>
-      <button data-filter="control"></button>
       <button data-filter="instant"></button>
       <button data-filter="preview"></button>
       <button data-filter="fire"></button>
@@ -98,7 +82,7 @@ describe('loadout station smoke', () => {
       'barrier',
       'smoke_screen',
     ])
-    // old positional magic field is gone
+    // Wire payload stays class-aware; there is no generic magic bucket.
     expect(msg['magic']).toBeUndefined()
     expect(api.getLoadout()).toHaveLength(11)
   })
@@ -231,10 +215,10 @@ describe('loadout station smoke', () => {
     const api = initLoadoutStation(() => undefined)
 
     api.open()
-    document.querySelector<HTMLButtonElement>('[data-filter="starter"]')?.click()
+    document.querySelector<HTMLButtonElement>('[data-filter="instant"]')?.click()
     expect(
       document
-        .querySelector<HTMLButtonElement>('[data-filter="starter"]')
+        .querySelector<HTMLButtonElement>('[data-filter="instant"]')
         ?.classList.contains('active-filter'),
     ).toBe(true)
 
@@ -248,42 +232,45 @@ describe('loadout station smoke', () => {
     ).toBe(true)
     expect(
       document
-        .querySelector<HTMLButtonElement>('[data-filter="starter"]')
+        .querySelector<HTMLButtonElement>('[data-filter="instant"]')
         ?.classList.contains('active-filter'),
     ).toBe(false)
   })
 
-  it('filters starter cards by combo role instead of legacy starter flags', () => {
-    const api = initLoadoutStation(() => undefined)
-
-    api.open()
-    document.querySelectorAll<HTMLButtonElement>('.ls-slot')[10]?.click()
-    document.querySelector<HTMLButtonElement>('[data-filter="starter"]')?.click()
-
-    expect(document.querySelectorAll('.pool-card')).toHaveLength(0)
-    expect(document.getElementById('ls-pool')?.textContent).toContain('No abilities available')
-  })
-
-  it('supports smart and cast-mode filters in the ability pool', () => {
+  it('supports cast-mode filters in the ability pool', () => {
     const api = initLoadoutStation(() => undefined)
 
     api.open()
     document.querySelectorAll<HTMLButtonElement>('.ls-slot')[2]?.click()
-    document.querySelector<HTMLButtonElement>('[data-filter="recommended"]')?.click()
-    expect(document.querySelectorAll('.pool-card.recommended').length).toBeGreaterThan(0)
 
     document.querySelector<HTMLButtonElement>('[data-filter="preview"]')?.click()
     expect(
-      Array.from(document.querySelectorAll('.pool-card .instant-toggle')).every(
-        (el) => el.getAttribute('aria-checked') === 'false',
-      ),
+      document
+        .querySelector<HTMLButtonElement>('[data-filter="preview"]')
+        ?.classList.contains('active-filter'),
     ).toBe(true)
 
     document.querySelector<HTMLButtonElement>('[data-filter="instant"]')?.click()
     expect(
-      Array.from(document.querySelectorAll('.pool-card .instant-toggle')).every(
-        (el) => el.getAttribute('aria-checked') === 'true',
-      ),
+      document
+        .querySelector<HTMLButtonElement>('[data-filter="instant"]')
+        ?.classList.contains('active-filter'),
     ).toBe(true)
+  })
+
+  it('uses the selected class slot family when building the ability pool', () => {
+    localStorage.setItem(__loadoutStationSmoke.classStorageKey, 'mage')
+    const api = initLoadoutStation(() => undefined)
+
+    api.open()
+
+    expect(document.getElementById('ls-pool-title')?.textContent).toBeFalsy()
+    expect(document.getElementById('ls-pool')?.textContent).toContain('Fireball')
+    expect(document.getElementById('ls-pool')?.textContent).not.toContain(
+      'No abilities available for this slot.',
+    )
+    expect(document.getElementById('ls-melee')?.children).toHaveLength(0)
+    expect(document.getElementById('ls-magic-base')?.children.length).toBeGreaterThan(0)
+    expect(document.getElementById('ls-magic-advanced')?.children.length).toBeGreaterThan(0)
   })
 })

@@ -16,11 +16,7 @@ import type { StatusKind } from '../status/types.js'
 
 // --- Slot taxonomy ----------------------------------------------------------
 
-// 11 loadout slots per player:
-//   melee : 1     — single melee ability
-//   bow   : 1     — single bow ability
-//   magic : 5     — five magic abilities (drives Mastery via element stacking)
-//   utility: 4    — three fixed transfer utilities + one flex utility
+// Slot families used by the class-aware loadout envelope.
 export type AbilitySlot =
   | 'melee' // R direct bind or E-wheel sector
   | 'bow' // G direct bind or E-wheel sector
@@ -74,7 +70,7 @@ export interface DamageEffect extends EffectBase {
   kind: 'damage'
   amount: number
   radius?: number // 0 = single-target
-  element?: ElementId // for Mastery damage bonus calculation
+  element?: ElementId
   excludePrimary?: boolean
   canCrit?: boolean
 }
@@ -185,8 +181,7 @@ export interface ChannelEffect extends EffectBase {
   breakOnDamage?: boolean
 }
 
-// Cleanse a status type from caster. Transmute clears bleed through its own
-// path; Cleanse Surge uses this primitive for explicit utility cleanse.
+// Cleanse a status type from caster.
 // When `status` is omitted the engine removes ALL negative statuses (full cleanse).
 export interface CleanseEffect extends EffectBase {
   kind: 'cleanse'
@@ -199,14 +194,6 @@ export interface CleanseEffect extends EffectBase {
 export interface RestoreStaminaEffect extends EffectBase {
   kind: 'restoreStamina'
   amount: number
-}
-
-// Resource transmutation — converts one resource to another at the fixed
-// design ratio (see 04_transmutation.md). These are fixed utility slots
-// triggered via Z/X/F.
-export interface TransmuteEffect extends EffectBase {
-  kind: 'transmute'
-  direction: 'hp_mana' | 'mana_stam' | 'stam_hp'
 }
 
 export type EffectSpec =
@@ -222,7 +209,6 @@ export type EffectSpec =
   | ChannelEffect
   | CleanseEffect
   | RestoreStaminaEffect
-  | TransmuteEffect
 
 // --- AbilityDef -------------------------------------------------------------
 
@@ -232,13 +218,10 @@ export interface AbilityDef {
   // Human label for HUD tooltips.
   name: string
   slot: AbilitySlot
-  // Target redesign metadata. Runtime loadout validation still consumes the
-  // legacy `slot` field until the class-aware protocol pass lands.
   targetSlotFamily?: TargetAbilitySlotFamily
   targetLegalClasses?: readonly ClassId[]
   airPolicy?: AbilityAirPolicy
-  // Element tag — drives Mastery bonuses. 'none' for utility
-  // abilities and the few melee/bow abilities that have no element.
+  // Element tag. 'none' for utility abilities and non-elemental weapon skills.
   element: ElementId | 'none'
   // Weapon the ability requires. The engine auto-swaps to this before the
   // cost is paid (per 01_controls.md auto-swap rule).

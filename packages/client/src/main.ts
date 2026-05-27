@@ -40,6 +40,7 @@ import {
   type ServerWeaponSwappedMessage,
   type SimInput,
   type Weapon,
+  type ClassId,
 } from '@ragequit/shared'
 import { Client, type Room } from 'colyseus.js'
 import * as THREE from 'three'
@@ -64,7 +65,18 @@ import { initMouseSensitivity } from './input/sensitivity.js'
 import { initLoadoutStation } from './loadout-station.js'
 import { initMenu } from './menu.js'
 import { sendLoadout } from './net/loadout-sync.js'
-import { initSupabaseAuth, getAccessToken } from './net/supabase-auth.js'
+import {
+  initSupabaseAuth,
+  getAccessToken,
+  signIn,
+  signUp,
+  logOut,
+  getCurrentUserEmail,
+  getCurrentUserId,
+  getPlayerStats,
+  signInWithGoogle,
+} from './net/supabase-auth.js'
+import { updateRankBadge } from './rank-system.js'
 import {
   makeCharacter,
   applyWeaponProp,
@@ -90,7 +102,7 @@ import {
   trackAbilityCast,
 } from './telemetry.js'
 import { DeathBurst } from './vfx/death-burst.js'
-import { ImpactPool } from './vfx/impact-pool.js'
+import { ImpactPool, type ImpactProfile } from './vfx/impact-pool.js'
 import { buildArena } from './world/arena.js'
 
 // -----------------------------------------------------------------------
@@ -152,7 +164,7 @@ const respawnSec = document.getElementById('respawn-sec')!
 const castBar = document.getElementById('cast-bar')!
 const castBarFill = document.querySelector<HTMLElement>('#cast-bar .fill')!
 const castBarLabel = document.querySelector<HTMLElement>('#cast-bar .label')!
-const masteryBadge = document.getElementById('mastery-badge')!
+const classMechanicEl = document.getElementById('class-mechanic')
 const respawnKillerEl = document.getElementById('respawn-killer')!
 const lowHpVignette = document.getElementById('low-hp-vignette')!
 const blindVignette = document.getElementById('blind-vignette')!
@@ -259,7 +271,7 @@ const selfHud = initSelfHud({
   respawnSec,
   respawnKillerEl,
   respawnTipEl,
-  masteryBadge,
+  classMechanicEl,
   statusStrip,
   castBar,
   castBarFill,
@@ -281,8 +293,8 @@ soundEngine.muted = true
 window.addEventListener('pointerdown', () => soundEngine.unlock(), { capture: true, passive: true })
 window.addEventListener('keydown', () => soundEngine.unlock(), { capture: true })
 initTelemetry()
-// Boot Supabase auth in the background — resolves before the player can click Play.
-initSupabaseAuth().catch((e: unknown) => console.warn('[supabase] auth init failed:', e))
+// Boot Supabase auth in the background — store the promise, wire up after menu is ready
+const _supabaseAuthReady = initSupabaseAuth()
 const statusOverlay = initStatusOverlay({
   getSelfId: () => self?.sessionId,
   playStatus: (el) => soundEngine.playStatus(el),
@@ -462,8 +474,8 @@ const placementPreview = initPlacementPreview({
 })
 scene.add(placementPreview.group)
 
-function spawnImpact(pos: THREE.Vector3, color: number): void {
-  impactVfx.spawn(pos, color)
+function spawnImpact(pos: THREE.Vector3, color: number, profile: ImpactProfile = 'magic'): void {
+  impactVfx.spawn(pos, color, profile)
 }
 
 /** Map element → world-space impact tint. */
@@ -493,6 +505,7 @@ function elementToImpactColor(element: string | undefined, cause: string): numbe
 const impactVfx = new ImpactPool()
 scene.add(impactVfx.mesh)
 scene.add(impactVfx.ringMesh)
+scene.add(impactVfx.accentMesh)
 
 const deathBurstVfx = new DeathBurst()
 scene.add(deathBurstVfx.mesh)
@@ -651,7 +664,11 @@ pauseSettingsBtn.addEventListener('click', () => {
 })
 pauseLobbyBtn.addEventListener('click', () => {
   closePauseMenu(false)
-  returnToMainMenu({ leaveRoom: true, statusText: 'left match' })
+  if (getRoomMode() === 'training') {
+    returnToTrainingScoreboard()
+  } else {
+    returnToMainMenu({ leaveRoom: true, statusText: 'left match' })
+  }
 })
 
 // -----------------------------------------------------------------------
@@ -703,7 +720,7 @@ let selfPrevOnGround = true
 let selfRollingUntilMs = 0
 
 // Directional screen shake — offset the camera toward/away from attacker.
-// attackerWorldPos: world-space position of whoever dealt damage. Pass null
+// attackerWorldPos: world-space position of whoever dealt damage. Use null
 // for a random-direction fallback (e.g. death from zone damage).
 function applyDirectionalShake(attackerWorldPos: THREE.Vector3 | null, intensity = 1): void {
   const selfPos = self?.sim.pos
@@ -737,6 +754,10 @@ let selfArc: THREE.Mesh | null = null
 let selfArcExpiresAt = 0
 let selfLastWeapon = ''
 let room: Room | null = null
+let activeRoomMode = 'duel_arena'
+export function getRoomMode(): string {
+  return activeRoomMode
+}
 let connectSeq = 0
 let ping = 0
 let matchStartMs = 0
@@ -749,7 +770,10 @@ interface MatchStats {
   damageTaken: number
   knockups: number
   parries: number
-  masteryProcs: number
+  comboProcs: number
+  knockupAttempts: number
+  knockupConversions: number
+  abilitiesUsed: Record<string, number>
 }
 let selfStats: MatchStats = {
   kills: 0,
@@ -758,7 +782,10 @@ let selfStats: MatchStats = {
   damageTaken: 0,
   knockups: 0,
   parries: 0,
-  masteryProcs: 0,
+  comboProcs: 0,
+  knockupAttempts: 0,
+  knockupConversions: 0,
+  abilitiesUsed: {},
 }
 let opponentStats: MatchStats = {
   kills: 0,
@@ -767,7 +794,10 @@ let opponentStats: MatchStats = {
   damageTaken: 0,
   knockups: 0,
   parries: 0,
-  masteryProcs: 0,
+  comboProcs: 0,
+  knockupAttempts: 0,
+  knockupConversions: 0,
+  abilitiesUsed: {},
 }
 
 let lastHitDetails = {
@@ -793,6 +823,7 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
   if (msg.phase === 'live') {
     livePhaseStartTick = getSchemaTick()
     roundTimer.textContent = ''
+    requestAnimationFrame(() => draggableHud.refreshBounds())
     if (canEngageGameplaySurface()) {
       engageCanvasInput()
     }
@@ -809,7 +840,10 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
       damageTaken: 0,
       knockups: 0,
       parries: 0,
-      masteryProcs: 0,
+      comboProcs: 0,
+      knockupAttempts: 0,
+      knockupConversions: 0,
+      abilitiesUsed: {},
     }
     opponentStats = {
       kills: 0,
@@ -818,7 +852,10 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
       damageTaken: 0,
       knockups: 0,
       parries: 0,
-      masteryProcs: 0,
+      comboProcs: 0,
+      knockupAttempts: 0,
+      knockupConversions: 0,
+      abilitiesUsed: {},
     }
     lastHitDetails = { killer: '', ability: '', element: '', damage: 0 }
     matchStartMs = performance.now()
@@ -841,14 +878,12 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
     const selfName = selfSchema?.name || 'Player'
     const opponentName = otherSchema?.name || 'Opponent'
 
-    // Retrieve build names based on active mastery/weapons.
-    const selfElement = selfSchema?.masteryElement || 'PHYSICAL'
-    const selfLevel = selfSchema?.masteryLevel || 0
-    const selfBuild = `${selfElement.toUpperCase()} ${selfLevel}/5 · ${selfSchema?.activeWeapon?.toUpperCase() || 'SWORD'} MAIN`
+    // Build label: class + active weapon
+    const selfClassId = selfSchema?.classId || 'hybrid'
+    const selfBuild = `${selfClassId.toUpperCase()} · ${selfSchema?.activeWeapon?.toUpperCase() || 'SWORD'}`
 
-    const oppElement = otherSchema?.masteryElement || 'PHYSICAL'
-    const oppLevel = otherSchema?.masteryLevel || 0
-    const oppBuild = `${oppElement.toUpperCase()} ${oppLevel}/5 · ${otherSchema?.activeWeapon?.toUpperCase() || 'SWORD'} MAIN`
+    const oppClassId = otherSchema?.classId || 'hybrid'
+    const oppBuild = `${oppClassId.toUpperCase()} · ${otherSchema?.activeWeapon?.toUpperCase() || 'SWORD'}`
 
     // Determine winner based on score or kills
     const isWin = selfStats.kills >= opponentStats.kills
@@ -861,8 +896,11 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
     const scoreboardData: ScoreboardData = {
       arena: arenaName.toUpperCase(),
       matchMs: matchMs > 0 ? matchMs : 120000,
-      rounds: `${selfStats.kills}-${opponentStats.kills} rounds`,
-      league: 'Gold III',
+      rounds:
+        getRoomMode() === 'training'
+          ? 'PRACTICE'
+          : `${selfStats.kills}-${opponentStats.kills} rounds`,
+      league: getRoomMode() === 'training' ? 'NO RANKED ELO' : 'Gold III',
       winner: isWin
         ? {
             name: selfName,
@@ -870,9 +908,10 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
             kills: selfStats.kills,
             damageDealt: selfStats.damageDealt,
             damageTaken: selfStats.damageTaken,
-            knockups: selfStats.knockups,
+            knockups: `${selfStats.knockupConversions} / ${selfStats.knockupAttempts}`,
             parries: selfStats.parries,
-            masteryProcs: selfStats.masteryProcs,
+            comboProcs: selfStats.comboProcs,
+            abilitiesUsed: selfStats.abilitiesUsed,
           }
         : {
             name: opponentName,
@@ -880,9 +919,10 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
             kills: opponentStats.kills,
             damageDealt: opponentStats.damageDealt,
             damageTaken: opponentStats.damageTaken,
-            knockups: opponentStats.knockups,
+            knockups: `${opponentStats.knockupConversions} / ${opponentStats.knockupAttempts}`,
             parries: opponentStats.parries,
-            masteryProcs: opponentStats.masteryProcs,
+            comboProcs: opponentStats.comboProcs,
+            abilitiesUsed: opponentStats.abilitiesUsed,
           },
       loser: isWin
         ? {
@@ -891,9 +931,10 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
             kills: opponentStats.kills,
             damageDealt: opponentStats.damageDealt,
             damageTaken: opponentStats.damageTaken,
-            knockups: opponentStats.knockups,
+            knockups: `${opponentStats.knockupConversions} / ${opponentStats.knockupAttempts}`,
             parries: opponentStats.parries,
-            masteryProcs: opponentStats.masteryProcs,
+            comboProcs: opponentStats.comboProcs,
+            abilitiesUsed: opponentStats.abilitiesUsed,
           }
         : {
             name: selfName,
@@ -901,12 +942,13 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
             kills: selfStats.kills,
             damageDealt: selfStats.damageDealt,
             damageTaken: selfStats.damageTaken,
-            knockups: selfStats.knockups,
+            knockups: `${selfStats.knockupConversions} / ${selfStats.knockupAttempts}`,
             parries: selfStats.parries,
-            masteryProcs: selfStats.masteryProcs,
+            comboProcs: selfStats.comboProcs,
+            abilitiesUsed: selfStats.abilitiesUsed,
           },
       eloBefore,
-      eloDelta,
+      eloDelta: getRoomMode() === 'training' ? 0 : eloDelta,
     }
 
     menu.showScoreboard(selfId, scoreboardData)
@@ -973,9 +1015,297 @@ const draggableHud = initDraggableHud({
   resizeHandle: hudResizeHandle,
 })
 
-function setStatus(text: string, color: string): void {
+function setStatus(text: string, _color: string): void {
+  const statusClass = `status-${text.replace(/\s+/g, '-').toLowerCase()}`
   dbgStatus.textContent = text
-  dbgStatus.style.color = color
+  dbgStatus.className = statusClass
+  const footerEl = document.getElementById('menu-server-status')
+  if (footerEl) {
+    footerEl.replaceChildren()
+    footerEl.className = statusClass
+    const dot = document.createElement('span')
+    dot.className = 'server-status-dot'
+    dot.textContent = '●'
+    footerEl.append(dot, text)
+  }
+}
+
+let playerProfile = {
+  currentClass: null as ClassId | null,
+  equippedSpells: [] as string[],
+}
+
+function updateAuthUI(): void {
+  const container = document.getElementById('profile-auth-section')
+  if (!container) return
+
+  const email = getCurrentUserEmail()
+  if (email) {
+    container.innerHTML = `
+      <div class="auth-logged-in-status">
+        <span>Acceduto come: <b>${email}</b></span>
+        <button class="auth-logout-btn" id="btn-auth-logout">LOGOUT</button>
+      </div>
+    `
+    const btnLogout = document.getElementById('btn-auth-logout') as HTMLButtonElement | null
+    if (btnLogout) {
+      btnLogout.addEventListener('click', async () => {
+        btnLogout.disabled = true
+        await logOut()
+        updateAuthUI()
+        initPlayerProfile()
+      })
+    }
+  } else {
+    container.innerHTML = `
+      <div class="auth-logged-out-form">
+        <input type="email" id="auth-email-input" aria-label="Email" class="auth-input" autocomplete="username" placeholder="Email">
+        <input type="password" id="auth-pass-input" aria-label="Password" class="auth-input" autocomplete="current-password" placeholder="Password">
+        <div class="auth-buttons-row">
+          <button class="auth-btn btn-accedi" id="btn-auth-signin">ACCEDI</button>
+          <button class="auth-btn btn-registrati" id="btn-auth-signup">REGISTRATI</button>
+        </div>
+        <div class="auth-oauth-divider"><span>oppure</span></div>
+        <button class="auth-btn btn-google-oauth" id="btn-auth-google">
+          <svg class="google-icon" viewBox="0 0 24 24" width="16" height="16">
+            <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.866-3.577-7.866-8s3.536-8 7.866-8c2.46 0 4.105 1.025 5.047 1.926l3.227-3.227C18.32 1.258 15.535 0 12.24 0 5.58 0 0 5.58 0 12.24s5.58 12.24 12.24 12.24c6.96 0 11.58-4.887 11.58-11.76 0-.792-.084-1.396-.188-1.935H12.24z"/>
+          </svg>
+          ACCEDI CON GOOGLE
+        </button>
+        <div id="auth-status" class="auth-status-message"></div>
+      </div>
+    `
+    const btnSignin = document.getElementById('btn-auth-signin') as HTMLButtonElement | null
+    const btnSignup = document.getElementById('btn-auth-signup') as HTMLButtonElement | null
+    const btnGoogle = document.getElementById('btn-auth-google') as HTMLButtonElement | null
+    const emailInput = document.getElementById('auth-email-input') as HTMLInputElement
+    const passInput = document.getElementById('auth-pass-input') as HTMLInputElement
+    const statusEl = document.getElementById('auth-status')
+
+    if (btnGoogle && statusEl) {
+      btnGoogle.addEventListener('click', async () => {
+        statusEl.textContent = 'Reindirizzamento a Google...'
+        statusEl.className = 'auth-status-message'
+        if (btnSignin) btnSignin.disabled = true
+        if (btnSignup) btnSignup.disabled = true
+        btnGoogle.disabled = true
+
+        try {
+          const { error } = await signInWithGoogle()
+          if (error) {
+            statusEl.textContent = error
+            statusEl.className = 'auth-status-message error'
+            if (btnSignin) btnSignin.disabled = false
+            if (btnSignup) btnSignup.disabled = false
+            btnGoogle.disabled = false
+          }
+        } catch (e: unknown) {
+          const errMsg = e instanceof Error ? e.message : String(e)
+          statusEl.textContent = errMsg || 'Errore OAuth'
+          statusEl.className = 'auth-status-message error'
+          if (btnSignin) btnSignin.disabled = false
+          if (btnSignup) btnSignup.disabled = false
+          btnGoogle.disabled = false
+        }
+      })
+    }
+
+    if (btnSignin && emailInput && passInput && statusEl) {
+      btnSignin.addEventListener('click', async () => {
+        const mail = emailInput.value.trim()
+        const pass = passInput.value
+        if (!mail || !pass) {
+          statusEl.textContent = 'Inserisci email e password'
+          statusEl.className = 'auth-status-message error'
+          return
+        }
+        statusEl.textContent = 'Accesso in corso...'
+        statusEl.className = 'auth-status-message'
+        btnSignin.disabled = true
+        if (btnSignup) btnSignup.disabled = true
+        if (btnGoogle) btnGoogle.disabled = true
+
+        try {
+          const { error } = await signIn(mail, pass)
+          if (error) {
+            statusEl.textContent = error
+            statusEl.className = 'auth-status-message error'
+            btnSignin.disabled = false
+            if (btnSignup) btnSignup.disabled = false
+            if (btnGoogle) btnGoogle.disabled = false
+          } else {
+            statusEl.textContent = 'Accesso eseguito!'
+            statusEl.className = 'auth-status-message success'
+            setTimeout(() => {
+              updateAuthUI()
+              initPlayerProfile()
+            }, 800)
+          }
+        } catch (e: unknown) {
+          const errMsg = e instanceof Error ? e.message : String(e)
+          statusEl.textContent = errMsg || 'Errore imprevisto'
+          statusEl.className = 'auth-status-message error'
+          btnSignin.disabled = false
+          if (btnSignup) btnSignup.disabled = false
+          if (btnGoogle) btnGoogle.disabled = false
+        }
+      })
+    }
+
+    if (btnSignup && emailInput && passInput && statusEl) {
+      btnSignup.addEventListener('click', async () => {
+        const mail = emailInput.value.trim()
+        const pass = passInput.value
+        if (!mail || !pass) {
+          statusEl.textContent = 'Inserisci email e password'
+          statusEl.className = 'auth-status-message error'
+          return
+         }
+        if (pass.length < 6) {
+          statusEl.textContent = 'Password deve essere almeno 6 caratteri'
+          statusEl.className = 'auth-status-message error'
+          return
+        }
+        statusEl.textContent = 'Registrazione in corso...'
+        statusEl.className = 'auth-status-message'
+        btnSignin!.disabled = true
+        btnSignup.disabled = true
+        if (btnGoogle) btnGoogle.disabled = true
+
+        try {
+          const { error } = await signUp(mail, pass)
+          if (error) {
+            statusEl.textContent = error
+            statusEl.className = 'auth-status-message error'
+            btnSignin!.disabled = false
+            btnSignup.disabled = false
+            if (btnGoogle) btnGoogle.disabled = false
+          } else {
+            // Save display name into localStorage on registration
+            const prefix = mail.split('@')[0] || 'PLAYER'
+            localStorage.setItem('ragequit.profile.displayName', prefix)
+            statusEl.textContent = 'Registrazione completata! Controlla la tua email.'
+            statusEl.className = 'auth-status-message success'
+            setTimeout(() => {
+              updateAuthUI()
+              initPlayerProfile()
+            }, 1500)
+          }
+        } catch (e: unknown) {
+          const errMsg = e instanceof Error ? e.message : String(e)
+          statusEl.textContent = errMsg || 'Errore imprevisto'
+          statusEl.className = 'auth-status-message error'
+          btnSignin!.disabled = false
+          btnSignup.disabled = false
+          if (btnGoogle) btnGoogle.disabled = false
+        }
+      })
+    }
+  }
+}
+
+function initPlayerProfile(): void {
+  let isConfigured = localStorage.getItem('ragequit.profile.configured') === 'true'
+  if (!isConfigured) {
+    const savedClass = localStorage.getItem('ragequit.loadout.classId')
+    const savedSlotsRaw = localStorage.getItem('ragequit.loadout.v6')
+    if (savedClass && savedSlotsRaw) {
+      try {
+        const parsed = JSON.parse(savedSlotsRaw) as { slots?: string[] }
+        if (parsed.slots && parsed.slots.length === 11 && parsed.slots.some(Boolean)) {
+          localStorage.setItem('ragequit.profile.configured', 'true')
+          isConfigured = true
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  if (isConfigured) {
+    playerProfile = {
+      currentClass: loadoutStation.getClassId(),
+      equippedSpells: Array.from(loadoutStation.getLoadout() as Iterable<string>),
+    }
+  } else {
+    playerProfile = {
+      currentClass: null,
+      equippedSpells: [],
+    }
+  }
+  menu.updateProfile(playerProfile)
+
+  // Load ELO/stats from Supabase or set defaults
+  const eloEl = document.getElementById('profile-stat-elo')
+  const winsEl = document.getElementById('profile-stat-wins')
+  const lossesEl = document.getElementById('profile-stat-losses')
+  const userId = getCurrentUserId()
+
+  if (userId) {
+    getPlayerStats(userId)
+      .then((stats) => {
+        if (stats) {
+          if (eloEl) eloEl.textContent = String(stats.elo_rating ?? 1000)
+          const wins = stats.wins ?? 0
+          const losses = stats.losses ?? 0
+          if (winsEl) winsEl.textContent = String(wins)
+          if (lossesEl) lossesEl.textContent = String(losses)
+          updateRankBadge(wins)
+        }
+      })
+      .catch((err: unknown) => console.warn('[supabase] failed to fetch player stats:', err))
+  } else {
+    if (eloEl) eloEl.textContent = '1000'
+    if (winsEl) winsEl.textContent = '0'
+    if (lossesEl) lossesEl.textContent = '0'
+    updateRankBadge(0)
+  }
+
+  updateAuthUI()
+  initDisplayName()
+}
+
+function initDisplayName(): void {
+  const nameInput = document.getElementById('pc-display-name') as HTMLInputElement | null
+  const savedTick = document.getElementById('pc-name-saved')
+  const avatarEl = document.getElementById('pc-avatar')
+
+  const email = getCurrentUserEmail()
+
+  // Determine initial name
+  let initialName: string
+  if (email) {
+    initialName = email.split('@')[0]?.toUpperCase() ?? 'USER'
+  } else {
+    const stored = localStorage.getItem('ragequit.profile.displayName')
+    initialName = stored ? stored.trim().toUpperCase() : ''
+  }
+
+  if (nameInput) {
+    nameInput.value = initialName
+    // Lock input when logged in (name comes from account)
+    nameInput.readOnly = Boolean(email)
+  }
+
+  if (avatarEl) avatarEl.textContent = initialName[0] ?? '?'
+
+  // Autosave on input (only when not logged in)
+  if (nameInput && !email) {
+    let saveTimer: ReturnType<typeof setTimeout> | null = null
+    nameInput.addEventListener('input', () => {
+      const val = nameInput.value.trim().toUpperCase()
+      if (val) nameInput.value = val
+      if (avatarEl) avatarEl.textContent = val[0] ?? '?'
+      if (saveTimer) clearTimeout(saveTimer)
+      saveTimer = setTimeout(() => {
+        localStorage.setItem('ragequit.profile.displayName', val)
+        if (savedTick) {
+          savedTick.classList.add('visible')
+          setTimeout(() => savedTick.classList.remove('visible'), 1500)
+        }
+      }, 600)
+    })
+  }
 }
 
 const loadoutStation = initLoadoutStation(
@@ -997,6 +1327,13 @@ const loadoutStation = initLoadoutStation(
   },
   () => currentMatchPhase !== 'live',
   () => {
+    // Update player profile
+    playerProfile = {
+      currentClass: loadoutStation.getClassId(),
+      equippedSpells: Array.from(loadoutStation.getLoadout() as Iterable<string>),
+    }
+    menu.updateProfile(playerProfile)
+
     const mode = pendingLaunchMode
     pendingLaunchMode = null
     if (mode) {
@@ -1050,7 +1387,7 @@ async function connectWithMode(mode: string, reopenLoadout = true): Promise<void
     }
   } else {
     // Already in a room — push loadout and continue. Leaving and rejoining
-    // with a different mode would reset the match; deferred to Fase 7 lobby.
+    // with a different mode would reset the match; keep the lobby state stable.
     pushPersistedLoadout()
   }
 }
@@ -1058,21 +1395,48 @@ async function connectWithMode(mode: string, reopenLoadout = true): Promise<void
 const menu = initMenu({
   onPlay: () => {
     loadoutReturnsToPause = false
-    pendingLaunchMode = 'duel_arena'
-    menu.hideMain()
-    loadoutStation.open()
+    const isConfigured = localStorage.getItem('ragequit.profile.configured') === 'true'
+    if (isConfigured) {
+      pendingLaunchMode = null
+      menu.hideMain()
+      engageCanvasInput()
+      requestArenaPointerLock()
+      void connectWithMode('duel_arena', false)
+    } else {
+      pendingLaunchMode = 'duel_arena'
+      menu.hideMain()
+      loadoutStation.open()
+    }
   },
   onFfa: () => {
     loadoutReturnsToPause = false
-    pendingLaunchMode = 'ffa'
-    menu.hideMain()
-    loadoutStation.open()
+    const isConfigured = localStorage.getItem('ragequit.profile.configured') === 'true'
+    if (isConfigured) {
+      pendingLaunchMode = null
+      menu.hideMain()
+      engageCanvasInput()
+      requestArenaPointerLock()
+      void connectWithMode('ffa', false)
+    } else {
+      pendingLaunchMode = 'ffa'
+      menu.hideMain()
+      loadoutStation.open()
+    }
   },
-  onTraining: () => {
+  onTraining: (difficulty) => {
     loadoutReturnsToPause = false
-    pendingLaunchMode = 'training'
-    menu.hideMain()
-    loadoutStation.open()
+    const isConfigured = localStorage.getItem('ragequit.profile.configured') === 'true'
+    if (isConfigured) {
+      pendingLaunchMode = null
+      menu.hideMain()
+      engageCanvasInput()
+      requestArenaPointerLock()
+      void connectWithMode(`training_${difficulty}`, false)
+    } else {
+      pendingLaunchMode = `training_${difficulty}`
+      menu.hideMain()
+      loadoutStation.open()
+    }
   },
   onLoadout: () => {
     loadoutReturnsToPause = false
@@ -1098,6 +1462,15 @@ const menu = initMenu({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelRatioMap[quality]))
   },
 })
+
+// Call on startup — menu is now initialized, safe to call
+initPlayerProfile()
+
+// Re-run profile init once auth resolves (updates auth UI + stats from Supabase)
+_supabaseAuthReady
+  .then(() => { initPlayerProfile() })
+  .catch((e: unknown) => console.warn('[supabase] auth init failed:', e))
+setStatus('offline', 'rgba(200,200,200,0.35)')
 
 // Register all keyboard/mouse/pointer event handlers now that loadoutStation,
 // radialWheels, and menu are fully initialised.
@@ -1141,9 +1514,16 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
     // botFill=true → server spawns a bot opponent at match start.
     // 1v1 always gets a bot (no matchmaking yet). Training: server handles bot
     // via mode check. FFA: no bots — it's a multiplayer free-for-all.
+    let resolvedMode = mode
+    let difficulty = 'competent'
+    if (mode.startsWith('training_')) {
+      resolvedMode = 'training'
+      difficulty = mode.replace('training_', '')
+    }
     const roomOptions: Record<string, unknown> = {
-      mode,
-      botFill: mode === 'duel_arena',
+      mode: resolvedMode,
+      difficulty,
+      botFill: resolvedMode === 'duel_arena',
     }
     if (token) roomOptions['token'] = token
     const joinedRoom = await client.joinOrCreate('game', roomOptions)
@@ -1154,6 +1534,7 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
       return
     }
     room = joinedRoom
+    activeRoomMode = resolvedMode
     matchStartMs = performance.now()
     soundEngine.muted = false
     setStatus('connected', '#9be39b')
@@ -1161,7 +1542,7 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
     console.info(
       `[ragequit-client] connected ${SERVER_URL} room=${joinedRoom.roomId} session=${joinedRoom.sessionId} mode=${mode}`,
     )
-    // Push the persisted loadout immediately so server-side Mastery/cooldowns
+    // Push the persisted loadout immediately so server-side cooldowns
     // reflect the build even before the user clicks CONFIRM.
     pushPersistedLoadout()
     // Re-open the station only when the main menu is still hidden, meaning the
@@ -1228,7 +1609,7 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
           def?.effects?.some(
             (e) => e.kind === 'move' && (e as { mode?: string }).mode === 'dash',
           ) ?? false
-        // Play cast sound for self only; remote cast VFX can be expanded in a later polish pass.
+        // Play cast sound for self only; remote cast VFX stays driven by replicated events.
         if (msg.casterId === self?.sessionId) {
           soundEngine.playCast(def?.element ?? 'none')
           trackAbilityCast(msg.abilityId, def?.element ?? 'none')
@@ -1271,7 +1652,7 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
       loadoutStation.applyPersistedInstantCast(flags)
     })
 
-    // Fase 7 — match flow events
+    // Match flow events
     joinedRoom.onMessage(MessageTypes.MatchPhase, (msg: ServerMatchPhaseMessage) => {
       if (!isCurrentRoom()) return
       applyMatchPhase(msg, joinedRoom.sessionId)
@@ -1332,13 +1713,24 @@ function onHit(msg: ServerHitMessage): void {
           selfStats.knockups++
         }
         if (msg.cause.startsWith('combo:')) {
-          selfStats.masteryProcs++
+          selfStats.comboProcs++
+        }
+        const players = getSchemaPlayers()
+        const opponent = players?.get(msg.victimId)
+        const tickNow = getSchemaTick()
+        if (opponent && opponent.airborneUntilTick > tickNow) {
+          selfStats.knockupConversions++
         }
       } else if (amISelf && !amIAttacker) {
         selfStats.damageTaken += msg.damage
+        const tickNow = getSchemaTick()
+        const players = getSchemaPlayers()
+        const selfSchema = players?.get(self?.sessionId || '')
+        if (selfSchema && selfSchema.airborneUntilTick > tickNow) {
+          opponentStats.knockupConversions++
+        }
 
         // Cache victim hit details for deathcam
-        const players = getSchemaPlayers()
         const killerName = players?.get(msg.attackerId)?.name || msg.attackerId.slice(0, 6)
         lastHitDetails = {
           killer: killerName,
@@ -1355,7 +1747,7 @@ function onHit(msg: ServerHitMessage): void {
             opponentStats.knockups++
           }
           if (msg.cause.startsWith('combo:')) {
-            opponentStats.masteryProcs++
+            opponentStats.comboProcs++
           }
         }
         if (msg.victimId !== self?.sessionId) {
@@ -1461,12 +1853,12 @@ function onHit(msg: ServerHitMessage): void {
       const cause = msg.cause
       if (msg.didParry) {
         // Parry spark — bright silver flash at contact midpoint.
-        spawnImpact(midpoint, 0xddeeff)
+        spawnImpact(midpoint, 0xddeeff, 'parry')
       } else if (msg.damage > 0) {
         // Air punish — extra burst directly at victim height.
         if (isAirPunish && vicPos) {
-          spawnImpact(new THREE.Vector3(vicPos.x, vicPos.y + 0.3, vicPos.z), 0xff8844)
-          spawnImpact(new THREE.Vector3(vicPos.x, vicPos.y + 0.6, vicPos.z), 0xff4422)
+          spawnImpact(new THREE.Vector3(vicPos.x, vicPos.y + 0.3, vicPos.z), 0xff8844, 'melee')
+          spawnImpact(new THREE.Vector3(vicPos.x, vicPos.y + 0.6, vicPos.z), 0xff4422, 'magic')
         }
         if (
           cause === 'sword_m1' ||
@@ -1478,7 +1870,7 @@ function onHit(msg: ServerHitMessage): void {
           cause === 'whirlwind'
         ) {
           // Melee — gold spark.
-          spawnImpact(midpoint, 0xffcc44)
+          spawnImpact(midpoint, 0xffcc44, 'melee')
         } else if (
           cause === 'bow_m1' ||
           cause === 'piercing_shot' ||
@@ -1491,7 +1883,7 @@ function onHit(msg: ServerHitMessage): void {
           cause === 'snare_trap'
         ) {
           // Bow / arrow — amber.
-          spawnImpact(midpoint, 0xf08020)
+          spawnImpact(midpoint, 0xf08020, 'pierce')
         } else if (cause.startsWith('combo:')) {
           // Status combo reactions — element-specific colour.
           spawnImpact(midpoint, elementToImpactColor(msg.element, cause))
@@ -1505,6 +1897,7 @@ function onHit(msg: ServerHitMessage): void {
             spawnImpact(
               new THREE.Vector3(vicPos.x, vicPos.y + 0.5, vicPos.z),
               elementToImpactColor(msg.element, cause),
+              'tick',
             )
         } else {
           // All other magic / ability hits — element-coloured impact.
@@ -1716,6 +2109,7 @@ function returnToMainMenu(opts: { leaveRoom: boolean; statusText?: string }): vo
       (performance.now() - matchStartMs) / 1000,
     )
   room = null
+  activeRoomMode = 'duel_arena'
   self = null
   clearLocalMatchState()
   if (document.pointerLockElement) document.exitPointerLock()
@@ -1728,6 +2122,107 @@ function returnToMainMenu(opts: { leaveRoom: boolean; statusText?: string }): vo
   if (opts.statusText)
     setStatus(opts.statusText, opts.statusText === 'disconnected' ? '#e87070' : '#e4c05a')
   if (opts.leaveRoom && leavingRoom) void leavingRoom.leave()
+}
+
+function returnToTrainingScoreboard(): void {
+  if (!room) return
+  const selfId = room.sessionId
+
+  if (document.pointerLockElement) document.exitPointerLock()
+
+  pauseMenu.classList.add('hidden')
+  settingsOverlay.classList.add('hidden')
+  settingsOverlay.dataset['returnTo'] = ''
+  loadoutStation.close()
+
+  const players = getSchemaPlayers()
+  const selfSchema = players?.get(selfId)
+
+  let otherId = ''
+  players?.forEach((_p, sid) => {
+    if (sid !== selfId) otherId = sid
+  })
+  const otherSchema = otherId ? players?.get(otherId) : null
+
+  const selfName = selfSchema?.name || 'Player'
+  const opponentName = otherSchema?.name || 'Opponent'
+
+  const selfClassId = selfSchema?.classId || 'hybrid'
+  const selfBuild = `${selfClassId.toUpperCase()} · ${selfSchema?.activeWeapon?.toUpperCase() || 'SWORD'}`
+
+  const oppClassId = otherSchema?.classId || 'hybrid'
+  const oppBuild = `${oppClassId.toUpperCase()} · ${otherSchema?.activeWeapon?.toUpperCase() || 'SWORD'}`
+
+  const isWin = selfStats.kills >= opponentStats.kills
+  const eloDelta = 0
+  const eloBefore = 1500
+
+  const arenaName = getSchemaMapId()
+  const matchMs = performance.now() - matchStartMs
+
+  const scoreboardData: ScoreboardData = {
+    arena: arenaName.toUpperCase(),
+    matchMs: matchMs > 0 ? matchMs : 120000,
+    rounds: 'PRACTICE',
+    league: 'NO RANKED ELO',
+    winner: isWin
+      ? {
+          name: selfName,
+          build: selfBuild,
+          kills: selfStats.kills,
+          damageDealt: selfStats.damageDealt,
+          damageTaken: selfStats.damageTaken,
+          knockups: `${selfStats.knockupConversions} / ${selfStats.knockupAttempts}`,
+          parries: selfStats.parries,
+          comboProcs: selfStats.comboProcs,
+          abilitiesUsed: selfStats.abilitiesUsed,
+        }
+      : {
+          name: opponentName,
+          build: oppBuild,
+          kills: opponentStats.kills,
+          damageDealt: opponentStats.damageDealt,
+          damageTaken: opponentStats.damageTaken,
+          knockups: `${opponentStats.knockupConversions} / ${opponentStats.knockupAttempts}`,
+          parries: opponentStats.parries,
+          comboProcs: opponentStats.comboProcs,
+          abilitiesUsed: opponentStats.abilitiesUsed,
+        },
+    loser: isWin
+      ? {
+          name: opponentName,
+          build: oppBuild,
+          kills: opponentStats.kills,
+          damageDealt: opponentStats.damageDealt,
+          damageTaken: opponentStats.damageTaken,
+          knockups: `${opponentStats.knockupConversions} / ${opponentStats.knockupAttempts}`,
+          parries: opponentStats.parries,
+          comboProcs: opponentStats.comboProcs,
+          abilitiesUsed: opponentStats.abilitiesUsed,
+        }
+      : {
+          name: selfName,
+          build: selfBuild,
+          kills: selfStats.kills,
+          damageDealt: selfStats.damageDealt,
+          damageTaken: selfStats.damageTaken,
+          knockups: `${selfStats.knockupConversions} / ${selfStats.knockupAttempts}`,
+          parries: selfStats.parries,
+          comboProcs: selfStats.comboProcs,
+          abilitiesUsed: selfStats.abilitiesUsed,
+        },
+    eloBefore,
+    eloDelta,
+  }
+
+  menu.showScoreboard(selfId, scoreboardData)
+
+  const leavingRoom = room
+  room = null
+  activeRoomMode = 'duel_arena'
+  self = null
+  clearLocalMatchState()
+  if (leavingRoom) void leavingRoom.leave()
 }
 
 function getPlayerWorldPos(sid: string): THREE.Vector3 | null {
@@ -1762,7 +2257,7 @@ function initSelfIfNeeded(): void {
   }
   selfMesh = makeCharacter(0x3a8fde, toonGradient) // self = blue (standard: I am blue)
   scene.add(selfMesh)
-  loadCharacterGlb(selfMesh, 0x3a8fde, toonGradient)
+  loadCharacterGlb(selfMesh, 0x3a8fde, toonGradient, p.classId)
   selfArc = makeSwingArcMesh()
   scene.add(selfArc)
   inp.mouseYaw = p.transform.yaw
@@ -1808,9 +2303,14 @@ interface SchemaPlayer {
   }>
   abilityCooldowns: Map<string, number>
   loadout: ReadonlyArray<string>
-  masteryElement: string
-  masteryLevel: number
-  masteryTier: number
+  classId: string
+  furyStacks: number
+  furyNextMeleeIsSurge: boolean
+  momentum: number
+  risonanzaElement: string
+  risonanzaArmedUntilTick: number
+  flowStacks: number
+  flowPendingBonus: boolean
   gcdReadyAtTick: number
 }
 
@@ -1859,6 +2359,11 @@ function sendAbilityCast(abilityId: string, tick: number): void {
   room.send(MessageTypes.Cast, msg)
   cooldownStrip.markPending(abilityId)
   showShootFlash()
+
+  selfStats.abilitiesUsed[abilityId] = (selfStats.abilitiesUsed[abilityId] ?? 0) + 1
+  if (['uppercut', 'eruption', 'arc_lift', 'frost_pillar'].includes(abilityId)) {
+    selfStats.knockupAttempts++
+  }
 }
 
 // -----------------------------------------------------------------------
@@ -1918,7 +2423,6 @@ function simStep(): void {
     slowFraction: capsFromStatus.slowFraction,
     movementLocked: capsFromStatus.movementLocked,
     castLocked: capsFromStatus.castLocked,
-    airborneLocked: false,
   }
 
   // Jump sound — fire exactly once per jump edge (not every tick).
@@ -2085,13 +2589,19 @@ function render(now: number): void {
   const airborne = !!selfSchema && selfSchema.airborneUntilTick > tickNow
   const dead = !!selfSchema && !selfSchema.alive
 
+  if (getRoomMode() === 'training' && dead && !selfPrevDead) {
+    returnToTrainingScoreboard()
+    selfPrevDead = dead
+    return
+  }
+
   // Detect dead → alive transition to trigger the Respawn animation.
   if (selfPrevDead && !dead) selfRespawnUntilMs = now + 1500
   selfPrevDead = dead
 
   // Detect onGround transitions for jump take-off and landing animations.
   // Use the client-predicted onGround (self.sim.onGround) for instant response.
-  // Fall back to "on ground" when dead or self is not yet initialised.
+  // Treat dead/uninitialised self as grounded for camera stability.
   const selfOnGround = dead || !self || self.sim.onGround
   if (!dead) {
     if (selfPrevOnGround && !selfOnGround) selfJumpUntilMs = now + 500 // left ground
@@ -2116,6 +2626,12 @@ function render(now: number): void {
 
   // Self render.
   if (self && selfMesh) {
+    if (selfSchema) {
+      const currentClassId = selfSchema.classId || 'hybrid'
+      if (selfMesh.userData['loadedClassId'] !== currentClassId) {
+        loadCharacterGlb(selfMesh, 0x3a8fde, toonGradient, currentClassId)
+      }
+    }
     // Hide own capsule when dead (you see the respawn overlay instead) and
     // when the camera is very close so you never clip through your own head.
     selfMesh.visible = !dead
@@ -2123,7 +2639,7 @@ function render(now: number): void {
     let x = self.sim.pos.x
     let y = self.sim.pos.y
     let z = self.sim.pos.z
-    if ((dead || airborne) && selfSchema) {
+    if (dead && selfSchema) {
       x = selfSchema.transform.x
       y = selfSchema.transform.y
       z = selfSchema.transform.z
@@ -2276,6 +2792,19 @@ function render(now: number): void {
         selfArc.visible = false
       }
     }
+  } else if (
+    document.body.classList.contains('main-menu-active') ||
+    document.body.classList.contains('loadout-active')
+  ) {
+    // Before a room exists there is no player camera to frame the menu canvas.
+    // Keep the arena readable instead of leaving the camera at ground origin.
+    const orbit = now * 0.00008
+    camera.position.set(Math.cos(orbit) * 38, 17, Math.sin(orbit) * 38)
+    camera.lookAt(0, 2.4, 0)
+    if (camera.fov !== 72) {
+      camera.fov = 72
+      camera.updateProjectionMatrix()
+    }
   }
 
   remotePlayerSystem.renderFrame(now, camera, renderer.domElement)
@@ -2353,7 +2882,7 @@ function render(now: number): void {
     round: `${selfStats.kills + opponentStats.kills + 1} / 3`,
     yourDamage: selfStats.damageDealt,
     yourHits: selfStats.yourHits,
-    yourProcs: selfStats.masteryProcs,
+    yourProcs: selfStats.comboProcs,
     yourParries: selfStats.parries,
     timeToNextMs: 5000,
   }

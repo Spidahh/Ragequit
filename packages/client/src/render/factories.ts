@@ -2,15 +2,21 @@ import { SWORD_M1_CONE_HALF_ANGLE_RAD, SWORD_M1_RANGE_M } from '@ragequit/shared
 import * as THREE from 'three'
 
 export function makeToonGradient(): THREE.DataTexture {
-  const steps = 6
+  const steps = 2
   const data = new Uint8Array(steps * 4)
-  const ramp = [28, 68, 120, 172, 220, 255]
-  for (let i = 0; i < steps; i++) {
-    data[i * 4] = ramp[i]!
-    data[i * 4 + 1] = ramp[i]!
-    data[i * 4 + 2] = ramp[i]!
-    data[i * 4 + 3] = 255
-  }
+
+  // Shadow band: moody slate dark shade
+  data[0] = 80
+  data[1] = 80
+  data[2] = 96
+  data[3] = 255
+
+  // Lit band: full illumination highlights
+  data[4] = 255
+  data[5] = 255
+  data[6] = 255
+  data[7] = 255
+
   const tex = new THREE.DataTexture(data, steps, 1, THREE.RGBAFormat)
   tex.minFilter = THREE.NearestFilter
   tex.magFilter = THREE.NearestFilter

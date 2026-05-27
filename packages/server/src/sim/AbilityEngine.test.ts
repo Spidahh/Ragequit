@@ -8,7 +8,6 @@ import {
   type ZoneSpawnRequest,
 } from './AbilityEngine.js'
 import { StatusRuntime } from './StatusRuntime.js'
-import { TransmuteHandler } from './TransmuteHandler.js'
 
 // Minimal hostable that wires StatusRuntime + AbilityEngine to a synthetic
 // GameState for unit testing. We keep the same `pendingDamage` array shared
@@ -133,14 +132,7 @@ function makeRoom(hostOverrides: Partial<Pick<EngineHost, 'hasLineOfSight'>> = {
     pendingDamage: sink,
     broadcast: (type, message) => broadcasts.push({ type, message }),
   })
-  const transmute = new TransmuteHandler(
-    {
-      state: state as unknown as { players: Map<string, Player>; tick: number },
-      broadcast: (type, message) => broadcasts.push({ type, message }),
-    },
-    statuses,
-  )
-  const engine = new AbilityEngine(host, statuses, transmute)
+  const engine = new AbilityEngine(host, statuses)
 
   return {
     state,
@@ -170,13 +162,6 @@ function makeRoomWithMoveResolver(
     },
     broadcast: (type, message) => r.broadcasts.push({ type, message }),
   })
-  const transmute = new TransmuteHandler(
-    {
-      state: r.state as unknown as { players: Map<string, Player>; tick: number },
-      broadcast: (type, message) => r.broadcasts.push({ type, message }),
-    },
-    statuses,
-  )
   r.engine = new AbilityEngine(
     {
       state: r.state as unknown as { players: Map<string, Player>; tick: number },
@@ -230,12 +215,11 @@ function makeRoomWithMoveResolver(
       resolveDisplacement,
     },
     statuses,
-    transmute,
   )
   return r
 }
 
-describe('AbilityEngine — Uppercut (porting Fase 2 numbers)', () => {
+describe('AbilityEngine - Uppercut numbers', () => {
   it('rejects on cooldown after a successful cast', () => {
     const r = makeRoom()
     expect(r.engine.tryCast('A', 'uppercut', { yaw: Math.PI, pitch: 0 })).toBe(true)
@@ -351,29 +335,6 @@ describe('AbilityEngine — Life Drain', () => {
   })
 })
 
-describe('AbilityEngine — fixed transfers', () => {
-  it('casts transfer utility abilities through the ability engine and broadcasts HUD result', () => {
-    const r = makeRoom()
-    r.caster.mana = 80
-    r.caster.stamina = 40
-    expect(r.engine.tryCast('A', 'transfer_mana_stam', { yaw: 0, pitch: 0 })).toBe(true)
-    expect(r.caster.mana).toBe(60)
-    expect(r.caster.stamina).toBe(60)
-    expect(r.broadcasts.some((b) => b.type === 'transmuteResult')).toBe(true)
-  })
-
-  it('does not spend GCD or cooldown when a fixed transfer fails its internal resource check', () => {
-    const r = makeRoom()
-    r.caster.hp = 20
-
-    expect(r.engine.tryCast('A', 'transfer_hp_mana', { yaw: 0, pitch: 0 })).toBe(false)
-
-    expect(r.caster.gcdReadyAtTick).toBe(0)
-    expect(r.caster.abilityCooldowns.get('transfer_hp_mana')).toBeUndefined()
-    expect(r.broadcasts.find((b) => b.type === 'transmuteResult')).toBeDefined()
-  })
-})
-
 describe('AbilityEngine — self utility targeting', () => {
   it('applies Barrier shield to the caster, not the nearest enemy', () => {
     const r = makeRoom()
@@ -447,7 +408,7 @@ describe('AbilityEngine — parryable followups', () => {
 })
 
 describe('AbilityEngine — vision control', () => {
-  it('Curse of Weakness applies blind as a short vision punish', () => {
+  it('Curse of Weakness applies blind as a major vision denial', () => {
     const r = makeRoom()
 
     expect(r.engine.tryCast('A', 'curse_of_weakness', { yaw: 0, pitch: 0 })).toBe(true)
@@ -455,7 +416,7 @@ describe('AbilityEngine — vision control', () => {
     r.engine.tickWindups()
 
     expect(r.target.statuses.some((s) => s.kind === 'curse')).toBe(true)
-    expect(r.target.statuses.some((s) => s.kind === 'blind' && s.remainingSec === 2.4)).toBe(true)
+    expect(r.target.statuses.some((s) => s.kind === 'blind' && s.remainingSec === 4.0)).toBe(true)
     expect(r.target.mana).toBe(102)
   })
 })
@@ -606,47 +567,7 @@ describe('AbilityEngine — forward aim targeting', () => {
   })
 })
 
-describe('AbilityEngine — Mastery bonuses', () => {
-  it('applies lightning mastery cooldown reduction', () => {
-    const r = makeRoom()
-    r.caster.masteryElement = 'lightning'
-    r.caster.masteryLevel = 1
-    expect(r.engine.tryCast('A', 'chain_bolt', { yaw: 0, pitch: 0 })).toBe(true)
-    expect(r.caster.abilityCooldowns.get('chain_bolt')).toBe(Math.round(6 * 0.85 * 60))
-  })
-
-  it('adds dark mastery lifesteal to projectiles and direct damage', () => {
-    const projectileRoom = makeRoom()
-    projectileRoom.caster.masteryElement = 'dark'
-    projectileRoom.caster.masteryLevel = 1
-    expect(projectileRoom.engine.tryCast('A', 'shadow_bolt', { yaw: 0, pitch: 0 })).toBe(true)
-    expect(projectileRoom.projectiles[0]!.lifestealFraction).toBeCloseTo(0.45)
-
-    const directRoom = makeRoom()
-    directRoom.caster.masteryElement = 'dark'
-    directRoom.caster.masteryLevel = 1
-    expect(directRoom.engine.tryCast('A', 'void_spike', { yaw: 0, pitch: 0 })).toBe(true)
-    expect(
-      directRoom.pendingDamage.find((d) => d.cause === 'ability:void_spike')?.lifestealFraction,
-    ).toBeCloseTo(0.2)
-  })
-
-  it('applies nature mastery to poison status tick damage', () => {
-    const r = makeRoom()
-    r.caster.masteryElement = 'nature'
-    r.caster.masteryLevel = 1
-    r.statuses.applyToPlayer('B', 'poison', 4, 1, 'A')
-
-    for (let i = 0; i < 60; i++) {
-      r.state.tick += 1
-      r.statuses.tick(1 / 60)
-    }
-
-    const poisonTick = r.pendingDamage.find((d) => d.cause === 'status:poison')
-    expect(poisonTick?.amount).toBeCloseTo(3.75)
-    expect(poisonTick?.element).toBe('nature')
-  })
-
+describe('StatusRuntime — status ticks', () => {
   it('applies fire element to burn status tick damage', () => {
     const r = makeRoom()
     r.statuses.applyToPlayer('B', 'burn', 3, 1, 'A')

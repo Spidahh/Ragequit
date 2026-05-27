@@ -32,6 +32,7 @@ export interface RemotePlayerSchema {
   onGround?: boolean
   castAbilityId?: string
   statuses: ReadonlyArray<{ kind: string; stacks: number; remainingSec: number }>
+  classId?: string
 }
 
 // Team-colour table: self is always blue, remotes are red unless same team.
@@ -57,6 +58,14 @@ interface RemoteState {
   castRing: THREE.Mesh
   nameplate: HTMLDivElement
   hpFill: HTMLDivElement
+  /** Status icon row above the HP bar — CC badges with remaining-sec timers. */
+  statusRow: HTMLDivElement
+  /** Cached badge elements by status kind for in-place text updates. */
+  statusBadges: Map<string, HTMLSpanElement>
+  /** Last serialized status kinds+sec to detect changes that require badge rebuild. */
+  lastStatusKey: string
+  /** Cached status array from updateFromSchema — used by renderFrame for badge updates. */
+  statuses: ReadonlyArray<{ kind: string; stacks: number; remainingSec: number }>
   hp: number
   alive: boolean
   lastWeapon: string
@@ -116,6 +125,81 @@ export interface RemotePlayersController {
   triggerRoll: (sid: string, untilMs: number) => void
 }
 
+// CC status display config: order defines priority (highest first).
+// hard CC (freeze/stun/blind/root) show a countdown; others show icon only.
+const CC_STATUS_META: ReadonlyArray<{
+  kind: string
+  icon: string
+  color: string
+  hardCC: boolean
+}> = [
+  { kind: 'freeze', icon: '❄', color: '#00E5FF', hardCC: true },
+  { kind: 'stun', icon: '⚡', color: '#FFE600', hardCC: true },
+  { kind: 'blind', icon: '◉', color: '#AA55FF', hardCC: true },
+  { kind: 'root', icon: '⬡', color: '#39FF14', hardCC: true },
+  { kind: 'slow', icon: '↓', color: '#AA77FF', hardCC: false },
+  { kind: 'chill', icon: '❄', color: '#80EEFF', hardCC: false },
+  { kind: 'curse', icon: '✦', color: '#6A0DAD', hardCC: false },
+  { kind: 'burn', icon: '🔥', color: '#FF4500', hardCC: false },
+  { kind: 'bleed', icon: '◆', color: '#FF3344', hardCC: false },
+  { kind: 'poison', icon: '◆', color: '#39FF14', hardCC: false },
+]
+const CC_STATUS_MAX_BADGES = 4
+
+/** Updates the status icon row in a remote player's nameplate.
+ *  Rebuilds the DOM only when the set of active status kinds changes.
+ *  Updates countdown text in-place every frame for hard CC. */
+function updateStatusRow(
+  r: RemoteState,
+  statuses: ReadonlyArray<{ kind: string; stacks: number; remainingSec: number }>,
+): void {
+  // Pick the highest-priority statuses up to the badge cap.
+  const active: Array<{ meta: (typeof CC_STATUS_META)[0]; remainingSec: number }> = []
+  for (const meta of CC_STATUS_META) {
+    if (active.length >= CC_STATUS_MAX_BADGES) break
+    const found = statuses.find((s) => s.kind === meta.kind)
+    if (found) active.push({ meta, remainingSec: found.remainingSec })
+  }
+
+  // Determine if the set of kinds has changed (triggers a DOM rebuild).
+  const newKey = active.map((a) => a.meta.kind).join(',')
+  if (newKey !== r.lastStatusKey) {
+    r.lastStatusKey = newKey
+    r.statusRow.innerHTML = ''
+    r.statusBadges.clear()
+    for (const { meta } of active) {
+      const badge = document.createElement('span')
+      badge.dataset['kind'] = meta.kind
+      badge.style.cssText = [
+        'display:inline-flex',
+        'align-items:center',
+        'gap:2px',
+        'font:700 9px/1 ui-monospace,monospace',
+        `color:${meta.color}`,
+        `text-shadow:0 0 5px ${meta.color}80`,
+        'background:rgba(0,0,0,0.65)',
+        `border:1px solid ${meta.color}55`,
+        'border-radius:3px',
+        'padding:1px 3px',
+        'white-space:nowrap',
+        'letter-spacing:0.03em',
+      ].join(';')
+      badge.textContent = meta.icon
+      r.statusRow.appendChild(badge)
+      r.statusBadges.set(meta.kind, badge)
+    }
+  }
+
+  // In-place update of countdown text for hard CC badges.
+  for (const { meta, remainingSec } of active) {
+    if (!meta.hardCC) continue
+    const badge = r.statusBadges.get(meta.kind)
+    if (!badge) continue
+    const secStr = remainingSec > 0 ? ` ${remainingSec.toFixed(1)}s` : ''
+    badge.textContent = meta.icon + secStr
+  }
+}
+
 export function initRemotePlayers({
   scene,
   toonGradient,
@@ -139,7 +223,7 @@ export function initRemotePlayers({
     const color = resolveRemoteColor(p)
     const mesh = makeCharacter(color, toonGradient)
     scene.add(mesh)
-    loadCharacterGlb(mesh, color, toonGradient)
+    loadCharacterGlb(mesh, color, toonGradient, p.classId)
     const arc = makeSwingArcMesh()
     scene.add(arc)
     const castRing = makeCastRing()
@@ -194,7 +278,18 @@ export function initRemotePlayers({
     ].join(';')
     barBg.appendChild(hpFill)
     barRow.appendChild(barBg)
+    const statusRow = document.createElement('div')
+    statusRow.style.cssText = [
+      'display:flex',
+      'align-items:center',
+      'gap:3px',
+      'min-height:14px',
+      'margin-bottom:2px',
+      'justify-content:center',
+      'flex-wrap:wrap',
+    ].join(';')
     nameplate.appendChild(nameLabel)
+    nameplate.appendChild(statusRow)
     nameplate.appendChild(barRow)
     nameplateContainer.appendChild(nameplate)
     return {
@@ -206,6 +301,10 @@ export function initRemotePlayers({
       castRing,
       nameplate,
       hpFill,
+      statusRow,
+      statusBadges: new Map(),
+      lastStatusKey: '',
+      statuses: [],
       hp: HP_MAX,
       alive: true,
       lastWeapon: '',
@@ -264,6 +363,11 @@ export function initRemotePlayers({
       if (!r) {
         r = spawnRemote(p, sid)
         remotePlayers.set(sid, r)
+      } else if (r.mesh) {
+        const currentClassId = p.classId || 'hybrid'
+        if (r.mesh.userData['loadedClassId'] !== currentClassId) {
+          loadCharacterGlb(r.mesh, resolveRemoteColor(p), toonGradient, currentClassId)
+        }
       }
       r.hp = p.hp
       if (!r.alive && p.alive) {
@@ -310,6 +414,8 @@ export function initRemotePlayers({
         r.arcExpiresAt = now + 400
       }
       r.castRing.visible = !!p.casting && p.castEndsAtTick > schemaTick
+      // Cache statuses for renderFrame badge updates.
+      r.statuses = p.statuses ?? []
     })
     remotePlayers.forEach((r, sid) => {
       if (!players.has(sid)) {
@@ -428,6 +534,8 @@ export function initRemotePlayers({
           const gAlpha = (0.25 + pulse * 0.35).toFixed(2)
           r.nameplate.style.boxShadow = `0 0 ${10 + pulse * 14}px rgba(220,30,30,${gAlpha}), 0 2px 12px rgba(0,0,0,0.6)`
         }
+        // Update CC status badges above the HP bar.
+        updateStatusRow(r, r.statuses)
       } else {
         r.nameplate.style.display = 'none'
       }

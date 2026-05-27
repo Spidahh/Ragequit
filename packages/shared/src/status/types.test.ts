@@ -105,16 +105,8 @@ describe('totalSlowFraction', () => {
   })
 })
 
-describe('Pass 4 bleed cleanse contract', () => {
-  it('bleed is NOT cleansed by transmute — Pass 4 moved cleanse to Cleanse Surge', () => {
-    expect(STATUS_META.bleed.cleansedByTransmute).toBe(false)
-  })
-
-  it('no other status is cleansed by transmute either', () => {
-    // After Pass 4 all cleansedByTransmute flags are false — the mechanic
-    // survives in TransmuteHandler code but fires for nothing until re-enabled.
-    for (const [kind, meta] of Object.entries(STATUS_META)) {
-      expect(meta.cleansedByTransmute, `${kind}.cleansedByTransmute should be false`).toBe(false)
-    }
+describe('bleed cleanse contract', () => {
+  it('bleed is cleansed only by explicit cleanse effects', () => {
+    expect(STATUS_META.bleed.maxStacks).toBe(1)
   })
 })

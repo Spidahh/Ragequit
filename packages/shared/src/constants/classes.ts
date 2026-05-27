@@ -1,10 +1,6 @@
 import type { WeaponId } from './weapons.js'
 
-// Target class vocabulary for the redesign migration.
-//
-// The live runtime still accepts the legacy classless loadout protocol. These
-// tables let shared/client/server code state the target grammar explicitly
-// while that wire format is replaced pass by pass.
+// Class vocabulary and slot grammar shared by client and server.
 
 export const CLASS_IDS = ['tank', 'archer', 'mage', 'hybrid'] as const
 export type ClassId = (typeof CLASS_IDS)[number]
@@ -153,12 +149,6 @@ const ABILITY_LEGAL_CLASSES: Record<string, readonly ClassId[]> = {
   energize: ['tank', 'archer', 'mage', 'hybrid'],
   phase_shift: ['tank', 'archer', 'mage', 'hybrid'],
   smoke_screen: ['tank', 'archer', 'mage', 'hybrid'],
-  // Pass 4: fixed transfer abilities removed from target class legality.
-  // The ability defs remain in the registry for the legacy runtime transmute
-  // path, but server-side budget validation will reject them from class builds.
-  transfer_hp_mana: [] as readonly ClassId[],
-  transfer_mana_stam: [] as readonly ClassId[],
-  transfer_stam_hp: [] as readonly ClassId[],
 }
 
 const ABILITY_SLOT_FAMILIES: Record<string, TargetAbilitySlotFamily> = {
@@ -224,9 +214,6 @@ const ABILITY_SLOT_FAMILIES: Record<string, TargetAbilitySlotFamily> = {
   energize: 'utility',
   phase_shift: 'utility',
   smoke_screen: 'utility',
-  transfer_hp_mana: 'utility',
-  transfer_mana_stam: 'utility',
-  transfer_stam_hp: 'utility',
 }
 
 export function getAbilitySlotFamily(abilityId: string): TargetAbilitySlotFamily {

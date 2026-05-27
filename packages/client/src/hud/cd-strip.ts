@@ -2,7 +2,6 @@ import { ABILITY_DEFS, TICK_RATE_HZ } from '@ragequit/shared'
 
 import { abilityIconMarkup } from '../icons.js'
 import { slotKeybindEntries } from '../input/keybinds.js'
-import { normalizeLoadoutSlots } from '../input/loadout-slots.js'
 
 export const ELEMENT_COLOR: Record<string, string> = {
   fire: '#ff6a2a',
@@ -195,21 +194,8 @@ export function initCooldownStrip(
     }
   }
 
-  rebuild(
-    normalizeLoadoutSlots([
-      'uppercut',
-      'piercing_shot',
-      'fireball',
-      'flame_wall',
-      'frost_bolt',
-      'chain_bolt',
-      'shadow_bolt',
-      '',
-      '',
-      '',
-      'quick_dash',
-    ]),
-  )
+  // Start empty; rebuild() is called by self-hud when the real loadout arrives.
+  rebuild([])
 
   return {
     currentSignature: () => loadoutSig,

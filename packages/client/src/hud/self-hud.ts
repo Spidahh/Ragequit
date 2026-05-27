@@ -1,11 +1,4 @@
-import {
-  ABILITY_DEFS,
-  MASTERY_BONUSES,
-  HP_MAX,
-  MANA_MAX,
-  STAMINA_MAX,
-  TICK_RATE_HZ,
-} from '@ragequit/shared'
+import { ABILITY_DEFS, TARGET_CLASS_DEFS, TICK_RATE_HZ, type ClassId } from '@ragequit/shared'
 import * as THREE from 'three'
 
 import { renderDeathcam, type DeathcamData } from '../endgame.js'
@@ -16,7 +9,7 @@ import { ELEMENT_COLOR, type CooldownStripController } from './cd-strip.js'
 const RESPAWN_TIPS: readonly string[] = [
   'RMB: tap for a parry window, hold to block repeated hits.',
   'Coyote time: jump remains valid for 83 ms after leaving a ledge.',
-  'Mastery: 4+ magic abilities of one element activates elemental bonuses.',
+  'Class mechanic: each class has a unique combat resource — Fury, Momentum, Risonanza, or Flow.',
   'Burn + Chill: Steam explosion combo.',
   'Poison + Bleed: Festering doubles damage-over-time effects.',
   'Space: hold for a higher jump, release early for a short hop.',
@@ -35,8 +28,15 @@ export interface SelfHudSchema {
   lastSwingStartTick: number
   alive: boolean
   respawnAtTick: number
-  masteryLevel: number
-  masteryElement: string
+  classId: string
+  // Class mechanic fields
+  furyStacks: number
+  furyNextMeleeIsSurge: boolean
+  momentum: number
+  risonanzaElement: string
+  risonanzaArmedUntilTick: number
+  flowStacks: number
+  flowPendingBonus: boolean
   statuses: ReadonlyArray<{ kind: string; stacks: number; remainingSec: number }>
   casting: boolean
   castAbilityId: string
@@ -58,7 +58,7 @@ export interface SelfHudOptions {
   respawnSec: HTMLElement
   respawnKillerEl: HTMLElement
   respawnTipEl: HTMLElement | null
-  masteryBadge: HTMLElement
+  classMechanicEl: HTMLElement | null
   statusStrip: HTMLElement
   castBar: HTMLElement
   castBarFill: HTMLElement
@@ -87,6 +87,66 @@ export interface SelfHudController {
   update: (params: SelfHudUpdateParams) => void
 }
 
+// Element color map for Risonanza armed state.
+const ELEM_COLOR: Record<string, string> = {
+  fire: '#ff6a2a',
+  ice: '#6dd6ff',
+  lightning: '#ffe244',
+  dark: '#b870ff',
+  nature: '#80e860',
+}
+
+function mechanicFillClass(value: number): string {
+  const pct = Math.max(0, Math.min(100, Math.round(value)))
+  return `fill-${Math.round(pct / 10) * 10}`
+}
+
+function stackDots(filled: number, total: number, filledClass: string): string {
+  return Array.from(
+    { length: total },
+    (_, i) => `<span class="mech-dot ${i < filled ? filledClass : 'empty'}"></span>`,
+  ).join('')
+}
+
+function renderClassMechanic(el: HTMLElement, s: SelfHudSchema, tickNow: number): void {
+  const classId = (s.classId ?? 'hybrid') as ClassId
+  let html = ''
+
+  if (classId === 'tank') {
+    const surge = s.furyNextMeleeIsSurge
+    html =
+      `<span class="mech-label">FURY</span>` +
+      stackDots(s.furyStacks, 5, 'fury') +
+      (surge ? `<span class="mech-surge">SURGE</span>` : '')
+  } else if (classId === 'archer') {
+    const pct = Math.round(s.momentum)
+    html =
+      `<span class="mech-label">MOMENTUM</span>` +
+      `<span class="mech-bar"><span class="mech-bar-fill momentum ${mechanicFillClass(pct)}"></span></span>` +
+      `<span class="mech-val">${pct}</span>`
+  } else if (classId === 'mage') {
+    const armed = s.risonanzaArmedUntilTick > tickNow
+    const el2 = s.risonanzaElement
+    const elemClass = armed && el2 && ELEM_COLOR[el2] ? ` elem-${el2}` : ''
+    html =
+      `<span class="mech-label">RISONANZA</span>` +
+      (armed
+        ? `<span class="mech-dot armed${elemClass}"></span>` +
+          `<span class="mech-elem${elemClass}">${el2.toUpperCase()}</span>`
+        : `<span class="mech-dot empty"></span>`)
+  } else {
+    // hybrid / flow
+    const bonus = s.flowPendingBonus
+    html =
+      `<span class="mech-label">FLOW</span>` +
+      stackDots(s.flowStacks, 3, 'flow') +
+      (bonus ? `<span class="mech-surge">BONUS</span>` : '')
+  }
+
+  el.innerHTML = html
+  el.dataset['class'] = classId
+}
+
 export function initSelfHud({
   hudHpFill,
   hudManaFill,
@@ -100,7 +160,7 @@ export function initSelfHud({
   respawnSec,
   respawnKillerEl,
   respawnTipEl,
-  masteryBadge,
+  classMechanicEl,
   statusStrip,
   castBar,
   castBarFill,
@@ -129,15 +189,21 @@ export function initSelfHud({
   }: SelfHudUpdateParams): void {
     if (!selfSchema) return
 
-    const hpPct = Math.max(0, Math.min(1, selfSchema.hp / HP_MAX))
-    const mpPct = Math.max(0, Math.min(1, selfSchema.mana / MANA_MAX))
-    const spPct = Math.max(0, Math.min(1, selfSchema.stamina / STAMINA_MAX))
+    const classId = (selfSchema.classId ?? 'hybrid') as ClassId
+    const isValidClass =
+      classId === 'tank' || classId === 'archer' || classId === 'mage' || classId === 'hybrid'
+    const maxima = isValidClass
+      ? TARGET_CLASS_DEFS[classId].resourceMaxima
+      : TARGET_CLASS_DEFS.hybrid.resourceMaxima
+    const hpPct = Math.max(0, Math.min(1, selfSchema.hp / maxima.hp))
+    const mpPct = Math.max(0, Math.min(1, selfSchema.mana / maxima.mana))
+    const spPct = Math.max(0, Math.min(1, selfSchema.stamina / maxima.stamina))
     hudHpFill.style.width = `${(hpPct * 100).toFixed(1)}%`
     hudManaFill.style.width = `${(mpPct * 100).toFixed(1)}%`
     hudStamFill.style.width = `${(spPct * 100).toFixed(1)}%`
-    hudHpNum.textContent = `${Math.round(selfSchema.hp)} / ${HP_MAX}`
-    hudManaNum.textContent = `${Math.round(selfSchema.mana)} / ${MANA_MAX}`
-    hudStamNum.textContent = `${Math.round(selfSchema.stamina)} / ${STAMINA_MAX}`
+    hudHpNum.textContent = `${Math.round(selfSchema.hp)} / ${maxima.hp}`
+    hudManaNum.textContent = `${Math.round(selfSchema.mana)} / ${maxima.mana}`
+    hudStamNum.textContent = `${Math.round(selfSchema.stamina)} / ${maxima.stamina}`
     hudHpBar?.classList.toggle('warn', hpPct < 0.25)
     hudManaBar?.classList.toggle('warn', mpPct < 0.2)
     hudStamBar?.classList.toggle('warn', spPct < 0.15)
@@ -183,15 +249,8 @@ export function initSelfHud({
       respawnOverlay.classList.remove('active')
     }
 
-    const mLevel = selfSchema.masteryLevel ?? 0
-    const mel = selfSchema.masteryElement
-    if (mLevel > 0 && mel && mel !== 'none' && mel !== '') {
-      const bonus = MASTERY_BONUSES[mel as keyof typeof MASTERY_BONUSES]
-      const label = mLevel >= 2 ? 'PERFECT MASTERY' : 'MASTERY'
-      masteryBadge.textContent = `✦ ${mel.toUpperCase()} · ${label} ✦`
-      masteryBadge.style.color = bonus?.color ?? ELEMENT_COLOR[mel] ?? '#ffd260'
-    } else {
-      masteryBadge.textContent = ''
+    if (classMechanicEl) {
+      renderClassMechanic(classMechanicEl, selfSchema, tickNow)
     }
 
     const liveStatuses = Array.from(selfSchema.statuses ?? [])

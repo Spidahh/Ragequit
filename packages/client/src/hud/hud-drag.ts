@@ -8,8 +8,8 @@ export interface DraggableHudController {
   refreshBounds: () => void
 }
 
-const HUD_POS_KEY = 'ragequit.hud.position.v2'
-const HUD_SIZE_KEY = 'ragequit.hud.size.v2'
+const HUD_POS_KEY = 'ragequit.hud.position.v3'
+const HUD_SIZE_KEY = 'ragequit.hud.size.v3'
 const HUD_MIN_WIDTH = 250
 const HUD_MAX_WIDTH = 520
 const HUD_MIN_BAR_H = 18

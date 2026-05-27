@@ -72,7 +72,7 @@ export async function saveLoadout(
 /** Record a match result and update ELO.
  *  winnerEloDelta / loserEloDelta are the K-factor computed deltas from
  *  MatchManager.applyEloUpdates(). Defaults to a flat ±20 only as a fallback
- *  when called without the proper deltas (e.g. legacy code paths).
+ *  when called without the proper deltas.
  */
 export async function recordMatchResult(
   winnerId: string,

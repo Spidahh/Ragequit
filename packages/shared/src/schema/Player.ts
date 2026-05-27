@@ -7,7 +7,7 @@ import { Transform } from './Transform.js'
 
 // Player entity — one per connected client, plus one per Bot in Training mode.
 // Replicated player state: movement/prediction fields, resources, weapon/combat
-// state, cooldown maps, statuses, current loadout, and mastery metadata.
+// state, cooldown maps, statuses, current loadout, and class mechanic metadata.
 // Scalar fields annotated `: number` explicitly so assignments aren't narrowed
 // by `as const` constants used as initialisers.
 export class Player extends Schema {
@@ -38,10 +38,6 @@ export class Player extends Schema {
 
   @type('string') activeWeapon = 'sword'
 
-  // Mastery — empty string means no mastery active.
-  @type('string') masteryElement = ''
-  @type('number') masteryLevel: number = 0
-
   // Cast state — empty/false means idle.
   // Used for ability windups (Uppercut 0.4 s, Meteor 1.5 s, etc).
   @type('boolean') casting = false
@@ -56,9 +52,7 @@ export class Player extends Schema {
   @type('number') swingEndsAtTick: number = 0
   @type('number') lastSwingStartTick: number = 0
 
-  // Legacy uppercut cooldown — kept for back-compat, mirrored from
-  // abilityCooldowns['uppercut'] by the engine. New abilities should ONLY
-  // read the per-ability map.
+  // Uppercut cooldown mirrored from abilityCooldowns['uppercut'] for HUD compatibility.
   @type('number') uppercutReadyAtTick: number = 0
 
   // Airborne / knockup state.
@@ -87,15 +81,12 @@ export class Player extends Schema {
   @type('number') parryTapEndsAtTick: number = 0
   @type('number') parryCooldownReadyAtTick: number = 0
 
-  // --- Ability engine + transmute + status --------------------------------
+  // --- Ability engine + status -------------------------------------------
 
   // Per-ability cooldown map: ability id -> tick at which it becomes ready
   // again. Missing entries mean ready (or never cast). Engine writes here on
   // a successful cast and reads here when validating a cast attempt.
   @type({ map: 'number' }) abilityCooldowns = new MapSchema<number>()
-
-  // Per-direction transmute cooldowns. Keys: 'hp_mana' | 'mana_stam' | 'stam_hp'.
-  @type({ map: 'number' }) transmuteCooldowns = new MapSchema<number>()
 
   // Active conditions on the player (Burn x3, Bleed, Slow 30%, ...). The
   // server's StatusRuntime ticks these every frame and applies DoT damage,
@@ -106,13 +97,9 @@ export class Player extends Schema {
   // a default loadout and replaced whenever the client sends loadoutSet.
   @type(['string']) loadout = new ArraySchema<string>()
 
-  // Mastery tier computed from the 5 magic slots only: 0 none, 1 active, 2 perfect.
-  // Written by the server on every loadout change.
-  @type('number') masteryTier: number = 0
-
   @type('string') classId = 'hybrid'
 
-  // --- Class mechanic state (Pass 5) -----------------------------------------
+  // --- Class mechanic state --------------------------------------------------
   // Replicated so the HUD can render mechanic indicators without extra messages.
 
   // Tank — Fury: 0-5 stacks (float during decay); each stack = +8% melee damage.
@@ -134,4 +121,3 @@ export class Player extends Schema {
   @type('number') flowStacks: number = 0
   @type('boolean') flowPendingBonus = false
 }
-

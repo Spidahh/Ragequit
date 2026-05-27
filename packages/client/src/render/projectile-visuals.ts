@@ -4,6 +4,8 @@ import {
 } from '@ragequit/shared'
 import * as THREE from 'three'
 
+import type { ImpactProfile } from '../vfx/impact-pool.js'
+
 import { makeProjectileMesh } from './factories.js'
 
 export interface SchemaProjectile {
@@ -86,17 +88,15 @@ function makeProjectileObject(
   style: ProjectileStyle
 } {
   const style = projectileStyle(kind, element)
-  if (style === 'arrow') {
-    const arrow = makeProjectileMesh('arrow')
-    arrow.userData['pulse'] = false
-    return { object: arrow, style }
-  }
-
-  const color = projectileColor(style)
+  const elemColor = projectileColor(style)
   const group = new THREE.Group()
 
-  if (style === 'fire') {
-    group.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.18, 0), makeBasicMat(color, 0.96)))
+  let baseMesh: THREE.Mesh
+  if (style === 'arrow') {
+    baseMesh = makeProjectileMesh('arrow')
+    baseMesh.userData['pulse'] = false
+  } else if (style === 'fire') {
+    baseMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(0.18, 0), makeBasicMat(elemColor, 0.96))
     const flame = new THREE.Mesh(
       new THREE.ConeGeometry(0.13, 0.38, 5),
       makeBasicMat(0xffb000, 0.72),
@@ -105,33 +105,29 @@ function makeProjectileObject(
     flame.position.z = 0.22
     group.add(flame)
   } else if (style === 'ice') {
-    const shard = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.62, 5), makeBasicMat(color, 0.9))
-    shard.rotation.x = Math.PI / 2
-    group.add(shard)
+    baseMesh = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.62, 5), makeBasicMat(elemColor, 0.9))
+    baseMesh.rotation.x = Math.PI / 2
     const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.13), makeBasicMat(0xffffff, 0.44))
     group.add(core)
   } else if (style === 'lightning') {
-    const lance = new THREE.Mesh(
+    baseMesh = new THREE.Mesh(
       new THREE.CylinderGeometry(0.035, 0.07, 0.82, 5),
-      makeBasicMat(color, 0.96),
+      makeBasicMat(elemColor, 0.96),
     )
-    lance.rotation.x = Math.PI / 2
-    group.add(lance)
+    baseMesh.rotation.x = Math.PI / 2
     const cross = new THREE.Mesh(
       new THREE.BoxGeometry(0.42, 0.035, 0.035),
       makeBasicMat(0xffffff, 0.68),
     )
     group.add(cross)
   } else if (style === 'dark') {
-    const shard = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), makeBasicMat(color, 0.92))
-    shard.scale.set(0.8, 0.8, 1.35)
-    group.add(shard)
+    baseMesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), makeBasicMat(elemColor, 0.92))
+    baseMesh.scale.set(0.8, 0.8, 1.35)
     const core = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), makeBasicMat(0x170021, 0.86))
     group.add(core)
   } else if (style === 'nature') {
-    const dart = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.58, 6), makeBasicMat(color, 0.9))
-    dart.rotation.x = Math.PI / 2
-    group.add(dart)
+    baseMesh = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.58, 6), makeBasicMat(elemColor, 0.9))
+    baseMesh.rotation.x = Math.PI / 2
     const leaf = new THREE.Mesh(
       new THREE.BoxGeometry(0.22, 0.035, 0.1),
       makeBasicMat(0xb8ff5a, 0.62),
@@ -139,13 +135,43 @@ function makeProjectileObject(
     leaf.position.z = -0.16
     group.add(leaf)
   } else {
-    group.add(new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 8), makeBasicMat(color, 0.92)))
+    baseMesh = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 8), makeBasicMat(elemColor, 0.92))
     const halo = new THREE.Mesh(
       new THREE.TorusGeometry(0.22, 0.018, 6, 16),
       makeBasicMat(0x80f0ff, 0.52),
     )
     group.add(halo)
   }
+
+  // Draw outline directly around the primary projectile body (thickness: 0.02)
+  const projOutline = new THREE.Mesh(
+    baseMesh.geometry.clone(),
+    new THREE.ShaderMaterial({
+      uniforms: {
+        thickness: { value: 0.02 },
+        outlineColor: { value: new THREE.Color(0x050508) },
+      },
+      vertexShader: `
+        uniform float thickness;
+        void main() {
+          vec3 pos = position + normal * thickness;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 outlineColor;
+        void main() {
+          gl_FragColor = vec4(outlineColor, 1.0);
+        }
+      `,
+      side: THREE.BackSide,
+      depthWrite: true,
+    }),
+  )
+  projOutline.scale.copy(baseMesh.scale)
+  projOutline.rotation.copy(baseMesh.rotation)
+  baseMesh.add(projOutline)
+  group.add(baseMesh)
 
   return { object: group, style }
 }
@@ -180,7 +206,7 @@ function makeTrailLine(style: ProjectileStyle): THREE.Line {
 
 export interface ProjectileVisualsOptions {
   scene: THREE.Scene
-  spawnImpact: (pos: THREE.Vector3, color: number) => void
+  spawnImpact: (pos: THREE.Vector3, color: number, profile?: ImpactProfile) => void
   zoneColorForElement: (element: string) => number
 }
 
@@ -235,6 +261,7 @@ export function initProjectileVisuals({
 
   function onExpired(msg: ServerProjectileExpiredMessage): void {
     const vis = projectileVisuals.get(msg.id)
+    const impactProfile: ImpactProfile = vis?.kind === 'arrow' ? 'pierce' : 'magic'
     if (vis) {
       disposeVisual(vis)
       projectileVisuals.delete(msg.id)
@@ -243,7 +270,7 @@ export function initProjectileVisuals({
     const color =
       elemColor ??
       (msg.reason === 'victim' ? 0xff6060 : msg.reason === 'terrain' ? 0xaabbcc : 0x80d0ff)
-    spawnImpact(new THREE.Vector3(msg.pos.x, msg.pos.y, msg.pos.z), color)
+    spawnImpact(new THREE.Vector3(msg.pos.x, msg.pos.y, msg.pos.z), color, impactProfile)
   }
 
   function clear(): void {
@@ -324,7 +351,7 @@ export function initProjectileVisuals({
             child1.scale.set(
               1.0 + 0.12 * Math.sin(f),
               1.0 + 0.12 * Math.sin(f),
-              1.0 + 0.18 * Math.cos(f)
+              1.0 + 0.18 * Math.cos(f),
             )
           }
         } else if (vis.style === 'ice') {

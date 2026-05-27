@@ -1,4 +1,4 @@
-// Server-side bot controller for TTK calibration and Training mode (Fase 5).
+// Server-side bot controller for TTK calibration and Training mode.
 //
 // Behavior: face nearest enemy, close to melee range, prioritize self-heal
 // when low HP, strafe to dodge, jump in close-range melee, fire abilities and
@@ -21,8 +21,16 @@ export interface BotHostFns {
   // jump is merged into sendInput — passing true emits a single message that
   // carries both movement and the jump edge, preventing the double-message /
   // same-seq bug that caused the bot's jump to be silently dropped.
-  sendInput: (botId: string, moveX: number, moveZ: number, yaw: number, jump?: boolean) => void
+  sendInput: (
+    botId: string,
+    moveX: number,
+    moveZ: number,
+    yaw: number,
+    jump?: boolean,
+    m2?: boolean,
+  ) => void
   sendSwing: (botId: string, yaw: number) => void
+  sendWeaponSwap: (botId: string, weapon: 'sword' | 'bow' | 'staff') => void
   cdReady: (botId: string, abilityId: string, atTick: number) => boolean
 }
 
@@ -30,14 +38,15 @@ export class BotController {
   private nextDecisionTick = 0
   private strafeDir = 1
   private strafeChangeTick = 0
-  private lastJumpTick = 0
-  private lastSwingTick = 0
+  private lastJumpTick = -1000
+  private lastSwingTick = -1000
 
   constructor(
     private readonly botId: string,
     private readonly host: BotHostFns,
     private readonly tickRef: () => number,
     private readonly loadout: readonly string[],
+    private readonly difficulty: 'novice' | 'competent' | 'master' = 'competent',
   ) {}
 
   step(): void {
@@ -62,13 +71,21 @@ export class BotController {
       this.strafeChangeTick = tick + Math.round((0.3 + Math.random() * 0.4) * TICK_RATE_HZ)
     }
 
-    // Movement: close into the short Sword M1 range before pressuring with a
-    // melee trade, then strafe around the enemy.
-    const desiredRange = 1.4
+    // Movement: close into range depending on active weapon.
+    // If holding bow or staff, try to stay at range, else close to melee.
+    let desiredRange = 1.4
+    if (self.activeWeapon === 'bow') {
+      desiredRange = 15.0
+    } else if (self.activeWeapon === 'staff') {
+      desiredRange = 10.0
+    }
+
     let mz = 0
-    if (dist > desiredRange + 0.5)
+    if (dist > desiredRange + 0.5) {
       mz = -1 // chase
-    else if (dist < desiredRange - 0.5) mz = 1 // back off slightly
+    } else if (dist < desiredRange - 0.5) {
+      mz = 1 // back off slightly
+    }
     const strafeMag = 0.4 + (dist < 3 ? 0.4 : 0)
     const mx = this.strafeDir * strafeMag
 
@@ -81,22 +98,65 @@ export class BotController {
       }
     }
 
-    this.host.sendInput(this.botId, mx, mz, yaw, doJump)
+    // Parrying logic
+    let doParry = false
+    if (this.difficulty === 'competent') {
+      if (dist <= 3.5 && enemy.swingEndsAtTick > tick) {
+        if (Math.random() < 0.6) {
+          doParry = true
+        }
+      }
+    } else if (this.difficulty === 'master') {
+      if (dist <= 4.0 && (enemy.swingEndsAtTick > tick || enemy.casting)) {
+        if (Math.random() < 0.85) {
+          doParry = true
+        }
+      }
+    }
 
-    // Sword swing when in range — bot swings every ~0.45 s to chain the combo.
-    if (dist <= SWORD_M1_RANGE_M && tick - this.lastSwingTick > Math.round(0.45 * TICK_RATE_HZ)) {
+    this.host.sendInput(this.botId, mx, mz, yaw, doJump, doParry)
+
+    // Sword swing when in range and holding sword — bot swings every ~0.45 s to chain the combo.
+    if (
+      self.activeWeapon === 'sword' &&
+      dist <= SWORD_M1_RANGE_M &&
+      tick - this.lastSwingTick > Math.round(0.45 * TICK_RATE_HZ)
+    ) {
       this.host.sendSwing(this.botId, yaw)
       this.lastSwingTick = tick
     }
 
     if (tick < this.nextDecisionTick) return
 
+    // Novice difficulty: only moves and basic attacks (M1), bypass Priority 1 & 2
+    if (this.difficulty === 'novice') {
+      const jitterTicks = Math.round(Math.random() * 0.2 * TICK_RATE_HZ)
+      this.nextDecisionTick = tick + Math.round(0.6 * TICK_RATE_HZ) + jitterTicks
+      return
+    }
+
+    // Competent occasionally swaps weapons randomly to show off different styles
+    if (
+      this.difficulty === 'competent' &&
+      Math.random() < 0.05 &&
+      tick - this.lastSwingTick > Math.round(3.0 * TICK_RATE_HZ)
+    ) {
+      const weapons: ('sword' | 'bow' | 'staff')[] = ['sword', 'bow', 'staff']
+      const randomWeapon = weapons[Math.floor(Math.random() * weapons.length)]!
+      if (randomWeapon !== self.activeWeapon) {
+        this.host.sendWeaponSwap(this.botId, randomWeapon)
+        this.nextDecisionTick = tick + Math.round(0.4 * TICK_RATE_HZ)
+        return
+      }
+    }
+
     const classId = (self.classId ?? 'hybrid') as ClassId
     const hpMax = TARGET_CLASS_DEFS[classId]?.resourceMaxima.hp ?? 200
     const hpFraction = self.hp / hpMax
 
-    // Priority 1: self-heal if low HP and not in melee range (stop to heal).
-    if (hpFraction < 0.35) {
+    // Priority 1: self-heal if low HP (stop to heal).
+    const healThreshold = this.difficulty === 'master' ? 0.4 : 0.35
+    if (hpFraction < healThreshold) {
       for (const id of this.loadout) {
         if (!id) continue
         const def = ABILITY_DEFS[id]
@@ -108,13 +168,75 @@ export class BotController {
         if (!this.host.cdReady(this.botId, id, tick)) continue
         if (def.costMana > self.mana) continue
         if (def.costStamina > self.stamina) continue
+
+        // Weapon check for heals
+        if (def.weapon && def.weapon !== 'none' && self.activeWeapon !== def.weapon) {
+          if (this.difficulty === 'master') {
+            this.host.sendWeaponSwap(this.botId, def.weapon)
+            this.nextDecisionTick = tick + Math.round(0.12 * TICK_RATE_HZ)
+            return
+          } else {
+            continue
+          }
+        }
+
         this.host.sendCast(this.botId, id, yaw, pitch)
-        this.nextDecisionTick = tick + Math.round(0.6 * TICK_RATE_HZ)
+        const baseDelay = this.difficulty === 'master' ? 0.2 : 0.6
+        this.nextDecisionTick = tick + Math.round(baseDelay * TICK_RATE_HZ)
         return
       }
     }
 
-    // Priority 2: cast best available offensive ability.
+    // Priority 2: Master AI combo setup and follow-up
+    if (this.difficulty === 'master') {
+      const isEnemyAirborne = enemy.airborneUntilTick > tick
+      if (isEnemyAirborne) {
+        // Enemy is airborne! Let's find an airborne follow-up finisher!
+        const followUps = ['marksman_shot', 'fireball', 'chain_bolt']
+        for (const id of followUps) {
+          if (!this.loadout.includes(id)) continue
+          const def = ABILITY_DEFS[id]
+          if (!def) continue
+          if (!this.host.cdReady(this.botId, id, tick)) continue
+          if (def.costMana > self.mana) continue
+          if (def.costStamina > self.stamina) continue
+
+          if (def.weapon && def.weapon !== 'none' && self.activeWeapon !== def.weapon) {
+            this.host.sendWeaponSwap(this.botId, def.weapon)
+            this.nextDecisionTick = tick + Math.round(0.12 * TICK_RATE_HZ)
+            return
+          }
+
+          this.host.sendCast(this.botId, id, yaw, pitch)
+          this.nextDecisionTick = tick + Math.round(0.15 * TICK_RATE_HZ)
+          return
+        }
+      } else {
+        // Enemy is NOT airborne. Try to launch them!
+        const knockups = ['uppercut', 'eruption', 'arc_lift', 'frost_pillar']
+        for (const id of knockups) {
+          if (!this.loadout.includes(id)) continue
+          const def = ABILITY_DEFS[id]
+          if (!def) continue
+          if (!this.host.cdReady(this.botId, id, tick)) continue
+          if (def.range > 0 && dist > def.range) continue
+          if (def.costMana > self.mana) continue
+          if (def.costStamina > self.stamina) continue
+
+          if (def.weapon && def.weapon !== 'none' && self.activeWeapon !== def.weapon) {
+            this.host.sendWeaponSwap(this.botId, def.weapon)
+            this.nextDecisionTick = tick + Math.round(0.12 * TICK_RATE_HZ)
+            return
+          }
+
+          this.host.sendCast(this.botId, id, yaw, pitch)
+          this.nextDecisionTick = tick + Math.round(0.25 * TICK_RATE_HZ)
+          return
+        }
+      }
+    }
+
+    // Priority 3: cast best available offensive ability.
     for (const id of this.loadout) {
       if (!id) continue
       const def = ABILITY_DEFS[id]
@@ -124,11 +246,30 @@ export class BotController {
       if (def.costMana > self.mana) continue
       if (def.costStamina > self.stamina) continue
 
-      // Slight randomised delay so the bot doesn't always fire the instant CD
-      // resets — makes it feel less robotic.
+      if (
+        this.difficulty === 'master' &&
+        def.weapon &&
+        def.weapon !== 'none' &&
+        self.activeWeapon !== def.weapon
+      ) {
+        this.host.sendWeaponSwap(this.botId, def.weapon)
+        this.nextDecisionTick = tick + Math.round(0.12 * TICK_RATE_HZ)
+        return
+      }
+
+      if (
+        this.difficulty === 'competent' &&
+        def.weapon &&
+        def.weapon !== 'none' &&
+        self.activeWeapon !== def.weapon
+      ) {
+        continue
+      }
+
+      const baseDelaySec = this.difficulty === 'master' ? 0.15 : 0.35
       const jitterTicks = Math.round(Math.random() * 0.2 * TICK_RATE_HZ)
       this.host.sendCast(this.botId, id, yaw, pitch)
-      this.nextDecisionTick = tick + Math.round(0.35 * TICK_RATE_HZ) + jitterTicks
+      this.nextDecisionTick = tick + Math.round(baseDelaySec * TICK_RATE_HZ) + jitterTicks
       return
     }
   }

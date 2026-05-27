@@ -1,4 +1,4 @@
-// Pass 5 — ClassMechanicRuntime unit tests.
+// ClassMechanicRuntime unit tests.
 //
 // Tests the server-side accumulation, decay, and payoff logic for the four
 // class mechanics without bringing up a full GameRoom.

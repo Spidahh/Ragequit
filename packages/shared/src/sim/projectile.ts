@@ -1,10 +1,10 @@
 // Shared projectile simulation. Used authoritatively by the server and
-// referenced in tests. Kept pure + deterministic so a future client-side
-// ballistic predictor can reuse it.
+// referenced in tests. Kept pure + deterministic so client-side ballistic
+// prediction can reuse it.
 //
 // Semantics:
 // - Projectile state is (pos, vel, gravity). Each tick we step by TICK_MS.
-// - Collision: at every step we form a segment from the old position to the
+// - Collision: at every step we form a segment from the previous position to the
 //   new position. We first test the segment against every player capsule
 //   (ignoring the shooter), then against every AABB in the static map, then
 //   against the ground plane. The nearest hit wins.

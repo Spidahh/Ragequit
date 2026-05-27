@@ -1,14 +1,14 @@
-// Anti-cheat scaffolding (Fase 9 v0.1).
+// Anti-cheat runtime.
 //
 // The server is already authoritative on movement / damage / projectiles
-// (Fase 1-7), so the only client-side mischief left is *flooding* — sending
+// so the main client-side mischief left is flooding - sending
 // inputs / casts / parry events faster than humanly possible. This module is
 // a pluggable per-message rate limiter that the GameRoom can wire on each
 // inbound channel; if a client crosses the threshold the room kicks them.
 //
 // Detection is simple sliding-window: keep a count of messages received
 // inside the last `windowMs`; reset the counter when the window rolls.
-// Threshold values are conservative defaults — Fase 10 polish will tighten
+// Threshold values are conservative defaults and can be tightened by telemetry.
 // after closed playtest data lands.
 
 export interface RateLimitConfig {
@@ -21,7 +21,7 @@ export const ANTI_CHEAT_LIMITS: Record<string, RateLimitConfig> = {
   input: { windowMs: 1000, maxInWindow: 240 },
   // Sword swing cap = 3/s combo. Allow burst 6/s for spammers.
   swing: { windowMs: 1000, maxInWindow: 6 },
-  // Cast/transmute/loadout are gated by GCD/CD server-side — anything past
+  // Cast/loadout are gated by GCD/CD server-side — anything past
   // 30/s is impossible from a real human input.
   cast: { windowMs: 1000, maxInWindow: 30 },
   weaponSwap: { windowMs: 1000, maxInWindow: 20 },

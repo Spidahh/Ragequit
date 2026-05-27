@@ -52,7 +52,7 @@ describe('loadout slot helpers', () => {
     expect(buildLoadoutMessage(['quick_dash'], undefined, undefined)['classId']).toBe('hybrid')
   })
 
-  it('normalizeLoadoutSlots pads to 11 without injecting transfers', () => {
+  it('normalizeLoadoutSlots pads to 11 without injecting abilities', () => {
     expect(
       normalizeLoadoutSlots(['m', 'b', 'a', 'b2', 'c', 'd', 'e', '', '', '', 'quick_dash']).slice(
         7,

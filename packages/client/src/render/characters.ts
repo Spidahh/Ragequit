@@ -1,111 +1,135 @@
 import { CAPSULE_HALF_HEIGHT_M, CAPSULE_HEIGHT_M } from '@ragequit/shared'
 import * as THREE from 'three'
-import { FBXLoader } from 'three/addons/loaders/FBXLoader.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js'
 
 import {
   ELEMENT_COLORS,
-  applyWeaponProp as newApplyWeaponProp,
-  makeCharacter as proceduralMakeCharacter,
+  makeCharacter as makeCharacterAnchor,
   type CharacterOpts,
   type ElementId,
   type WeaponId as CharacterWeaponId,
 } from '../character.js'
 
+import { createOutlineMesh } from './outlines.js'
+
 // ---------------------------------------------------------------------------
 // Loaders — shared instances, one fetch per unique URL.
 // ---------------------------------------------------------------------------
 const _loader = new GLTFLoader()
-const _fbxLoader = new FBXLoader()
 
-// ---------------------------------------------------------------------------
-// Character GLB — loaded once, cloned per character instance.
-// ---------------------------------------------------------------------------
-
-interface _CharGlbData {
+interface _NewCharacterData {
   scene: THREE.Group
-  animations: THREE.AnimationClip[]
+  clips: Partial<Record<_AnimName, THREE.AnimationClip>>
+  headScene?: THREE.Group
 }
 
-let _charGlbData: _CharGlbData | null = null
-let _charGlbInflight: Promise<_CharGlbData> | null = null
+const _newCharacterCache = new Map<string, _NewCharacterData>()
+const _newCharacterInflightMap = new Map<string, Promise<_NewCharacterData>>()
 
-function _fetchCharGlb(): Promise<_CharGlbData> {
-  if (_charGlbData) return Promise.resolve(_charGlbData)
-  if (_charGlbInflight) return _charGlbInflight
-  _charGlbInflight = new Promise((resolve, reject) => {
-    _loader.load(
-      '/characters/player.glb',
-      (gltf) => {
-        _charGlbData = { scene: gltf.scene, animations: gltf.animations }
-        _charGlbInflight = null
-        resolve(_charGlbData)
-      },
-      undefined,
-      reject,
-    )
-  })
-  return _charGlbInflight
+function _getModelNameForClass(classId: string): string {
+  const c = classId.toLowerCase()
+  if (c.includes('tank')) return 'Male_Ranger'
+  if (c.includes('archer') || c.includes('arciere')) return 'Female_Ranger'
+  if (c.includes('mage') || c.includes('mago')) return 'Female_Peasant'
+  return 'Male_Peasant' // hybrid or default
 }
 
-function _loadFbx(url: string): Promise<THREE.Group> {
-  return new Promise((resolve, reject) => {
-    _fbxLoader.load(url, (group) => resolve(group), undefined, reject)
-  })
-}
+function _fetchNewCharacter(classId = 'hybrid'): Promise<_NewCharacterData> {
+  const modelName = _getModelNameForClass(classId)
+  const cached = _newCharacterCache.get(modelName)
+  if (cached) return Promise.resolve(cached)
 
-async function _fetchLegacyCharacter(): Promise<_LegacyCharacterData> {
-  if (_legacyCharacterData) return _legacyCharacterData
-  if (_legacyCharacterInflight) return _legacyCharacterInflight
+  const inflight = _newCharacterInflightMap.get(modelName)
+  if (inflight) return inflight
 
-  _legacyCharacterInflight = (async () => {
-    const scene = await _loadFbx(_LEGACY_CHARACTER_FBX)
-    const baseBoneNames = _collectBoneNames(scene)
-    const baseBoneQuaternions = _collectBoneQuaternions(scene)
-    const clips: Partial<Record<_AnimName, THREE.AnimationClip>> = {}
-    const uniqueUrls = [
-      ...new Set(
-        _ANIM_NAMES.flatMap((name) => {
-          const url = _LEGACY_ANIM_FBX[name]
-          return url ? [url] : []
-        }),
-      ),
+  const newInflight = (async () => {
+    const needHead = modelName.includes('Peasant')
+    const headModelName = modelName.includes('Male')
+      ? 'Male_Ranger_Head_Hood'
+      : 'Female_Ranger_Head_Hood'
+
+    const promises: Promise<unknown>[] = [
+      new Promise<unknown>((resolve, reject) => {
+        _loader.load(`/characters/${modelName}.gltf`, resolve, undefined, reject)
+      }),
+      new Promise<unknown>((resolve, reject) => {
+        _loader.load('/characters/UAL1_Standard.glb', resolve, undefined, reject)
+      }),
     ]
-    const loaded = new Map(
-      await Promise.all(
-        uniqueUrls.map(async (url) => {
-          const animRoot = await _loadFbx(url)
-          const clip = animRoot.animations[0]
-          if (!clip) throw new Error(`Legacy animation missing clip: ${url}`)
-          return [url, { clip, boneQuaternions: _collectBoneQuaternions(animRoot) }] as const
-        }),
-      ),
-    )
 
-    for (const name of _ANIM_NAMES) {
-      const url = _LEGACY_ANIM_FBX[name]
-      if (!url) continue
-      const source = loaded.get(url)
-      if (!source) continue
-      clips[name] = _retargetLegacyClip(
-        source.clip,
-        name,
-        baseBoneNames,
-        source.boneQuaternions,
-        baseBoneQuaternions,
+    if (needHead) {
+      promises.push(
+        new Promise<unknown>((resolve, reject) => {
+          _loader.load(`/characters/${headModelName}.gltf`, resolve, undefined, reject)
+        }),
       )
     }
 
-    _legacyCharacterData = { scene, clips }
-    _legacyCharacterInflight = null
-    return _legacyCharacterData
+    const results = await Promise.all(promises)
+    const gltfModel = results[0] as { scene: THREE.Group }
+    const gltfAnim = results[1] as { animations: THREE.AnimationClip[] }
+
+    const scene = gltfModel.scene
+    const animations = gltfAnim.animations
+
+    let headScene: THREE.Group | undefined = undefined
+    if (needHead && results[2]) {
+      const gltfHead = results[2] as { scene: THREE.Group }
+      headScene = gltfHead.scene
+    }
+
+    const clips: Partial<Record<_AnimName, THREE.AnimationClip>> = {}
+
+    const nameMap: Record<_AnimName, string> = {
+      Idle: 'Idle_Loop',
+      Attacking_Idle: 'Idle_Loop',
+      Run: 'Sprint_Loop',
+      Walk: 'Walk_Loop',
+      Dagger_Attack: 'Sword_Attack',
+      Dagger_Attack2: 'Sword_Attack',
+      Death: 'Death01',
+      Punch: 'Punch_Cross',
+      RecieveHit: 'Hit_Chest',
+      RecieveHit_Attacking: 'Hit_Chest',
+      Roll: 'Roll',
+      Jump: 'Jump_Start',
+      Land: 'Jump_Land',
+      Airborne: 'Jump_Loop',
+      Parry_Block: 'Sword_Idle',
+      Bow_Draw: 'Spell_Simple_Idle_Loop',
+      Bow_Release: 'Spell_Simple_Shoot',
+      Staff_Cast: 'Spell_Simple_Shoot',
+      Channel: 'Spell_Simple_Idle_Loop',
+      Respawn: 'Spell_Simple_Enter',
+    }
+
+    for (const key in nameMap) {
+      const name = key as _AnimName
+      const sourceName = nameMap[name]
+      const sourceClip = animations.find((a) => a.name === sourceName)
+      if (sourceClip) {
+        const cloned = sourceClip.clone()
+        cloned.name = name
+        clips[name] = cloned
+      } else {
+        console.warn(
+          `[character] Animation ${sourceName} not found in UAL1_Standard.glb for ${name}`,
+        )
+      }
+    }
+
+    const data = { scene, clips, headScene }
+    _newCharacterCache.set(modelName, data)
+    _newCharacterInflightMap.delete(modelName)
+    return data
   })().catch((err) => {
-    _legacyCharacterInflight = null
+    _newCharacterInflightMap.delete(modelName)
     throw err
   })
 
-  return _legacyCharacterInflight
+  _newCharacterInflightMap.set(modelName, newInflight)
+  return newInflight
 }
 
 type _AnimName =
@@ -152,119 +176,6 @@ const _ANIM_NAMES: _AnimName[] = [
   'Channel',
   'Respawn',
 ]
-
-const _LEGACY_CHARACTER_FBX = '/characters/legacy/player_base.fbx'
-const _LEGACY_ANIM_FBX: Partial<Record<_AnimName, string>> = {
-  Idle: '/characters/legacy/animations/idle_combat.fbx',
-  Attacking_Idle: '/characters/legacy/animations/idle_combat.fbx',
-  Run: '/characters/legacy/animations/run_forward.fbx',
-  Walk: '/characters/legacy/animations/walk_forward.fbx',
-  Jump: '/characters/legacy/animations/jump.fbx',
-  Airborne: '/characters/legacy/animations/airborne.fbx',
-  Land: '/characters/legacy/animations/land.fbx',
-  Dagger_Attack: '/characters/legacy/animations/melee_attack_01.fbx',
-  Dagger_Attack2: '/characters/legacy/animations/melee_attack_02.fbx',
-  Parry_Block: '/characters/legacy/animations/parry_block.fbx',
-  Bow_Draw: '/characters/legacy/animations/bow_draw.fbx',
-  Bow_Release: '/characters/legacy/animations/bow_release.fbx',
-  Punch: '/characters/legacy/animations/staff_cast.fbx',
-  Staff_Cast: '/characters/legacy/animations/staff_cast.fbx',
-  Channel: '/characters/legacy/animations/channel.fbx',
-  RecieveHit: '/characters/legacy/animations/hit_react.fbx',
-  RecieveHit_Attacking: '/characters/legacy/animations/hit_react.fbx',
-  Roll: '/characters/legacy/animations/dash_roll.fbx',
-  Death: '/characters/legacy/animations/death.fbx',
-  Respawn: '/characters/legacy/animations/respawn.fbx',
-}
-
-interface _LegacyCharacterData {
-  scene: THREE.Group
-  clips: Partial<Record<_AnimName, THREE.AnimationClip>>
-}
-
-let _legacyCharacterData: _LegacyCharacterData | null = null
-let _legacyCharacterInflight: Promise<_LegacyCharacterData> | null = null
-
-function _trackTargetName(trackName: string): string {
-  const dot = trackName.indexOf('.')
-  return dot >= 0 ? trackName.slice(0, dot) : trackName
-}
-
-function _trackPropertyName(trackName: string): string {
-  const dot = trackName.indexOf('.')
-  return dot >= 0 ? trackName.slice(dot) : ''
-}
-
-function _collectBoneNames(root: THREE.Object3D): Set<string> {
-  const names = new Set<string>()
-  root.traverse((node) => {
-    if (node instanceof THREE.Bone) names.add(node.name)
-  })
-  return names
-}
-
-function _collectBoneQuaternions(root: THREE.Object3D): Map<string, THREE.Quaternion> {
-  const quaternions = new Map<string, THREE.Quaternion>()
-  root.traverse((node) => {
-    if (node instanceof THREE.Bone) quaternions.set(node.name, node.quaternion.clone())
-  })
-  return quaternions
-}
-
-function _resolveLegacyTrackTarget(target: string, boneNames: Set<string>): string | null {
-  if (boneNames.has(target)) return target
-
-  const withoutMixamo = target.replace(/^mixamorig/, '')
-  if (boneNames.has(withoutMixamo)) return withoutMixamo
-
-  return null
-}
-
-function _retargetLegacyClip(
-  source: THREE.AnimationClip,
-  name: _AnimName,
-  boneNames: Set<string>,
-  sourceBoneQuaternions: Map<string, THREE.Quaternion>,
-  targetBoneQuaternions: Map<string, THREE.Quaternion>,
-): THREE.AnimationClip {
-  const tracks: THREE.KeyframeTrack[] = []
-  const seen = new Set<string>()
-
-  for (const track of source.tracks) {
-    const sourceTarget = _trackTargetName(track.name)
-    const resolvedTarget = _resolveLegacyTrackTarget(sourceTarget, boneNames)
-    if (!resolvedTarget) continue
-    // Gameplay owns character translation. The legacy animation FBXs come from
-    // a Mixamo-scale rig whose Hips.position values do not match the base skin.
-    if (_trackPropertyName(track.name) === '.position') continue
-
-    const remappedName = `${resolvedTarget}${_trackPropertyName(track.name)}`
-    if (seen.has(remappedName)) continue
-    seen.add(remappedName)
-
-    const remapped = track.clone()
-    remapped.name = remappedName
-    if (_trackPropertyName(track.name) === '.quaternion') {
-      const sourceRest = sourceBoneQuaternions.get(sourceTarget)
-      const targetRest = targetBoneQuaternions.get(resolvedTarget)
-      if (sourceRest && targetRest) {
-        const restOffset = targetRest.clone().multiply(sourceRest.clone().invert())
-        const values = remapped.values
-        const quat = new THREE.Quaternion()
-        for (let offset = 0; offset < values.length; offset += 4) {
-          quat.fromArray(values, offset).premultiply(restOffset).toArray(values, offset)
-        }
-      }
-    }
-    tracks.push(remapped)
-  }
-
-  if (tracks.length === 0) {
-    throw new Error(`Legacy animation has no compatible tracks after retarget: ${name}`)
-  }
-
-  return new THREE.AnimationClip(name, source.duration, tracks)
-}
 
 interface _MixerStore {
   mixer: THREE.AnimationMixer
@@ -377,10 +288,6 @@ function _measureRenderableBox(root: THREE.Object3D): THREE.Box3 {
     if (!geo) return
     // Use the raw geometry bounding box (local vertex positions) instead of
     // setFromObject / SkinnedMesh.computeBoundingBox().
-    // Three.js r180 SkinnedMesh.computeBoundingBox() calls applyBoneTransform
-    // per vertex, returning world-space coords — if bone matrixWorlds differ
-    // between the two clone calls the measured "native height" comes out ~100×
-    // too large for the second character, producing a wildly wrong target scale.
     if (geo.boundingBox === null) geo.computeBoundingBox()
     if (!geo.boundingBox) return
     const childBox = geo.boundingBox.clone().applyMatrix4(child.matrixWorld)
@@ -405,25 +312,26 @@ function _resolveClip(
 
 function _makeToonMaterial(
   source: THREE.Material | undefined,
-  teamColor: number,
+  _teamColor: number,
   toonGradient: THREE.DataTexture,
-  meshName = '',
 ): THREE.MeshToonMaterial {
   const src = source as THREE.MeshStandardMaterial | THREE.MeshToonMaterial | undefined
-  const lowerName = meshName.toLowerCase()
-  const color =
-    lowerName.includes('head') || lowerName.includes('face')
-      ? new THREE.Color(0xb98252)
-      : lowerName.includes('body') || lowerName.includes('character')
-        ? new THREE.Color(teamColor).lerp(new THREE.Color(0xffffff), 0.28)
-        : (src?.color?.clone() ?? new THREE.Color(0xffffff))
+  const hasMap = !!(src && 'map' in src && src.map)
+
+  const color = hasMap
+    ? (src?.color?.clone() ?? new THREE.Color(0xffffff))
+    : new THREE.Color(_teamColor)
+
   return new THREE.MeshToonMaterial({
     color,
-    map: src && 'map' in src ? (src.map ?? null) : null,
+    map: hasMap ? src.map : null,
     gradientMap: toonGradient,
-    emissive: new THREE.Color(teamColor),
     side: THREE.DoubleSide,
-    emissiveIntensity: lowerName.includes('body') || lowerName.includes('character') ? 0.38 : 0.12,
+    emissive: hasMap ? new THREE.Color(_teamColor) : new THREE.Color(0x000000),
+    emissiveIntensity: hasMap ? 0.08 : 0.0,
+    alphaTest: src?.alphaTest ?? 0,
+    transparent: src?.transparent ?? false,
+    opacity: src?.opacity ?? 1,
   })
 }
 
@@ -444,18 +352,6 @@ function _clearWeaponGroup(wg: THREE.Group): void {
 
 // ---------------------------------------------------------------------------
 // Character model loader + AnimationMixer system.
-//
-// loadCharacterGlb(charGroup, teamColor, toonGradient)
-//   Call once per character after makeCharacter().  Async: procedural body
-//   stays visible until the legacy FBX arrives, then procedural parts are hidden
-//   and the animated model (with toon shading) takes over.
-//
-// tickCharacterMixer(charGroup, deltaS)
-//   Call every render frame.  Updates the AnimationMixer by deltaS seconds.
-//
-// setCharAnimState(charGroup, state)
-//   Call whenever movement / attack / alive state changes.  Crossfades to the
-//   appropriate clip: Death → Dagger_Attack → Run → Attacking_Idle.
 // ---------------------------------------------------------------------------
 
 /** Describes the character's current gameplay state for animation selection. */
@@ -484,6 +380,23 @@ export interface CharAnimState {
   rolling?: boolean
 }
 
+function _findBone(model: THREE.Object3D, name: string): THREE.Object3D | null {
+  const nLower = name.toLowerCase()
+  const searchNames = [name, 'mixamorig' + name]
+  if (nLower.includes('righthand') || nLower === 'hand_r' || nLower === 'handr') {
+    searchNames.push('hand_r', 'RightHand', 'mixamorigRightHand')
+  }
+  if (nLower.includes('lefthand') || nLower === 'hand_l' || nLower === 'handl') {
+    searchNames.push('hand_l', 'LeftHand', 'mixamorigLeftHand')
+  }
+
+  for (const sName of searchNames) {
+    const found = model.getObjectByName(sName)
+    if (found) return found
+  }
+  return null
+}
+
 function _installCharacterModel(
   charGroup: THREE.Group,
   model: THREE.Group,
@@ -497,27 +410,17 @@ function _installCharacterModel(
   const nativeBox = _measureRenderableBox(model)
   const nativeHeight = _validBoxHeight(nativeBox)
 
-  const targetScale = CAPSULE_HEIGHT_M / nativeHeight
+  // Scale up visual models by a factor of 1.45 to ensure characters look imposing,
+  // athletic, and majestic in-game and on the main menu, without altering
+  // the server-side physical capsule bounds (which remain 1.8).
+  const targetScale = (CAPSULE_HEIGHT_M / nativeHeight) * 1.45
   model.scale.setScalar(targetScale)
+  // Rotate the model by 180 degrees (Math.PI) so that it faces forward along the game's movement axis
+  // instead of facing backward and looking at the camera.
+  model.rotation.y = Math.PI
   const scaledBox = _measureRenderableBox(model) // also calls updateMatrixWorld(true)
   model.position.y = -CAPSULE_HALF_HEIGHT_M - scaledBox.min.y
 
-  // Do NOT call skeleton.calculateInverses() here.
-  //
-  // The FBXLoader computes boneInverses at load-time in the FBX native scale
-  // (cm units, model scale = 1.0) and stores the mesh's bindMatrix from the FBX
-  // BindPose node at the same cm scale.  Because boneInverses and bindMatrix
-  // are consistent with each other, the skinning math is correct:
-  //   transformed = bindMatrixInverse × Σ(w · bone.matWorld · boneInverse) · bindMatrix · vertex
-  // Three.js SkinnedMesh in AttachedBindMode recomputes bindMatrixInverse every
-  // frame as inverse(mesh.matrixWorld), which already accounts for the 0.01×
-  // scaling we applied above — so the math cancels cleanly without us touching
-  // the boneInverses.
-  //
-  // Re-running calculateInverses() after we set model.scale = 0.01 would
-  // produce boneInverses in a different (scaled) space from bindMatrix (still
-  // at cm scale), breaking the rest-pose invariant and causing visible mesh
-  // deformation (or invisibility when the mismatch is extreme).
   const glbMaterials: THREE.MeshToonMaterial[] = []
   let renderableMeshes = 0
   let skinnedMeshes = 0
@@ -528,11 +431,11 @@ function _installCharacterModel(
     child.frustumCulled = false
     const source = child.material
     if (Array.isArray(source)) {
-      const mats = source.map((mat) => _makeToonMaterial(mat, teamColor, toonGradient, child.name))
+      const mats = source.map((mat) => _makeToonMaterial(mat, teamColor, toonGradient))
       child.material = mats
       glbMaterials.push(...mats)
     } else {
-      const mat = _makeToonMaterial(source, teamColor, toonGradient, child.name)
+      const mat = _makeToonMaterial(source, teamColor, toonGradient)
       child.material = mat
       glbMaterials.push(mat)
     }
@@ -545,15 +448,80 @@ function _installCharacterModel(
 
   charGroup.userData['armorMat'] = glbMaterials[0]
   charGroup.userData['glbMaterials'] = glbMaterials
+  charGroup.userData['toonGradient'] = toonGradient
 
-  // Hide all procedural body parts — the loaded model replaces them entirely.
-  // Both FBX and GLB paths fully replace the procedural geometry.
+  // Find rightHand bone to attach props dynamically
+  const rightHand = _findBone(model, 'RightHand')
+
   const wg = charGroup.userData['weaponGroup'] as THREE.Group | undefined
+  const shield = charGroup.userData['parryShield'] as THREE.Group | undefined
+
+  // Ensure matrices are fully updated so that THREE.Object3D.attach() preserves the exact world transforms
+  charGroup.updateMatrixWorld(true)
+  model.updateMatrixWorld(true)
+
+  // Clean up detached anchor parts from charGroup.
   for (const child of [...charGroup.children]) {
-    if (child !== wg) child.visible = false
+    // Skip weaponGroup, shield, the new model itself, and ground shadow
+    if (child === wg || child === shield || child === model || child.name === 'shadow') {
+      continue
+    }
+
+    // Hide and remove detached anchor meshes completely so they do not double-render or clip.
+    child.visible = false
+    charGroup.remove(child)
   }
+
+  // Add the new skinned glTF character model to the group
   charGroup.add(model)
   charGroup.userData['charModel'] = model
+
+  // Attach weaponGroup directly to the hand bone with reset transform for perfect grip!
+  if (rightHand && wg) {
+    rightHand.add(wg)
+    wg.position.set(0, 0, 0)
+    wg.rotation.set(0, 0, 0)
+    wg.scale.set(1, 1, 1)
+  }
+
+  // Generate dynamic toon outlines for all active character meshes (both skinned model and attached armor/props)
+  const outlineMeshes: { mesh: THREE.Mesh | THREE.SkinnedMesh; outline: THREE.Mesh }[] = []
+  charGroup.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return
+    if (child.name.endsWith('_outline')) return
+
+    // Skip parry shield meshes
+    let p = child.parent
+    let isShield = false
+    while (p) {
+      if (p === shield) {
+        isShield = true
+        break
+      }
+      p = p.parent
+    }
+    if (isShield) return
+
+    // Skip ground drop shadows
+    if (child.name === 'shadow') return
+
+    // Determine custom outline thickness (weapons get slightly thicker outlines)
+    const thickness =
+      child.name.toLowerCase().includes('weapon') ||
+      child.name.toLowerCase().includes('sword') ||
+      child.name.toLowerCase().includes('dagger') ||
+      child.name.toLowerCase().includes('staff') ||
+      child.name.toLowerCase().includes('bow')
+        ? 0.016
+        : 0.012
+    const outline = createOutlineMesh(child, thickness, 0x0a0a0f)
+    outlineMeshes.push({ mesh: child, outline })
+  })
+
+  // Add the outline shells to their respective parent groups/bones to animate together
+  for (const item of outlineMeshes) {
+    item.mesh.parent?.add(item.outline)
+  }
 
   const mixer = new THREE.AnimationMixer(model)
   const actions: Partial<Record<_AnimName, THREE.AnimationAction>> = {}
@@ -579,40 +547,62 @@ function _installCharacterModel(
 
 /**
  * Starts loading the shared character model and wires up an AnimationMixer on
- * charGroup once it arrives.  The procedural body is hidden and replaced by
- * the animated model. Safe to call multiple times on different groups — the
- * source model is loaded only once and cloned per character.
+ * charGroup once it arrives. Safe to call multiple times on different groups.
  */
 export function loadCharacterGlb(
   charGroup: THREE.Group,
   teamColor: number,
   toonGradient: THREE.DataTexture,
+  classId?: string,
 ): void {
-  _fetchLegacyCharacter()
-    .then(({ scene, clips }) => {
+  const resolvedClass = classId || 'hybrid'
+  charGroup.userData['loadedClassId'] = resolvedClass
+
+  _fetchNewCharacter(resolvedClass)
+    .then(({ scene, clips, headScene }) => {
       const model = skeletonClone(scene) as THREE.Group
-      _installCharacterModel(charGroup, model, clips, teamColor, toonGradient, 'legacy FBX')
+
+      if (headScene) {
+        // Ensure bone world matrices are fully calculated in the bind pose.
+        model.updateMatrixWorld(true)
+
+        headScene.traverse((child) => {
+          if (child instanceof THREE.SkinnedMesh) {
+            const hoodMesh = child.clone()
+
+            const peasantBones: THREE.Bone[] = []
+            for (const originalBone of child.skeleton.bones) {
+              const matchingBone = _findBone(model, originalBone.name) as THREE.Bone | null
+              if (matchingBone) {
+                peasantBones.push(matchingBone)
+              } else {
+                const fallback = (_findBone(model, 'Head') || model) as THREE.Bone
+                peasantBones.push(fallback)
+              }
+            }
+
+            // Use the original ranger head skeleton's bone inverses to transform the
+            // vertices (which are in ranger pose space) perfectly to local bone space,
+            // preventing the face and hood from collapsing or warping.
+            const newSkeleton = new THREE.Skeleton(peasantBones, child.skeleton.boneInverses)
+
+            hoodMesh.bind(newSkeleton, child.bindMatrix)
+            model.add(hoodMesh)
+          }
+        })
+      }
+
+      _installCharacterModel(
+        charGroup,
+        model,
+        clips,
+        teamColor,
+        toonGradient,
+        `${resolvedClass} GLTF`,
+      )
     })
-    .catch((legacyErr) => {
-      console.warn('[character] Legacy FBX failed, trying GLB fallback', legacyErr)
-      _fetchCharGlb()
-        .then(({ scene, animations }) => {
-          const model = skeletonClone(scene) as THREE.Group
-          const clips: Partial<Record<_AnimName, THREE.AnimationClip>> = {}
-          const missing: _AnimName[] = []
-          for (const name of _ANIM_NAMES) {
-            const clip = _resolveClip(animations, name)
-            if (clip) clips[name] = clip
-            else missing.push(name)
-          }
-          if (missing.length > 0) {
-            console.warn('[character] GLB animations missing:', missing)
-          }
-          _installCharacterModel(charGroup, model, clips, teamColor, toonGradient, 'player GLB')
-        })
-        .catch((glbErr) => {
-          console.error('[character] GLB fallback failed as well:', glbErr)
-        })
+    .catch((err) => {
+      console.error('[character] Failed to load character and animations:', err)
     })
 }
 
@@ -621,6 +611,15 @@ export function tickCharacterMixer(charGroup: THREE.Group, deltaS: number): void
   const store = charGroup.userData['mixerStore'] as _MixerStore | undefined
   if (!store) return
   store.mixer.update(Math.min(deltaS, 0.1)) // clamp to avoid large jumps after tab-switch
+
+  // Force Head bone scale to (1,1,1) to prevent shared animations from collapsing the face!
+  const model = charGroup.userData['charModel'] || charGroup.userData['model']
+  if (model) {
+    const headBone = _findBone(model, 'Head')
+    if (headBone) {
+      headBone.scale.set(1, 1, 1)
+    }
+  }
 }
 
 /** Drive the animation state machine based on current gameplay state. */
@@ -676,7 +675,7 @@ export function makeCharacter(
     optsOrToonGradient && !(optsOrToonGradient instanceof THREE.DataTexture)
       ? optsOrToonGradient
       : {}
-  const g = proceduralMakeCharacter(teamColor, opts)
+  const g = makeCharacterAnchor(teamColor, opts)
 
   // Simple static round parry shield attached at hips origin.
   // Set visible on self parrying and remote player parrying.
@@ -748,6 +747,37 @@ export function setParryShieldState(
   })
 }
 
+const _weaponCache = new Map<string, THREE.Group>()
+const _weaponInflightMap = new Map<string, Promise<THREE.Group>>()
+
+function _fetchWeaponGlb(weaponId: 'sword' | 'bow' | 'staff'): Promise<THREE.Group> {
+  const cached = _weaponCache.get(weaponId)
+  if (cached) return Promise.resolve(cached)
+
+  const inflight = _weaponInflightMap.get(weaponId)
+  if (inflight) return inflight
+
+  const newInflight = new Promise<THREE.Group>((resolve, reject) => {
+    _loader.load(
+      `/weapons/${weaponId}.glb`,
+      (gltf) => {
+        const group = gltf.scene
+        _weaponCache.set(weaponId, group)
+        _weaponInflightMap.delete(weaponId)
+        resolve(group)
+      },
+      undefined,
+      (err) => {
+        _weaponInflightMap.delete(weaponId)
+        reject(err)
+      },
+    )
+  })
+
+  _weaponInflightMap.set(weaponId, newInflight)
+  return newInflight
+}
+
 export function applyWeaponProp(
   charGroup: THREE.Group,
   weapon: CharacterWeaponId | string,
@@ -769,7 +799,88 @@ export function applyWeaponProp(
   else if (wStr.includes('staff')) weaponId = 'staff'
   else weaponId = 'sword'
 
-  newApplyWeaponProp(charGroup, weaponId, elementHex)
+  const wg = charGroup.userData['weaponGroup'] as THREE.Group | undefined
+  if (!wg) return
+
+  // Synchronously track the active weapon prop target to guard against async race conditions
+  charGroup.userData['activeWeaponProp'] = weaponId
+
+  // Clear existing weapon meshes from wg
+  _clearWeaponGroup(wg)
+
+  // Fetch the GLB weapon model
+  _fetchWeaponGlb(weaponId)
+    .then((scene) => {
+      // Guard against race conditions: if weapon changed while loading, skip
+      if (charGroup.userData['activeWeaponProp'] !== weaponId) {
+        return
+      }
+
+      // Clear again just in case another model was appended during transition
+      _clearWeaponGroup(wg)
+
+      const model = scene.clone() as THREE.Group
+
+      // Ensure proper materials and glow effects are applied
+      model.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.castShadow = true
+          child.frustumCulled = false
+
+          const makeWeaponMat = (m: THREE.Material) => {
+            const src = m as THREE.MeshStandardMaterial | THREE.MeshToonMaterial | undefined
+            // Check if it is a standard/toon material with a map texture.
+            const hasMap = !!(src && 'map' in src && src.map && !(src.map instanceof Function))
+            const color = src?.color?.clone() ?? new THREE.Color(0xffffff)
+
+            // If the mesh is named "glow", "rune", "orb", or "element", we tint it with the element color
+            const nameLower = child.name.toLowerCase()
+            const isGlowing =
+              nameLower.includes('glow') ||
+              nameLower.includes('rune') ||
+              nameLower.includes('orb') ||
+              nameLower.includes('element')
+
+            const gradMap = (charGroup.userData['toonGradient'] as THREE.DataTexture) || null
+
+            return new THREE.MeshToonMaterial({
+              color: isGlowing ? new THREE.Color(elementHex) : color,
+              map: hasMap ? src.map : null,
+              gradientMap: gradMap,
+              side: THREE.DoubleSide,
+              emissive: isGlowing ? new THREE.Color(elementHex) : new THREE.Color(0x000000),
+              emissiveIntensity: isGlowing ? 0.8 : 0.0,
+            })
+          }
+
+          const source = child.material
+          if (Array.isArray(source)) {
+            child.material = source.map(makeWeaponMat)
+          } else {
+            child.material = makeWeaponMat(source)
+          }
+        }
+      })
+
+      wg.add(model)
+
+      // Generate dynamic outlines for the newly attached weapon meshes
+      const weaponOutlines: { mesh: THREE.Mesh; outline: THREE.Mesh }[] = []
+      wg.traverse((child) => {
+        if (!(child instanceof THREE.Mesh)) return
+        if (child.name.endsWith('_outline')) return
+
+        // Create a slightly thicker black outline for the weapon meshes (thickness: 0.016)
+        const outline = createOutlineMesh(child, 0.016, 0x0a0a0f)
+        weaponOutlines.push({ mesh: child, outline })
+      })
+      for (const item of weaponOutlines) {
+        item.mesh.parent?.add(item.outline)
+      }
+    })
+    .catch((err) => {
+      console.error(`[character] Failed to load weapon model ${weaponId}:`, err)
+    })
 }
 
 export function makeCastRing(): THREE.Mesh {

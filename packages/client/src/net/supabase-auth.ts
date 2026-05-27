@@ -67,3 +67,85 @@ export async function getAccessToken(): Promise<string | null> {
 export function getCurrentUserId(): string | null {
   return _session?.user.id ?? null
 }
+
+/** Get the current user email, or null if not authenticated. */
+export function getCurrentUserEmail(): string | null {
+  return _session?.user.email ?? null
+}
+
+/** Sign in with email and password. */
+export async function signIn(
+  email: string,
+  password: string,
+): Promise<{ session: Session | null; error: string | null }> {
+  const sb = getClient()
+  if (!sb) return { session: null, error: 'Supabase URL o anon key mancanti' }
+  const { data, error } = await sb.auth.signInWithPassword({ email, password })
+  if (error || !data.session) {
+    return { session: null, error: error?.message || 'Login fallito' }
+  }
+  _session = data.session
+  console.info('[supabase] email login ok, userId:', data.session.user.id)
+  return { session: data.session, error: null }
+}
+
+/** Sign up with email and password. */
+export async function signUp(
+  email: string,
+  password: string,
+): Promise<{ session: Session | null; error: string | null }> {
+  const sb = getClient()
+  if (!sb) return { session: null, error: 'Supabase URL o anon key mancanti' }
+  const { data, error } = await sb.auth.signUp({ email, password })
+  if (error || !data.session) {
+    return { session: null, error: error?.message || 'Registrazione fallita' }
+  }
+  _session = data.session
+  console.info('[supabase] email sign-up ok, userId:', data.session.user.id)
+  return { session: data.session, error: null }
+}
+
+/** Log out of the current session. */
+export async function logOut(): Promise<{ error: string | null }> {
+  const sb = getClient()
+  if (!sb) return { error: 'Supabase URL o anon key mancanti' }
+  const { error } = await sb.auth.signOut()
+  _session = null
+  console.info('[supabase] logged out')
+  return { error: error?.message || null }
+}
+
+/** Sign in with Google (OAuth). */
+export async function signInWithGoogle(): Promise<{ error: string | null }> {
+  const sb = getClient()
+  if (!sb) return { error: 'Supabase URL o anon key mancanti' }
+  
+  // Dynamic host detection for local vs fly deploy redirects
+  const redirectUrl = window.location.origin
+  
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: redirectUrl,
+    },
+  })
+  return { error: error?.message || null }
+}
+
+
+/** Get player stats (ELO, wins, losses) from Supabase players table. */
+export async function getPlayerStats(userId: string): Promise<{ elo_rating: number; wins: number; losses: number } | null> {
+  const sb = getClient()
+  if (!sb) return null
+  const { data, error } = await sb
+    .from('players')
+    .select('elo_rating, wins, losses')
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (error) {
+    console.warn('[supabase] getPlayerStats failed:', error.message)
+    return null
+  }
+  return data as { elo_rating: number; wins: number; losses: number } | null
+}
+

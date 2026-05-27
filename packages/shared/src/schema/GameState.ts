@@ -11,9 +11,9 @@ export class GameState extends Schema {
   @type('string') mapId = 'blockout'
   @type('string') mode = 'blockout'
   @type({ map: Player }) players = new MapSchema<Player>()
-  // Fase 3: arrows + bolts in flight. Keyed by projectile id.
+  // Arrows and bolts in flight. Keyed by projectile id.
   @type({ map: Projectile }) projectiles = new MapSchema<Projectile>()
-  // Fase 4: persistent ground zones (Flame Wall, Thorn Field, ...). Keyed by zone id.
+  // Persistent ground zones (Flame Wall, Thorn Field, ...). Keyed by zone id.
   @type({ map: Zone }) zones = new MapSchema<Zone>()
 
   // Score — team kills (5v5), solo kills (FFA), round wins (1v1).

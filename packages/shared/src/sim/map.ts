@@ -1,4 +1,4 @@
-// Fase 1 blockout map. Ground plane plus five boxes positioned for movement
+// Arena blockout map. Ground plane plus five boxes positioned for movement
 // testing: four cardinal cubes at 8 m distance + one taller central cube to
 // require jump-hold to clear.
 
@@ -44,10 +44,10 @@ export const STATIC_MAP: StaticMap = {
   spawns: SPAWNS as Vec3[],
 }
 
-// --- Fase 8 map variants ---------------------------------------------------
+// --- Map variants ----------------------------------------------------------
 // Two named maps shared between client + server. The default `STATIC_MAP`
-// stays the Fase 1-7 blockout for back-compat with existing tests; new maps
-// are addressable by id so a future server config picks one based on the
+// stays the stable blockout for compatibility with existing tests; new maps
+// are addressable by id so server config can pick one based on the
 // match mode (1v1 → duel_arena, 5v5/FFA → gladiators_arena).
 
 // duel_arena — symmetric 1v1 map with pillars, raised platforms, and cover.
@@ -136,7 +136,7 @@ export const GLADIATORS_ARENA: StaticMap = {
   spawns: G_SPAWNS as Vec3[],
 }
 
-// Map registry — server picks via room option / match mode in Fase 9 deploy.
+// Map registry. Server picks via room option or match mode.
 export const MAPS = {
   blockout: STATIC_MAP,
   duel_arena: DUEL_ARENA,

@@ -31,7 +31,7 @@ describe('target class definitions', () => {
   })
 })
 
-describe('ability slot family and class legality (Pass 3 validation)', () => {
+describe('ability slot family and class legality', () => {
   it('maps sample abilities to their correct target slot families', () => {
     expect(getAbilitySlotFamily('uppercut')).toBe('melee')
     expect(getAbilitySlotFamily('piercing_shot')).toBe('bow')
@@ -81,14 +81,6 @@ describe('ability slot family and class legality (Pass 3 validation)', () => {
     expect(isAbilityLegalForClass('meteor', 'hybrid')).toBe(true)
   })
 
-  it('rejects fixed transfer abilities from all classes (Pass 4)', () => {
-    for (const classId of CLASS_IDS) {
-      expect(isAbilityLegalForClass('transfer_hp_mana', classId)).toBe(false)
-      expect(isAbilityLegalForClass('transfer_mana_stam', classId)).toBe(false)
-      expect(isAbilityLegalForClass('transfer_stam_hp', classId)).toBe(false)
-    }
-  })
-
   it('rejects duplicate, cross-class and over-budget loadouts with one shared rule', () => {
     expect(
       classLoadoutFitsSlotGrammar('hybrid', [
@@ -120,7 +112,7 @@ describe('ability slot family and class legality (Pass 3 validation)', () => {
     )
   })
 
-  it('validates the Pass 3 starter build family budgets for all four classes', () => {
+  it('validates the starter build family budgets for all four classes', () => {
     // Verify each starter build satisfies its class slot budget.
     // These are the same builds used in CLASS_STARTER_PRESETS and DEFAULT_LOADOUT.
     const starters: Record<string, string[]> = {

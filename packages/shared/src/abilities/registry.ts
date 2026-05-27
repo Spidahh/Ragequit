@@ -66,13 +66,13 @@ export const ABILITY_M2_GAP_CLOSER: AbilityDef = {
       at: 'onLand',
       kind: 'applyStatus',
       status: 'slow',
-      durationSec: 0.8,
+      durationSec: 3.0,
       stacks: 1,
       radius: 1.5,
-      slowFraction: 0.35,
+      slowFraction: 0.5,
     },
   ],
-  description: '6m engage dash. Landing hit deals 18 damage in 1.5m and applies Slow 35% for 0.8s.',
+  description: '6m engage dash. Landing hit deals 18 damage in 1.5m and applies Slow 50% for 3.0s.',
   miniMalus: 'Linear engage; collision stops the dash and contact is parryable.',
   canParry: true,
 }
@@ -137,10 +137,10 @@ export const ABILITY_M5_GUARD_BREAK: AbilityDef = {
   comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 10 },
-    { at: 'onCast', kind: 'applyStatus', status: 'stun', durationSec: 0.55, stacks: 1 },
+    { at: 'onCast', kind: 'applyStatus', status: 'stun', durationSec: 1.5, stacks: 1 },
     { at: 'onCast', kind: 'knockup', airborneSec: 0.45, knockbackDistance: 1.2 },
   ],
-  description: '10 damage. Applies Stun 0.55s plus a short 0.45s pop.',
+  description: '10 damage. Applies Stun 1.5s plus a short 0.45s pop.',
   miniMalus: 'Very short 2.2m reach and fully parryable.',
   canParry: true,
 }
@@ -220,10 +220,11 @@ export const ABILITY_B2_VOLLEY: AbilityDef = {
       durationSec: 1.5,
       tickEverySec: 0.5,
       damagePerTick: 11,
-      applyStatus: { status: 'slow', durationSec: 0.8, stacks: 1, slowFraction: 0.25 },
+      applyStatus: { status: 'slow', durationSec: 3.0, stacks: 1, slowFraction: 0.45 },
     },
   ],
-  description: 'Arcing arrow rain on a 3.5m point zone. Three waves deal 11 damage and Slow 25%.',
+  description:
+    'Arcing arrow rain on a 3.5m point zone. Three waves deal 11 damage and Slow 45% for 3.0s.',
   miniMalus: 'Telegraphed landing zone; targets can leave before waves land.',
 }
 
@@ -247,10 +248,10 @@ export const ABILITY_B3_PIN_SHOT: AbilityDef = {
       speedMps: 90,
       gravityMps2: 2,
       damage: 14,
-      onHitStatus: { status: 'root', durationSec: 1.1, stacks: 1 },
+      onHitStatus: { status: 'root', durationSec: 2.8, stacks: 1 },
     },
   ],
-  description: 'Control arrow. 14 damage and Root 1.1s on hit.',
+  description: 'Control arrow. 14 damage and Root 2.8s on hit.',
   miniMalus: '0.8s windup. Requires clear aim and line of sight.',
 }
 
@@ -278,11 +279,11 @@ export const ABILITY_B4_SNARE_TRAP: AbilityDef = {
       armDelaySec: 2,
       expiresOnTrigger: true,
       damagePerTick: 10,
-      applyStatus: { status: 'root', durationSec: 1.0, stacks: 1 },
+      applyStatus: { status: 'root', durationSec: 3.0, stacks: 1 },
     },
   ],
   description:
-    'Self zone trap, 1.5m radius. Arms after 2.0s. First trigger deals 10 damage and Root 1.0s.',
+    'Self zone trap, 1.5m radius. Arms after 2.0s. First trigger deals 10 damage and Root 3.0s.',
   miniMalus: 'No effect before arm delay.',
 }
 
@@ -584,10 +585,11 @@ export const ABILITY_I1_FROST_BOLT: AbilityDef = {
       gravityMps2: 1.5,
       damage: 16,
       element: 'ice',
-      onHitStatus: { status: 'chill', durationSec: 4, stacks: 1 },
+      onHitStatus: { status: 'chill', durationSec: 6, stacks: 1 },
     },
   ],
-  description: 'Fast frost projectile. 16 damage and Chill x1; repeated hits build toward Freeze.',
+  description:
+    'Fast frost projectile. 16 damage and Chill x1 (6.0s); repeated hits build toward Freeze.',
   miniMalus: 'Lower direct damage than fire or bow finishers.',
 }
 
@@ -614,10 +616,10 @@ export const ABILITY_I2_ICE_WALL: AbilityDef = {
       tickEverySec: 0.25,
       damagePerTick: 0,
       element: 'ice',
-      applyStatus: { status: 'root', durationSec: 0.45, stacks: 1 },
+      applyStatus: { status: 'root', durationSec: 1.5, stacks: 1 },
     },
   ],
-  description: '6m ice strip for 4.5s. Repeatedly applies Root 0.45s to deny a lane.',
+  description: '6m ice strip for 4.5s. Repeatedly applies Root 1.5s to deny a lane.',
   miniMalus: 'No damage.',
 }
 
@@ -643,10 +645,10 @@ export const ABILITY_I3_BLIZZARD: AbilityDef = {
       tickEverySec: 1,
       damagePerTick: 4,
       element: 'ice',
-      applyStatus: { status: 'slow', durationSec: 1.5, stacks: 1, slowFraction: 0.4 },
+      applyStatus: { status: 'slow', durationSec: 3.5, stacks: 1, slowFraction: 0.6 },
     },
   ],
-  description: 'Large 7m storm for 5.0s. Ticks 4 damage and applies Slow 40%.',
+  description: 'Large 7m storm for 5.0s. Ticks 4 damage and applies Slow 60% for 3.5s.',
   miniMalus: 'No hard lock; enemies can still shoot or dash out.',
 }
 
@@ -665,9 +667,9 @@ export const ABILITY_I4_FREEZE_TARGET: AbilityDef = {
   comboRole: 'ray',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 8, element: 'ice' },
-    { at: 'onCast', kind: 'applyStatus', status: 'freeze', durationSec: 1.2, stacks: 1 },
+    { at: 'onCast', kind: 'applyStatus', status: 'freeze', durationSec: 2.5, stacks: 1 },
   ],
-  description: 'Instant ray within 12m. 8 damage and Freeze 1.2s.',
+  description: 'Instant ray within 12m. 8 damage and Freeze 2.5s.',
   miniMalus: '0.5s windup. Parryable. Requires clear line of sight.',
   canParry: true,
 }
@@ -742,9 +744,9 @@ export const ABILITY_L2_THUNDER_CLAP: AbilityDef = {
   comboRole: 'counter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 16, radius: 3.2, element: 'lightning' },
-    { at: 'onCast', kind: 'applyStatus', status: 'stun', durationSec: 0.6, stacks: 1, radius: 3.2 },
+    { at: 'onCast', kind: 'applyStatus', status: 'stun', durationSec: 1.8, stacks: 1, radius: 3.2 },
   ],
-  description: 'Self shockwave in 3.2m. 16 damage and Stun 0.6s.',
+  description: 'Self shockwave in 3.2m. 16 damage and Stun 1.8s.',
   miniMalus: 'Short range; whiffs if used before contact.',
 }
 
@@ -770,10 +772,10 @@ export const ABILITY_L3_STORM_FIELD: AbilityDef = {
       tickEverySec: 0.4,
       damagePerTick: 4,
       element: 'lightning',
-      applyStatus: { status: 'slow', durationSec: 0.5, stacks: 1, slowFraction: 0.2 },
+      applyStatus: { status: 'slow', durationSec: 2.0, stacks: 1, slowFraction: 0.45 },
     },
   ],
-  description: '4.5m storm field for 3.2s. Ticks 4 damage and applies Slow 20%.',
+  description: '4.5m storm field for 3.2s. Ticks 4 damage and applies Slow 45% for 2.0s.',
   miniMalus: 'Zone is visible.',
 }
 
@@ -867,10 +869,10 @@ export const ABILITY_D2_CURSE_OF_WEAKNESS: AbilityDef = {
   comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'applyStatus', status: 'curse', durationSec: 5, stacks: 1 },
-    { at: 'onCast', kind: 'applyStatus', status: 'blind', durationSec: 2.4, stacks: 1 },
+    { at: 'onCast', kind: 'applyStatus', status: 'blind', durationSec: 4.0, stacks: 1 },
     { at: 'onCast', kind: 'resourceDrain', resource: 'mana', amount: 18, gainFraction: 0.5 },
   ],
-  description: 'Ray hex within 15m. Curse 5.0s, Blind 2.4s and drains 18 Mana, refunding half.',
+  description: 'Ray hex within 15m. Curse 5.0s, Blind 4.0s and drains 18 Mana, refunding half.',
   miniMalus: 'Short windup and line of sight required; parryable.',
   canParry: true,
 }
@@ -1009,10 +1011,10 @@ export const ABILITY_N2_THORN_FIELD: AbilityDef = {
       tickEverySec: 0.75,
       damagePerTick: 4,
       element: 'nature',
-      applyStatus: { status: 'slow', durationSec: 1, stacks: 1, slowFraction: 0.25 },
+      applyStatus: { status: 'slow', durationSec: 3.0, stacks: 1, slowFraction: 0.5 },
     },
   ],
-  description: '3.5m thorn zone for 5.0s. Ticks 4 damage and applies Slow 25%.',
+  description: '3.5m thorn zone for 5.0s. Ticks 4 damage and applies Slow 50% for 3.0s.',
   miniMalus: 'Visible zone; no instant burst.',
 }
 
@@ -1031,9 +1033,9 @@ export const ABILITY_N3_ENTANGLE: AbilityDef = {
   comboRole: 'ray',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 4, element: 'nature' },
-    { at: 'onCast', kind: 'applyStatus', status: 'root', durationSec: 1.7, stacks: 1 },
+    { at: 'onCast', kind: 'applyStatus', status: 'root', durationSec: 3.2, stacks: 1 },
   ],
-  description: 'Instant root ray within 10m. 4 damage and Root 1.7s.',
+  description: 'Instant root ray within 10m. 4 damage and Root 3.2s.',
   miniMalus: '0.5s windup. Requires clear line of sight.',
 }
 
@@ -1110,10 +1112,10 @@ export const ABILITY_N6_VINE_DASH: AbilityDef = {
       tickEverySec: 0.25,
       damagePerTick: 0,
       element: 'nature',
-      applyStatus: { status: 'root', durationSec: 1.2, stacks: 1 },
+      applyStatus: { status: 'root', durationSec: 2.8, stacks: 1 },
     },
   ],
-  description: '5m dash. Leaves 2m zone for 2.5s that applies Root on contact.',
+  description: '5m dash. Leaves 2m zone for 2.5s that applies Root 2.8s on contact.',
   miniMalus: 'Collision stops dash.',
 }
 
@@ -1141,7 +1143,7 @@ export const ABILITY_U1_SELF_HEAL_POTION: AbilityDef = {
       durationSec: 2,
       tickEverySec: 1,
       perTick: { at: 'onTick', kind: 'heal', amount: 20 },
-      breakOnMove: false,
+      breakOnMove: true,
     },
   ],
   description: 'Self heal over 2.0s. Restores 40 HP total.',
@@ -1294,10 +1296,10 @@ export const ABILITY_U8_SMOKE_SCREEN: AbilityDef = {
       radius: 3.5,
       durationSec: 3.5,
       tickEverySec: 0.5,
-      applyStatus: { status: 'blind', durationSec: 1.1, stacks: 1 },
+      applyStatus: { status: 'blind', durationSec: 3.0, stacks: 1 },
     },
   ],
-  description: 'Forward smoke zone, 3.5m radius for 3.5s. Repeatedly applies Blind 1.1s.',
+  description: 'Forward smoke zone, 3.5m radius for 3.5s. Repeatedly applies Blind 3.0s.',
   miniMalus: 'No damage.',
 }
 
@@ -1320,7 +1322,8 @@ export const ABILITY_U_BRACE_RECOVERY: AbilityDef = {
     { at: 'onCast', kind: 'heal', amount: 50 },
     { at: 'onCast', kind: 'applyStatus', status: 'shield', durationSec: 3, stacks: 20 },
   ],
-  description: 'Spend 40 Stamina to restore 50 HP and gain a 20 damage shield for 3.0s. If Fury is at 5, consumes it to heal 100 HP instead.',
+  description:
+    'Spend 40 Stamina to restore 50 HP and gain a 20 damage shield for 3.0s. If Fury is at 5, consumes it to heal 100 HP instead.',
   miniMalus: 'High Stamina cost leaves you vulnerable to pressure.',
 }
 
@@ -1343,7 +1346,8 @@ export const ABILITY_U_HUNTERS_FLOW: AbilityDef = {
     { at: 'onCast', kind: 'heal', amount: 35 },
     { at: 'onCast', kind: 'move', mode: 'dash', distance: 3, useMovementDirection: true },
   ],
-  description: 'Spend 20 Mana and 10 Stamina to restore 35 HP while performing a quick 3m dash in your movement direction. Gains +25 HP extra healing if Momentum is above 60.',
+  description:
+    'Spend 20 Mana and 10 Stamina to restore 35 HP while performing a quick 3m dash in your movement direction. Gains +25 HP extra healing if Momentum is above 60.',
   miniMalus: 'Dash has no invulnerability frames.',
 }
 
@@ -1362,10 +1366,9 @@ export const ABILITY_U_ARCANE_REBIND: AbilityDef = {
   range: 0,
   targeting: 'self',
   comboRole: 'survival',
-  effects: [
-    { at: 'onCast', kind: 'heal', amount: 60 },
-  ],
-  description: 'Spend 45 Mana to channel arcana for 0.5s, restoring 60 HP. If a Risonanza elemental window is active, consumes it to heal 110 HP instead.',
+  effects: [{ at: 'onCast', kind: 'heal', amount: 60 }],
+  description:
+    'Spend 45 Mana to channel arcana for 0.5s, restoring 60 HP. If a Risonanza elemental window is active, consumes it to heal 110 HP instead.',
   miniMalus: '0.5s windup leaves you vulnerable to interrupts.',
 }
 
@@ -1384,69 +1387,10 @@ export const ABILITY_U_ADAPTIVE_MEND: AbilityDef = {
   range: 0,
   targeting: 'self',
   comboRole: 'survival',
-  effects: [
-    { at: 'onCast', kind: 'heal', amount: 30 },
-  ],
-  description: 'Spend 15 Mana and 15 Stamina to restore 30 HP. If Flow stacks are at 3, consumes them to heal 70 HP instead.',
+  effects: [{ at: 'onCast', kind: 'heal', amount: 30 }],
+  description:
+    'Spend 15 Mana and 15 Stamina to restore 30 HP. If Flow stacks are at 3, consumes them to heal 70 HP instead.',
   miniMalus: 'Low base healing if not amplified by weapon swaps.',
-}
-
-// ── Transfer (Transmutation) utilities ───────────────────────────────────────
-// These convert one resource to another at the ratios defined in
-// 04_transmutation.md. They occupy fixed utility slots and are cast via Z/X/F.
-
-export const ABILITY_U9_TRANSFER_HP_MANA: AbilityDef = {
-  id: 'transfer_hp_mana',
-  name: 'HP → Mana',
-  slot: 'utility',
-  element: 'none',
-  weapon: 'none',
-  costMana: 0,
-  costStamina: 0,
-  cooldownSec: 5,
-  windupSec: 0,
-  range: 0,
-  targeting: 'self',
-  comboRole: 'resource',
-  effects: [{ at: 'onCast', kind: 'transmute', direction: 'hp_mana' }],
-  description: 'Spend 20 HP to gain 20 Mana.',
-  miniMalus: 'Requires more than 20 HP.',
-}
-
-export const ABILITY_U10_TRANSFER_MANA_STAM: AbilityDef = {
-  id: 'transfer_mana_stam',
-  name: 'Mana → Stamina',
-  slot: 'utility',
-  element: 'none',
-  weapon: 'none',
-  costMana: 0,
-  costStamina: 0,
-  cooldownSec: 5,
-  windupSec: 0,
-  range: 0,
-  targeting: 'self',
-  comboRole: 'resource',
-  effects: [{ at: 'onCast', kind: 'transmute', direction: 'mana_stam' }],
-  description: 'Spend 20 Mana to gain 20 Stamina.',
-  miniMalus: 'Requires 20 Mana.',
-}
-
-export const ABILITY_U11_TRANSFER_STAM_HP: AbilityDef = {
-  id: 'transfer_stam_hp',
-  name: 'Stamina → HP',
-  slot: 'utility',
-  element: 'none',
-  weapon: 'none',
-  costMana: 0,
-  costStamina: 0,
-  cooldownSec: 5,
-  windupSec: 0,
-  range: 0,
-  targeting: 'self',
-  comboRole: 'resource',
-  effects: [{ at: 'onCast', kind: 'transmute', direction: 'stam_hp' }],
-  description: 'Spend 30 Stamina to gain 20 HP.',
-  miniMalus: 'Requires 30 Stamina.',
 }
 
 // ============================================================================
@@ -1515,10 +1459,6 @@ export const ABILITY_DEFS: AbilityRegistry = Object.freeze({
   hunters_flow: ABILITY_U_HUNTERS_FLOW,
   arcane_rebind: ABILITY_U_ARCANE_REBIND,
   adaptive_mend: ABILITY_U_ADAPTIVE_MEND,
-  // Transfers (Transmutation as utility)
-  transfer_hp_mana: ABILITY_U9_TRANSFER_HP_MANA,
-  transfer_mana_stam: ABILITY_U10_TRANSFER_MANA_STAM,
-  transfer_stam_hp: ABILITY_U11_TRANSFER_STAM_HP,
 })
 
 export function getAbilityDef(id: string): AbilityDef | null {

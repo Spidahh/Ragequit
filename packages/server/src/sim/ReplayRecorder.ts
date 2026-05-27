@@ -1,4 +1,4 @@
-// Replay recorder (Fase 9 v0.1).
+// Replay recorder.
 //
 // Records every match as a JSONL stream of (tick, event) tuples so:
 //   1. closed-playtest debugging — replay a contested moment.
@@ -8,7 +8,7 @@
 //
 // The recorder is plugged in by GameRoom: every broadcast goes through
 // `record(type, message)`. On match dispose the JSONL file lands in
-// REPLAY_OUT_DIR (default /tmp/ragequit-replays — overridable via env). Fase
+// REPLAY_OUT_DIR (default /tmp/ragequit-replays - overridable via env).
 // 10 wires this to Cloudflare R2 retention 7 days.
 
 import { mkdirSync, writeFileSync } from 'node:fs'

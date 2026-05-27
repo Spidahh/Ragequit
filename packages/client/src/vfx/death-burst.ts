@@ -6,7 +6,7 @@ import * as THREE from 'three'
 // gold accent for own-kill feedback.
 //
 // Architecture: one InstancedMesh for the whole scene.  Up to MAX_BURSTS
-// active simultaneously (old ones are forcibly recycled if pool is full).
+// active simultaneously (the pool recycles entries when full).
 
 const PARTICLES_PER_BURST = 18
 const BURST_LIFE_MS = 900

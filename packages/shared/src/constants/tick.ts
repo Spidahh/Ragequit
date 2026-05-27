@@ -1,12 +1,12 @@
 // Simulation tick rate. The server runs at exactly this rate; the client sends
 // inputs once per tick and interpolates rendering between snapshots.
-// Authority: 01_DESIGN/10_tech_netcode.md § Tick rate.
+// Server tick rate.
 
 export const TICK_RATE_HZ = 60 as const
 export const TICK_MS = 1000 / TICK_RATE_HZ // 16.666...
 
 // Rolling history retained on the server for lag compensation.
-// Authority: 01_DESIGN/10_tech_netcode.md § Lag compensation.
+// Lag compensation window.
 export const LAG_COMP_HISTORY_MS = 400 as const
 export const LAG_COMP_HISTORY_TICKS = Math.ceil(LAG_COMP_HISTORY_MS / TICK_MS) // 24
 

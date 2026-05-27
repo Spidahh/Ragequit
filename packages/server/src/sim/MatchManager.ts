@@ -1,4 +1,4 @@
-// Match flow / round state machine (Fase 7).
+// Match flow / round state machine.
 //
 // Drives the BO5 1v1 round loop:
 //   lobby (waiting for 2 players) → countdown (3 s) → live → roundEnd (2 s)
@@ -64,7 +64,7 @@ export class MatchManager {
   // ROUND_TIMER_TICKS for the live phase).
   private roundStartTick = 0
   private roundIndex = 0
-  // In-memory ELO (Fase 7 scaffold; persisted to Supabase in Fase 9).
+  // In-memory ELO, persisted to Supabase when auth is available.
   private readonly elo = new Map<string, number>()
   // The winner of the LAST round (for roundEnd → next live transition).
   private lastRoundWinnerId = ''
@@ -235,7 +235,7 @@ export class MatchManager {
   }
 
   // Update in-memory ELO at match end. 1v1 round modes: winner by round count.
-  // FFA/5v5: ELO deferred to the ranked multiplayer pass; round modes update now.
+  // FFA/5v5: ELO belongs to ranked multiplayer; round modes update now.
   // Returns { winnerId, loserId, winnerEloDelta, loserEloDelta } so the caller
   // can persist the actual computed deltas to DB (not a flat constant).
   private applyEloUpdates(): {

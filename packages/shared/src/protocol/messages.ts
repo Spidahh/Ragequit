@@ -2,13 +2,12 @@
 // Colyseus state-sync handles structural state; these are one-shot events.
 
 export type Weapon = 'sword' | 'bow' | 'staff'
-export type TransmuteDirection = 'hp_mana' | 'mana_stam' | 'stam_hp'
 
 // --- Client -> Server --------------------------------------------------
 
 export interface ClientInputMessage {
   // Client-estimated server tick the input is meant for. Informational in
-  // Queued by arrival order today; carried for future lag compensation.
+  // Queued by arrival order and echoed for prediction cleanup.
   tick: number
   // Monotonic per-client counter. The server echoes the highest processed
   // value back via Player.lastProcessedInputSeq so the client can discard
@@ -91,13 +90,8 @@ export interface ClientParryReleaseMessage {
   atTick: number
 }
 
-export interface ClientTransmuteMessage {
-  direction: TransmuteDirection
-  atTick: number
-}
-
 /**
- * Class-aware loadout envelope (Pass 4).
+ * Class-aware loadout envelope.
  * Each array contains ability ids for that slot family; length is determined
  * by the class slot grammar. Server validates family, class-legality, budget
  * and uniqueness — not wire array positions.
@@ -164,6 +158,7 @@ export interface ServerAbilityFailedMessage {
     | 'parrying'
     | 'unknown_ability'
     | 'not_in_loadout'
+    | 'swapping'
 }
 
 // Status apply / expire / DoT damage tick events for HUD.
@@ -179,15 +174,6 @@ export interface ServerStatusAppliedMessage {
 export interface ServerStatusExpiredMessage {
   playerId: string
   status: string
-  atTick: number
-}
-
-// Transmute success / failure broadcast (success drives HUD pulse).
-export interface ServerTransmuteResultMessage {
-  playerId: string
-  direction: TransmuteDirection
-  ok: boolean
-  reason?: 'cooldown' | 'cost' | 'parrying' | 'casting' | 'dead' | 'airborne'
   atTick: number
 }
 
@@ -303,7 +289,6 @@ export const MessageTypes = {
   Swing: 'swing',
   Cast: 'cast',
   WeaponSwap: 'weaponSwap',
-  Transmute: 'transmute',
   Loadout: 'loadoutSet',
   Heartbeat: 'heartbeat',
   ChargeStart: 'chargeStart',
@@ -329,7 +314,6 @@ export const MessageTypes = {
   // Ability / status / zone messages
   StatusApplied: 'statusApplied',
   StatusExpired: 'statusExpired',
-  TransmuteResult: 'transmuteResult',
   ZoneSpawned: 'zoneSpawned',
   ZoneExpired: 'zoneExpired',
   // Kill streaks

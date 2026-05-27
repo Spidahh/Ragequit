@@ -52,8 +52,8 @@ export interface SimInput {
 
 export interface StaticMap {
   boxes: AABB[]
-  // Ground plane Y (flat floor, no heightfield in Fase 1).
+  // Ground plane Y (flat floor, no heightfield).
   groundY: number
-  // Spawn points — at least 2 for Fase 1 room cap.
+  // Spawn points. At least 2 for duel rooms.
   spawns: Vec3[]
 }

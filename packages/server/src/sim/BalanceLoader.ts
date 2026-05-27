@@ -1,4 +1,4 @@
-// Balance loader (Fase 10b v0.1).
+// Balance loader.
 //
 // Reads `packages/shared/src/constants/balance.json` at server boot and
 // produces a snapshot of override values that match.constants would otherwise
@@ -7,7 +7,7 @@
 //
 // Falls back gracefully to the compile-time constants when the JSON file is
 // missing, malformed, or carries an unknown `version`. Designed so a balance
-// pass post-playtest is a single PR that touches `balance.json` only.
+// post-playtest tuning can stay in a single PR that touches `balance.json` only.
 
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'

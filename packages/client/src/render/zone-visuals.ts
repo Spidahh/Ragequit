@@ -63,6 +63,34 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
       edge.rotation.y = msg.yaw
       edge.position.x += Math.sin(msg.yaw) * 0.23
       edge.position.z += Math.cos(msg.yaw) * 0.23
+
+      // Draw stylized comic outline around the wall (thickness: 0.02)
+      const wallOutline = new THREE.Mesh(
+        mesh.geometry.clone(),
+        new THREE.ShaderMaterial({
+          uniforms: {
+            thickness: { value: 0.025 },
+            outlineColor: { value: new THREE.Color(0x050508) },
+          },
+          vertexShader: `
+            uniform float thickness;
+            void main() {
+              vec3 pos = position + normal * thickness;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+            }
+          `,
+          fragmentShader: `
+            uniform vec3 outlineColor;
+            void main() {
+              gl_FragColor = vec4(outlineColor, 1.0);
+            }
+          `,
+          side: THREE.BackSide,
+          depthWrite: true,
+        }),
+      )
+      mesh.add(wallOutline)
+
       scene.add(mesh)
       scene.add(edge)
       zoneVisuals.set(msg.id, { mesh, extra: edge, element: msg.element })
@@ -77,6 +105,34 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
       })
       mesh = new THREE.Mesh(cylinderGeo, cylinderMat)
       mesh.position.set(msg.pos.x, msg.pos.y + 0.9, msg.pos.z)
+
+      // Draw stylized comic outline around the cylinder AoE bounds (thickness: 0.03)
+      const cylinderOutline = new THREE.Mesh(
+        cylinderGeo.clone(),
+        new THREE.ShaderMaterial({
+          uniforms: {
+            thickness: { value: 0.035 },
+            outlineColor: { value: new THREE.Color(0x050508) },
+          },
+          vertexShader: `
+            uniform float thickness;
+            void main() {
+              vec3 pos = position + normal * thickness;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+            }
+          `,
+          fragmentShader: `
+            uniform vec3 outlineColor;
+            void main() {
+              gl_FragColor = vec4(outlineColor, 1.0);
+            }
+          `,
+          side: THREE.BackSide,
+          depthWrite: true,
+        }),
+      )
+      mesh.add(cylinderOutline)
+
       scene.add(mesh)
 
       const floorGeo = new THREE.RingGeometry(Math.max(0.1, msg.radius - 0.18), msg.radius, 28)

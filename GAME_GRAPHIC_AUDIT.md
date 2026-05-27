@@ -1,45 +1,21 @@
-# GAME GRAPHIC AUDIT
+# RAGEQUIT — Graphic State
 
-Root entrypoint for the current code-read graphic audit.
+Questo documento non e un audit storico. Descrive il visual runtime vivo.
 
-Canonical audit document:
+## Stato Vivo
 
-- [`01_DESIGN/12_game_graphic_audit.md`](01_DESIGN/12_game_graphic_audit.md)
+- Il menu usa `packages/client/public/ui/sfondo.png`.
+- Il logo usa `packages/client/public/ui/ragequit-logo-full.png`.
+- La scena menu usa `#bg-canvas` con arena 3D animata.
+- Il CSS UI vivo e solo `packages/client/public/game-ui.css`.
+- Non esistono layer CSS separati per override UI.
+- Il Loadout Forge usa pannelli separati `#ls-magic-base` e
+  `#ls-magic-advanced`.
 
-This file exists at repository root because the graphic audit is a required input
-before whole-game visual work. Do not skip it and do not replace it with generic
-art assumptions.
+## Regole
 
-## What The Audit Controls
-
-Read the canonical audit before deciding or changing:
-
-- menu, pause, settings, HUD, loadout, scoreboard, loading and game shell presentation;
-- Three.js scene, camera, lighting, materials, arena, character, weapon and VFX work;
-- projectile, zone, spell, status and feedback visuals;
-- asset search, asset replacement or fallback decisions.
-
-## Current Audit Findings That Must Stay Visible
-
-- RAGEQUIT is a desktop browser PvP arena slice with active `Play 1v1`,
-  `Training`, and `Free For All` menu/loadout paths.
-- The client presentation is split across Three.js world rendering and DOM/CSS
-  HUD/menu surfaces.
-- Current runtime uses arena, weapon and character assets together with
-  procedural fallbacks and code-driven VFX.
-- Current presentation debt is whole-game debt, not only asset debt: menus,
-  Loadout Forge, HUD hierarchy, spell language, projectiles, arena coherence and
-  character/weapon runtime assets must be evaluated together.
-- Unknowns must stay labeled as `non deducibile dal codice` in the canonical
-  audit instead of being invented.
-
-## Required Follow-Up Documents
-
-After the audit, read:
-
-1. [`VISUAL_STRATEGY.md`](VISUAL_STRATEGY.md)
-2. [`01_DESIGN/15_visual_strategy.md`](01_DESIGN/15_visual_strategy.md)
-3. [`01_DESIGN/13_graphic_redesign_blueprint.md`](01_DESIGN/13_graphic_redesign_blueprint.md)
-4. [`01_DESIGN/14_visual_redesign_system.md`](01_DESIGN/14_visual_redesign_system.md)
-5. [`01_DESIGN/11_ui_redesign_plan.md`](01_DESIGN/11_ui_redesign_plan.md)
-6. [`02_TECH/06_visual_performance_contract.md`](02_TECH/06_visual_performance_contract.md)
+- Niente nuovi layer CSS.
+- Niente override grafici separati.
+- Niente menu in stile pagina HTML.
+- UI e VFX devono restare leggibili durante aim, proiettili, parry, cast e
+  movement.

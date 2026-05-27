@@ -2,24 +2,20 @@
 //
 // Class-aware build screen: the active class (Tank/Arciere/Mago/Ibrido) determines
 // which slot families are available, which abilities are legal, and which vitals
-// are displayed. 11 total slots; each slot is freely assignable within class
-// slot-family budget (no slot is ever locked). Fixed transfers are no longer
-// injected — they exist in the registry as legacy abilities for the current
-// runtime but are not part of any target starter build.
+// are displayed. Each slot is freely assignable within class slot-family budget.
 
 import {
   ABILITY_DEFS,
-  MASTERY_BONUSES,
   MessageTypes,
-  computeLoadoutMastery,
   CLASS_IDS,
   TARGET_CLASS_DEFS,
   classLoadoutFitsSlotGrammar,
+  getAbilitySlotFamily,
+  getClassSlotOrder,
   isAbilityLegalForClass,
   type ClassId,
   type AbilityDef,
-  type ElementId,
-  type MasteryLevel,
+  type TargetAbilitySlotFamily,
 } from '@ragequit/shared'
 import type { Room } from 'colyseus.js'
 
@@ -27,7 +23,6 @@ import { abilityIconMarkup } from './icons.js'
 import { actionLabel, onKeybindsChanged, slotKeybindEntries } from './input/keybinds.js'
 import {
   LOADOUT_SLOT_ORDER,
-  UTILITY_FLEX_SLOT_INDEX,
   buildLoadoutMessage,
   normalizeLoadoutSlots,
 } from './input/loadout-slots.js'
@@ -50,7 +45,7 @@ const CLASS_MECHANIC_DESC: Record<ClassId, string> = {
 // Slot positions are packed by family regardless of wire-field name; the server
 // validates by family budget (not position), so melee abilities may sit in
 // "magic" wire positions etc. See 01_DESIGN/06_loadout_build.md for rationale.
-// Each starter includes the class Recovery utility and no fixed transfers.
+// Each starter includes the class Recovery utility.
 const CLASS_STARTER_PRESETS: Record<ClassId, string[]> = {
   // Tank: 3 melee + 2 bow + 6 utility = 11
   tank: [
@@ -150,18 +145,15 @@ export function initLoadoutStation(
   const overlay = document.getElementById('loadout-station')!
   const lsMelee = document.getElementById('ls-melee')!
   const lsBow = document.getElementById('ls-bow')!
-  const lsMagic = document.getElementById('ls-magic')!
+  const lsMagicBase = document.getElementById('ls-magic-base')!
+  const lsMagicAdvanced = document.getElementById('ls-magic-advanced')!
   const lsUtility = document.getElementById('ls-utility')!
   const lsPool = document.getElementById('ls-pool')!
-  const masteryBadge = document.getElementById('ls-mastery-badge')!
-  const masteryPills = Array.from(document.querySelectorAll<HTMLElement>('#mastery-pills .mpill'))
   const btnBack = document.getElementById('ls-back') as HTMLButtonElement
   const btnDefault = document.getElementById('ls-default') as HTMLButtonElement
   const btnConfirm = document.getElementById('ls-confirm') as HTMLButtonElement
   const searchInput = document.getElementById('ls-search') as HTMLInputElement | null
   const filterBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-filter]'))
-  const filterToggle = document.getElementById('ls-filter-toggle') as HTMLButtonElement | null
-  const filterDrawer = document.getElementById('ls-filter-drawer')
 
   const detailsName = document.getElementById('ls-detail-name')
   const detailsMeta = document.getElementById('ls-detail-meta')
@@ -176,14 +168,11 @@ export function initLoadoutStation(
   const utilityWheelKey = document.getElementById('ls-utility-wheel-key')
 
   // Class selector DOM refs
-  const classTabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.ls-class-tab'))
+  const classTabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.class-select-card'))
   // Class vitals DOM refs
   const vitalsClassName = document.getElementById('ls-vitals-class-name')
   const vitalsMechanicName = document.getElementById('ls-mechanic-name')
   const vitalsMechanicDesc = document.getElementById('ls-mechanic-desc')
-  const vitalsBarHp = document.getElementById('ls-bar-hp') as HTMLElement | null
-  const vitalsBarMana = document.getElementById('ls-bar-mana') as HTMLElement | null
-  const vitalsBarStam = document.getElementById('ls-bar-stam') as HTMLElement | null
   const vitalsValHp = document.getElementById('ls-val-hp')
   const vitalsValMana = document.getElementById('ls-val-mana')
   const vitalsValStam = document.getElementById('ls-val-stam')
@@ -314,17 +303,15 @@ export function initLoadoutStation(
     }
   }
 
-  function currentMastery(): { level: MasteryLevel; element: ElementId | undefined } {
-    const defs = slots.map((id) => (id ? ABILITY_DEFS[id] : undefined)) as Array<
-      AbilityDef | undefined
-    >
-    return computeLoadoutMastery(defs)
+  function currentSlotOrder(): TargetAbilitySlotFamily[] {
+    return getClassSlotOrder(activeClassId)
   }
 
-  function slotPanel(slot: (typeof LOADOUT_SLOT_ORDER)[number]): HTMLElement {
+  function slotPanel(slot: TargetAbilitySlotFamily): HTMLElement {
     if (slot === 'melee') return lsMelee
     if (slot === 'bow') return lsBow
-    if (slot === 'magic') return lsMagic
+    if (slot === 'magicBase') return lsMagicBase
+    if (slot === 'magicAdvanced') return lsMagicAdvanced
     return lsUtility
   }
 
@@ -354,7 +341,7 @@ export function initLoadoutStation(
     el.className = `ls-slot ${idx === activeIdx ? 'active' : ''} el-${def?.element ?? 'none'}`
     el.dataset['idx'] = String(idx)
     const role = def ? abilityRole(def) : undefined
-    const slotKind = LOADOUT_SLOT_ORDER[idx] ?? 'utility'
+    const slotKind = currentSlotOrder()[idx] ?? 'utility'
     el.innerHTML = [
       `<span class="ls-slot-icon">${def ? abilityIconMarkup(def.id) : slotKind.slice(0, 1).toUpperCase()}</span>`,
       `<span class="ls-slot-label">${slotKeyLabel(idx)}</span>`,
@@ -363,7 +350,7 @@ export function initLoadoutStation(
       def
         ? `<span class="ls-slot-mode ${isInstantCast(def) ? 'instant' : 'preview'}">${isInstantCast(def) ? 'INSTANT' : 'PREVIEW'}</span>`
         : '',
-      id ? '<button class="ls-slot-clear" title="Clear">×</button>' : '',
+      id ? '<span class="ls-slot-clear" title="Clear">×</span>' : '',
     ].join('')
     el.addEventListener('click', (event) => {
       if ((event.target as HTMLElement).classList.contains('ls-slot-clear')) {
@@ -381,41 +368,12 @@ export function initLoadoutStation(
   }
 
   function rebuildSlots(): void {
-    for (const c of [lsMelee, lsBow, lsMagic, lsUtility]) {
+    for (const c of new Set([lsMelee, lsBow, lsMagicBase, lsMagicAdvanced, lsUtility])) {
       while (c.firstChild) c.removeChild(c.firstChild)
     }
-    for (let i = 0; i < LOADOUT_SLOT_ORDER.length; i++) {
-      slotPanel(LOADOUT_SLOT_ORDER[i]!).appendChild(makeSlotEl(i))
-    }
-  }
-
-  function rebuildMastery(): void {
-    const counts: Partial<Record<ElementId, number>> = {}
-    // Only magic abilities count for mastery — filter by def.slot, not hardcoded indices.
-    for (const id of slots) {
-      const def = id ? ABILITY_DEFS[id] : undefined
-      if (!def || def.slot !== 'magic' || def.element === 'none') continue
-      counts[def.element as ElementId] = (counts[def.element as ElementId] ?? 0) + 1
-    }
-    const elements: ElementId[] = ['fire', 'ice', 'lightning', 'dark', 'nature']
-    for (const pill of masteryPills) {
-      const el = pill.dataset['el'] as ElementId
-      if (!elements.includes(el)) continue
-      const n = counts[el] ?? 0
-      pill.textContent = `${capitalize(el)} ${n}/5`
-      pill.className = `mpill el-${el} ${n >= 4 ? 'active' : n >= 2 ? 'partial' : ''}`
-    }
-    const { level, element } = currentMastery()
-    const bonus = element ? MASTERY_BONUSES[element] : null
-    if (level === 0 || !bonus || !element) {
-      masteryBadge.textContent = 'NO MASTERY'
-      masteryBadge.className = 'mastery-badge tier-0'
-    } else {
-      const label = level === 2 ? 'PERFECT MASTERY' : 'MASTERY ACTIVE'
-      masteryBadge.textContent = `${label} · ${element.toUpperCase()}`
-      masteryBadge.className = `mastery-badge el-${element} tier-${level}`
-      masteryBadge.style.color = bonus.color
-      masteryBadge.style.borderColor = bonus.color + '66'
+    const order = currentSlotOrder()
+    for (let i = 0; i < order.length; i++) {
+      slotPanel(order[i]!).appendChild(makeSlotEl(i))
     }
   }
 
@@ -424,7 +382,7 @@ export function initLoadoutStation(
     if (!detailsName || !detailsMeta || !detailsDesc || !detailsMalus) return
     if (!def) {
       detailsName.textContent = 'Select an ability'
-      detailsMeta.textContent = (LOADOUT_SLOT_ORDER[activeIdx] ?? 'utility').toUpperCase() + ' SLOT'
+      detailsMeta.textContent = `${slotPoolTitle(currentSlotOrder()[activeIdx] ?? 'utility', activeIdx).toUpperCase()} SLOT`
       detailsDesc.replaceChildren()
       const empty = document.createElement('p')
       empty.textContent = 'Pick a compatible ability from the pool below.'
@@ -519,12 +477,6 @@ export function initLoadoutStation(
   })
   filterBtns.find((b) => b.dataset['filter'] === 'all')?.classList.add('active-filter')
 
-  filterToggle?.addEventListener('click', () => {
-    const open = filterDrawer?.classList.toggle('open') ?? false
-    filterToggle.setAttribute('aria-expanded', String(open))
-    filterToggle.textContent = open ? 'FILTERS' : 'FILTERS ↓'
-  })
-
   searchInput?.addEventListener('input', () => {
     poolSearch = searchInput.value.trim().toLowerCase()
     rebuildPool()
@@ -539,7 +491,7 @@ export function initLoadoutStation(
     while (lsPool.firstChild) lsPool.removeChild(lsPool.firstChild)
     syncPoolFilterButtons()
 
-    const targetSlot = LOADOUT_SLOT_ORDER[activeIdx]!
+    const targetSlot = currentSlotOrder()[activeIdx]!
     const locked = buildLocked()
     const targetLabel = slotPoolTitle(targetSlot, activeIdx)
     if (poolTitle) poolTitle.textContent = targetLabel
@@ -548,8 +500,7 @@ export function initLoadoutStation(
         ? 'Build editing is locked during live combat'
         : poolSubtitleFor(targetSlot, activeIdx)
     const defs = (Object.values(ABILITY_DEFS) as AbilityDef[])
-      .filter((def) => def.slot === targetSlot)
-      .filter((def) => activeIdx !== UTILITY_FLEX_SLOT_INDEX || !def.id.startsWith('transfer_'))
+      .filter((def) => getAbilitySlotFamily(def.id) === targetSlot)
       .filter((def) => !slots.some((id, idx) => idx !== activeIdx && id === def.id))
       // Class legality filter — only show abilities valid for the active class
       .filter((def) => isAbilityLegalForClass(def.id, activeClassId))
@@ -603,13 +554,18 @@ export function initLoadoutStation(
         `<span class="effect-tags">${formatEffectTags(def)
           .map((tag) => `<span class="${tagClass(tag)}">${escapeHtml(tag)}</span>`)
           .join('')}</span>`,
-        `<span class="pool-bars">${quickStats.map((s) => `<span class="pool-bar ${s.className}" title="${escapeHtml(s.label)}"><i style="width:${s.value * 20}%"></i></span>`).join('')}</span>`,
+        `<span class="pool-bars">${quickStats
+          .map((s) => {
+            const widthClass = `fill-${Math.max(0, Math.min(5, Math.round(s.value)))}`
+            return `<span class="pool-bar ${s.className}" title="${escapeHtml(s.label)}"><i class="${widthClass}"></i></span>`
+          })
+          .join('')}</span>`,
       ].join('')
       card.addEventListener('click', () => {
         if (buildLocked()) return
         slots[activeIdx] = def.id
         const nextIdx = slots.findIndex(
-          (value, idx) => idx > activeIdx && !value && LOADOUT_SLOT_ORDER[idx] === targetSlot,
+          (value, idx) => idx > activeIdx && !value && currentSlotOrder()[idx] === targetSlot,
         )
         if (nextIdx >= 0) activeIdx = nextIdx
         save()
@@ -667,18 +623,45 @@ export function initLoadoutStation(
   function rebuildClassVitals(): void {
     const classDef = TARGET_CLASS_DEFS[activeClassId]
     const { hp, mana, stamina } = classDef.resourceMaxima
-    const HP_REF = 250,
-      MANA_REF = 160,
-      STAM_REF = 150
     if (vitalsClassName) vitalsClassName.textContent = classDef.label.toUpperCase()
     if (vitalsMechanicName) vitalsMechanicName.textContent = classDef.mechanicId.toUpperCase()
     if (vitalsMechanicDesc) vitalsMechanicDesc.textContent = CLASS_MECHANIC_DESC[activeClassId]
     if (vitalsValHp) vitalsValHp.textContent = String(hp)
     if (vitalsValMana) vitalsValMana.textContent = String(mana)
     if (vitalsValStam) vitalsValStam.textContent = String(stamina)
-    if (vitalsBarHp) vitalsBarHp.style.width = `${Math.round((hp / HP_REF) * 100)}%`
-    if (vitalsBarMana) vitalsBarMana.style.width = `${Math.round((mana / MANA_REF) * 100)}%`
-    if (vitalsBarStam) vitalsBarStam.style.width = `${Math.round((stamina / STAM_REF) * 100)}%`
+
+    // Dynamic Allowed Weapons highlights
+    const weaponIcons = document.querySelectorAll('#ls-vitals-weapons .vitals-weapon-icon')
+    weaponIcons.forEach((iconEl) => {
+      const weapon = iconEl.getAttribute('data-weapon')
+      const isAllowed = (classDef.weapons as readonly string[]).includes(weapon || '')
+      iconEl.classList.toggle('active', isAllowed)
+      iconEl.classList.toggle('disabled', !isAllowed)
+    })
+
+    // Dynamic Spells budgets grid
+    const spellsGrid = document.getElementById('ls-vitals-spells')
+    if (spellsGrid) {
+      spellsGrid.innerHTML = ''
+      const families: { key: keyof typeof classDef.slots; label: string; icon: string }[] = [
+        { key: 'melee', label: 'Melee', icon: '⚔️' },
+        { key: 'bow', label: 'Bow', icon: '🏹' },
+        { key: 'magicBase', label: 'Spell Base', icon: '✨' },
+        { key: 'magicAdvanced', label: 'Spell Adv', icon: '🔥' },
+        { key: 'utility', label: 'Utility', icon: '🛠️' },
+      ]
+      families.forEach((fam) => {
+        const count = classDef.slots[fam.key]
+        const badge = document.createElement('div')
+        badge.className = `vitals-budget-badge ${count > 0 ? 'has-budget' : 'no-budget'}`
+        badge.innerHTML = `
+          <span class="budget-icon">${fam.icon}</span>
+          <span class="budget-label">${fam.label}</span>
+          <span class="budget-count">${count}</span>
+        `
+        spellsGrid.appendChild(badge)
+      })
+    }
   }
 
   // --- Preset Loader ---------------------------------------------------------
@@ -694,7 +677,6 @@ export function initLoadoutStation(
   function rerender(): void {
     refreshSectionKeyLabels()
     rebuildSlots()
-    rebuildMastery()
     rebuildClassVitals()
     rebuildDetails()
     rebuildPool()
@@ -849,7 +831,7 @@ function analyzeBuild(slotIds: readonly string[], classId: ClassId): BuildCoachR
   ).length
   const hasAirPunish = defs.some((def) => def.comboRole === 'finisher')
 
-  // Pass 4: Recovery check replaces Mastery as the build health indicator.
+  // Recovery is the core sustain check for each class.
   const recoveryId = TARGET_CLASS_DEFS[classId].recoveryId
   const hasRecovery = slotIds.includes(recoveryId)
 
@@ -980,7 +962,6 @@ function recommendationTags(
   const hasInstantHit = otherDefs.some(
     (def) => def.targeting === 'forward' || def.comboRole === 'ray',
   )
-  const masteryTarget = closestMasteryElement(slotIds, activeIdx)
 
   if (!hasStarter && (candidate.comboRole === 'starter' || abilityHasControl(candidate)))
     tags.push('OPENER')
@@ -994,31 +975,7 @@ function recommendationTags(
     (candidate.targeting === 'forward' || candidate.comboRole === 'ray')
   )
     tags.push('FOLLOWUP')
-  if (masteryTarget && candidate.slot === 'magic' && candidate.element === masteryTarget)
-    tags.push('MASTERY')
   return Array.from(new Set(tags)).slice(0, 2)
-}
-
-function closestMasteryElement(
-  slotIds: readonly string[],
-  activeIdx: number,
-): ElementId | undefined {
-  // Only suggest mastery when the active slot is a magic slot.
-  const activeDef = slotIds[activeIdx] ? ABILITY_DEFS[slotIds[activeIdx]!] : undefined
-  const isActiveMagic =
-    activeDef?.slot === 'magic' || (!activeDef && LOADOUT_SLOT_ORDER[activeIdx] === 'magic')
-  if (!isActiveMagic) return undefined
-  const counts: Partial<Record<ElementId, number>> = {}
-  // Count magic abilities across all slots dynamically (not hardcoded 2..7)
-  for (let idx = 0; idx < slotIds.length; idx++) {
-    if (idx === activeIdx) continue
-    const def = ABILITY_DEFS[slotIds[idx] ?? '']
-    if (!def || def.slot !== 'magic' || def.element === 'none') continue
-    counts[def.element as ElementId] = (counts[def.element as ElementId] ?? 0) + 1
-  }
-  const best = (Object.entries(counts) as Array<[ElementId, number]>).sort((a, b) => b[1] - a[1])[0]
-  if (!best || best[1] < 1) return undefined
-  return best[0]
 }
 
 function roleBlock(role: AbilityRoleInfo): HTMLDivElement {
@@ -1166,7 +1123,6 @@ function abilityRole(def: AbilityDef): AbilityRoleInfo {
       e.kind === 'heal' ||
       e.kind === 'cleanse' ||
       e.kind === 'restoreStamina' ||
-      e.kind === 'transmute' ||
       e.kind === 'lifesteal' ||
       e.kind === 'resourceDrain'
     ) {
@@ -1174,12 +1130,6 @@ function abilityRole(def: AbilityDef): AbilityRoleInfo {
     }
   }
 
-  if (def.id.startsWith('transfer_'))
-    return {
-      icon: '↔',
-      title: 'Resource Swap',
-      line: 'Converts one resource into another on a fixed utility key.',
-    }
   if (hasSustain && !hasHardCc && !hasPersistentZone)
     return {
       icon: '+',
@@ -1243,7 +1193,6 @@ function abilityQuickStats(def: AbilityDef): AbilityQuickStat[] {
       e.kind === 'heal' ||
       e.kind === 'cleanse' ||
       e.kind === 'restoreStamina' ||
-      e.kind === 'transmute' ||
       e.kind === 'lifesteal' ||
       e.kind === 'resourceDrain'
     ) {
@@ -1309,8 +1258,6 @@ function formatEffectTags(def: AbilityDef): string[] {
       tags.add(e.status ? `CLEANSE ${e.status.toUpperCase()}` : 'FULL CLEANSE')
     } else if (e.kind === 'restoreStamina') {
       tags.add(`+${e.amount} STAMINA`)
-    } else if (e.kind === 'transmute') {
-      tags.add(e.direction.replaceAll('_', ' -> ').toUpperCase())
     } else if (e.kind === 'lifesteal') {
       tags.add(`${Math.round(e.fraction * 100)}% LIFESTEAL`)
     } else if (e.kind === 'resourceDrain') {
@@ -1361,22 +1308,20 @@ function tagClass(tag: string): string {
   return ''
 }
 
-function slotPoolTitle(slot: (typeof LOADOUT_SLOT_ORDER)[number], _idx: number): string {
+function slotPoolTitle(slot: TargetAbilitySlotFamily, _idx: number): string {
   if (slot === 'melee') return 'Melee Ability'
   if (slot === 'bow') return 'Bow Ability'
-  if (slot === 'magic') return 'Spell Slot'
+  if (slot === 'magicBase') return 'Magic Base'
+  if (slot === 'magicAdvanced') return 'Magic Advanced'
   return 'Utility Slot'
 }
 
-function poolSubtitleFor(slot: (typeof LOADOUT_SLOT_ORDER)[number], _idx: number): string {
+function poolSubtitleFor(slot: TargetAbilitySlotFamily, _idx: number): string {
   if (slot === 'melee') return 'Close range pressure, launches, stuns and bleed'
   if (slot === 'bow') return 'Skill shots, roots, traps and ranged pressure'
-  if (slot === 'magic') return 'Damage, status effects, zones and combo setup'
+  if (slot === 'magicBase') return 'Frequent spells, movement, simple control and pressure'
+  if (slot === 'magicAdvanced') return 'High-commitment zones, launches, cashouts and sustain'
   return 'Survival, cleanse, mobility and resource tools'
-}
-
-function capitalize(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1)
 }
 
 export const __loadoutStationSmoke = {

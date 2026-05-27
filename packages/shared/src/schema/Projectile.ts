@@ -8,14 +8,13 @@ import { Schema, type } from '@colyseus/schema'
 //
 // Schema lives here in `shared` so the dedicated server and the client agree
 // on the wire shape. The integration math is shared too, in
-// `sim/projectile.ts`, so client prediction (future) can re-use it.
+// `sim/projectile.ts`, so client and server share the same motion contract.
 export class Projectile extends Schema {
   @type('string') id = ''
   // Player id of the shooter — used for friendly-fire filtering and for
   // awarding the kill on fatal hits.
   @type('string') ownerId = ''
-  // 'arrow' | 'bolt' (string so future projectile kinds don't require a schema
-  // bump of the enum).
+  // 'arrow' | 'bolt' (string so additional projectile kinds do not require a schema bump).
   @type('string') kind = 'arrow'
   @type('string') element = 'none'
 

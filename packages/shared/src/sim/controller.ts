@@ -1,7 +1,7 @@
 // Shared kinematic capsule controller. Deterministic — same inputs produce
 // the same outputs on client and server, enabling prediction + reconciliation.
 //
-// Fase 1 scope: flat ground plus static AABBs. No slopes, no moving platforms,
+// Movement scope: flat ground plus static AABBs. No slopes, no moving platforms,
 // no character-character collision (players pass through each other). Jump
 // tap/hold produces JUMP_HEIGHT_TAP_M / JUMP_HEIGHT_HOLD_M respectively.
 //
@@ -34,13 +34,10 @@ import type { AABB, PlayerSimState, SimInput, StaticMap, Vec3 } from './types.js
 //   slowFraction  : 0..1, additive %-slow from chill/slow statuses (clamped)
 //   movementLocked: true if root/stun/freeze is active — no horizontal motion
 //   castLocked    : true if stun/freeze incapacitates — informational only
-//   airborneLocked: legacy caller state kept during the air-legality migration.
-//                   Knockup no longer removes horizontal input by itself.
 export interface MovementCaps {
   slowFraction: number
   movementLocked: boolean
   castLocked: boolean
-  airborneLocked: boolean
 }
 
 // Initial vy from vertical-motion equation: v0 = sqrt(2 * g * h).

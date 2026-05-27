@@ -120,7 +120,7 @@ CI GitHub Actions gira su ogni push/PR: lint + typecheck + test + build. Finché
 
 ## Verifica locale consigliata
 
-Prima di considerare buono un pass:
+Prima di considerare buono un cambio:
 
 ```bash
 pnpm lint

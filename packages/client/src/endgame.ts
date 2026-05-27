@@ -1,54 +1,47 @@
-// drop-in/src/endgame.ts
-// ──────────────────────────────────────────────────────────────────────
-// Drop-in for end-of-match surfaces:
-//   • Scoreboard (1v1 ranked match end)
-//   • Death cam (between rounds — killed-by overlay)
-//
-// Both render into a host container you provide. Style hooks are
-// already in drop-in/css/endgame.css.
-// ──────────────────────────────────────────────────────────────────────
+import { ABILITY_DEFS } from '@ragequit/shared'
 
 export interface PlayerSummary {
-  name:         string;
-  build:        string;          // e.g. "FIRE 5/5 · SWORD MAIN"
-  kills:        number;
-  damageDealt:  number;
-  damageTaken:  number;
-  knockups:     number;
-  parries:      number;
-  masteryProcs: number;
+  name: string
+  build: string // e.g. "FIRE 5/5 · SWORD MAIN"
+  kills: number
+  damageDealt: number
+  damageTaken: number
+  knockups: number | string
+  parries: number
+  comboProcs: number
+  abilitiesUsed?: Record<string, number>
 }
 
 export interface ScoreboardData {
-  arena:    string;              // "RING_NORTH"
-  matchMs:  number;              // total match duration (ms)
-  rounds:   string;              // "2-1 rounds"
-  league:   string;              // "Bronze III"
-  winner:   PlayerSummary;
-  loser:    PlayerSummary;
-  eloBefore: number;
-  eloDelta:  number;
+  arena: string // "RING_NORTH"
+  matchMs: number // total match duration (ms)
+  rounds: string // "2-1 rounds"
+  league: string // "Bronze III"
+  winner: PlayerSummary
+  loser: PlayerSummary
+  eloBefore: number
+  eloDelta: number
 }
 
 export interface DeathcamData {
-  killer:       string;
-  ability:      string;          // "LIFE DRAIN"
-  element:      string;          // "DARK"
-  damage:       number;          // last hit dmg
-  round:        string;          // "2 / 3"
-  yourDamage:   number;
-  yourHits:     number;
-  yourProcs:    number;
-  yourParries:  number;
-  timeToNextMs: number;
+  killer: string
+  ability: string // "LIFE DRAIN"
+  element: string // "DARK"
+  damage: number // last hit dmg
+  round: string // "2 / 3"
+  yourDamage: number
+  yourHits: number
+  yourProcs: number
+  yourParries: number
+  timeToNextMs: number
 }
 
 // ── SCOREBOARD ────────────────────────────────────────────────────────
 export function renderScoreboard(host: HTMLElement, data: ScoreboardData): void {
-  const ms = data.matchMs;
-  const mm = Math.floor(ms / 60_000);
-  const ss = Math.floor((ms % 60_000) / 1000);
-  const time = `${String(mm).padStart(2, '0')} : ${String(ss).padStart(2, '0')}`;
+  const ms = data.matchMs
+  const mm = Math.floor(ms / 60_000)
+  const ss = Math.floor((ms % 60_000) / 1000)
+  const time = `${String(mm).padStart(2, '0')} : ${String(ss).padStart(2, '0')}`
 
   host.innerHTML = `
     <div class="sb-mock" id="scoreboard">
@@ -81,25 +74,35 @@ export function renderScoreboard(host: HTMLElement, data: ScoreboardData): void 
         </div>
       </div>
     </div>
-  `;
+  `
 }
 
 function playerBlock(p: PlayerSummary, lose: boolean): string {
+  let abilitiesHtml = ''
+  if (p.abilitiesUsed && Object.keys(p.abilitiesUsed).length > 0) {
+    abilitiesHtml = `<div class="sb-abilities-header">Abilities Used</div>`
+    for (const [id, count] of Object.entries(p.abilitiesUsed)) {
+      const name = ABILITY_DEFS[id]?.name ?? id.toUpperCase()
+      abilitiesHtml += `<div class="sb-row sub"><span class="l">${escape(name)}</span><span class="v">x${count}</span></div>`
+    }
+  }
+
   return `
     <div class="sb-player${lose ? ' lose' : ''}">
       <div class="sb-nm">${escape(p.name)}</div>
       <div class="sb-tag">${escape(p.build)}</div>
-      ${row('Kills',         p.kills)}
-      ${row('Damage dealt',  p.damageDealt.toLocaleString())}
-      ${row('Damage taken',  p.damageTaken.toLocaleString())}
-      ${row('Knockups',      p.knockups)}
-      ${row('Parries',       p.parries)}
-      ${row('Mastery procs', p.masteryProcs)}
+      ${row('Kills', p.kills)}
+      ${row('Damage dealt', p.damageDealt.toLocaleString())}
+      ${row('Damage taken', p.damageTaken.toLocaleString())}
+      ${row('Knockups', p.knockups)}
+      ${row('Parries', p.parries)}
+      ${row('Combo procs', p.comboProcs)}
+      ${abilitiesHtml}
     </div>
-  `;
+  `
 }
 function row(l: string, v: string | number): string {
-  return `<div class="sb-row"><span class="l">${l}</span><span class="v">${v}</span></div>`;
+  return `<div class="sb-row"><span class="l">${l}</span><span class="v">${v}</span></div>`
 }
 
 // ── DEATH CAM ─────────────────────────────────────────────────────────
@@ -141,11 +144,19 @@ export function renderDeathcam(host: HTMLElement, data: DeathcamData): void {
       </div>
       <div class="dc-watermark">UNDERGROUND · FIGHT · LEAGUE</div>
     </div>
-  `;
+  `
 }
 
 function escape(s: string | number): string {
-  return String(s).replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  })[c]!);
+  return String(s).replace(
+    /[&<>"']/g,
+    (c) =>
+      ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      })[c]!,
+  )
 }

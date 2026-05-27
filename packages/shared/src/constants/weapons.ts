@@ -44,7 +44,7 @@ export const RESPAWN_SEC = 5 as const
 
 // --- Lag compensation -------------------------------------------------------
 // 400 ms ring buffer of past positions per entity, used to rewind melee hit
-// checks and any future true hitscan casts.
+// checks and line-of-sight casts.
 export const LAG_COMP_BUFFER_MS = 400 as const
 export const LAG_COMP_MAX_COMPENSATE_MS = 200 as const
 
@@ -110,7 +110,7 @@ export const TERRAIN_GROUND_Y = 0 as const
 // --- Parry -----------------------------------------------------------------
 // Tap parry = perfect block window (100% block), burns 20 stamina, 3 s CD.
 // Hold parry = continuous 70% block, drains 15 stam/s, no CD on release.
-// Airborne state is not a universal parry lock in the arena-FPS target.
+// Airborne state is not a universal parry lock in the arena-FPS contract.
 
 export const PARRY_TAP_WINDOW_SEC = 0.5 as const
 export const PARRY_TAP_COST_STAMINA = 20 as const

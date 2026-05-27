@@ -1,4 +1,4 @@
-// Server-side status runtime (Fase 4).
+// Server-side status runtime.
 //
 // Authority on damage, decay, locks, and broadcast for every active
 // StatusInstance on every Player. Pure-ish — depends only on the shared
@@ -15,7 +15,6 @@ import {
   STATUS_META,
   StatusInstance,
   applyStatus as pureApply,
-  getMasteryBonus,
   isCastLocked as pureIsCastLocked,
   isMovementLocked as pureIsMovementLocked,
   totalSlowFraction as pureTotalSlow,
@@ -198,7 +197,7 @@ export class StatusRuntime {
     // No immediate action required here — tick() handles it via entrapment flag.
   }
 
-  // Cleanse a status from a player (used by transmute → Bleed). Broadcast.
+  // Cleanse a status from a player. Broadcast.
   cleanse(sid: string, kind: StatusKind): boolean {
     const player = this.host.state.players.get(sid)
     if (!player) return false
@@ -310,15 +309,10 @@ export class StatusRuntime {
         if (newAcc >= effectiveTickPeriod) {
           if (meta.damagePerTick > 0) {
             const festerMul = festering && (kind === 'poison' || kind === 'bleed') ? 2 : 1
-            const source = this.host.state.players.get(inst.sourceId)
-            const natureDotMul =
-              kind === 'poison' && source?.masteryElement === 'nature' && source.masteryLevel >= 1
-                ? (getMasteryBonus('nature')?.dotTickMult ?? 1)
-                : 1
             this.host.pendingDamage.push({
               attackerId: inst.sourceId,
               victimId: sid,
-              amount: meta.damagePerTick * inst.stacks * festerMul * natureDotMul,
+              amount: meta.damagePerTick * inst.stacks * festerMul,
               element: kind === 'burn' ? 'fire' : kind === 'poison' ? 'nature' : '',
               cause:
                 festering && festerMul > 1
