@@ -831,7 +831,7 @@ button.locked {
 .card-title {
   grid-area: title;
   min-width: 0;
-  font: 900 13px/1 var(--font-hud);
+  font: 900 16px/1 var(--font-hud);
   letter-spacing: 0;
   text-transform: uppercase;
   color: var(--text-soft);
@@ -847,7 +847,7 @@ button.locked {
   grid-area: desc;
   min-width: 0;
   overflow: hidden;
-  font: 800 8px/1.15 var(--font-mono);
+  font: 800 10px/1.2 var(--font-mono);
   letter-spacing: 0;
   text-transform: uppercase;
   color: var(--muted);
