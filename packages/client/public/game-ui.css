@@ -647,7 +647,7 @@ button.locked {
   inset: 0;
   z-index: 760;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) 48px;
+  grid-template-rows: auto minmax(0, 1fr) 52px;
   gap: 0;
   overflow: hidden;
   background:
@@ -1554,11 +1554,11 @@ button.locked {
 .tag-timing {
   display: inline-flex;
   margin: 2px 4px 0 0;
-  padding: 3px 6px;
+  padding: 3px 8px;
   border: 1px solid var(--line);
   border-radius: 3px;
   color: var(--text-soft);
-  font: 800 9px/1 var(--font-mono);
+  font: 800 10px/1 var(--font-mono);
   text-transform: uppercase;
 }
 
