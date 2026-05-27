@@ -835,9 +835,9 @@ button.locked {
 #ls-body {
   min-height: 0;
   display: grid;
-  grid-template-columns: clamp(260px, 20vw, 340px) minmax(0, 1fr);
-  gap: 10px;
-  padding: 10px clamp(14px, 1.8vw, 24px);
+  grid-template-columns: clamp(360px, 30vw, 440px) minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px clamp(16px, 1.8vw, 28px);
   position: relative;
   z-index: 2;
 }
@@ -1829,7 +1829,7 @@ button.locked {
    Icone compatte, griglia densa, sezioni per arma colorate
    ════════════════════════════════════════════════════════════ */
 
-/* ── Slot list: riga orizzontale wrap, non colonna ── */
+/* ── Slot list: riga orizzontale wrap ── */
 .slot-list {
   display: flex;
   flex-direction: row;
@@ -1838,39 +1838,40 @@ button.locked {
   padding: 6px 8px 10px;
 }
 
-/* ── Family mini-label sopra ogni slot-list ── */
-#ls-melee:not(:empty)::before    { content: "⚔  MELEE"; color: #d4824a; }
-#ls-bow:not(:empty)::before      { content: "🏹  BOW";   color: #5ab97a; }
-#ls-magic-base:not(:empty)::before     { content: "🔮  SPELL"; color: #9b6cf4; }
-#ls-magic-advanced:not(:empty)::before { content: "✦  ADVANCED"; color: #00d0ff; }
-#ls-utility:not(:empty)::before  { content: "🛡  UTILITY"; color: #ffd260; }
+/* ── Family label strip ── */
+#ls-melee:not(:empty)::before        { content: "MELEE";    color: #d4824a; }
+#ls-bow:not(:empty)::before          { content: "BOW";      color: #5ab97a; }
+#ls-magic-base:not(:empty)::before   { content: "SPELL";    color: #9b6cf4; }
+#ls-magic-advanced:not(:empty)::before { content: "ADV";    color: #00d0ff; }
+#ls-utility:not(:empty)::before      { content: "UTILITY";  color: #ffd260; }
 
 #ls-melee::before, #ls-bow::before,
 #ls-magic-base::before, #ls-magic-advanced::before,
 #ls-utility::before {
   display: block;
   width: 100%;
-  padding: 0 0 5px;
-  font: 900 8px/1 var(--font-mono);
+  padding: 4px 8px;
+  font: 900 9px/1.4 var(--font-mono);
   text-transform: uppercase;
-  letter-spacing: 0.16em;
-  border-bottom: 1px solid currentColor;
-  opacity: 0.65;
-  margin-bottom: 6px;
+  letter-spacing: 0.2em;
+  border-left: 3px solid currentColor;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  opacity: 0.9;
+  margin-bottom: 8px;
 }
 
-/* ── Colore famiglia per ogni container slot ── */
-#ls-melee        { --fam: #d4824a; }
-#ls-bow          { --fam: #5ab97a; }
-#ls-magic-base   { --fam: #9b6cf4; }
-#ls-magic-advanced { --fam: #00d0ff; }
-#ls-utility      { --fam: #ffd260; }
+/* ── Colore famiglia ── */
+#ls-melee          { --fam: #d4824a; --fam-bg: rgba(212,130,74,0.05); }
+#ls-bow            { --fam: #5ab97a; --fam-bg: rgba(90,185,122,0.05); }
+#ls-magic-base     { --fam: #9b6cf4; --fam-bg: rgba(155,108,244,0.05); }
+#ls-magic-advanced { --fam: #00d0ff; --fam-bg: rgba(0,208,255,0.05); }
+#ls-utility        { --fam: #ffd260; --fam-bg: rgba(255,210,96,0.05); }
 
-/* ── Slot card: icona compatta ── */
+/* ── Slot card: icona grande stile videogioco ── */
 .ls-slot {
   position: relative;
-  width: 68px;
-  min-height: 82px;
+  width: 88px;
+  min-height: 108px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1878,62 +1879,67 @@ button.locked {
   padding: 0;
   border: 1px solid color-mix(in srgb, var(--fam, var(--line)) 45%, var(--line));
   border-top: 2px solid color-mix(in srgb, var(--fam, var(--gold)) 70%, transparent);
-  border-radius: 3px;
-  background: rgba(4, 6, 14, 0.88);
+  border-radius: 4px;
+  background: var(--fam-bg, rgba(4, 6, 14, 0.88));
   cursor: pointer;
   text-align: center;
   /* reset grid */
   grid-template-columns: unset;
   grid-template-rows: unset;
   grid-template-areas: unset;
+  transition: transform 0.08s, box-shadow 0.12s;
 }
 
 .ls-slot:hover {
   transform: translateY(-2px);
-  background: rgba(12, 16, 28, 0.95);
+  background: color-mix(in srgb, var(--fam, #ffffff) 6%, rgba(12, 16, 28, 0.95));
+  box-shadow: 0 4px 18px rgba(0,0,0,0.55);
 }
 
 .ls-slot.active {
   border-top-color: var(--gold);
   border-color: rgba(255, 210, 96, 0.55);
   background: rgba(255, 210, 96, 0.07);
-  box-shadow: 0 0 10px rgba(255, 210, 96, 0.18);
+  box-shadow:
+    0 0 0 1px rgba(255,210,96,0.35),
+    0 0 20px rgba(255,210,96,0.2),
+    inset 0 0 14px rgba(255,210,96,0.05);
 }
 
-/* Element accent on top border */
-.ls-slot.el-fire   { border-top-color: var(--fire); }
-.ls-slot.el-ice    { border-top-color: var(--ice); }
+/* Element top-border accent */
+.ls-slot.el-fire      { border-top-color: var(--fire); }
+.ls-slot.el-ice       { border-top-color: var(--ice); }
 .ls-slot.el-lightning { border-top-color: var(--lightning); }
-.ls-slot.el-dark   { border-top-color: #c060ff; }
-.ls-slot.el-nature { border-top-color: var(--nature); }
+.ls-slot.el-dark      { border-top-color: #c060ff; }
+.ls-slot.el-nature    { border-top-color: var(--nature); }
 
-/* Icon area */
+/* Icon area: grande e prominente */
 .ls-slot-icon {
   grid-area: unset;
   align-self: unset;
   width: 100%;
-  height: 46px;
+  height: 62px;
   display: grid;
   place-items: center;
-  font-size: 20px;
+  font-size: 28px;
   border: none;
   border-bottom: 1px solid rgba(145, 170, 220, 0.1);
-  border-radius: 2px 2px 0 0;
-  background: rgba(0, 0, 0, 0.32);
+  border-radius: 3px 3px 0 0;
+  background: rgba(0, 0, 0, 0.3);
 }
 
 /* Name */
 .ls-slot-main {
   grid-area: unset;
   width: 100%;
-  padding: 3px 3px 2px;
+  padding: 4px 4px 2px;
 }
 .ls-slot-name {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
-  font: 700 8px/1.2 var(--font-mono);
+  font: 700 8.5px/1.2 var(--font-mono);
   text-transform: uppercase;
   text-overflow: unset;
   white-space: normal;
@@ -1941,7 +1947,7 @@ button.locked {
   text-align: center;
 }
 
-/* Role: nascosto (troppo piccolo) */
+/* Role: nascosto */
 .ls-slot-role { display: none; }
 
 /* Cost: minuscolo sotto il nome */
@@ -2009,16 +2015,16 @@ button.locked {
 }
 .ls-slot-clear:hover { background: rgba(255,51,68,0.18); color: #ff3344; }
 
-/* Empty slot style */
+/* Empty slot */
 .ls-slot:not([data-idx]) .ls-slot-icon,
 .ls-slot .ls-slot-name:empty {
-  opacity: 0.35;
+  opacity: 0.3;
 }
 
-/* ── Pool: griglia di icone compatte ── */
+/* ── Pool: griglia icone compatte ── */
 .pool-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
   align-content: start;
   gap: 5px;
   padding: 10px;
@@ -2045,7 +2051,7 @@ button.locked {
   /* reset grid */
   grid-template-columns: unset;
   grid-template-areas: unset;
-  transition: transform 0.08s, border-color 0.1s, background 0.1s;
+  transition: transform 0.08s, border-color 0.1s, background 0.1s, box-shadow 0.12s;
 }
 
 .pool-card::before { display: none; }
@@ -2054,6 +2060,7 @@ button.locked {
   transform: translateY(-2px);
   border-color: color-mix(in srgb, var(--ability-color) 65%, transparent);
   background: color-mix(in srgb, var(--ability-color) 8%, rgba(6,8,16,0.96));
+  box-shadow: 0 0 14px color-mix(in srgb, var(--ability-color) 28%, transparent);
 }
 
 .pool-card.recommended {
@@ -2068,29 +2075,29 @@ button.locked {
   opacity: 1;
 }
 .pool-card.equipped::after {
-  content: '✓';
+  content: 'E';
   position: absolute;
   top: 4px; right: 5px;
   font: 900 9px/1 var(--font-mono);
   color: var(--gold);
 }
 
-/* Pool icon: grande, riempie la metà superiore */
+/* Pool icon: grande */
 .pool-icon,
 .pool-icon-box {
   grid-area: unset;
   width: 100%;
-  height: 50px;
+  height: 64px;
   display: grid;
   place-items: center;
   border: none;
   border-bottom: 1px solid color-mix(in srgb, var(--ability-color) 18%, rgba(145,170,220,0.08));
   border-radius: 2px 2px 0 0;
-  background: color-mix(in srgb, var(--ability-color) 9%, rgba(0,0,0,0.45));
-  font-size: 22px;
+  background: color-mix(in srgb, var(--ability-color) 10%, rgba(0,0,0,0.45));
+  font-size: 28px;
 }
 
-/* Pool name: 2 righe max, compatto */
+/* Pool name */
 .pool-title,
 .pool-name {
   grid-area: unset;
@@ -2108,7 +2115,7 @@ button.locked {
   text-align: center;
 }
 
-/* Pool meta: cost/cd compatto */
+/* Pool meta */
 .pool-meta {
   grid-area: unset;
   grid-column: unset;
@@ -2120,7 +2127,7 @@ button.locked {
   overflow: hidden;
 }
 
-/* Nascondi tutto il contenuto verboso nel pool — visibile solo nel detail panel */
+/* Nascondi contenuto verboso nel pool */
 .pool-topline,
 .pool-summary,
 .pool-bars,
@@ -2131,12 +2138,13 @@ button.locked {
 .pool-card .pool-topline { display: none; }
 
 /* Element colors per pool card */
-.pool-card.el-fire     { --ability-color: #ff6b35; }
-.pool-card.el-ice      { --ability-color: #44d4ff; }
+.pool-card.el-fire      { --ability-color: #ff6b35; }
+.pool-card.el-ice       { --ability-color: #44d4ff; }
 .pool-card.el-lightning { --ability-color: #f4e040; }
-.pool-card.el-dark     { --ability-color: #c060ff; }
-.pool-card.el-nature   { --ability-color: #39ff14; }
-.pool-card.el-none     { --ability-color: #888896; }
+.pool-card.el-dark      { --ability-color: #c060ff; }
+.pool-card.el-nature    { --ability-color: #39ff14; }
+.pool-card.el-none      { --ability-color: #888896; }
+
 
 @media (max-width: 1180px) {
   #main-menu {
