@@ -2,6 +2,8 @@
    Single-source stylesheet for menu, Loadout Forge, HUD and overlays.
 */
 
+@import url('./game-ui-loadout.css');
+
 :root {
   --bg: #080b12;
   --bg-deep: #04060b;
