@@ -20,7 +20,7 @@ import {
 import type { Room } from 'colyseus.js'
 
 import { abilityIconMarkup } from './icons.js'
-import { actionLabel, onKeybindsChanged, slotKeybindEntries } from './input/keybinds.js'
+import { actionLabel, onKeybindsChanged } from './input/keybinds.js'
 import {
   LOADOUT_SLOT_ORDER,
   buildLoadoutMessage,
@@ -290,7 +290,22 @@ export function initLoadoutStation(
   }
 
   function slotKeyLabel(idx: number): string {
-    return slotKeybindEntries().find(([, , slotIdx]) => slotIdx === idx)?.[1] ?? ''
+    const order = currentSlotOrder()
+    const family = order[idx] ?? 'utility'
+    if (family === 'utility') return `${actionLabel('wheelUtility')} WHEEL`
+    if (family === 'magicBase' || family === 'magicAdvanced') {
+      const spellIdx = order
+        .slice(0, idx + 1)
+        .filter((slot) => slot === 'magicBase' || slot === 'magicAdvanced').length
+      return spellIdx <= 5 ? actionLabel(`spell${spellIdx}` as Parameters<typeof actionLabel>[0]) : 'SPELL'
+    }
+    return `${actionLabel('wheelAbility')} WHEEL`
+  }
+
+  function slotRouteLabel(slot: TargetAbilitySlotFamily, idx: number): string {
+    if (slot === 'utility') return `${actionLabel('wheelUtility')} wheel · release primes`
+    if (slot === 'magicBase' || slot === 'magicAdvanced') return `direct key ${slotKeyLabel(idx)}`
+    return `${actionLabel('wheelAbility')} wheel · release primes`
   }
 
   function refreshSectionKeyLabels(): void {
@@ -314,20 +329,21 @@ export function initLoadoutStation(
     el.type = 'button'
     el.className = `ls-slot ${idx === activeIdx ? 'active' : ''} el-${def?.element ?? 'none'}`
     el.dataset['idx'] = String(idx)
-    const role = def ? abilityRole(def) : undefined
     const slotKind = currentSlotOrder()[idx] ?? 'utility'
     const SLOT_TYPE_LABELS: Record<string, string> = {
-      melee: 'MELEE', bow: 'BOW', magicBase: 'SPELL', magicAdvanced: 'ADVANCED', utility: 'UTILITY',
+      melee: 'SWORD',
+      bow: 'BOW',
+      magicBase: 'SPELL',
+      magicAdvanced: 'ADV SPELL',
+      utility: 'UTILITY',
     }
     const emptyTypeLabel = SLOT_TYPE_LABELS[slotKind] ?? slotKind.toUpperCase()
     el.innerHTML = [
-      `<span class="ls-slot-icon">${def ? abilityIconMarkup(def.id) : `<span class="ls-slot-empty-type">${emptyTypeLabel}</span>`}</span>`,
+      `<span class="ls-slot-portrait"><span class="ls-slot-icon">${def ? abilityIconMarkup(def.id) : `<span class="ls-slot-empty-type">${emptyTypeLabel}</span>`}</span><span class="ls-slot-name">${def?.name ?? emptyTypeLabel}</span></span>`,
       `<span class="ls-slot-label">${slotKeyLabel(idx)}</span>`,
-      `<span class="ls-slot-main"><span class="ls-slot-name">${def?.name ?? emptyTypeLabel}</span><span class="ls-slot-role">${role?.title ?? slotPoolTitle(slotKind, idx)}</span></span>`,
+      `<span class="ls-slot-main"><span class="ls-slot-nature">${def ? abilityNatureLabel(def) : slotPoolTitle(slotKind, idx)}</span></span>`,
+      `<span class="ls-slot-route">${slotRouteLabel(slotKind, idx)}</span>`,
       def ? `<span class="ls-slot-cost">${formatCost(def)} · ${def.cooldownSec}s</span>` : '',
-      def
-        ? `<span class="ls-slot-mode ${isInstantCast(def) ? 'instant' : 'preview'}">${isInstantCast(def) ? 'INSTANT' : 'PREVIEW'}</span>`
-        : '',
       id ? '<span class="ls-slot-clear" title="Clear">×</span>' : '',
     ].join('')
     el.addEventListener('click', (event) => {
@@ -374,23 +390,12 @@ export function initLoadoutStation(
       detailsIcon.innerHTML = abilityIconMarkup(def.id)
     }
     if (detailsInstant) {
-      const instant = isInstantCast(def)
-      detailsInstant.hidden = false
-      detailsInstant.setAttribute('aria-pressed', String(instant))
-      detailsInstant.innerHTML = [
-        '<span class="mode-kicker">Cast mode</span>',
-        `<span class="mode-state">${instant ? 'Instant' : 'Preview'}</span>`,
-        `<span class="mode-help">${instant ? 'Key casts now' : 'Key primes · LMB confirms'}</span>`,
-      ].join('')
-      detailsInstant.classList.toggle('on', instant)
-      detailsInstant.title = instant
-        ? 'Click to switch to preview placement: key primes, LMB confirms.'
-        : 'Click to switch to instant cast: direct key casts immediately.'
+      detailsInstant.hidden = true
     }
     detailsName.textContent = def.name
-    const role = abilityRole(def)
     const quickStats = abilityQuickStats(def)
     detailsMeta.textContent = [
+      abilityNatureLabel(def),
       def.slot.toUpperCase(),
       def.element !== 'none' ? def.element.toUpperCase() : 'PHYSICAL',
       formatCost(def),
@@ -398,8 +403,6 @@ export function initLoadoutStation(
       def.range > 0 ? `${def.range}m` : 'self',
     ].join(' · ')
     detailsDesc.replaceChildren(
-      roleBlock(role, def.comboRole),
-      castModeBlock(def, isInstantCast(def)),
       renderEffectTags(def),
       quickStatBlock(quickStats),
       textBlock(def.description),
@@ -447,10 +450,11 @@ export function initLoadoutStation(
         if (poolFilterEl === 'all') return true
         if (poolFilterEl === 'recommended')
           return recommendationTags(def, activeIdx, slots).length > 0
-        if (poolFilterEl === 'starter') return def.comboRole === 'starter'
         if (poolFilterEl === 'control') return abilityHasControl(def)
-        if (poolFilterEl === 'instant') return isInstantCast(def)
-        if (poolFilterEl === 'preview') return !isInstantCast(def)
+        if (poolFilterEl === 'projectile') return abilityNatureLabel(def).includes('PROJECTILE')
+        if (poolFilterEl === 'recovery') return abilityNatureLabel(def) === 'RECOVERY'
+        if (poolFilterEl === 'zone') return abilityNatureLabel(def).includes('ZONE')
+        if (poolFilterEl === 'mobility') return abilityNatureLabel(def).includes('MOBILITY')
         if (poolFilterEl === 'none') return def.element === 'none'
         return def.element === poolFilterEl
       })
@@ -472,23 +476,21 @@ export function initLoadoutStation(
       const card = document.createElement('button')
       card.type = 'button'
       const isActive = slots[activeIdx] === def.id
-      const role = abilityRole(def)
       const quickStats = abilityQuickStats(def)
-      const instant = isInstantCast(def)
+      const poolInputLabel = slotKeyLabel(activeIdx)
       const recTags = recommendationTags(def, activeIdx, slots)
+      const nature = abilityNatureLabel(def)
       card.className = `pool-card el-${def.element} ${isActive ? 'equipped' : ''} ${recTags.length > 0 ? 'recommended' : ''} ${locked ? 'locked' : ''}`
       card.disabled = locked
       card.title = def.description
       card.setAttribute(
         'aria-label',
-        `${def.name}. ${role.title}. ${def.element !== 'none' ? def.element : 'physical'}. ${formatCost(def)}. ${formatEffectTags(def).join(', ')}`,
+        `${def.name}. ${nature}. ${def.element !== 'none' ? def.element : 'physical'}. ${formatCost(def)}. ${formatEffectTags(def).join(', ')}`,
       )
       card.innerHTML = [
-        `<span class="pool-icon-box">${abilityIconMarkup(def.id)}</span>`,
-        `<span class="pool-topline"><span class="pool-role-icon">${role.icon}</span><span class="pool-role-text">${escapeHtml(role.title)}</span>${recTags.length > 0 ? ` <span class="recommend-tag">${escapeHtml(recTags[0]!)}</span>` : def.comboRole === 'starter' ? ' <span class="starter-tag">STARTER</span>' : ''}</span>`,
-        `<span class="instant-toggle ${instant ? 'on' : ''}" role="switch" aria-checked="${instant}" title="${instant ? 'Click: switch to Preview placement' : 'Click: switch to Instant cast'}"><span>${instant ? 'Instant' : 'Preview'}</span><small>${instant ? 'key casts' : 'LMB confirms'}</small></span>`,
-        `<span class="pool-name">${escapeHtml(def.name)}</span>`,
-        `<span class="pool-meta">${def.element !== 'none' ? def.element.toUpperCase() : 'PHYSICAL'} · ${formatCost(def)} · ${def.cooldownSec}s CD</span>`,
+        `<span class="pool-visual"><span class="pool-icon-box">${abilityIconMarkup(def.id)}</span><span class="pool-name">${escapeHtml(def.name)}</span></span>`,
+        `<span class="pool-nature"><b>${escapeHtml(nature)}</b>${recTags.length > 0 ? ` <span class="recommend-tag">${escapeHtml(recTags[0]!)}</span>` : ''}</span>`,
+        `<span class="pool-meta"><b>${poolInputLabel}</b> · ${def.element !== 'none' ? def.element.toUpperCase() : 'PHYSICAL'} · ${formatCost(def)} · ${def.cooldownSec}s CD</span>`,
         `<span class="pool-summary">${escapeHtml(def.description)}</span>`,
         `<span class="effect-tags">${formatEffectTags(def)
           .map((tag) => `<span class="${tagClass(tag)}">${escapeHtml(tag)}</span>`)
@@ -509,11 +511,6 @@ export function initLoadoutStation(
         if (nextIdx >= 0) activeIdx = nextIdx
         save()
         rerender()
-      })
-      card.querySelector('.instant-toggle')?.addEventListener('click', (event) => {
-        event.preventDefault()
-        event.stopPropagation()
-        toggleInstantCast(def)
       })
       lsPool.appendChild(card)
     }
@@ -719,33 +716,6 @@ function textBlock(text: string): HTMLParagraphElement {
   return p
 }
 
-function castModeBlock(def: AbilityDef, instant: boolean): HTMLDivElement {
-  const block = document.createElement('div')
-  block.className = `cast-mode-card ${instant ? 'instant' : 'preview'}`
-
-  const label = document.createElement('b')
-  label.textContent = instant ? 'Instant cast' : 'Preview placement'
-
-  const copy = document.createElement('span')
-  if (instant) {
-    copy.textContent =
-      def.targeting === 'forward'
-        ? 'Direct key press fires toward the current crosshair.'
-        : 'Direct key press activates immediately.'
-  } else {
-    copy.textContent = 'Key press primes the spell, shows the placement preview, then LMB confirms.'
-  }
-
-  block.append(label, copy)
-  return block
-}
-
-interface AbilityRoleInfo {
-  icon: string
-  title: string
-  line: string
-}
-
 interface AbilityQuickStat {
   key: string
   label: string
@@ -806,37 +776,6 @@ function recommendationTags(
   return Array.from(new Set(tags)).slice(0, 2)
 }
 
-function roleBlock(role: AbilityRoleInfo, comboRole?: AbilityDef['comboRole']): HTMLDivElement {
-  const block = document.createElement('div')
-  block.className = 'ability-role'
-  const icon = document.createElement('span')
-  icon.className = 'ability-role-icon'
-  icon.textContent = role.icon
-  const copy = document.createElement('span')
-  copy.className = 'ability-role-copy'
-  const title = document.createElement('b')
-  title.textContent = role.title
-  const line = document.createElement('small')
-  line.textContent = role.line
-  copy.append(title, line)
-  // Combo chain hint: mostra la catena STARTER → FINISHER
-  if (comboRole === 'starter' || comboRole === 'extender') {
-    const chain = document.createElement('span')
-    chain.className = 'combo-chain-hint'
-    chain.textContent = comboRole === 'starter'
-      ? 'CATENA: QUESTO  →  [EXTENDER]  →  FINISHER  =  +25% DMG'
-      : 'CATENA: STARTER  →  QUESTO  →  FINISHER  =  +25% DMG'
-    copy.appendChild(chain)
-  } else if (comboRole === 'finisher' || comboRole === 'ray') {
-    const chain = document.createElement('span')
-    chain.className = 'combo-chain-hint combo-chain-hint--finisher'
-    chain.textContent = 'CATENA: STARTER  →  [EXTENDER]  →  QUESTO  =  +25% DMG'
-    copy.appendChild(chain)
-  }
-  block.append(icon, copy)
-  return block
-}
-
 function quickStatBlock(stats: AbilityQuickStat[]): HTMLDivElement {
   const block = document.createElement('div')
   block.className = 'ability-quickstats'
@@ -865,146 +804,38 @@ function renderEffectTags(def: AbilityDef): HTMLDivElement {
   return wrap
 }
 
-const COMBO_ROLE_INFO: Record<AbilityDef['comboRole'], AbilityRoleInfo> = {
-  starter: {
-    icon: '^',
-    title: 'STARTER — Apri il combo',
-    line: 'Lancia in aria, radica o stordisce il nemico. Subito dopo usa un FINISHER per +25% danno bonus.',
-  },
-  extender: {
-    icon: '[]',
-    title: 'EXTENDER — Prolunga il combo',
-    line: 'Zone persistenti, rallentamenti o tick ripetuti che tengono il nemico in combo window tra STARTER e FINISHER.',
-  },
-  finisher: {
-    icon: '!',
-    title: 'FINISHER — Chiudi il combo',
-    line: 'Infligge +25% danno se il nemico è in aria o sotto CC. Usa un STARTER prima per attivare il bonus.',
-  },
-  ray: {
-    icon: '|',
-    title: 'INSTANT RAY — Colpo diretto',
-    line: 'Colpisce istantaneamente se il nemico è sotto il mirino. Ottimo FINISHER contro bersagli lanciati in aria.',
-  },
-  pressure: {
-    icon: '*',
-    title: 'PRESSURE — Danno diretto',
-    line: 'Danno grezzo, bleed, burn o veleno. Funziona da solo senza richiedere setup.',
-  },
-  survival: {
-    icon: '+',
-    title: 'SURVIVAL — Tieniti vivo',
-    line: 'Healing, scudo o recupero risorse. Usa quando sei a bassa vita o hai bisogno di reset.',
-  },
-  counter: {
-    icon: '<>',
-    title: 'COUNTER — Risposta al burst',
-    line: 'Cleanse, fase di invulnerabilità, interruzione o disimpegno. Reagisci al burst nemico.',
-  },
-  mobility: {
-    icon: '>>',
-    title: 'MOBILITY — Spostamento',
-    line: 'Dash, teleport o riposizionamento. Utile sia per aggredire che per sfuggire.',
-  },
-  drain: {
-    icon: '-',
-    title: 'DRAIN — Prosciuga risorse',
-    line: 'Attacca Mana o Stamina nemico. Se rimane senza risorse non può castare o schivare.',
-  },
-  resource: {
-    icon: '=',
-    title: 'RECOVERY — Risorse proprie',
-    line: 'Recupero fisso di Mana/Stamina. Fondamentale per sostenere il ritmo di combattimento.',
-  },
-}
+function abilityNatureLabel(def: AbilityDef): string {
+  const kinds = new Set(def.effects.map((effect) => effect.kind))
+  const statuses: string[] = []
 
-function abilityRole(def: AbilityDef): AbilityRoleInfo {
-  if (def.comboRole) return COMBO_ROLE_INFO[def.comboRole]
-
-  let hasMove = false
-  let hasHardCc = false
-  let hasPersistentZone = false
-  let hasAreaHit = false
-  let hasSustain = false
-  let hasDot = false
-  let hasProjectile = false
-  let hasChannel = false
-
-  for (const e of def.effects) {
-    if (e.kind === 'move') hasMove = true
-    else if (e.kind === 'knockup') hasHardCc = true
-    else if (e.kind === 'zone') {
-      hasPersistentZone = true
-      if (e.applyStatus) {
-        hasHardCc = hasHardCc || statusControlScore(e.applyStatus.status) >= 2
-        hasDot = hasDot || statusControlScore(e.applyStatus.status) === 1
-      }
-    } else if (e.kind === 'damage') {
-      hasAreaHit = hasAreaHit || Boolean(e.radius && e.radius > 0)
-    } else if (e.kind === 'projectile') {
-      hasProjectile = true
-      hasAreaHit = hasAreaHit || Boolean(e.splashRadius && e.splashRadius > 0)
-      if (e.onHitStatus) {
-        hasHardCc = hasHardCc || statusControlScore(e.onHitStatus.status) >= 2
-        hasDot = hasDot || statusControlScore(e.onHitStatus.status) === 1
-      }
-    } else if (e.kind === 'applyStatus') {
-      const selfOnly = def.targeting === 'self' && !(e.radius && e.radius > 0)
-      hasHardCc = hasHardCc || (!selfOnly && statusControlScore(e.status) >= 2)
-      hasDot = hasDot || (!selfOnly && statusControlScore(e.status) === 1)
-      hasSustain = hasSustain || ['shield', 'haste'].includes(e.status)
-    } else if (e.kind === 'channel') {
-      hasChannel = true
-      hasAreaHit =
-        hasAreaHit ||
-        (e.perTick.kind === 'damage' && Boolean(e.perTick.radius && e.perTick.radius > 0))
-      hasSustain = hasSustain || e.perTick.kind === 'heal'
-      hasHardCc =
-        hasHardCc || (e.perTick.kind === 'applyStatus' && statusControlScore(e.perTick.status) >= 2)
-    } else if (
-      e.kind === 'heal' ||
-      e.kind === 'cleanse' ||
-      e.kind === 'restoreStamina' ||
-      e.kind === 'lifesteal' ||
-      e.kind === 'resourceDrain'
-    ) {
-      hasSustain = true
-    }
+  for (const effect of def.effects) {
+    if (effect.kind === 'applyStatus') statuses.push(effect.status)
+    if (effect.kind === 'projectile' && effect.onHitStatus) statuses.push(effect.onHitStatus.status)
+    if (effect.kind === 'zone' && effect.applyStatus) statuses.push(effect.applyStatus.status)
+    if (effect.kind === 'channel' && effect.perTick.kind === 'applyStatus')
+      statuses.push(effect.perTick.status)
   }
 
-  if (hasSustain && !hasHardCc && !hasPersistentZone)
-    return {
-      icon: '+',
-      title: 'Survival Tool',
-      line: 'Keeps you alive, cleansed, mobile or stocked on resources.',
-    }
-  if (hasMove)
-    return {
-      icon: '↗',
-      title: hasHardCc ? 'Engage Setup' : 'Mobility Hit',
-      line: 'Moves the player and may apply control or damage.',
-    }
-  if (hasHardCc && (hasPersistentZone || hasAreaHit))
-    return { icon: '⌖', title: 'Area Control', line: 'Controls space with AoE and status effects.' }
-  if (hasHardCc)
-    return { icon: '↑', title: 'Combo Starter', line: 'Applies launch or control pressure.' }
-  if (hasPersistentZone)
-    return {
-      icon: '□',
-      title: 'Zone Pressure',
-      line: 'Controls an area with damage or status ticks.',
-    }
-  if (hasAreaHit || hasChannel)
-    return {
-      icon: '◇',
-      title: 'Area Damage',
-      line: 'Hits a space or repeated window instead of one clean shot.',
-    }
-  if (hasProjectile)
-    return { icon: '➤', title: 'Skill Shot', line: 'Ranged aim tool fired toward the crosshair.' }
-  if (hasDot)
-    return { icon: '✦', title: 'Status Pressure', line: 'Applies damage or debuffs over time.' }
-  return { icon: '◆', title: 'Direct Hit', line: 'Straightforward damage or utility effect.' }
+  const hasControl = statuses.some((status) => statusControlScore(status) >= 2) || kinds.has('knockup')
+  const hasDot = statuses.some((status) => ['burn', 'bleed', 'poison', 'chill'].includes(status))
+
+  if (
+    def.comboRole === 'survival' ||
+    kinds.has('heal') ||
+    kinds.has('cleanse') ||
+    kinds.has('restoreStamina') ||
+    statuses.some((status) => status === 'shield')
+  )
+    return 'RECOVERY'
+  if (def.comboRole === 'mobility' || kinds.has('move')) return hasControl ? 'MOVE + CONTROL' : 'MOBILITY'
+  if (def.comboRole === 'drain' || kinds.has('resourceDrain') || kinds.has('lifesteal'))
+    return 'DRAIN'
+  if (hasControl) return kinds.has('zone') ? 'AREA CONTROL' : 'CONTROL'
+  if (kinds.has('zone')) return 'ZONE'
+  if (kinds.has('projectile')) return hasDot ? 'PROJECTILE + STATUS' : 'PROJECTILE'
+  if (hasDot) return 'STATUS DOT'
+  if (kinds.has('damage')) return 'DAMAGE'
+  return 'UTILITY'
 }
 
 function abilityQuickStats(def: AbilityDef): AbilityQuickStat[] {
@@ -1063,8 +894,6 @@ function clampStat(value: number): number {
 
 function formatEffectTags(def: AbilityDef): string[] {
   const tags = new Set<string>()
-  tags.add(def.comboRole.toUpperCase())
-  if (def.comboRole === 'finisher') tags.add('AIR PUNISH')
   for (const tag of targetingTags(def)) tags.add(tag)
   if (def.windupSec > 0) tags.add(`${def.windupSec}s WINDUP`)
   for (const e of def.effects) {
@@ -1111,7 +940,7 @@ function formatEffectTags(def: AbilityDef): string[] {
 
 function targetingTags(def: AbilityDef): string[] {
   if (def.targeting === 'self') return ['SELF']
-  if (def.targeting === 'point') return ['POINT PREVIEW']
+  if (def.targeting === 'point') return ['POINT AREA']
   if (def.effects.some((effect) => effect.kind === 'projectile')) return ['SKILL SHOT']
   if (def.targeting === 'forward') return ['AIM LOCK']
   if (def.targeting === 'target') return ['TARGET']
@@ -1139,14 +968,15 @@ function tagClass(tag: string): string {
     )
   )
     return 'tag-role'
-  if (/\b(SELF|POINT PREVIEW|SKILL SHOT|AIM LOCK|TARGET)\b/.test(tag)) return 'tag-targeting'
+  if (/\b(SELF|POINT AREA|SKILL SHOT|AIM LOCK|TARGET)\b/.test(tag)) return 'tag-targeting'
   if (/\b(DMG|DAMAGE|PROJECTILE|SPLASH|TICK)\b/.test(tag)) return 'tag-damage'
-  if (/\b(AIRBORNE|AIR PUNISH|KNOCKBACK|ROOT|STUN|FREEZE|SLOW|BLIND|MARK|CURSE)\b/.test(tag))
+  if (/\b(AIRBORNE|KNOCKBACK|ROOT|STUN|FREEZE|SLOW|BLIND|MARK|CURSE)\b/.test(tag))
     return 'tag-control'
   if (/\b(BURN|BLEED|POISON|CHILL|SHIELD|HASTE|CLEANSE|INVULNERABLE)\b/.test(tag))
     return 'tag-status'
   if (/\b(DASH|TELEPORT|MOVE)\b/.test(tag)) return 'tag-move'
   if (/\b(HEAL|STAMINA|MANA|HP|LIFESTEAL|->)\b/.test(tag)) return 'tag-resource'
+  if (/\b(WINDUP|CHANNEL|TICK)\b/.test(tag)) return 'tag-timing'
   return ''
 }
 
