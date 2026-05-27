@@ -142,9 +142,9 @@ describe('ability slot family and class legality', () => {
         'dark_barrier',
         'eruption',
         'meteor',
-        'frost_pillar',
         'arcane_rebind',
         'phase_shift',
+        'smoke_screen',
       ],
       hybrid: [
         'uppercut',

@@ -100,5 +100,8 @@ astratte.
 - Mapping runtime wheel 2026-05-27: `E` wheel usa solo `melee`/`bow`, `Q` wheel
   usa solo `utility`, le spell `magicBase`/`magicAdvanced` sono sui tasti
   diretti `1`-`5` derivati dal loadout corrente.
+- Regola slot magia 2026-05-27: nessuna classe puo avere piu di 5 slot magia
+  totali (`magicBase` + `magicAdvanced`), perche solo `1`-`5` sono input vivi.
+  Il Mago e 3 Magic Base, 2 Magic Advanced, 3 Utility.
 - Nella UI Loadout le uniche classi valide sono Tank, Arciere, Mago e Ibrido.
 - Conservare nel progetto solo asset runtime e contratti presenti approvati.

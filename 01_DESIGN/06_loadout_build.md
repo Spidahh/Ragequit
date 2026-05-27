@@ -10,7 +10,7 @@ Every class has 8 total slots. Slot legality is fixed by class:
 | ------- | ----- | --- | ---------- | -------------- | ------- |
 | Tank    | 3     | 2   | 0          | 0              | 3       |
 | Arciere | 0     | 3   | 3          | 0              | 2       |
-| Mago    | 0     | 0   | 3          | 3              | 2       |
+| Mago    | 0     | 0   | 3          | 2              | 3       |
 | Ibrido  | 1     | 1   | 2          | 2              | 2       |
 
 Class weapon access must follow this grammar:
@@ -39,16 +39,18 @@ Wheel behavior is fixed:
 
 - Hold `E` for the ability wheel, select, release to prime, `LMB` to fire or confirm.
 - Hold `Q` for the utility wheel, select, release to prime, `LMB` to fire or confirm.
-- Number keys `1-5` cast equipped magic/combat slots where the class grammar exposes them.
+- Number keys `1-5` cast equipped magic slots. No class may expose more than five
+  `magicBase` + `magicAdvanced` slots.
 
-Both wheels are symmetrical and hold the exact same number of spells/abilities regardless of whether they are utilities or spells:
+The `E` wheel is for weapon abilities only (`melee`/`bow`). The `Q` wheel is for
+utility/recovery only. Magic slots are direct keys:
 
-| Class   | Ability Wheel `E` sectors | Utility Wheel `Q` sectors |
-| ------- | ------------------------- | ------------------------- |
-| Tank    | 4                         | 4                         |
-| Arciere | 4                         | 4                         |
-| Mago    | 4                         | 4                         |
-| Ibrido  | 4                         | 4                         |
+| Class   | Weapon Wheel `E` abilities | Spell keys `1-5` | Utility Wheel `Q` |
+| ------- | -------------------------- | ---------------- | ----------------- |
+| Tank    | 5                          | 0                | 3                 |
+| Arciere | 3                          | 3                | 2                 |
+| Mago    | 0                          | 5                | 3                 |
+| Ibrido  | 2                          | 4                | 2                 |
 
 ## Loadout Forge UI Contract
 
@@ -57,7 +59,7 @@ The Forge must show the whole build at once:
 - class selector with allowed weapons and family budgets visible;
 - slot columns grouped by family, not duplicate class/weapon rows;
 - search always visible;
-- filters `BEST`, `STARTER`, `CONTROL`, `INSTANT`, `PREVIEW`, element filters and `PHYSICAL`;
+- filters `SMART`, `CONTROL`, `PROJECTILE`, `RECOVERY`, `ZONE`, `MOBILITY`, `ALL`;
 - key hints, recovery coverage, and vitals visible;
 - `#ls-magic-base` and `#ls-magic-advanced` as separate panels;
 - no `#ls-magic` fallback panel;
@@ -104,9 +106,9 @@ Starter builds are teaching builds, not ranked recommendations.
 | Magic Base     | Dark Barrier  |
 | Magic Advanced | Eruption      |
 | Magic Advanced | Meteor        |
-| Magic Advanced | Frost Pillar  |
 | Utility        | Arcane Rebind |
 | Utility        | Phase Shift   |
+| Utility        | Smoke Screen  |
 
 ### Ibrido
 

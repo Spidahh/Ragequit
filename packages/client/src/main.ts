@@ -1518,6 +1518,7 @@ const gameInput = initGameInput(inp, {
   },
   getPing: () => ping,
   getCurrentWeaponForInput: () => currentWeaponForInput(),
+  getCurrentLoadout: () => currentLoadoutArray(),
   isGameplayInputAllowed: () => isGameplayInputAllowed(),
   canEngageGameplaySurface: () => canEngageGameplaySurface(),
   openPauseMenu: () => openPauseMenu(),

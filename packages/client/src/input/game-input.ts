@@ -1,6 +1,6 @@
-import { type SimInput, type Weapon } from '@ragequit/shared'
+import { getAbilitySlotFamily, type SimInput, type Weapon } from '@ragequit/shared'
 
-import { actionCode, matchesAction, slotKeybindEntries } from './keybinds.js'
+import { actionCode, matchesAction, type KeybindAction } from './keybinds.js'
 import { type RadialWheelController } from './radial-wheels.js'
 import { type MouseSensitivityController } from './sensitivity.js'
 
@@ -72,6 +72,7 @@ export interface GameInputOptions {
   setLoadoutReturnsToPause: (v: boolean) => void
   getPing: () => number
   getCurrentWeaponForInput: () => string
+  getCurrentLoadout: () => readonly string[]
   isGameplayInputAllowed: () => boolean
   canEngageGameplaySurface: () => boolean
   openPauseMenu: () => void
@@ -102,6 +103,7 @@ export function initGameInput(
     setLoadoutReturnsToPause,
     getPing,
     getCurrentWeaponForInput,
+    getCurrentLoadout,
     isGameplayInputAllowed,
     canEngageGameplaySurface,
     openPauseMenu,
@@ -168,11 +170,15 @@ export function initGameInput(
       actionCode('wheelUtility'),
       actionCode('wheelAbility'),
       actionCode('openLoadout'),
+      actionCode('spell1'),
+      actionCode('spell2'),
+      actionCode('spell3'),
+      actionCode('spell4'),
+      actionCode('spell5'),
       actionCode('sensDown'),
       actionCode('sensUp'),
     ]
-    if (actionCodes.includes(code)) return true
-    return slotKeybindEntries().some(([slotCode]) => slotCode === code)
+    return actionCodes.includes(code)
   }
 
   function shouldIgnoreGameplayPointerTarget(target: EventTarget | null): boolean {
@@ -348,11 +354,13 @@ export function initGameInput(
         state.weaponSwapRequest = weaponIds[(idx + 1) % weaponIds.length] ?? null
       }
 
-      for (const [code, , slotIdx] of slotKeybindEntries()) {
-        if (k === code) {
-          activateAbilitySlot(slotIdx, false)
-          break
-        }
+      const spellActions: readonly KeybindAction[] = ['spell1', 'spell2', 'spell3', 'spell4', 'spell5']
+      for (let spellIdx = 0; spellIdx < spellActions.length; spellIdx++) {
+        const action = spellActions[spellIdx]!
+        if (!matchesAction(k, action)) continue
+        const targetSlotIdx = nthMagicSlotIndex(getCurrentLoadout(), spellIdx)
+        if (targetSlotIdx >= 0) activateAbilitySlot(targetSlotIdx, false)
+        break
       }
 
       if (matchesAction(k, 'sensDown')) mouseSensitivity.scale(0.9)
@@ -507,4 +515,17 @@ export function initGameInput(
   }
 
   return { engageCanvasInput, disengageCanvasInput, requestArenaPointerLock, sampleInput }
+}
+
+function nthMagicSlotIndex(loadout: readonly string[], wantedIdx: number): number {
+  let seen = 0
+  for (let idx = 0; idx < loadout.length; idx++) {
+    const id = loadout[idx]
+    if (!id) continue
+    const family = getAbilitySlotFamily(id)
+    if (family !== 'magicBase' && family !== 'magicAdvanced') continue
+    if (seen === wantedIdx) return idx
+    seen++
+  }
+  return -1
 }

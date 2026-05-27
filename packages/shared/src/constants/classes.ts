@@ -58,7 +58,7 @@ export const TARGET_CLASS_DEFS = {
     id: 'mage',
     label: 'Mago',
     resourceMaxima: { hp: 150, mana: 160, stamina: 80 },
-    slots: { melee: 0, bow: 0, magicBase: 3, magicAdvanced: 3, utility: 2 },
+    slots: { melee: 0, bow: 0, magicBase: 3, magicAdvanced: 2, utility: 3 },
     weapons: ['staff'],
     recoveryId: 'arcane_rebind',
   },

@@ -3,7 +3,7 @@
 // Checks ability registry, ability icon coverage, balance config, and map data.
 // Exits with code 1 and prints all issues if any validation fails.
 
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 
 import {
   ABILITY_DEFS,
@@ -76,18 +76,22 @@ console.info(`ability registry: ${defs.length} abilities, ${seenIds.size} unique
 
 // --- Ability icons ----------------------------------------------------------
 
-const iconSprite = readFileSync('packages/client/public/icons-sprite.svg', 'utf8')
-const abilityIconIds = new Set(
-  Array.from(iconSprite.matchAll(/<symbol id="ability-([^"]+)"/g), (match) => match[1]!),
-)
-
+const abilityIconPngIds = new Set<string>()
 for (const def of defs) {
-  if (!abilityIconIds.has(def.id)) fail(`icons: missing symbol for ability '${def.id}'`)
+  const path = `packages/client/public/ability-icons/${def.id}.png`
+  if (existsSync(path)) abilityIconPngIds.add(def.id)
+  else fail(`icons: missing PNG for ability '${def.id}'`)
 }
-for (const iconId of abilityIconIds) {
-  if (!seenIds.has(iconId)) fail(`icons: stale ability symbol '${iconId}'`)
+
+const iconSprite = readFileSync('packages/client/public/icons-sprite.svg', 'utf8')
+const staleAbilitySymbols = Array.from(
+  iconSprite.matchAll(/<symbol id="ability-([^"]+)"/g),
+  (match) => match[1]!,
+)
+for (const iconId of staleAbilitySymbols) {
+  fail(`icons: stale ability SVG symbol '${iconId}'`)
 }
-console.info(`ability icons: ${abilityIconIds.size} symbols checked`)
+console.info(`ability icons: ${abilityIconPngIds.size} PNG files checked`)
 
 // --- Balance config ---------------------------------------------------------
 

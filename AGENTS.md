@@ -107,6 +107,9 @@ assunzioni precedenti come autorita.
 - Mapping runtime wheel: `E` wheel contiene solo abilita weapon (`melee`/`bow`),
   `Q` wheel contiene solo `utility`, le spell `magicBase`/`magicAdvanced` sono
   sui tasti diretti `1`-`5` calcolati dal loadout corrente.
+- Le classi non possono esporre piu di 5 slot magia totali
+  (`magicBase` + `magicAdvanced`), perche le magie vive hanno solo tasti
+  diretti `1`-`5`. Il Mago usa 3 Magic Base, 2 Magic Advanced, 3 Utility.
 - Classi consentite nella UI: solo Tank, Arciere, Mago, Ibrido.
 - Conservare nel progetto solo asset runtime e contratti presenti approvati.
 - Le icone abilita vive sono PNG in `packages/client/public/ability-icons/`

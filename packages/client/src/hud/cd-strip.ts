@@ -1,7 +1,7 @@
-import { ABILITY_DEFS, TICK_RATE_HZ } from '@ragequit/shared'
+import { ABILITY_DEFS, getAbilitySlotFamily, TICK_RATE_HZ } from '@ragequit/shared'
 
 import { abilityIconMarkup } from '../icons.js'
-import { slotKeybindEntries } from '../input/keybinds.js'
+import { actionLabel } from '../input/keybinds.js'
 
 export const ELEMENT_COLOR: Record<string, string> = {
   fire: '#ff6a2a',
@@ -34,6 +34,45 @@ export interface CooldownStripController {
 const CD_ARC_R = 18
 const CD_ARC_CIRC = 2 * Math.PI * CD_ARC_R
 
+type HotbarSectionKind = 'weapon' | 'spell' | 'utility'
+
+interface HotbarSlotMeta {
+  kind: HotbarSectionKind
+  label: string
+  pipClass: string
+}
+
+function spellLabel(loadout: ReadonlyArray<string>, slotIdx: number): string {
+  let spellIdx = 0
+  for (let idx = 0; idx <= slotIdx; idx++) {
+    const id = loadout[idx]
+    if (!id) continue
+    const family = getAbilitySlotFamily(id)
+    if (family === 'magicBase' || family === 'magicAdvanced') spellIdx++
+  }
+  return spellIdx > 0 && spellIdx <= 5
+    ? actionLabel(`spell${spellIdx}` as Parameters<typeof actionLabel>[0])
+    : ''
+}
+
+function slotMeta(loadout: ReadonlyArray<string>, slotIdx: number): HotbarSlotMeta | null {
+  const id = loadout[slotIdx]
+  if (!id) return null
+  const family = getAbilitySlotFamily(id)
+  if (family === 'utility') {
+    return { kind: 'utility', label: actionLabel('wheelUtility'), pipClass: 'utility-pip' }
+  }
+  if (family === 'magicBase' || family === 'magicAdvanced') {
+    const label = spellLabel(loadout, slotIdx)
+    if (!label) return null
+    return { kind: 'spell', label, pipClass: 'spell-pip' }
+  }
+  if (family === 'melee' || family === 'bow') {
+    return { kind: 'weapon', label: actionLabel('wheelAbility'), pipClass: 'ability-pip' }
+  }
+  return null
+}
+
 export function initCooldownStrip(
   root: HTMLElement,
   onSlotClick: (slotIdx: number) => void,
@@ -52,12 +91,19 @@ export function initCooldownStrip(
     root.replaceChildren()
     pipEls.clear()
 
-    const abilitySection = document.createElement('div')
-    abilitySection.className = 'hotbar-section ability-section'
-    abilitySection.innerHTML = '<div class="hotbar-title"><span>E</span><b>Ability Wheel</b></div>'
-    const abilityRail = document.createElement('div')
-    abilityRail.className = 'hotbar-rail'
-    abilitySection.appendChild(abilityRail)
+    const weaponSection = document.createElement('div')
+    weaponSection.className = 'hotbar-section ability-section'
+    weaponSection.innerHTML = '<div class="hotbar-title"><span>E</span><b>Weapon Wheel</b></div>'
+    const weaponRail = document.createElement('div')
+    weaponRail.className = 'hotbar-rail'
+    weaponSection.appendChild(weaponRail)
+
+    const spellSection = document.createElement('div')
+    spellSection.className = 'hotbar-section spell-section'
+    spellSection.innerHTML = '<div class="hotbar-title"><span>1-5</span><b>Spells</b></div>'
+    const spellRail = document.createElement('div')
+    spellRail.className = 'hotbar-rail'
+    spellSection.appendChild(spellRail)
 
     const utilitySection = document.createElement('div')
     utilitySection.className = 'hotbar-section utility-section'
@@ -66,10 +112,12 @@ export function initCooldownStrip(
     utilityRail.className = 'hotbar-rail'
     utilitySection.appendChild(utilityRail)
 
-    for (const [, label, slotIdx] of slotKeybindEntries()) {
+    for (let slotIdx = 0; slotIdx < loadout.length; slotIdx++) {
       const id = loadout[slotIdx] ?? ''
       if (!id) continue
       const def = ABILITY_DEFS[id]
+      const meta = slotMeta(loadout, slotIdx)
+      if (!meta) continue
       const elemColor = ELEMENT_COLOR[def?.element ?? 'none'] ?? ELEMENT_COLOR['none']!
       const hasMana = (def?.costMana ?? 0) > 0
       const hasStamina = (def?.costStamina ?? 0) > 0
@@ -91,8 +139,7 @@ export function initCooldownStrip(
       const malusHtml = def?.miniMalus ? `<div class="tt-malus">${def.miniMalus}</div>` : ''
 
       const pip = document.createElement('div')
-      const isUtility = slotIdx >= 7
-      pip.className = `cd-pip ready ${isUtility ? 'utility-pip' : 'ability-pip'}`
+      pip.className = `cd-pip ready ${meta.pipClass}`
       pip.dataset['abilityId'] = id
       pip.dataset['slotIdx'] = String(slotIdx)
       pip.title = tooltip
@@ -106,7 +153,7 @@ export function initCooldownStrip(
             stroke-dasharray="${CD_ARC_CIRC}" stroke-dashoffset="${CD_ARC_CIRC}"
             transform="rotate(-90 22 22)"/>
         </svg>
-        <span class="label">${label}</span>
+        <span class="label">${meta.label}</span>
         <span class="ability-icon">${icon}</span>
         <span class="ability-name">${def?.name ?? id}</span>
         <span class="cd-timer">-</span>
@@ -124,10 +171,12 @@ export function initCooldownStrip(
         e.stopPropagation()
         onSlotClick(slotIdx)
       })
-      ;(isUtility ? utilityRail : abilityRail).appendChild(pip)
+      ;(meta.kind === 'utility' ? utilityRail : meta.kind === 'spell' ? spellRail : weaponRail)
+        .appendChild(pip)
       pipEls.set(id, pip)
     }
-    root.appendChild(abilitySection)
+    root.appendChild(weaponSection)
+    root.appendChild(spellSection)
     root.appendChild(utilitySection)
   }
 
@@ -157,10 +206,12 @@ export function initCooldownStrip(
     primedSlotIdx: number | null
     tickNow: number
   }): void {
-    for (const [, label, slotIdx] of slotKeybindEntries()) {
+    for (let slotIdx = 0; slotIdx < loadoutRef.length; slotIdx++) {
       const id = loadoutRef[slotIdx] ?? ''
       const pip = pipEls.get(id)
       if (!pip) continue
+      const meta = slotMeta(loadoutRef, slotIdx)
+      if (!meta) continue
       const readyTick = (abilityCooldowns?.get?.(id) ?? 0) as number
       const arcEl = pip.querySelector<SVGCircleElement>('.cd-arc-fill')
       const labelEl = pip.querySelector<HTMLElement>('.label')
@@ -172,14 +223,14 @@ export function initCooldownStrip(
         const ratio = Math.min(1, left / totalSec)
         pip.classList.remove('ready', 'pending')
         pip.classList.add('cooling')
-        if (labelEl) labelEl.textContent = label
+        if (labelEl) labelEl.textContent = meta.label
         if (timerEl) timerEl.textContent = left < 1 ? left.toFixed(1) : left.toFixed(0)
         if (arcEl) arcEl.style.strokeDashoffset = String(CD_ARC_CIRC * ratio)
       } else {
         const wasCooling = pip.classList.contains('cooling')
         pip.classList.add('ready')
         pip.classList.remove('cooling', 'pending')
-        if (labelEl) labelEl.textContent = label
+        if (labelEl) labelEl.textContent = meta.label
         if (timerEl) timerEl.textContent = ''
         if (arcEl) arcEl.style.strokeDashoffset = String(CD_ARC_CIRC)
         if (wasCooling) {

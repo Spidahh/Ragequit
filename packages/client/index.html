@@ -62,12 +62,17 @@
         ><span class="r-name r-empty">empty</span><span class="r-cd"></span
         ><span class="r-mode"></span>
       </div>
-      <div class="radial-slot" data-dir="bottom" data-slot="2">
+      <div class="radial-slot" data-dir="bottom-right" data-slot="2">
         <span class="r-icon">✦</span><span class="r-key"></span
         ><span class="r-name r-empty">empty</span><span class="r-cd"></span
         ><span class="r-mode"></span>
       </div>
-      <div class="radial-slot" data-dir="left" data-slot="3">
+      <div class="radial-slot" data-dir="bottom-left" data-slot="3">
+        <span class="r-icon">✦</span><span class="r-key"></span
+        ><span class="r-name r-empty">empty</span><span class="r-cd"></span
+        ><span class="r-mode"></span>
+      </div>
+      <div class="radial-slot" data-dir="left" data-slot="4">
         <span class="r-icon">✦</span><span class="r-key"></span
         ><span class="r-name r-empty">empty</span><span class="r-cd"></span
         ><span class="r-mode"></span>
@@ -489,25 +494,30 @@
         </div>
 
         <div id="ls-class-selector" aria-label="Seleziona classe">
+          <div class="ls-class-selector-title">
+            <span>1</span>
+            <b>Scegli classe</b>
+            <small>cambia armi, spell e recovery</small>
+          </div>
           <button class="class-select-card active" data-class="tank" id="ls-class-tank" type="button">
             <span class="card-icon">🛡️</span>
             <span class="card-title">TANK</span>
-            <span class="card-desc">Fury · 250 HP</span>
+            <span class="card-desc">Sword/Bow · Recovery</span>
           </button>
           <button class="class-select-card" data-class="archer" id="ls-class-archer" type="button">
             <span class="card-icon">🏹</span>
             <span class="card-title">ARCIERE</span>
-            <span class="card-desc">Momentum · 175 HP</span>
+            <span class="card-desc">Bow/Staff · Recovery</span>
           </button>
           <button class="class-select-card" data-class="mage" id="ls-class-mage" type="button">
             <span class="card-icon">🔮</span>
             <span class="card-title">MAGO</span>
-            <span class="card-desc">Risonanza · 150 HP</span>
+            <span class="card-desc">Staff · Recovery</span>
           </button>
           <button class="class-select-card" data-class="hybrid" id="ls-class-hybrid" type="button">
             <span class="card-icon">⚡</span>
             <span class="card-title">IBRIDO</span>
-            <span class="card-desc">Flow · 200 HP</span>
+            <span class="card-desc">All weapons · Recovery</span>
           </button>
         </div>
 
@@ -538,8 +548,8 @@
         <div id="ls-left">
           <div class="ls-section">
             <div class="ls-section-label">
-              <span>⚔ Ability Wheel</span>
-              <span class="ls-key" id="ls-ability-wheel-key">E HOLD</span>
+              <span>2 · Build Combat</span>
+              <span class="ls-key" id="ls-ability-wheel-key">E WHEEL · 1-5 SPELL</span>
             </div>
             <div class="slot-list" id="ls-melee"></div>
             <div class="slot-list" id="ls-bow"></div>
@@ -548,7 +558,7 @@
           </div>
           <div class="ls-section">
             <div class="ls-section-label">
-              <span>🛡 Utility Wheel</span>
+              <span>3 · Utility / Recovery</span>
               <span class="ls-key" id="ls-utility-wheel-key">Q HOLD</span>
             </div>
             <div class="slot-list" id="ls-utility"></div>
@@ -558,7 +568,7 @@
           </button>
         </div>
 
-        <!-- RIGHT: pool (top, scrollable) + detail (bottom, fixed) -->
+        <!-- RIGHT: compact ability pool -->
         <div id="ls-right">
 
           <div id="ls-pool-section">
@@ -566,10 +576,11 @@
               <input id="ls-search" type="text" placeholder="Cerca abilità…" autocomplete="off" spellcheck="false" />
               <div class="filter-group" aria-label="Build filters">
                 <button class="filter-btn smart" data-filter="recommended">SMART</button>
-                <button class="filter-btn starter" data-filter="starter">STARTER</button>
                 <button class="filter-btn" data-filter="control">CONTROL</button>
-                <button class="filter-btn" data-filter="instant">INSTANT</button>
-                <button class="filter-btn" data-filter="preview">PREVIEW</button>
+                <button class="filter-btn" data-filter="projectile">PROJECTILE</button>
+                <button class="filter-btn" data-filter="recovery">RECOVERY</button>
+                <button class="filter-btn" data-filter="zone">ZONE</button>
+                <button class="filter-btn" data-filter="mobility">MOBILITY</button>
                 <button class="filter-btn" data-filter="all">ALL</button>
               </div>
             </div>
@@ -607,11 +618,7 @@
 
     </div><!-- /loadout-station -->
 
-    <!-- REMOVED LEGACY: class-vitals-panel, flow-strip, ls-center, filter-drawer -->
-    <!-- All slot IDs retained: ls-melee, ls-bow, ls-magic-base, ls-magic-advanced, ls-utility, ls-pool -->
-
     <div id="ls-dummy-removed">
-      <!-- vitals kept inline in header; spells/weapons grid removed; build coach removed -->
       <div id="ls-vitals-spells" style="display:none"></div>
       <div id="ls-vitals-weapons" style="display:none"></div>
     </div>

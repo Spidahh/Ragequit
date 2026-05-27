@@ -1,18 +1,18 @@
-import { ABILITY_DEFS } from '@ragequit/shared'
+import { ABILITY_DEFS, getAbilitySlotFamily } from '@ragequit/shared'
 
 import { abilityIcon } from '../icons.js'
 
-import { slotKeybindEntries } from './keybinds.js'
+import { actionLabel } from './keybinds.js'
 
 interface WheelSector {
   angleDeg: number
   dir: string
-  slotIdx: number
 }
 
 interface RadialWheel {
   el: HTMLElement
   sectors: readonly WheelSector[]
+  kind: 'ability' | 'utility'
 }
 
 export interface RadialWheelController {
@@ -39,17 +39,18 @@ export interface RadialWheelControllerOptions {
 }
 
 const utilitySectors: readonly WheelSector[] = [
-  { dir: 'top', angleDeg: -90, slotIdx: 4 },
-  { dir: 'right', angleDeg: 0, slotIdx: 5 },
-  { dir: 'bottom', angleDeg: 90, slotIdx: 6 },
-  { dir: 'left', angleDeg: 180, slotIdx: 7 },
+  { dir: 'top', angleDeg: -90 },
+  { dir: 'right', angleDeg: 0 },
+  { dir: 'bottom', angleDeg: 90 },
+  { dir: 'left', angleDeg: 180 },
 ]
 
 const abilitySectors: readonly WheelSector[] = [
-  { dir: 'top', angleDeg: -90, slotIdx: 0 },
-  { dir: 'right', angleDeg: 0, slotIdx: 1 },
-  { dir: 'bottom', angleDeg: 90, slotIdx: 2 },
-  { dir: 'left', angleDeg: 180, slotIdx: 3 },
+  { dir: 'top', angleDeg: -90 },
+  { dir: 'right', angleDeg: -18 },
+  { dir: 'bottom-right', angleDeg: 54 },
+  { dir: 'bottom-left', angleDeg: 126 },
+  { dir: 'left', angleDeg: -162 },
 ]
 
 export function initRadialWheels({
@@ -61,8 +62,8 @@ export function initRadialWheels({
   getCooldownSec,
   isInstantCast,
 }: RadialWheelControllerOptions): RadialWheelController {
-  const utilityWheel: RadialWheel = { el: utilityWheelEl, sectors: utilitySectors }
-  const abilityWheel: RadialWheel = { el: abilityWheelEl, sectors: abilitySectors }
+  const utilityWheel: RadialWheel = { el: utilityWheelEl, sectors: utilitySectors, kind: 'utility' }
+  const abilityWheel: RadialWheel = { el: abilityWheelEl, sectors: abilitySectors, kind: 'ability' }
 
   let open = false
   let dxTotal = 0
@@ -71,8 +72,40 @@ export function initRadialWheels({
   let activeKey: string | null = null
   let selectedDir: string | null = null
 
-  function slotBindLabel(slotIdx: number): string {
-    return slotKeybindEntries().find(([, , idx]) => idx === slotIdx)?.[1] ?? '?'
+  function wheelSlotIndices(wheel: RadialWheel, loadout: readonly string[]): number[] {
+    const indices: number[] = []
+    for (let idx = 0; idx < loadout.length; idx++) {
+      const id = loadout[idx]
+      if (!id) continue
+      const family = getAbilitySlotFamily(id)
+      const utility = family === 'utility'
+      const weaponAbility = family === 'melee' || family === 'bow'
+      if (wheel.kind === 'utility' ? utility : weaponAbility) indices.push(idx)
+    }
+    return indices.slice(0, wheel.sectors.length)
+  }
+
+  function sectorSlotIdx(wheel: RadialWheel, sector: WheelSector, loadout: readonly string[]): number {
+    const position = wheel.sectors.indexOf(sector)
+    return wheelSlotIndices(wheel, loadout)[position] ?? -1
+  }
+
+  function slotBindLabel(slotIdx: number, loadout: readonly string[]): string {
+    const id = loadout[slotIdx]
+    if (!id) return ''
+    const family = getAbilitySlotFamily(id)
+    if (family === 'utility') return `${actionLabel('wheelUtility')}`
+    if (family === 'magicBase' || family === 'magicAdvanced') {
+      let spellIdx = 0
+      for (let idx = 0; idx <= slotIdx; idx++) {
+        const other = loadout[idx]
+        if (!other) continue
+        const otherFamily = getAbilitySlotFamily(other)
+        if (otherFamily === 'magicBase' || otherFamily === 'magicAdvanced') spellIdx++
+      }
+      return spellIdx > 0 && spellIdx <= 5 ? actionLabel(`spell${spellIdx}` as Parameters<typeof actionLabel>[0]) : ''
+    }
+    return `${actionLabel('wheelAbility')}`
   }
 
   function refresh(wheel: RadialWheel): void {
@@ -81,7 +114,7 @@ export function initRadialWheels({
       const dir = slotEl.dataset['dir']!
       const sector = wheel.sectors.find((s) => s.dir === dir)
       if (!sector) continue
-      const idx = sector.slotIdx
+      const idx = sectorSlotIdx(wheel, sector, loadout)
       const id = loadout[idx] ?? ''
       const def = id ? ABILITY_DEFS[id] : null
       const nameEl = slotEl.querySelector<HTMLElement>('.r-name')!
@@ -94,7 +127,7 @@ export function initRadialWheels({
         iconEl.replaceChildren(abilityIcon(id, 25))
         nameEl.textContent = def.name
         nameEl.classList.remove('r-empty')
-        keyEl.textContent = slotBindLabel(idx)
+        keyEl.textContent = slotBindLabel(idx, loadout)
 
         // Cooldown badge — shows remaining seconds; hidden when ready.
         const cdSec = getCooldownSec ? getCooldownSec(id) : 0
@@ -121,7 +154,7 @@ export function initRadialWheels({
         iconEl.textContent = '·'
         nameEl.textContent = 'empty'
         nameEl.classList.add('r-empty')
-        keyEl.textContent = slotBindLabel(idx)
+        keyEl.textContent = slotBindLabel(idx, loadout)
         if (cdEl) {
           cdEl.textContent = ''
           cdEl.classList.remove('r-cd-active')
@@ -165,7 +198,10 @@ export function initRadialWheels({
 
     if (primeSelection && selectedDir) {
       const sector = wheel.sectors.find((s) => s.dir === selectedDir)
-      if (sector) onPrimeSlot(sector.slotIdx)
+      if (sector) {
+        const idx = sectorSlotIdx(wheel, sector, getLoadout())
+        if (idx >= 0) onPrimeSlot(idx)
+      }
     }
     selectedDir = null
   }

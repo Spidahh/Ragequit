@@ -60,16 +60,16 @@ const CLASS_STARTER_PRESETS: Record<ClassId, string[]> = {
     'hunters_flow', // slot 6 — utility (Recovery)
     'quick_dash', // slot 7 — utility
   ],
-  // Mago: 3 magicBase + 3 magicAdvanced + 2 utility = 8
+  // Mago: 3 magicBase + 2 magicAdvanced + 3 utility = 8
   mage: [
     'fireball', // slot 0 — magicBase (Fire projectile pressure)
     'frost_bolt', // slot 1 — magicBase (Ice pressure)
     'dark_barrier', // slot 2 — magicBase (Magic protection)
     'eruption', // slot 3 — magicAdvanced (launch setup)
     'meteor', // slot 4 — magicAdvanced (high-commit Fire cashout)
-    'frost_pillar', // slot 5 — magicAdvanced (windup launch path)
-    'arcane_rebind', // slot 6 — utility (Recovery)
-    'phase_shift', // slot 7 — utility (timed survival counter)
+    'arcane_rebind', // slot 5 — utility (Recovery)
+    'phase_shift', // slot 6 — utility (timed survival counter)
+    'smoke_screen', // slot 7 — utility (blind / vision denial)
   ],
   // Ibrido: 1 melee + 1 bow + 2 magicBase + 2 magicAdvanced + 2 utility = 8
   hybrid: [

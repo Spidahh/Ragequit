@@ -17,7 +17,7 @@ Four classes. Same total slot count (8). Different slot distribution, different 
 | ------- | ----- | --- | ---------- | --------- | ------- | ---------------------- |
 | Tank    | 3     | 2   | 0          | 0         | 3       | Sword + Bow (no Staff) |
 | Arciere | 0     | 3   | 3          | 0         | 2       | Bow + Staff            |
-| Mago    | 0     | 0   | 3          | 3         | 2       | Staff only             |
+| Mago    | 0     | 0   | 3          | 2         | 3       | Staff only             |
 | Ibrido  | 1     | 1   | 2          | 2         | 2       | Sword + Bow + Staff    |
 
 ## Resource pools per class

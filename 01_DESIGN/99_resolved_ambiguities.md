@@ -30,7 +30,7 @@ This file contains only current locked decisions.
 - Class grammar is owned by `packages/shared/src/constants/classes.ts`.
 - Tank uses Sword/Bow with 3 Melee, 2 Bow, 3 Utility (8 total).
 - Arciere uses Bow/Staff with 3 Bow, 3 Magic Base, 2 Utility (8 total).
-- Mago uses Staff with 3 Magic Base, 3 Magic Advanced, 2 Utility (8 total).
+- Mago uses Staff with 3 Magic Base, 2 Magic Advanced, 3 Utility (8 total).
 - Ibrido uses Sword/Bow/Staff with 1 Melee, 1 Bow, 2 Magic Base,
   2 Magic Advanced, 2 Utility (8 total).
 - Source of truth for slot counts: packages/shared/src/constants/classes.ts.

@@ -3,750 +3,1476 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RAGEQUIT — Loadout Forge MOCKUP</title>
+<title>RAGEQUIT — Loadout Forge v2</title>
 <style>
-  :root {
-    --bg: #080b12;
-    --panel: rgba(15,17,26,0.92);
-    --line: rgba(145,170,220,0.18);
-    --gold: #ffd260;
-    --gold-dim: rgba(255,210,96,0.18);
-    --text: #e8ecf6;
-    --text-soft: #a7b0c4;
-    --muted: #687084;
-    --cyan: #00d0ff;
-    --green: #00ff88;
-    --danger: #ff3344;
-    --tank-c: #d4a04a;
-    --archer-c: #39ff14;
-    --mage-c: #00d0ff;
-    --hybrid-c: #ffd260;
-    --font-hud: Rajdhani,"Arial Narrow",Arial,sans-serif;
-    --font-mono: ui-monospace,"Cascadia Mono",Consolas,monospace;
-    --font-ui: Inter,"Segoe UI",system-ui,sans-serif;
-    --r: 6px;
-  }
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  body{
-    background:var(--bg);
-    color:var(--text);
-    font-family:var(--font-ui);
-    font-size:13px;
-    width:1400px;
-    min-height:820px;
-    overflow:hidden;
-    background-image:
-      linear-gradient(90deg,rgba(4,6,11,0.97),rgba(4,6,11,0.88) 50%,rgba(4,6,11,0.75)),
-      url('packages/client/public/ui/sfondo.png');
-    background-size:cover;
-    background-position:center;
-    position:relative;
-  }
+/* ================================================================
+   TOKENS
+================================================================ */
+:root {
+  --bg:      #030508;
+  --bg2:     #070b14;
+  --panel:   rgba(6,9,17,0.96);
+  --panel2:  rgba(10,13,22,0.92);
+  --border:  rgba(130,155,200,0.12);
+  --bh:      rgba(130,155,200,0.24);
+  --gold:    #ffd260;
+  --gold-d:  rgba(255,210,96,0.12);
+  --gold-g:  rgba(255,210,96,0.05);
+  --gold-b:  rgba(255,210,96,0.28);
+  --cyan:    #00d0ff;
+  --cyan-d:  rgba(0,208,255,0.12);
+  --green:   #00ff88;
+  --red:     #ff3344;
+  --text:    #d6e2f4;
+  --text2:   #7a8aa4;
+  --muted:   #3d4a5e;
+  /* family */
+  --f-melee:    #d4824a;
+  --f-bow:      #52c462;
+  --f-magic:    #9b7fff;
+  --f-magicadv: #00cfff;
+  --f-utility:  #ffd260;
+  /* class */
+  --c-tank:   #d4a04a;
+  --c-archer: #3ecf8e;
+  --c-mage:   #00c8ff;
+  --c-hybrid: #ffd260;
+  /* type */
+  --f-hud:  Rajdhani,"Arial Narrow",Arial,sans-serif;
+  --f-mono: "Cascadia Mono","Consolas",ui-monospace,monospace;
+  --f-ui:   Inter,"Segoe UI",system-ui,sans-serif;
+  --r: 4px;
+}
 
-  /* ── LAYOUT ROOT ───────────────────────────────── */
-  #forge {
-    display:grid;
-    grid-template-rows:auto minmax(0,1fr) 56px;
-    height:820px;
-    gap:0;
-  }
+/* ================================================================
+   RESET + BODY
+================================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+button { font-family: inherit; }
 
-  /* ── HEADER ────────────────────────────────────── */
-  #forge-header {
-    display:grid;
-    grid-template-columns:auto 1fr auto;
-    align-items:center;
-    gap:24px;
-    padding:14px 24px 0;
-    border-bottom:1px solid var(--gold-dim);
-    background:rgba(4,6,11,0.6);
-  }
+body {
+  width: 1440px;
+  height: 820px;
+  overflow: hidden;
+  background: var(--bg);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255,210,96,0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 45% 45% at 85% 85%, rgba(0,208,255,0.04) 0%, transparent 50%),
+    url('packages/client/public/ui/sfondo.png');
+  background-size: auto, auto, cover;
+  background-position: center top, center, center;
+  color: var(--text);
+  font-family: var(--f-ui);
+  font-size: 13px;
+  position: relative;
+  user-select: none;
+}
 
-  .forge-logo-block {
-    display:flex;
-    align-items:center;
-    gap:12px;
-  }
-  .forge-logo-block img {
-    width:38px;height:38px;object-fit:contain;
-    filter:drop-shadow(0 0 8px rgba(255,210,96,0.5));
-  }
-  .forge-logo-block h1 {
-    font:900 26px/1 var(--font-hud);
-    text-transform:uppercase;
-    color:var(--text);
-  }
-  .forge-logo-block h1 span{color:var(--gold);}
-  .forge-logo-block .forge-sub {
-    font:800 9px/1 var(--font-mono);
-    text-transform:uppercase;
-    color:var(--muted);
-    letter-spacing:.12em;
-    margin-top:4px;
-  }
+/* scanlines overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 3px,
+    rgba(0,0,0,0.055) 3px,
+    rgba(0,0,0,0.055) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
 
-  /* Class tabs */
-  #class-tabs {
-    display:flex;
-    gap:4px;
-    align-self:stretch;
-    align-items:flex-end;
-  }
-  .ctab {
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:3px;
-    padding:10px 22px 10px;
-    background:rgba(0,0,0,0.4);
-    border:1px solid rgba(255,255,255,0.07);
-    border-bottom:2px solid transparent;
-    cursor:pointer;
-    min-width:100px;
-    position:relative;
-    transition:all .15s;
-  }
-  .ctab:hover { background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.15); }
-  .ctab.active { border-color:var(--class-color); background:rgba(0,0,0,0.55); }
-  .ctab.active::after {
-    content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;
-    background:var(--class-color);
-    box-shadow:0 0 10px var(--class-color),0 0 20px var(--class-color);
-  }
-  .ctab[data-c=tank]   {--class-color:var(--tank-c);}
-  .ctab[data-c=archer] {--class-color:var(--archer-c);}
-  .ctab[data-c=mage]   {--class-color:var(--mage-c);}
-  .ctab[data-c=hybrid] {--class-color:var(--hybrid-c);}
-  .ctab .tab-icon {font-size:18px;line-height:1;filter:grayscale(.4);}
-  .ctab.active .tab-icon {filter:none;}
-  .ctab .tab-name {font:700 11px/1 var(--font-mono);letter-spacing:.18em;text-transform:uppercase;color:var(--text-soft);}
-  .ctab.active .tab-name {color:var(--class-color);}
-  .ctab .tab-sub {font:600 8px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
-  .ctab.active .tab-sub {color:color-mix(in srgb,var(--class-color) 60%,var(--muted));}
+/* ================================================================
+   ROOT GRID
+================================================================ */
+#forge {
+  display: grid;
+  grid-template-rows: 56px minmax(0,1fr) 50px;
+  height: 820px;
+}
 
-  /* Compact vitals */
-  #forge-vitals {
-    display:flex;
-    gap:18px;
-    align-items:center;
-    justify-content:flex-end;
-  }
-  .vital-chip {
-    display:flex;align-items:center;gap:6px;
-    font:700 12px/1 var(--font-hud);
-  }
-  .vital-chip .vc-bar {
-    width:60px;height:5px;border-radius:3px;background:rgba(255,255,255,0.1);overflow:hidden;
-  }
-  .vital-chip .vc-fill {height:100%;border-radius:3px;}
-  .vc-hp .vc-fill{background:#ff3344;}
-  .vc-mana .vc-fill{background:#00d0ff;width:20%;}
-  .vc-stam .vc-fill{background:#00ff88;}
-  .vc-hp .vc-val{color:#ff8090;}
-  .vc-mana .vc-val{color:#00d0ff;}
-  .vc-stam .vc-val{color:#00ff88;}
-  .vc-val{font:700 12px/1 var(--font-hud);}
-  .mechanic-tag {
-    padding:3px 9px;
-    border:1px solid var(--gold-dim);
-    border-radius:3px;
-    background:rgba(255,210,96,0.08);
-    font:800 9px/1 var(--font-mono);
-    letter-spacing:.18em;
-    text-transform:uppercase;
-    color:var(--gold);
-  }
+/* ================================================================
+   HEADER
+================================================================ */
+#forge-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: stretch;
+  border-bottom: 1px solid rgba(255,210,96,0.14);
+  background: rgba(2,4,8,0.88);
+  backdrop-filter: blur(10px);
+  position: relative;
+  z-index: 20;
+}
+/* gold top line */
+#forge-header::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(255,210,96,0.25) 10%,
+    rgba(255,210,96,0.55) 40%,
+    rgba(255,210,96,0.55) 60%,
+    rgba(255,210,96,0.25) 90%,
+    transparent 100%);
+}
 
-  /* ── BODY ──────────────────────────────────────── */
-  #forge-body {
-    display:grid;
-    grid-template-columns:340px minmax(0,1fr);
-    gap:12px;
-    padding:12px 24px;
-    min-height:0;
-  }
+/* Brand */
+.forge-brand {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 18px 0 14px;
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.brand-icon {
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+  font-size: 15px;
+  background: rgba(255,210,96,0.1);
+  border: 1px solid rgba(255,210,96,0.22);
+  border-radius: var(--r);
+  color: var(--gold);
+  flex-shrink: 0;
+  box-shadow: 0 0 12px rgba(255,210,96,0.12);
+}
+.brand-text { display: flex; flex-direction: column; gap: 2px; }
+.brand-title {
+  font: 900 18px/1 var(--f-hud);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+}
+.brand-title em { color: var(--gold); font-style: normal; }
+.brand-sub {
+  font: 700 8px/1 var(--f-mono);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .16em;
+}
 
-  /* ── LEFT — BUILD ──────────────────────────────── */
-  #forge-left {
-    display:flex;
-    flex-direction:column;
-    gap:10px;
-    overflow-y:auto;
-  }
+/* Class tabs */
+#class-tabs {
+  display: flex;
+  align-items: stretch;
+  padding: 0 10px;
+}
+.ctab {
+  position: relative;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 3px;
+  padding: 0 22px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all .15s;
+  min-width: 115px;
+}
+.ctab:hover { background: rgba(255,255,255,0.025); }
+.ctab.active {
+  border-bottom-color: var(--class-c);
+  background: rgba(0,0,0,0.18);
+}
+.ctab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 25%; right: 25%;
+  height: 1px;
+  background: var(--class-c);
+  box-shadow: 0 0 8px var(--class-c), 0 0 18px var(--class-c);
+}
+.ctab[data-c=tank]   { --class-c: var(--c-tank); }
+.ctab[data-c=archer] { --class-c: var(--c-archer); }
+.ctab[data-c=mage]   { --class-c: var(--c-mage); }
+.ctab[data-c=hybrid] { --class-c: var(--c-hybrid); }
 
-  .wheel-section {
-    background:rgba(10,12,20,0.92);
-    border:1px solid var(--line);
-    border-radius:var(--r);
-    overflow:hidden;
-  }
-  .wheel-label {
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:9px 14px;
-    border-bottom:1px solid var(--line);
-    background:rgba(0,0,0,0.3);
-  }
-  .wheel-label span:first-child {
-    font:900 13px/1 var(--font-hud);
-    text-transform:uppercase;
-    letter-spacing:.1em;
-  }
-  .wheel-key {
-    padding:2px 8px;
-    border:1px solid var(--gold-dim);
-    border-radius:3px;
-    background:rgba(255,210,96,0.08);
-    font:700 10px/1 var(--font-mono);
-    color:var(--gold);
-    letter-spacing:.1em;
-  }
+.ctab-name {
+  font: 700 11px/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: .18em;
+  color: var(--text2);
+  transition: color .15s;
+}
+.ctab.active .ctab-name { color: var(--class-c); text-shadow: 0 0 10px var(--class-c); }
+.ctab-sub {
+  font: 600 8px/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--muted);
+  transition: color .15s;
+}
+.ctab.active .ctab-sub { color: color-mix(in srgb, var(--class-c) 50%, var(--muted)); }
 
-  .slot-item {
-    display:grid;
-    grid-template-columns:36px minmax(0,1fr) auto auto;
-    align-items:center;
-    gap:8px;
-    padding:8px 10px;
-    border-bottom:1px solid rgba(145,170,220,0.08);
-    cursor:pointer;
-    transition:background .1s;
-    position:relative;
-  }
-  .slot-item:last-child{border-bottom:none;}
-  .slot-item:hover{background:rgba(255,255,255,0.04);}
-  .slot-item.active{background:rgba(0,208,255,0.07);border-left:2px solid var(--cyan);}
-  .slot-item.empty{opacity:.45;}
-  .slot-item.active{padding-left:8px;}
+/* Vitals */
+#forge-vitals {
+  display: flex; align-items: center; gap: 14px;
+  padding: 0 16px;
+  border-left: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.mech-badge {
+  padding: 4px 11px;
+  border: 1px solid rgba(255,210,96,0.25);
+  border-radius: 3px;
+  background: rgba(255,210,96,0.08);
+  font: 800 8px/1 var(--f-mono);
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  white-space: nowrap;
+  box-shadow: inset 0 0 10px rgba(255,210,96,0.04);
+}
+.vital-col { display: flex; flex-direction: column; gap: 4px; }
+.vital-row {
+  display: flex; align-items: center; gap: 6px;
+}
+.vlabel {
+  font: 700 7px/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  width: 16px; text-align: right;
+}
+.vbar {
+  width: 56px; height: 3px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px; overflow: hidden;
+}
+.vfill { height: 100%; border-radius: 2px; }
+.vval {
+  font: 700 9px/1 var(--f-mono);
+  min-width: 24px;
+}
+.vital-row.hp .vlabel, .vital-row.hp .vval { color: var(--red); }
+.vital-row.hp .vfill { background: var(--red); box-shadow: 0 0 5px var(--red); }
+.vital-row.sp .vlabel, .vital-row.sp .vval { color: var(--green); }
+.vital-row.sp .vfill { background: var(--green); }
+.vital-row.mp .vlabel, .vital-row.mp .vval { color: var(--cyan); }
+.vital-row.mp .vfill { background: var(--cyan); }
 
-  .slot-icon {
-    display:grid;place-items:center;
-    width:34px;height:34px;
-    border:1px solid var(--line);
-    border-radius:4px;
-    background:rgba(0,0,0,0.3);
-    font-size:16px;
-  }
-  .slot-item.active .slot-icon {
-    border-color:var(--cyan);
-    background:rgba(0,208,255,0.1);
-    box-shadow:0 0 8px rgba(0,208,255,0.3);
-  }
-  .slot-meta {display:flex;flex-direction:column;gap:2px;min-width:0;}
-  .slot-name {
-    font:700 13px/1 var(--font-hud);
-    text-transform:uppercase;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
-  .slot-item.empty .slot-name{color:var(--muted);font-weight:400;text-transform:none;font-style:italic;}
-  .slot-role {
-    font:600 9px/1 var(--font-mono);
-    color:var(--text-soft);
-    text-transform:uppercase;
-    letter-spacing:.08em;
-  }
-  .slot-badge {
-    padding:2px 6px;
-    border-radius:2px;
-    font:700 8px/1 var(--font-mono);
-    text-transform:uppercase;
-    letter-spacing:.1em;
-  }
-  .slot-badge.instant{background:rgba(0,255,136,0.15);color:var(--green);border:1px solid rgba(0,255,136,0.2);}
-  .slot-badge.preview{background:rgba(0,208,255,0.12);color:var(--cyan);border:1px solid rgba(0,208,255,0.2);}
-  .slot-clear {
-    width:22px;height:22px;
-    display:grid;place-items:center;
-    border-radius:3px;
-    background:transparent;
-    color:var(--muted);
-    font-size:14px;
-    cursor:pointer;
-    transition:all .1s;
-    flex-shrink:0;
-  }
-  .slot-clear:hover{background:rgba(255,51,68,0.18);color:var(--danger);}
+/* ================================================================
+   BODY
+================================================================ */
+#forge-body {
+  display: grid;
+  grid-template-columns: 300px minmax(0,1fr) 285px;
+  gap: 8px;
+  padding: 8px 10px;
+  min-height: 0;
+}
 
-  /* ── RIGHT — POOL + DETAIL ─────────────────────── */
-  #forge-right {
-    display:grid;
-    grid-template-rows:minmax(0,1fr) 200px;
-    gap:10px;
-    min-height:0;
-  }
+/* ================================================================
+   LEFT — BUILD EDITOR
+================================================================ */
+#forge-build {
+  display: flex; flex-direction: column; gap: 8px;
+  overflow-y: auto; overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
 
-  /* Pool */
-  #forge-pool {
-    display:flex;
-    flex-direction:column;
-    gap:0;
-    background:rgba(10,12,20,0.92);
-    border:1px solid var(--line);
-    border-top-color:rgba(0,255,136,0.2);
-    border-radius:var(--r);
-    overflow:hidden;
-    min-height:0;
-  }
-  #pool-filters {
-    display:flex;
-    align-items:center;
-    gap:8px;
-    padding:10px 12px;
-    border-bottom:1px solid var(--line);
-    flex-shrink:0;
-    flex-wrap:wrap;
-  }
-  #pool-search {
-    flex:1;min-width:120px;max-width:220px;
-    padding:6px 10px;
-    background:rgba(0,0,0,0.35);
-    border:1px solid var(--line);
-    border-radius:4px;
-    color:var(--text);
-    font:13px var(--font-ui);
-    outline:none;
-  }
-  #pool-search:focus{border-color:rgba(0,208,255,0.4);}
-  .filter-btn {
-    padding:5px 10px;
-    background:rgba(0,0,0,0.3);
-    border:1px solid var(--line);
-    border-radius:3px;
-    color:var(--text-soft);
-    font:700 9px/1 var(--font-mono);
-    text-transform:uppercase;
-    letter-spacing:.1em;
-    cursor:pointer;
-    transition:all .1s;
-  }
-  .filter-btn:hover{border-color:rgba(255,210,96,0.3);color:var(--gold);}
-  .filter-btn.on{background:rgba(255,210,96,0.12);border-color:rgba(255,210,96,0.4);color:var(--gold);}
+.wheel-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  flex-shrink: 0;
+}
 
-  #pool-grid {
-    display:grid;
-    grid-template-columns:repeat(2,1fr);
-    gap:6px;
-    padding:10px;
-    overflow-y:auto;
-    flex:1;
-  }
-  .pool-card {
-    display:grid;
-    grid-template-columns:36px minmax(0,1fr);
-    gap:8px;
-    align-items:start;
-    padding:8px 10px;
-    background:rgba(8,10,18,0.82);
-    border:1px solid var(--line);
-    border-radius:var(--r);
-    cursor:pointer;
-    transition:all .12s;
-    position:relative;
-  }
-  .pool-card:hover{transform:translateY(-1px);border-color:rgba(255,210,96,0.3);background:rgba(17,20,32,0.94);}
-  .pool-card.active{border-color:var(--cyan);background:rgba(0,208,255,0.06);}
-  .pool-icon {
-    display:grid;place-items:center;
-    width:34px;height:34px;
-    border:1px solid var(--line);
-    border-radius:4px;
-    background:rgba(0,0,0,0.3);
-    font-size:16px;
-    color:var(--text-soft);
-  }
-  .pool-info {display:flex;flex-direction:column;gap:3px;}
-  .pool-name {font:700 13px/1 var(--font-hud);text-transform:uppercase;}
-  .pool-role {font:600 9px/1 var(--font-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--text-soft);}
-  .pool-meta {font:600 9px/1 var(--font-mono);color:var(--muted);}
-  .pool-badge-row {display:flex;gap:4px;margin-top:2px;}
-  .pb {padding:2px 5px;border-radius:2px;font:700 7px/1 var(--font-mono);text-transform:uppercase;}
-  .pb.instant{background:rgba(0,255,136,0.15);color:var(--green);}
-  .pb.starter{background:rgba(255,210,96,0.15);color:var(--gold);}
-  .pb.control{background:rgba(0,208,255,0.12);color:var(--cyan);}
-  .pb.pressure{background:rgba(255,100,50,0.15);color:#ff8060;}
+.wheel-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.28);
+}
+.wheel-title {
+  font: 800 10px/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: .2em;
+  color: var(--text);
+}
+.wheel-key {
+  padding: 3px 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font: 700 9px/1 var(--f-mono);
+  color: var(--gold);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
 
-  /* Detail */
-  #forge-detail {
-    background:rgba(10,12,20,0.94);
-    border:1px solid var(--line);
-    border-top-color:rgba(0,208,255,0.3);
-    border-radius:var(--r);
-    padding:14px 16px;
-    display:grid;
-    grid-template-columns:minmax(0,1fr) auto;
-    grid-template-rows:auto auto auto auto;
-    column-gap:16px;
-    row-gap:6px;
-    align-content:start;
-  }
-  .det-label {
-    grid-column:1/-1;
-    font:800 9px/1 var(--font-mono);
-    text-transform:uppercase;
-    letter-spacing:.18em;
-    color:var(--cyan);
-    margin-bottom:2px;
-  }
-  .det-name {
-    font:900 22px/1 var(--font-hud);
-    text-transform:uppercase;
-  }
-  .det-tags {display:flex;gap:5px;align-items:center;flex-wrap:wrap;}
-  .det-tag {padding:2px 7px;border-radius:2px;font:700 8px/1 var(--font-mono);text-transform:uppercase;border:1px solid transparent;}
-  .det-tag.starter{background:rgba(255,210,96,0.12);color:var(--gold);border-color:rgba(255,210,96,0.2);}
-  .det-tag.physical{background:rgba(145,170,220,0.08);color:var(--text-soft);}
-  .det-tag.pressure{background:rgba(255,100,50,0.1);color:#ff8060;border-color:rgba(255,100,50,0.2);}
-  .det-cost {
-    font:700 11px/1 var(--font-mono);
-    color:var(--text-soft);
-    white-space:nowrap;
-  }
-  .det-cost span{color:var(--text);}
-  .det-desc {
-    grid-column:1/-1;
-    font:400 12px/1.45 var(--font-ui);
-    color:var(--text-soft);
-  }
-  .det-cast-toggle {
-    grid-row:2/4;
-    grid-column:2;
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-    align-items:center;
-    gap:3px;
-    padding:10px 14px;
-    background:rgba(0,255,136,0.1);
-    border:1px solid rgba(0,255,136,0.3);
-    border-radius:4px;
-    cursor:pointer;
-    min-width:100px;
-  }
-  .det-cast-toggle .ck { font:800 9px/1 var(--font-mono);text-transform:uppercase;color:var(--muted);letter-spacing:.12em;}
-  .det-cast-toggle .cv { font:900 14px/1 var(--font-hud);text-transform:uppercase;color:var(--green);}
-  .det-cast-toggle .ch { font:600 9px/1 var(--font-mono);color:var(--muted);}
+/* family header inside wheel */
+.fam-hdr {
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 12px 4px;
+  background: rgba(0,0,0,0.18);
+  border-left: 2px solid var(--fc, var(--border));
+  font: 800 8px/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: .2em;
+  color: var(--fc, var(--text2));
+  opacity: .88;
+}
+[data-fam=melee]    { --fc: var(--f-melee); }
+[data-fam=bow]      { --fc: var(--f-bow); }
+[data-fam=magic]    { --fc: var(--f-magic); }
+[data-fam=magicadv] { --fc: var(--f-magicadv); }
+[data-fam=utility]  { --fc: var(--f-utility); }
 
-  /* ── FOOTER ─────────────────────────────────────── */
-  #forge-footer {
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:12px;
-    padding:0 24px;
-    border-top:1px solid var(--gold-dim);
-    background:rgba(4,6,11,0.7);
-  }
-  .btn {
-    padding:0 22px;
-    height:38px;
-    border-radius:4px;
-    font:700 11px/1 var(--font-mono);
-    text-transform:uppercase;
-    letter-spacing:.12em;
-    cursor:pointer;
-    border:1px solid var(--line);
-    background:rgba(8,10,18,0.8);
-    color:var(--text-soft);
-    transition:all .12s;
-  }
-  .btn:hover{border-color:rgba(255,210,96,0.3);color:var(--gold);}
-  .btn.primary{
-    background:rgba(255,210,96,0.12);
-    border-color:rgba(255,210,96,0.5);
-    color:var(--gold);
-  }
-  .btn.primary:hover{background:rgba(255,210,96,0.22);}
+.fam-group {
+  border-bottom: 1px solid rgba(145,170,220,0.06);
+}
+.fam-group:last-child { border-bottom: none; }
 
-  /* annotation */
-  .annot {
-    position:absolute;
-    background:rgba(255,50,50,0.9);
-    color:#fff;
-    font:700 10px/1 var(--font-mono);
-    padding:3px 7px;
-    border-radius:3px;
-    pointer-events:none;
-    white-space:nowrap;
-    z-index:100;
-  }
+/* slot rows */
+.slot-row {
+  display: grid;
+  grid-template-columns: 20px 26px minmax(0,1fr) auto auto;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px 6px 14px;
+  border-bottom: 1px solid rgba(145,170,220,0.05);
+  cursor: pointer;
+  transition: background .1s;
+  position: relative;
+}
+.slot-row:last-child { border-bottom: none; }
+.slot-row:hover:not(.sel) { background: rgba(255,255,255,0.03); }
+.slot-row.sel {
+  background: rgba(255,210,96,0.05);
+  border-left: 2px solid rgba(255,210,96,0.38);
+  padding-left: 12px;
+  box-shadow: inset 0 0 20px rgba(255,210,96,0.03);
+}
+.slot-row.empty { opacity: .42; }
+.slot-row.empty:hover { opacity: .65; background: rgba(255,255,255,0.025); }
+
+.slot-num {
+  font: 700 8px/1 var(--f-mono);
+  color: var(--muted);
+  text-align: center;
+}
+.slot-ico {
+  display: grid; place-items: center;
+  width: 24px; height: 24px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-size: 12px;
+  color: var(--text2);
+  flex-shrink: 0;
+}
+.slot-row.sel .slot-ico {
+  border-color: rgba(255,210,96,0.3);
+  background: rgba(255,210,96,0.1);
+  color: var(--gold);
+}
+.slot-info { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.slot-name {
+  font: 700 12px/1 var(--f-hud);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--text);
+}
+.slot-row.empty .slot-name {
+  font: 400 11px/1 var(--f-ui);
+  color: var(--muted);
+  font-style: italic;
+  text-transform: none;
+}
+.slot-role {
+  font: 600 8px/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--text2);
+}
+.cast-tag {
+  padding: 2px 5px;
+  border-radius: 2px;
+  font: 700 7px/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.cast-tag.instant { background: rgba(0,255,136,0.1); color: var(--green); border: 1px solid rgba(0,255,136,0.18); }
+.cast-tag.preview  { background: var(--cyan-d); color: var(--cyan); border: 1px solid rgba(0,208,255,0.2); }
+
+.slot-clear {
+  width: 18px; height: 18px;
+  display: grid; place-items: center;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 2px;
+  flex-shrink: 0;
+  padding: 0;
+  line-height: 1;
+  transition: all .1s;
+}
+.slot-clear:hover { background: rgba(255,51,68,0.18); color: var(--red); }
+.slot-row.empty .slot-clear { visibility: hidden; }
+
+/* ================================================================
+   CENTER — ABILITY POOL
+================================================================ */
+#forge-pool {
+  display: flex; flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-top-color: rgba(0,255,136,0.18);
+  border-radius: var(--r);
+  overflow: hidden;
+  min-height: 0;
+}
+
+#pool-toolbar {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: 5px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.22);
+  flex-shrink: 0;
+}
+#pool-search {
+  width: 155px;
+  padding: 5px 9px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text);
+  font: 12px var(--f-ui);
+  outline: none;
+  caret-color: var(--gold);
+  flex-shrink: 0;
+}
+#pool-search:focus { border-color: rgba(255,210,96,0.28); }
+#pool-search::placeholder { color: var(--muted); font-style: italic; }
+
+.filter-btn {
+  padding: 4px 9px;
+  background: rgba(0,0,0,0.28);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text2);
+  font: 700 8px/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  cursor: pointer;
+  transition: all .1s;
+  flex-shrink: 0;
+}
+.filter-btn:hover { border-color: var(--bh); color: var(--text); }
+.filter-btn.on {
+  background: var(--gold-d);
+  border-color: rgba(255,210,96,0.32);
+  color: var(--gold);
+}
+.pool-count {
+  margin-left: auto;
+  font: 700 8px/1 var(--f-mono);
+  color: var(--muted);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+#pool-scroll {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  padding: 7px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
+
+.pool-fam-section { margin-bottom: 10px; }
+.pool-fam-section:last-child { margin-bottom: 0; }
+
+.pool-fam-hdr {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 7px;
+  font: 800 8px/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: .22em;
+  color: var(--fc, var(--text2));
+  border-left: 2px solid var(--fc, var(--muted));
+  background: rgba(0,0,0,0.12);
+  margin-bottom: 5px;
+}
+.pool-fam-hdr .fam-slots-hint {
+  margin-left: auto;
+  font-weight: 600;
+  opacity: .55;
+  letter-spacing: .1em;
+}
+
+.pool-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+/* ability card */
+.acard {
+  display: grid;
+  grid-template-columns: 26px minmax(0,1fr);
+  gap: 7px;
+  align-items: start;
+  padding: 7px 8px;
+  background: rgba(4,7,15,0.75);
+  border: 1px solid var(--border);
+  border-left: 2px solid color-mix(in srgb, var(--fc,var(--border)) 45%, transparent);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all .12s;
+  position: relative;
+}
+.acard:hover {
+  background: rgba(12,16,28,0.9);
+  border-color: var(--bh);
+  border-left-color: color-mix(in srgb, var(--fc,var(--bh)) 80%, transparent);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+.acard.equipped {
+  border-color: rgba(255,210,96,0.18);
+  border-left-color: rgba(255,210,96,0.5);
+  background: rgba(255,210,96,0.04);
+}
+.acard.sel {
+  border-color: rgba(0,208,255,0.35);
+  border-left-color: var(--cyan);
+  background: rgba(0,208,255,0.06);
+  box-shadow: 0 0 14px rgba(0,208,255,0.08);
+}
+.acard.locked { opacity: .28; pointer-events: none; }
+
+.acard-ico {
+  display: grid; place-items: center;
+  width: 24px; height: 24px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-size: 12px;
+  color: var(--text2);
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+.acard.equipped .acard-ico {
+  border-color: rgba(255,210,96,0.25);
+  background: rgba(255,210,96,0.08);
+}
+.acard.sel .acard-ico {
+  border-color: rgba(0,208,255,0.3);
+  background: rgba(0,208,255,0.1);
+}
+
+.acard-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.acard-name {
+  font: 700 11px/1.1 var(--f-hud);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.acard-role {
+  font: 600 8px/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text2);
+}
+.acard-cost {
+  font: 600 8px/1 var(--f-mono);
+  color: var(--muted);
+  margin-top: 1px;
+}
+.acard-tags { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 2px; }
+
+.eq-dot {
+  position: absolute;
+  top: 4px; right: 5px;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 5px var(--gold);
+  opacity: .85;
+}
+
+/* ================================================================
+   TAGS
+================================================================ */
+.tag {
+  padding: 1px 4px;
+  border-radius: 2px;
+  font: 700 7px/1.1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.tag.starter  { background: rgba(255,210,96,0.12); color: var(--gold); }
+.tag.finisher { background: rgba(255,90,70,0.12);  color: #ff8068; }
+.tag.control  { background: rgba(0,208,255,0.1);   color: var(--cyan); }
+.tag.pressure { background: rgba(255,110,50,0.1);  color: #ff8055; }
+.tag.instant  { background: rgba(0,255,136,0.1);   color: var(--green); }
+.tag.preview  { background: rgba(0,208,255,0.08);  color: var(--cyan); }
+.tag.mobility { background: rgba(130,110,255,0.1); color: #a090ff; }
+.tag.survival { background: rgba(0,200,100,0.1);   color: #40d080; }
+.tag.counter  { background: rgba(200,100,255,0.1); color: #cc80ff; }
+.tag.extender { background: rgba(255,180,50,0.1);  color: #ffb840; }
+
+/* ================================================================
+   RIGHT — DETAIL PANEL
+================================================================ */
+#forge-detail {
+  display: flex; flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-top-color: rgba(0,208,255,0.18);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+.det-hdr {
+  padding: 11px 14px 9px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.28);
+  flex-shrink: 0;
+}
+.det-slot-lbl {
+  font: 800 8px/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: .2em;
+  color: var(--cyan);
+  margin-bottom: 5px;
+  opacity: .8;
+}
+.det-fam-row {
+  display: flex; align-items: center; gap: 5px;
+  margin-bottom: 5px;
+}
+.det-fam-badge {
+  padding: 2px 7px;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  font: 800 8px/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  background: rgba(0,0,0,0.3);
+}
+.det-name {
+  font: 900 21px/1 var(--f-hud);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+/* cast toggle */
+.det-cast {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 14px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+.det-cast-lbl {
+  font: 800 8px/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: .16em;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.cast-btn {
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.3);
+  cursor: pointer;
+  transition: all .12s;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 2px;
+}
+.cast-btn.on {
+  background: rgba(0,255,136,0.08);
+  border-color: rgba(0,255,136,0.28);
+}
+.cast-btn .ct { font: 700 9px/1 var(--f-mono); text-transform: uppercase; letter-spacing: .12em; color: var(--text2); }
+.cast-btn.on .ct { color: var(--green); }
+.cast-btn .cs { font: 500 7px/1 var(--f-mono); color: var(--muted); }
+.cast-btn.on .cs { color: rgba(0,255,136,0.5); }
+.cast-btn:hover:not(.on) { border-color: var(--bh); }
+
+/* stats grid */
+.det-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.stat-cell {
+  background: var(--panel2);
+  padding: 6px 10px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.stat-key {
+  font: 700 7px/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: .16em;
+  color: var(--muted);
+}
+.stat-val {
+  font: 700 13px/1 var(--f-hud);
+  text-transform: uppercase;
+}
+.stat-val.v-sp  { color: var(--green); }
+.stat-val.v-mp  { color: var(--cyan); }
+.stat-val.v-cd  { color: var(--text2); }
+.stat-val.v-dmg { color: var(--red); }
+.stat-val.v-cc  { color: #a090ff; }
+
+/* description + chain */
+.det-body {
+  flex: 1; min-height: 0;
+  padding: 10px 14px;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
+.det-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+.det-desc {
+  font: 400 12px/1.55 var(--f-ui);
+  color: var(--text2);
+}
+
+.combo-chain {
+  padding: 7px 9px;
+  border-radius: 3px;
+  border-left: 2px solid rgba(255,210,96,0.45);
+  background: rgba(255,210,96,0.05);
+  flex-shrink: 0;
+}
+.combo-chain-lbl {
+  font: 800 7px/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: .2em;
+  color: rgba(255,210,96,0.55);
+  margin-bottom: 4px;
+}
+.combo-chain-flow {
+  font: 700 9px/1.4 var(--f-mono);
+  color: rgba(255,210,96,0.88);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.combo-chain.fin {
+  border-left-color: rgba(255,80,60,0.45);
+  background: rgba(255,70,50,0.05);
+}
+.combo-chain.fin .combo-chain-lbl { color: rgba(255,130,110,0.6); }
+.combo-chain.fin .combo-chain-flow { color: rgba(255,160,130,0.9); }
+
+/* equip action */
+.det-equip-btn {
+  margin: 0 14px 10px;
+  padding: 9px 12px;
+  background: rgba(0,208,255,0.08);
+  border: 1px solid rgba(0,208,255,0.25);
+  border-radius: 3px;
+  font: 700 9px/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  color: var(--cyan);
+  cursor: pointer;
+  transition: all .12s;
+  text-align: center;
+  flex-shrink: 0;
+}
+.det-equip-btn:hover {
+  background: rgba(0,208,255,0.16);
+  border-color: rgba(0,208,255,0.4);
+}
+
+/* ================================================================
+   FOOTER
+================================================================ */
+#forge-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  padding: 0 14px;
+  border-top: 1px solid rgba(255,210,96,0.1);
+  background: rgba(2,4,8,0.82);
+  position: relative; z-index: 10;
+}
+#forge-footer::before {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0; height: 1px;
+  background: rgba(255,210,96,0.06);
+}
+.btn {
+  padding: 0 18px;
+  height: 34px;
+  background: rgba(7,10,18,0.85);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  font: 700 9px/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all .12s;
+  white-space: nowrap;
+}
+.btn:hover { border-color: var(--bh); color: var(--text); background: rgba(255,255,255,0.03); }
+.btn.primary {
+  background: rgba(255,210,96,0.1);
+  border-color: rgba(255,210,96,0.32);
+  color: var(--gold);
+}
+.btn.primary:hover { background: rgba(255,210,96,0.18); border-color: rgba(255,210,96,0.52); box-shadow: 0 0 16px rgba(255,210,96,0.12); }
+.btn.ghost:hover { border-color: rgba(255,51,68,0.28); color: var(--red); }
+
+.footer-mid {
+  display: flex; align-items: center; gap: 10px;
+}
+.footer-status {
+  font: 700 8px/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--muted);
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: rgba(0,0,0,0.2);
+}
+.footer-status .warn { color: rgba(255,210,96,0.7); }
+
+/* ================================================================
+   SCROLLBAR GLOBAL
+================================================================ */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text2); }
 </style>
 </head>
 <body>
 <div id="forge">
 
-  <!-- ── HEADER ── -->
-  <div id="forge-header">
-    <div class="forge-logo-block">
-      <div style="width:38px;height:38px;background:rgba(255,210,96,0.15);border:1px solid rgba(255,210,96,0.3);border-radius:4px;display:grid;place-items:center;font-size:18px;">⚔</div>
-      <div>
-        <h1>LOADOUT <span>FORGE</span></h1>
-        <div class="forge-sub">Seleziona classe · Forgia il build</div>
+  <!-- ================================================================
+       HEADER
+  ================================================================ -->
+  <header id="forge-header">
+
+    <div class="forge-brand">
+      <div class="brand-icon">⚔</div>
+      <div class="brand-text">
+        <div class="brand-title">LOADOUT <em>FORGE</em></div>
+        <div class="brand-sub">Configura build · Entra in match</div>
       </div>
     </div>
 
     <div id="class-tabs">
       <button class="ctab active" data-c="tank">
-        <span class="tab-icon">🛡️</span>
-        <span class="tab-name">TANK</span>
-        <span class="tab-sub">Fury · 250 HP</span>
+        <span class="ctab-name">TANK</span>
+        <span class="ctab-sub">FURY · 250 HP</span>
       </button>
       <button class="ctab" data-c="archer">
-        <span class="tab-icon">🏹</span>
-        <span class="tab-name">ARCIERE</span>
-        <span class="tab-sub">Momentum · 175 HP</span>
+        <span class="ctab-name">ARCIERE</span>
+        <span class="ctab-sub">MOMENTUM · 175 HP</span>
       </button>
       <button class="ctab" data-c="mage">
-        <span class="tab-icon">🔮</span>
-        <span class="tab-name">MAGO</span>
-        <span class="tab-sub">Risonanza · 150 HP</span>
+        <span class="ctab-name">MAGO</span>
+        <span class="ctab-sub">RISONANZA · 150 HP</span>
       </button>
       <button class="ctab" data-c="hybrid">
-        <span class="tab-icon">⚡</span>
-        <span class="tab-name">IBRIDO</span>
-        <span class="tab-sub">Flow · 200 HP</span>
+        <span class="ctab-name">IBRIDO</span>
+        <span class="ctab-sub">FLOW · 200 HP</span>
       </button>
     </div>
 
     <div id="forge-vitals">
-      <span class="mechanic-tag">FURY</span>
-      <div class="vital-chip vc-hp">
-        ❤️ <span class="vc-val">250</span>
-        <div class="vc-bar"><div class="vc-fill" style="width:100%"></div></div>
-      </div>
-      <div class="vital-chip vc-stam">
-        ⚡ <span class="vc-val">150</span>
-        <div class="vc-bar"><div class="vc-fill"></div></div>
-      </div>
-      <div class="vital-chip vc-mana">
-        🔷 <span class="vc-val">50</span>
-        <div class="vc-bar"><div class="vc-fill"></div></div>
+      <div class="mech-badge" id="mech-badge">FURY ⚡⚡⚡⚡◦</div>
+      <div class="vital-col">
+        <div class="vital-row hp">
+          <span class="vlabel">HP</span>
+          <div class="vbar"><div class="vfill" style="width:100%"></div></div>
+          <span class="vval" id="v-hp">250</span>
+        </div>
+        <div class="vital-row sp">
+          <span class="vlabel">SP</span>
+          <div class="vbar"><div class="vfill" style="width:100%"></div></div>
+          <span class="vval" id="v-sp">150</span>
+        </div>
+        <div class="vital-row mp">
+          <span class="vlabel">MP</span>
+          <div class="vbar"><div class="vfill" style="width:31%"></div></div>
+          <span class="vval" id="v-mp">50</span>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- ── BODY ── -->
+  </header>
+
+  <!-- ================================================================
+       BODY
+  ================================================================ -->
   <div id="forge-body">
 
-    <!-- LEFT: Build -->
-    <div id="forge-left">
+    <!-- ──────────────────────────────────────────────────────────────
+         LEFT: BUILD EDITOR
+    ────────────────────────────────────────────────────────────────── -->
+    <div id="forge-build">
 
-      <div class="wheel-section">
-        <div class="wheel-label">
-          <span>⚔ Ability Wheel</span>
-          <span class="wheel-key">TIENI E</span>
+      <!-- ABILITY WHEEL ───────────────────────────── -->
+      <div class="wheel-panel">
+        <div class="wheel-hdr">
+          <span class="wheel-title">⬡ Ability Wheel</span>
+          <kbd class="wheel-key">HOLD E</kbd>
         </div>
 
-        <div class="slot-item active">
-          <div class="slot-icon">⚔</div>
-          <div class="slot-meta">
-            <div class="slot-name">Uppercut</div>
-            <div class="slot-role">Combo Starter · Melee</div>
+        <!-- MELEE group -->
+        <div class="fam-group" data-fam="melee">
+          <div class="fam-hdr">⚔ MELEE &nbsp;·&nbsp; 3 SLOT</div>
+
+          <div class="slot-row sel" data-slot="0">
+            <span class="slot-num">1</span>
+            <div class="slot-ico">⚔</div>
+            <div class="slot-info">
+              <div class="slot-name">Uppercut</div>
+              <div class="slot-role">Starter · Melee</div>
+            </div>
+            <span class="cast-tag instant">Instant</span>
+            <button class="slot-clear" title="Rimuovi">×</button>
           </div>
-          <span class="slot-badge instant">Instant</span>
-          <span class="slot-clear">×</span>
-        </div>
-        <div class="slot-item">
-          <div class="slot-icon">⚔</div>
-          <div class="slot-meta">
-            <div class="slot-name">Gap Closer</div>
-            <div class="slot-role">Mobility · Melee</div>
+
+          <div class="slot-row" data-slot="1">
+            <span class="slot-num">2</span>
+            <div class="slot-ico">⚔</div>
+            <div class="slot-info">
+              <div class="slot-name">Bleed Strike</div>
+              <div class="slot-role">Pressure · Melee</div>
+            </div>
+            <span class="cast-tag instant">Instant</span>
+            <button class="slot-clear" title="Rimuovi">×</button>
           </div>
-          <span class="slot-badge instant">Instant</span>
-          <span class="slot-clear">×</span>
-        </div>
-        <div class="slot-item">
-          <div class="slot-icon">⚔</div>
-          <div class="slot-meta">
-            <div class="slot-name">Guard Break</div>
-            <div class="slot-role">Combo Starter · Melee</div>
+
+          <div class="slot-row" data-slot="2">
+            <span class="slot-num">3</span>
+            <div class="slot-ico">⚔</div>
+            <div class="slot-info">
+              <div class="slot-name">Gap Closer</div>
+              <div class="slot-role">Mobility · Melee</div>
+            </div>
+            <span class="cast-tag instant">Instant</span>
+            <button class="slot-clear" title="Rimuovi">×</button>
           </div>
-          <span class="slot-badge instant">Instant</span>
-          <span class="slot-clear">×</span>
         </div>
-        <div class="slot-item">
-          <div class="slot-icon">🏹</div>
-          <div class="slot-meta">
-            <div class="slot-name">Piercing Shot</div>
-            <div class="slot-role">Finisher · Bow</div>
+
+        <!-- BOW group -->
+        <div class="fam-group" data-fam="bow">
+          <div class="fam-hdr">🏹 BOW &nbsp;·&nbsp; 2 SLOT</div>
+
+          <div class="slot-row" data-slot="3">
+            <span class="slot-num">4</span>
+            <div class="slot-ico">🏹</div>
+            <div class="slot-info">
+              <div class="slot-name">Piercing Shot</div>
+              <div class="slot-role">Finisher · Bow</div>
+            </div>
+            <span class="cast-tag instant">Instant</span>
+            <button class="slot-clear" title="Rimuovi">×</button>
           </div>
-          <span class="slot-badge instant">Instant</span>
-          <span class="slot-clear">×</span>
-        </div>
-        <div class="slot-item">
-          <div class="slot-icon">🏹</div>
-          <div class="slot-meta">
-            <div class="slot-name">Disengage Shot</div>
-            <div class="slot-role">Mobility · Bow</div>
+
+          <div class="slot-row empty" data-slot="4">
+            <span class="slot-num">5</span>
+            <div class="slot-ico">🏹</div>
+            <div class="slot-info">
+              <div class="slot-name">— slot vuoto —</div>
+              <div class="slot-role">Bow · scegli dal pool</div>
+            </div>
+            <span class="cast-tag" style="visibility:hidden">·</span>
+            <button class="slot-clear">×</button>
           </div>
-          <span class="slot-badge instant">Instant</span>
-          <span class="slot-clear">×</span>
         </div>
+      </div><!-- /ability wheel -->
+
+      <!-- UTILITY WHEEL ──────────────────────────── -->
+      <div class="wheel-panel">
+        <div class="wheel-hdr">
+          <span class="wheel-title">◈ Utility Wheel</span>
+          <kbd class="wheel-key">HOLD Q</kbd>
+        </div>
+
+        <!-- UTILITY group -->
+        <div class="fam-group" data-fam="utility">
+          <div class="fam-hdr">🛡 UTILITY &nbsp;·&nbsp; 3 SLOT</div>
+
+          <div class="slot-row" data-slot="5">
+            <span class="slot-num">6</span>
+            <div class="slot-ico">🛡</div>
+            <div class="slot-info">
+              <div class="slot-name">Brace Recovery</div>
+              <div class="slot-role">Recovery · Utility</div>
+            </div>
+            <span class="cast-tag instant">Instant</span>
+            <button class="slot-clear" title="Rimuovi">×</button>
+          </div>
+
+          <div class="slot-row" data-slot="6">
+            <span class="slot-num">7</span>
+            <div class="slot-ico">💨</div>
+            <div class="slot-info">
+              <div class="slot-name">Quick Dash</div>
+              <div class="slot-role">Mobility · Utility</div>
+            </div>
+            <span class="cast-tag instant">Instant</span>
+            <button class="slot-clear" title="Rimuovi">×</button>
+          </div>
+
+          <div class="slot-row empty" data-slot="7">
+            <span class="slot-num">8</span>
+            <div class="slot-ico">🛡</div>
+            <div class="slot-info">
+              <div class="slot-name">— slot vuoto —</div>
+              <div class="slot-role">Utility · scegli dal pool</div>
+            </div>
+            <span class="cast-tag" style="visibility:hidden">·</span>
+            <button class="slot-clear">×</button>
+          </div>
+        </div>
+      </div><!-- /utility wheel -->
+
+    </div><!-- /forge-build -->
+
+    <!-- ──────────────────────────────────────────────────────────────
+         CENTER: ABILITY POOL
+    ────────────────────────────────────────────────────────────────── -->
+    <div id="forge-pool">
+
+      <div id="pool-toolbar">
+        <input id="pool-search" type="text" placeholder="Cerca abilità…">
+        <button class="filter-btn on" data-filter="all">ALL</button>
+        <button class="filter-btn" data-filter="smart">SMART</button>
+        <button class="filter-btn" data-filter="starter">STARTER</button>
+        <button class="filter-btn" data-filter="control">CONTROL</button>
+        <button class="filter-btn" data-filter="instant">INSTANT</button>
+        <button class="filter-btn" data-filter="finisher">FINISHER</button>
+        <span class="pool-count">14 ABILITÀ</span>
       </div>
 
-      <div class="wheel-section">
-        <div class="wheel-label">
-          <span>🛡 Utility Wheel</span>
-          <span class="wheel-key">TIENI Q</span>
-        </div>
+      <div id="pool-scroll">
 
-        <div class="slot-item">
-          <div class="slot-icon">🛡</div>
-          <div class="slot-meta">
-            <div class="slot-name">Brace Recovery</div>
-            <div class="slot-role">Recovery · Utility</div>
+        <!-- MELEE section -->
+        <div class="pool-fam-section" data-fam="melee">
+          <div class="pool-fam-hdr">
+            ⚔ MELEE — Richiede Sword
+            <span class="fam-slots-hint">3 slot • Tank</span>
           </div>
-          <span class="slot-badge instant">Instant</span>
-          <span class="slot-clear">×</span>
-        </div>
-        <div class="slot-item">
-          <div class="slot-icon">🛡</div>
-          <div class="slot-meta">
-            <div class="slot-name">Barrier</div>
-            <div class="slot-role">Protection · Utility</div>
-          </div>
-          <span class="slot-badge preview">Preview</span>
-          <span class="slot-clear">×</span>
-        </div>
-        <div class="slot-item">
-          <div class="slot-icon">💨</div>
-          <div class="slot-meta">
-            <div class="slot-name">Quick Dash</div>
-            <div class="slot-role">Mobility · Utility</div>
-          </div>
-          <span class="slot-badge instant">Instant</span>
-          <span class="slot-clear">×</span>
-        </div>
-      </div>
-    </div>
+          <div class="pool-grid">
 
-    <!-- RIGHT: Pool + Detail -->
-    <div id="forge-right">
+            <div class="acard equipped sel" data-id="uppercut">
+              <div class="acard-ico">⚔</div>
+              <div class="acard-body">
+                <div class="acard-name">Uppercut</div>
+                <div class="acard-role">Starter · Melee</div>
+                <div class="acard-cost">40 SP · 185s CD</div>
+                <div class="acard-tags">
+                  <span class="tag starter">Starter</span>
+                  <span class="tag instant">Instant</span>
+                </div>
+              </div>
+              <span class="eq-dot"></span>
+            </div>
 
-      <!-- Pool -->
-      <div id="forge-pool">
-        <div id="pool-filters">
-          <input id="pool-search" type="text" placeholder="🔍 Cerca abilità…">
-          <button class="filter-btn on">SMART</button>
-          <button class="filter-btn">STARTER</button>
-          <button class="filter-btn">CONTROL</button>
-          <button class="filter-btn">FINISHER</button>
-          <button class="filter-btn">INSTANT</button>
-          <button class="filter-btn">PREVIEW</button>
-        </div>
-        <div id="pool-grid">
-          <div class="pool-card active">
-            <div class="pool-icon">⚔</div>
-            <div class="pool-info">
-              <div class="pool-name">Bleed Strike</div>
-              <div class="pool-role">Pressure · Melee</div>
-              <div class="pool-meta">40 SP · 75s CD</div>
-              <div class="pool-badge-row"><span class="pb instant">Instant</span><span class="pb pressure">Pressure</span></div>
+            <div class="acard equipped" data-id="bleed-strike">
+              <div class="acard-ico">⚔</div>
+              <div class="acard-body">
+                <div class="acard-name">Bleed Strike</div>
+                <div class="acard-role">Pressure · Melee</div>
+                <div class="acard-cost">40 SP · 75s CD</div>
+                <div class="acard-tags">
+                  <span class="tag pressure">Pressure</span>
+                  <span class="tag instant">Instant</span>
+                </div>
+              </div>
+              <span class="eq-dot"></span>
             </div>
-          </div>
-          <div class="pool-card">
-            <div class="pool-icon">⚔</div>
-            <div class="pool-info">
-              <div class="pool-name">Gap Closer</div>
-              <div class="pool-role">Mobility · Melee</div>
-              <div class="pool-meta">25 SP · 75s CD</div>
-              <div class="pool-badge-row"><span class="pb instant">Instant</span></div>
-            </div>
-          </div>
-          <div class="pool-card">
-            <div class="pool-icon">⚔</div>
-            <div class="pool-info">
-              <div class="pool-name">Guard Break</div>
-              <div class="pool-role">Combo Starter · Melee</div>
-              <div class="pool-meta">30 SP · 95s CD</div>
-              <div class="pool-badge-row"><span class="pb starter">Starter</span><span class="pb instant">Instant</span></div>
-            </div>
-          </div>
-          <div class="pool-card">
-            <div class="pool-icon">⚔</div>
-            <div class="pool-info">
-              <div class="pool-name">Rending Dash</div>
-              <div class="pool-role">Mobility · Melee</div>
-              <div class="pool-meta">35 SP · 95s CD</div>
-              <div class="pool-badge-row"><span class="pb instant">Instant</span></div>
-            </div>
-          </div>
-          <div class="pool-card">
-            <div class="pool-icon">🏹</div>
-            <div class="pool-info">
-              <div class="pool-name">Piercing Shot</div>
-              <div class="pool-role">Finisher · Bow</div>
-              <div class="pool-meta">30 SP · 75s CD</div>
-              <div class="pool-badge-row"><span class="pb instant">Instant</span></div>
-            </div>
-          </div>
-          <div class="pool-card">
-            <div class="pool-icon">🏹</div>
-            <div class="pool-info">
-              <div class="pool-name">Volley</div>
-              <div class="pool-role">Pressure · Bow</div>
-              <div class="pool-meta">50 SP · 185s CD</div>
-              <div class="pool-badge-row"><span class="pb preview">Preview</span><span class="pb control">Control</span></div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Detail -->
-      <div id="forge-detail">
-        <div class="det-label">▸ SELEZIONATO · slot 1 — ABILITY WHEEL</div>
+            <div class="acard equipped" data-id="gap-closer">
+              <div class="acard-ico">⚔</div>
+              <div class="acard-body">
+                <div class="acard-name">Gap Closer</div>
+                <div class="acard-role">Mobility · Melee</div>
+                <div class="acard-cost">25 SP · 75s CD</div>
+                <div class="acard-tags">
+                  <span class="tag mobility">Mobility</span>
+                  <span class="tag instant">Instant</span>
+                </div>
+              </div>
+              <span class="eq-dot"></span>
+            </div>
+
+            <div class="acard" data-id="guard-break">
+              <div class="acard-ico">⚔</div>
+              <div class="acard-body">
+                <div class="acard-name">Guard Break</div>
+                <div class="acard-role">Starter · Melee</div>
+                <div class="acard-cost">30 SP · 95s CD</div>
+                <div class="acard-tags">
+                  <span class="tag starter">Starter</span>
+                  <span class="tag instant">Instant</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="acard" data-id="whirlwind">
+              <div class="acard-ico">⚔</div>
+              <div class="acard-body">
+                <div class="acard-name">Whirlwind Slash</div>
+                <div class="acard-role">Pressure · Melee</div>
+                <div class="acard-cost">50 SP · 150s CD</div>
+                <div class="acard-tags">
+                  <span class="tag pressure">Pressure</span>
+                  <span class="tag preview">Preview</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="acard" data-id="rending-dash">
+              <div class="acard-ico">⚔</div>
+              <div class="acard-body">
+                <div class="acard-name">Rending Dash</div>
+                <div class="acard-role">Mobility · Melee</div>
+                <div class="acard-cost">35 SP · 95s CD</div>
+                <div class="acard-tags">
+                  <span class="tag mobility">Mobility</span>
+                  <span class="tag instant">Instant</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div><!-- /melee section -->
+
+        <!-- BOW section -->
+        <div class="pool-fam-section" data-fam="bow">
+          <div class="pool-fam-hdr">
+            🏹 BOW — Richiede Bow
+            <span class="fam-slots-hint">2 slot • Tank</span>
+          </div>
+          <div class="pool-grid">
+
+            <div class="acard equipped" data-id="piercing-shot">
+              <div class="acard-ico">🏹</div>
+              <div class="acard-body">
+                <div class="acard-name">Piercing Shot</div>
+                <div class="acard-role">Finisher · Bow</div>
+                <div class="acard-cost">30 SP · 75s CD</div>
+                <div class="acard-tags">
+                  <span class="tag finisher">Finisher</span>
+                  <span class="tag instant">Instant</span>
+                </div>
+              </div>
+              <span class="eq-dot"></span>
+            </div>
+
+            <div class="acard" data-id="volley">
+              <div class="acard-ico">🏹</div>
+              <div class="acard-body">
+                <div class="acard-name">Volley</div>
+                <div class="acard-role">Pressure · Bow</div>
+                <div class="acard-cost">50 SP · 185s CD</div>
+                <div class="acard-tags">
+                  <span class="tag pressure">Pressure</span>
+                  <span class="tag preview">Preview</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="acard" data-id="pin-shot">
+              <div class="acard-ico">🏹</div>
+              <div class="acard-body">
+                <div class="acard-name">Pin Shot</div>
+                <div class="acard-role">Control · Bow</div>
+                <div class="acard-cost">35 SP · 95s CD</div>
+                <div class="acard-tags">
+                  <span class="tag control">Control</span>
+                  <span class="tag instant">Instant</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="acard" data-id="disengage-shot">
+              <div class="acard-ico">🏹</div>
+              <div class="acard-body">
+                <div class="acard-name">Disengage Shot</div>
+                <div class="acard-role">Mobility · Bow</div>
+                <div class="acard-cost">25 SP · 75s CD</div>
+                <div class="acard-tags">
+                  <span class="tag mobility">Mobility</span>
+                  <span class="tag instant">Instant</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div><!-- /bow section -->
+
+        <!-- UTILITY section -->
+        <div class="pool-fam-section" data-fam="utility">
+          <div class="pool-fam-hdr">
+            🛡 UTILITY — Tutte le classi
+            <span class="fam-slots-hint">3 slot • Tank</span>
+          </div>
+          <div class="pool-grid">
+
+            <div class="acard equipped" data-id="brace-recovery">
+              <div class="acard-ico">🛡</div>
+              <div class="acard-body">
+                <div class="acard-name">Brace Recovery</div>
+                <div class="acard-role">Recovery · Utility</div>
+                <div class="acard-cost">Fury → Heal · 130s CD</div>
+                <div class="acard-tags">
+                  <span class="tag survival">Recovery</span>
+                  <span class="tag instant">Instant</span>
+                </div>
+              </div>
+              <span class="eq-dot"></span>
+            </div>
+
+            <div class="acard equipped" data-id="quick-dash">
+              <div class="acard-ico">💨</div>
+              <div class="acard-body">
+                <div class="acard-name">Quick Dash</div>
+                <div class="acard-role">Mobility · Utility</div>
+                <div class="acard-cost">30 SP · 60s CD</div>
+                <div class="acard-tags">
+                  <span class="tag mobility">Mobility</span>
+                  <span class="tag instant">Instant</span>
+                </div>
+              </div>
+              <span class="eq-dot"></span>
+            </div>
+
+            <div class="acard" data-id="barrier">
+              <div class="acard-ico">🛡</div>
+              <div class="acard-body">
+                <div class="acard-name">Barrier</div>
+                <div class="acard-role">Counter · Utility</div>
+                <div class="acard-cost">40 SP · 155s CD</div>
+                <div class="acard-tags">
+                  <span class="tag counter">Counter</span>
+                  <span class="tag preview">Preview</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="acard" data-id="cleanse-surge">
+              <div class="acard-ico">✦</div>
+              <div class="acard-body">
+                <div class="acard-name">Cleanse Surge</div>
+                <div class="acard-role">Counter · Utility</div>
+                <div class="acard-cost">45 SP · 185s CD</div>
+                <div class="acard-tags">
+                  <span class="tag counter">Counter</span>
+                  <span class="tag instant">Instant</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div><!-- /utility section -->
+
+      </div><!-- /pool-scroll -->
+    </div><!-- /forge-pool -->
+
+    <!-- ──────────────────────────────────────────────────────────────
+         RIGHT: DETAIL PANEL
+    ────────────────────────────────────────────────────────────────── -->
+    <div id="forge-detail">
+
+      <div class="det-hdr">
+        <div class="det-slot-lbl">▸ SLOT 1 — ABILITY WHEEL</div>
+        <div class="det-fam-row">
+          <span class="det-fam-badge" style="color:var(--f-melee);border:1px solid rgba(212,130,74,0.28)">⚔ MELEE</span>
+          <span class="det-fam-badge" style="color:var(--gold);border:1px solid rgba(255,210,96,0.22)">STARTER</span>
+        </div>
         <div class="det-name">Uppercut</div>
-        <div class="det-tags">
-          <span class="det-tag starter">Combo Starter</span>
-          <span class="det-tag physical">Physical</span>
-          <span class="det-tag pressure">Pressure</span>
-        </div>
-        <div class="det-cost">40 SP · 185s CD · <span>AIM LOCK</span> · 0.45s windup · 16 AOE DMG · 15 Airborne · 0.8s Knockback</div>
-        <div class="det-cast-toggle">
-          <span class="ck">Cast Mode</span>
-          <span class="cv">Instant</span>
-          <span class="ch">key casts</span>
-        </div>
-        <div class="det-desc">Launches target upward. Applies root for 3.0s. High combo starter value — follow with an airborne cashout for maximum damage.</div>
       </div>
 
-    </div><!-- /forge-right -->
+      <div class="det-cast">
+        <span class="det-cast-lbl">Cast</span>
+        <button class="cast-btn on">
+          <span class="ct">Instant</span>
+          <span class="cs">tasto → lancia</span>
+        </button>
+        <button class="cast-btn">
+          <span class="ct">Preview</span>
+          <span class="cs">tasto → prima · LMB</span>
+        </button>
+      </div>
+
+      <div class="det-stats">
+        <div class="stat-cell">
+          <span class="stat-key">Costo</span>
+          <span class="stat-val v-sp">40 SP</span>
+        </div>
+        <div class="stat-cell">
+          <span class="stat-key">Cooldown</span>
+          <span class="stat-val v-cd">185s</span>
+        </div>
+        <div class="stat-cell">
+          <span class="stat-key">Danno (AOE)</span>
+          <span class="stat-val v-dmg">16 fis.</span>
+        </div>
+        <div class="stat-cell">
+          <span class="stat-key">AOE Radius</span>
+          <span class="stat-val">2.2m</span>
+        </div>
+        <div class="stat-cell">
+          <span class="stat-key">Airborne CC</span>
+          <span class="stat-val v-cc">0.8s</span>
+        </div>
+        <div class="stat-cell">
+          <span class="stat-key">Windup</span>
+          <span class="stat-val">0.45s</span>
+        </div>
+      </div>
+
+      <div class="det-body">
+        <div class="det-tags">
+          <span class="tag starter">COMBO STARTER</span>
+          <span class="tag instant">INSTANT</span>
+          <span class="tag pressure">PHYSICAL</span>
+        </div>
+
+        <div class="det-desc">
+          Colpisce verso l'alto nell'area davanti, mandando in knockup il
+          bersaglio per 0.8s. Infligge 16 danni fisici AOE in un raggio
+          di 2.2m. Ottimo opener — usa immediatamente un FINISHER dopo
+          per attivare il +25% danno bonus.
+        </div>
+
+        <div class="combo-chain">
+          <div class="combo-chain-lbl">Catena combo</div>
+          <div class="combo-chain-flow">
+            QUESTO &nbsp;→&nbsp; [EXTENDER] &nbsp;→&nbsp; FINISHER &nbsp;=&nbsp; +25% DMG
+          </div>
+        </div>
+      </div>
+
+      <button class="det-equip-btn">← EQUIP IN SLOT 1 (MELEE)</button>
+
+    </div><!-- /forge-detail -->
+
   </div><!-- /forge-body -->
 
-  <!-- ── FOOTER ── -->
-  <div id="forge-footer">
-    <button class="btn">← BACK</button>
-    <button class="btn">RESET DEFAULT</button>
+  <!-- ================================================================
+       FOOTER
+  ================================================================ -->
+  <footer id="forge-footer">
+    <button class="btn ghost">← BACK</button>
+    <div class="footer-mid">
+      <div class="footer-status">
+        Slot vuoti: <span class="warn">2 / 8</span>
+      </div>
+      <button class="btn">RESET DEFAULT</button>
+    </div>
     <button class="btn primary">CONFIRM &amp; ENTER MATCH ▶</button>
-  </div>
+  </footer>
 
-</div>
+</div><!-- /forge -->
 
 <script>
-// Tab switching
+/* ================================================================
+   CLASS DATA
+================================================================ */
+const CLASS_DATA = {
+  tank:   { mech:'FURY ⚡⚡⚡⚡◦', hp:250, sp:150, mp:50,  hpPct:100, spPct:100, mpPct:31  },
+  archer: { mech:'MOMENTUM ████░', hp:175, sp:110, mp:80,  hpPct:70,  spPct:73,  mpPct:50  },
+  mage:   { mech:'RISONANZA ◈◈◈◦◦', hp:150, sp:80,  mp:160, hpPct:60,  spPct:53,  mpPct:100 },
+  hybrid: { mech:'FLOW ▌▌▌', hp:200, sp:100, mp:100, hpPct:80,  spPct:67,  mpPct:62  }
+};
+
+/* Class tab switching */
 document.querySelectorAll('.ctab').forEach(t => {
   t.addEventListener('click', () => {
     document.querySelectorAll('.ctab').forEach(x => x.classList.remove('active'));
     t.classList.add('active');
+    const d = CLASS_DATA[t.dataset.c] || CLASS_DATA.tank;
+    document.getElementById('mech-badge').textContent = d.mech;
+    document.getElementById('v-hp').textContent = d.hp;
+    document.getElementById('v-sp').textContent = d.sp;
+    document.getElementById('v-mp').textContent = d.mp;
+    document.querySelectorAll('.vital-row.hp .vfill')[0].style.width = d.hpPct + '%';
+    document.querySelectorAll('.vital-row.sp .vfill')[0].style.width = d.spPct + '%';
+    document.querySelectorAll('.vital-row.mp .vfill')[0].style.width = d.mpPct + '%';
   });
 });
-// Slot clicking
-document.querySelectorAll('.slot-item').forEach(s => {
+
+/* Slot row selection */
+document.querySelectorAll('.slot-row:not(.empty)').forEach(s => {
   s.addEventListener('click', () => {
-    document.querySelectorAll('.slot-item').forEach(x => x.classList.remove('active'));
-    s.classList.add('active');
+    document.querySelectorAll('.slot-row').forEach(x => x.classList.remove('sel'));
+    s.classList.add('sel');
   });
 });
-// Pool card clicking
-document.querySelectorAll('.pool-card').forEach(p => {
-  p.addEventListener('click', () => {
-    document.querySelectorAll('.pool-card').forEach(x => x.classList.remove('active'));
-    p.classList.add('active');
+
+/* Ability card selection */
+document.querySelectorAll('.acard').forEach(c => {
+  c.addEventListener('click', () => {
+    document.querySelectorAll('.acard').forEach(x => x.classList.remove('sel'));
+    c.classList.add('sel');
   });
 });
-// Filter toggles
+
+/* Filter toggles */
 document.querySelectorAll('.filter-btn').forEach(b => {
-  b.addEventListener('click', () => b.classList.toggle('on'));
+  b.addEventListener('click', () => {
+    if (b.dataset.filter === 'all') {
+      document.querySelectorAll('.filter-btn').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+    } else {
+      document.querySelector('[data-filter=all]').classList.remove('on');
+      b.classList.toggle('on');
+      if (!document.querySelector('.filter-btn.on')) {
+        document.querySelector('[data-filter=all]').classList.add('on');
+      }
+    }
+  });
+});
+
+/* Cast mode toggle */
+document.querySelectorAll('.det-cast').forEach(section => {
+  section.querySelectorAll('.cast-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      section.querySelectorAll('.cast-btn').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+    });
+  });
+});
+
+/* Slot clear buttons */
+document.querySelectorAll('.slot-clear').forEach(btn => {
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const row = btn.closest('.slot-row');
+    if (row && !row.classList.contains('empty')) {
+      row.classList.add('empty');
+      row.querySelector('.slot-name').textContent = '— slot vuoto —';
+      row.querySelector('.slot-role').textContent = 'Scegli dal pool';
+      const ct = row.querySelector('.cast-tag');
+      if (ct) ct.style.visibility = 'hidden';
+    }
+  });
 });
 </script>
 </body>

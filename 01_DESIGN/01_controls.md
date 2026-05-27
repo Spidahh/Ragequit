@@ -24,8 +24,8 @@ status: current
 | -------- | -------------------------------------------------------------- |
 | WASD     | Movement (sprint is always on — no Shift)                      |
 | Space    | Jump (tap = short, hold = higher)                              |
-| Q (hold) | Open **Utility Wheel** — sectors follow the chosen class build |
-| E (hold) | Open **Ability Wheel** — sectors follow the chosen class build |
+| Q (hold) | Open **Utility Wheel** — utility/recovery slots from the chosen class build |
+| E (hold) | Open **Weapon Wheel** — melee/bow ability slots from the chosen class build |
 | Tab      | Cycle equipped weapon (rebindable)                             |
 | Escape   | Menu                                                           |
 
@@ -35,9 +35,10 @@ status: current
 - Mouse direction selects the sector; releasing the key primes that action
 - Releasing the wheel key primes the selected action; M1 fires the primed ability (instant → casts immediately; preview → opens placement preview and then M1 confirms)
 - For placement abilities primed via wheel: the preview ground circle appears on the FIRST M1 press after priming; a SECOND M1 press confirms the cast. Releasing Q/E alone does not show the preview — it only primes.
-- Direct hotkeys for the current class-legal slots bypass the wheel prime step.
-  Instant abilities cast immediately on keypress; placement abilities open the
-  preview immediately on keypress, then M1 confirms.
+- Direct hotkeys `1-5` are for magic slots (`magicBase`/`magicAdvanced`) only
+  and bypass the wheel prime step. Instant abilities cast immediately on
+  keypress; placement abilities open the preview immediately on keypress, then
+  M1 confirms.
 - Movement is not blocked while holding Q/E (10% speed reduction while any key is held for readability; does not prevent ability firing)
 - The game does NOT pause while a wheel is open — server clock keeps running. Visual UI dims the world for focus.
 - This is a hard input contract for the current wheel interaction: a wheel is a
@@ -50,23 +51,23 @@ The consolidated keyboard layout is:
 
 | Key | Slot                      |
 | --- | ------------------------- |
-| 1-5 | class-legal ability slots |
+| 1-5 | equipped magic slots |
 | Q   | utility wheel             |
-| E   | ability wheel             |
+| E   | weapon ability wheel      |
 | Tab | weapon swap               |
 
 `Z`, `X`, `F`, `V`, `R` and `G` are not bindable ability/transfer keys.
 
 ### Auto-swap on direct ability use
 
-If the ability belongs to a **different weapon** than the one currently equipped, pressing the direct bind performs two sequential actions:
+If a magic direct bind needs Staff and another weapon is currently equipped, pressing the direct bind performs two sequential actions:
 
 1. Switch weapon to the ability's required weapon
 2. Cast the ability immediately (instant) or open its placement preview (non-instant)
 
 For **instant abilities** the swap and cast happen in the same server tick — imperceptible to the player. For **preview abilities** the swap completes first, then the placement preview opens; M1 confirms.
 
-**Example**: sword equipped. Press `2` for an instant bow ability → bow is equipped and the ability casts in the same frame if all server checks pass. Press `2` for a non-instant bow placement spell → bow equips first, then the preview circle appears; M1 confirms placement.
+**Example**: sword equipped. Press `2` for an instant staff spell → staff is equipped and the ability casts in the same frame if all server checks pass. Press `2` for a non-instant placement spell → staff equips first, then the preview circle appears; M1 confirms placement.
 
 - No swap penalty (no cast delay from the swap itself)
 - No stamina/mana cost from the swap
