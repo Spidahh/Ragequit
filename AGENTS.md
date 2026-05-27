@@ -74,7 +74,7 @@ assunzioni precedenti come autorita.
   `tag-mobility`, `tag-sustain`, `tag-defense`, `tag-cost`.
 - Prima di modificare la Loadout Forge leggere il codice vivo:
   `TARGET_CLASS_DEFS`, `getClassSlotOrder()`, `isAbilityLegalForClass()`,
-  `getAbilitySlotFamily()`, `slotKeybindEntries()` e `rebuildPool()`.
+  `getAbilitySlotFamily()`, `actionLabel()` e `rebuildPool()`.
 - Correzione UX Loadout Forge: non progettare intorno a "scegli uno slot" come
   azione primaria. Il giocatore deve poter modificare tutta la build in una
   vista unica, con lane editabili e pool/alternative per famiglia visibili
@@ -107,6 +107,8 @@ assunzioni precedenti come autorita.
 - Mapping runtime wheel: `E` wheel contiene solo abilita weapon (`melee`/`bow`),
   `Q` wheel contiene solo `utility`, le spell `magicBase`/`magicAdvanced` sono
   sui tasti diretti `1`-`5` calcolati dal loadout corrente.
+- Non reintrodurre mappe slot fisse per le spell: i tasti `1`-`5` devono
+  selezionare la N-esima magia viva nel loadout corrente, non indici hardcoded.
 - Le classi non possono esporre piu di 5 slot magia totali
   (`magicBase` + `magicAdvanced`), perche le magie vive hanno solo tasti
   diretti `1`-`5`. Il Mago usa 3 Magic Base, 2 Magic Advanced, 3 Utility.

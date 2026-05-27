@@ -1587,6 +1587,7 @@ button.locked {
   gap: 4px;
   padding: 3px 7px 6px;
 }
+.slot-list:empty { padding: 0; gap: 0; }
 
 /* ── Family label strip ── */
 #ls-melee:not(:empty)::before        { content: "MELEE";    color: #d4824a; }

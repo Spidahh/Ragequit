@@ -70,7 +70,7 @@ astratte.
   `tag-mobility`/`tag-sustain`/`tag-defense`/`tag-cost` sono rimossi.
 - Regola Loadout Forge: leggere prima `TARGET_CLASS_DEFS`,
   `getClassSlotOrder()`, `isAbilityLegalForClass()`, `getAbilitySlotFamily()`,
-  `slotKeybindEntries()` e `rebuildPool()`. Nessuna arma inventata, nessuna
+  `actionLabel()` e `rebuildPool()`. Nessuna arma inventata, nessuna
   riga classi/armi duplicata, nessuna lane a budget zero per la classe attiva.
 - Correzione UX utente: la Forge non deve basarsi su "seleziona uno slot" come
   flusso principale. Deve permettere di cambiare tutta la build da una vista
@@ -100,6 +100,9 @@ astratte.
 - Mapping runtime wheel 2026-05-27: `E` wheel usa solo `melee`/`bow`, `Q` wheel
   usa solo `utility`, le spell `magicBase`/`magicAdvanced` sono sui tasti
   diretti `1`-`5` derivati dal loadout corrente.
+- Regola input 2026-05-27: non esiste piu una mappa slot fissa per i tasti
+  magia. `1`-`5` puntano alla N-esima magia (`magicBase`/`magicAdvanced`)
+  realmente equipaggiata nel loadout corrente.
 - Regola slot magia 2026-05-27: nessuna classe puo avere piu di 5 slot magia
   totali (`magicBase` + `magicAdvanced`), perche solo `1`-`5` sono input vivi.
   Il Mago e 3 Magic Base, 2 Magic Advanced, 3 Utility.

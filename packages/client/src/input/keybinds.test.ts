@@ -5,7 +5,6 @@ import {
   actionLabel,
   resetKeybinds,
   setKeybind,
-  slotKeybindEntries,
 } from './keybinds.js'
 
 describe('keybind settings', () => {
@@ -23,9 +22,10 @@ describe('keybind settings', () => {
     expect(actionLabel('wheelUtility')).toBe('E')
   })
 
-  it('feeds the loadout slot map from remappable bindings', () => {
+  it('feeds spell labels from remappable bindings', () => {
     setKeybind('spell1', 'KeyY')
 
-    expect(slotKeybindEntries().find(([, , slotIdx]) => slotIdx === 2)).toEqual(['KeyY', 'Y', 2])
+    expect(actionCode('spell1')).toBe('KeyY')
+    expect(actionLabel('spell1')).toBe('Y')
   })
 })

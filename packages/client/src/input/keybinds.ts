@@ -114,24 +114,6 @@ export function codeToLabel(code: string): string {
   return labels[code] ?? code.replace(/Left|Right/, '')
 }
 
-export function slotKeybindEntries(): ReadonlyArray<
-  readonly [code: string, label: string, slotIdx: number]
-> {
-  return [
-    ['', '', 0],
-    ['', '', 1],
-    [actionCode('spell1'), actionLabel('spell1'), 2],
-    [actionCode('spell2'), actionLabel('spell2'), 3],
-    [actionCode('spell3'), actionLabel('spell3'), 4],
-    [actionCode('spell4'), actionLabel('spell4'), 5],
-    [actionCode('spell5'), actionLabel('spell5'), 6],
-    ['', '', 7],
-    ['', '', 8],
-    ['', '', 9],
-    ['', '', 10],
-  ]
-}
-
 export function initKeybindSettings(root: Document | HTMLElement = document): void {
   const buttons = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-keybind-action]'))
   const reset = root.querySelector<HTMLButtonElement>('#settings-keybind-reset')

@@ -37,7 +37,7 @@ Every starter build includes exactly one class Recovery:
 
 Wheel behavior is fixed:
 
-- Hold `E` for the ability wheel, select, release to prime, `LMB` to fire or confirm.
+- Hold `E` for the weapon ability wheel, select, release to prime, `LMB` to fire or confirm.
 - Hold `Q` for the utility wheel, select, release to prime, `LMB` to fire or confirm.
 - Number keys `1-5` cast equipped magic slots. No class may expose more than five
   `magicBase` + `magicAdvanced` slots.
