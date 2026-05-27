@@ -3236,3 +3236,97 @@ button.locked {
 .mode-tile--mini {
   min-height: clamp(64px, 6vh, 100px);
 }
+
+/* ================================================================
+   PROFILE BAR — scala con il viewport (era fisso 52px su 2560px)
+   ================================================================ */
+
+/* Altezza barra */
+#menu-loadout-preview {
+  min-height: clamp(52px, 6.5vh, 96px);
+}
+
+/* Avatar */
+.profile-card-floating .pc-avatar {
+  width: clamp(34px, 3.2vh, 54px);
+  height: clamp(34px, 3.2vh, 54px);
+  font: 900 clamp(14px, 1.4vh, 22px)/1 var(--font-hud);
+}
+
+/* Nome input */
+.pc-name-input {
+  width: clamp(110px, 9vw, 180px);
+  height: clamp(26px, 2.8vh, 42px);
+  font: 900 clamp(10px, 1.1vh, 16px)/1 var(--font-hud);
+}
+
+.pc-name-sub {
+  font: 800 clamp(7px, 0.65vh, 11px)/1 var(--font-mono);
+}
+
+/* Box statistiche ELO/W/L */
+.profile-card-floating .pc-stat-box {
+  min-width: clamp(42px, 3.8vw, 70px);
+  padding: clamp(4px, 0.6vh, 9px) clamp(7px, 0.7vw, 13px);
+}
+
+.pc-stat-lbl {
+  font: 800 clamp(7px, 0.65vh, 11px)/1 var(--font-mono);
+}
+
+.pc-stat-val {
+  font: 900 clamp(14px, 1.5vh, 24px)/1 var(--font-hud);
+}
+
+/* Rank */
+.profile-card-floating .rank-icon {
+  font-size: clamp(16px, 1.6vh, 26px);
+}
+
+.profile-card-floating .rank-name {
+  font: 900 clamp(12px, 1.2vh, 20px)/1 var(--font-hud);
+}
+
+.profile-card-floating .rank-next-label {
+  font: 800 clamp(7px, 0.65vh, 11px)/1 var(--font-mono);
+}
+
+.profile-card-floating .rank-progress-track {
+  width: clamp(48px, 4.5vw, 90px);
+  height: clamp(3px, 0.35vh, 5px);
+}
+
+/* Auth input e bottoni */
+.profile-card-floating .auth-input {
+  height: clamp(26px, 2.8vh, 42px) !important;
+  width: clamp(80px, 7vw, 140px) !important;
+  font: 800 clamp(9px, 0.9vh, 14px)/1 var(--font-mono);
+}
+
+.profile-card-floating .auth-btn {
+  height: clamp(26px, 2.8vh, 42px);
+  font: 900 clamp(8px, 0.8vh, 13px)/1 var(--font-hud);
+  padding: 0 clamp(6px, 0.7vw, 13px);
+}
+
+.profile-card-floating .btn-google-oauth {
+  height: clamp(26px, 2.8vh, 42px);
+  font: 900 clamp(8px, 0.8vh, 13px)/1 var(--font-hud);
+  padding: 0 clamp(6px, 0.7vw, 13px);
+}
+
+.profile-card-floating .btn-google-oauth svg {
+  width: clamp(11px, 1.1vh, 18px);
+  height: clamp(11px, 1.1vh, 18px);
+}
+
+/* Loadout status */
+.profile-card-floating .pc-loadout-status {
+  font: 900 clamp(8px, 0.8vh, 13px)/1 var(--font-hud);
+  padding: clamp(3px, 0.4vh, 7px) clamp(6px, 0.7vw, 12px);
+}
+
+/* Separatori verticali */
+.profile-card-floating > .pc-sep {
+  height: clamp(28px, 2.8vh, 48px);
+}
