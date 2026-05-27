@@ -8,17 +8,11 @@ export type KeybindAction =
   | 'wheelUtility'
   | 'wheelAbility'
   | 'openLoadout'
-  | 'meleeAbility'
-  | 'bowAbility'
   | 'spell1'
   | 'spell2'
   | 'spell3'
   | 'spell4'
   | 'spell5'
-  | 'utilityQuick1'
-  | 'utilityQuick2'
-  | 'utilityQuick3'
-  | 'utilityAbility'
   | 'sensDown'
   | 'sensUp'
 
@@ -41,17 +35,11 @@ export const DEFAULT_KEYBINDS: Record<KeybindAction, KeybindDef> = {
   wheelUtility: { action: 'wheelUtility', label: 'Utility wheel', code: 'KeyQ' },
   wheelAbility: { action: 'wheelAbility', label: 'Ability wheel', code: 'KeyE' },
   openLoadout: { action: 'openLoadout', label: 'Loadout', code: 'KeyL' },
-  meleeAbility: { action: 'meleeAbility', label: 'Melee ability', code: '' },
-  bowAbility: { action: 'bowAbility', label: 'Bow ability', code: '' },
   spell1: { action: 'spell1', label: 'Spell 1', code: 'Digit1' },
   spell2: { action: 'spell2', label: 'Spell 2', code: 'Digit2' },
   spell3: { action: 'spell3', label: 'Spell 3', code: 'Digit3' },
   spell4: { action: 'spell4', label: 'Spell 4', code: 'Digit4' },
   spell5: { action: 'spell5', label: 'Spell 5', code: 'Digit5' },
-  utilityQuick1: { action: 'utilityQuick1', label: 'Utility quick 1', code: '' },
-  utilityQuick2: { action: 'utilityQuick2', label: 'Utility quick 2', code: '' },
-  utilityQuick3: { action: 'utilityQuick3', label: 'Utility quick 3', code: '' },
-  utilityAbility: { action: 'utilityAbility', label: 'Utility quick 4', code: '' },
   sensDown: { action: 'sensDown', label: 'Sensitivity down', code: 'BracketLeft' },
   sensUp: { action: 'sensUp', label: 'Sensitivity up', code: 'BracketRight' },
 }
@@ -130,17 +118,17 @@ export function slotKeybindEntries(): ReadonlyArray<
   readonly [code: string, label: string, slotIdx: number]
 > {
   return [
-    [actionCode('meleeAbility'), actionCode('meleeAbility') ? actionLabel('meleeAbility') : '', 0],
-    [actionCode('bowAbility'), actionCode('bowAbility') ? actionLabel('bowAbility') : '', 1],
+    ['', '', 0],
+    ['', '', 1],
     [actionCode('spell1'), actionLabel('spell1'), 2],
     [actionCode('spell2'), actionLabel('spell2'), 3],
     [actionCode('spell3'), actionLabel('spell3'), 4],
     [actionCode('spell4'), actionLabel('spell4'), 5],
     [actionCode('spell5'), actionLabel('spell5'), 6],
-    [actionCode('utilityQuick1'), actionCode('utilityQuick1') ? actionLabel('utilityQuick1') : '', 7],
-    [actionCode('utilityQuick2'), actionCode('utilityQuick2') ? actionLabel('utilityQuick2') : '', 8],
-    [actionCode('utilityQuick3'), actionCode('utilityQuick3') ? actionLabel('utilityQuick3') : '', 9],
-    [actionCode('utilityAbility'), actionCode('utilityAbility') ? actionLabel('utilityAbility') : '', 10],
+    ['', '', 7],
+    ['', '', 8],
+    ['', '', 9],
+    ['', '', 10],
   ]
 }
 

@@ -31,82 +31,61 @@ const STORAGE_KEY = 'ragequit.loadout.v6'
 const INSTANT_CAST_STORAGE_KEY = 'ragequit.instantCast.v2'
 const CLASS_STORAGE_KEY = 'ragequit.loadout.classId'
 
-// Class-specific mechanic descriptions shown in the vitals console.
-const CLASS_MECHANIC_DESC: Record<ClassId, string> = {
-  tank: 'FURY — Ogni colpo subito senza parare accumula Fury. A 100 Fury scatta uno scudo automatico e il prossimo attacco Melee ignora il 30% di riduzione danni.',
-  archer:
-    'MOMENTUM — Ogni tiro in movimento senza fermarsi aumenta il Momentum. A 5 stack il prossimo attacco ottiene +40% velocità freccia e ignora lo scudo nemico.',
-  mage: 'RISONANZA — Incantesimi dello stesso elemento cast in sequenza aumentano la Risonanza. A 3 stack il prossimo cast è potenziato: +25% danno e costo mana dimezzato.',
-  hybrid:
-    'FLOW — Ogni abilità cast da una famiglia diversa dalla precedente aumenta il Flow. A 4 stack le prossime 2 abilità ignoreranno il GCD globale.',
-}
 
-// Starter preset builds per class — full 11-slot class-aware builds.
+
+// Starter preset builds per class — full 8-slot class-aware builds.
 // Slot positions are packed by family regardless of wire-field name; the server
-// validates by family budget (not position), so melee abilities may sit in
-// "magic" wire positions etc. See 01_DESIGN/06_loadout_build.md for rationale.
+// validates by family budget (not position). See 01_DESIGN/06_loadout_build.md for rationale.
 // Each starter includes the class Recovery utility.
 const CLASS_STARTER_PRESETS: Record<ClassId, string[]> = {
-  // Tank: 3 melee + 2 bow + 6 utility = 11
+  // Tank: 3 melee + 2 bow + 3 utility = 8
   tank: [
     'uppercut', // slot 0 — melee (Uppercut: knockup setup)
-    'piercing_shot', // slot 1 — bow   (Piercing Shot: physical cashout)
-    'gap_closer', // slot 2 — melee (Gap Closer: engage dash)
-    'guard_break', // slot 3 — melee (Guard Break: short-range setup)
-    'disengage_shot', // slot 4 — bow   (Disengage Shot: spacing tool)
-    'brace_recovery', // slot 5 — utility (Recovery — always first in build)
+    'gap_closer', // slot 1 — melee (Gap Closer: engage dash)
+    'guard_break', // slot 2 — melee (Guard Break: short-range setup)
+    'piercing_shot', // slot 3 — bow (Piercing Shot: physical cashout)
+    'disengage_shot', // slot 4 — bow (Disengage Shot: spacing tool)
+    'brace_recovery', // slot 5 — utility (Recovery)
     'barrier', // slot 6 — utility
-    'cleanse_surge', // slot 7 — utility
-    'quick_dash', // slot 8 — utility
-    'energize', // slot 9 — utility (Stamina economy)
-    'smoke_screen', // slot 10 — utility
+    'quick_dash', // slot 7 — utility
   ],
-  // Arciere: 3 bow + 4 magicBase + 4 utility = 11
+  // Arciere: 3 bow + 3 magicBase + 2 utility = 8
   archer: [
-    'dark_barrier', // slot 0 — magicBase (protection without stopping ranged play)
-    'pin_shot', // slot 1 — bow   (ranged setup)
-    'marksman_shot', // slot 2 — bow   (precision cashout)
-    'disengage_shot', // slot 3 — bow   (spacing response)
-    'frost_bolt', // slot 4 — magicBase (control projectile)
-    'fireball', // slot 5 — magicBase (splash projectile)
-    'lightning_dash', // slot 6 — magicBase (magic movement)
-    'hunters_flow', // slot 7 — utility (Recovery + Momentum spend)
-    'quick_dash', // slot 8 — utility
-    'cleanse_surge', // slot 9 — utility
-    'smoke_screen', // slot 10 — utility
+    'pin_shot', // slot 0 — bow (ranged setup)
+    'marksman_shot', // slot 1 — bow (precision cashout)
+    'disengage_shot', // slot 2 — bow (spacing response)
+    'frost_bolt', // slot 3 — magicBase (control projectile)
+    'fireball', // slot 4 — magicBase (splash projectile)
+    'lightning_dash', // slot 5 — magicBase (magic movement)
+    'hunters_flow', // slot 6 — utility (Recovery)
+    'quick_dash', // slot 7 — utility
   ],
-  // Mago: 4 magicBase + 4 magicAdvanced + 3 utility = 11
+  // Mago: 3 magicBase + 3 magicAdvanced + 2 utility = 8
   mage: [
     'fireball', // slot 0 — magicBase (Fire projectile pressure)
-    'ignite', // slot 1 — magicBase (Fast Fire follow-up for Risonanza)
-    'frost_bolt', // slot 2 — magicBase (Ice pressure)
-    'dark_barrier', // slot 3 — magicBase (Magic protection)
-    'eruption', // slot 4 — magicAdvanced (launch setup)
-    'meteor', // slot 5 — magicAdvanced (high-commit Fire cashout)
-    'frost_pillar', // slot 6 — magicAdvanced (windup launch path)
-    'blizzard', // slot 7 — magicAdvanced (large control field)
-    'arcane_rebind', // slot 8 — utility (Recovery — Mana/Risonanza survival)
-    'phase_shift', // slot 9 — utility (timed survival counter)
-    'cleanse_surge', // slot 10 — utility
+    'frost_bolt', // slot 1 — magicBase (Ice pressure)
+    'dark_barrier', // slot 2 — magicBase (Magic protection)
+    'eruption', // slot 3 — magicAdvanced (launch setup)
+    'meteor', // slot 4 — magicAdvanced (high-commit Fire cashout)
+    'frost_pillar', // slot 5 — magicAdvanced (windup launch path)
+    'arcane_rebind', // slot 6 — utility (Recovery)
+    'phase_shift', // slot 7 — utility (timed survival counter)
   ],
-  // Ibrido: 1 melee + 1 bow + 2 magicBase + 2 magicAdvanced + 5 utility = 11
+  // Ibrido: 1 melee + 1 bow + 2 magicBase + 2 magicAdvanced + 2 utility = 8
   hybrid: [
     'uppercut', // slot 0 — melee (sword setup)
-    'marksman_shot', // slot 1 — bow   (bow cashout)
+    'marksman_shot', // slot 1 — bow (bow cashout)
     'fireball', // slot 2 — magicBase (staff projectile pressure)
-    'lightning_dash', // slot 3 — magicBase (staff movement + weapon-swap reward)
+    'lightning_dash', // slot 3 — magicBase (staff movement)
     'arc_lift', // slot 4 — magicAdvanced (spell launch path)
     'meteor', // slot 5 — magicAdvanced (advanced cashout)
-    'adaptive_mend', // slot 6 — utility (Recovery — Flow-spend)
+    'adaptive_mend', // slot 6 — utility (Recovery)
     'quick_dash', // slot 7 — utility
-    'cleanse_surge', // slot 8 — utility
-    'barrier', // slot 9 — utility
-    'smoke_screen', // slot 10 — utility
   ],
 }
 
 // Default build used when no class is selected or no saved build exists.
-// Matches the Ibrido (hybrid) starter from 01_DESIGN/06_loadout_build.md.
+// Matches the Ibrido (hybrid) starter.
 // Server DEFAULT_LOADOUT in GameRoom.ts must stay in sync with this.
 const DEFAULT_SLOTS: string[] = [
   'uppercut', // melee
@@ -117,9 +96,6 @@ const DEFAULT_SLOTS: string[] = [
   'meteor', // magicAdvanced
   'adaptive_mend', // utility (Ibrido Recovery)
   'quick_dash', // utility
-  'cleanse_surge', // utility
-  'barrier', // utility
-  'smoke_screen', // utility
 ]
 
 export interface LoadoutStationApi {
@@ -155,10 +131,10 @@ export function initLoadoutStation(
   const searchInput = document.getElementById('ls-search') as HTMLInputElement | null
   const filterBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-filter]'))
 
+  const detailsIcon = document.getElementById('ls-detail-icon-frame')
   const detailsName = document.getElementById('ls-detail-name')
   const detailsMeta = document.getElementById('ls-detail-meta')
   const detailsDesc = document.getElementById('ls-detail-desc')
-  const buildCoach = document.getElementById('ls-build-coach')
   const detailsMalus = document.getElementById('ls-detail-malus')
   const detailsInstant = document.getElementById('ls-detail-instant') as HTMLButtonElement | null
   const poolTitle = document.getElementById('ls-pool-title')
@@ -171,8 +147,6 @@ export function initLoadoutStation(
   const classTabs = Array.from(document.querySelectorAll<HTMLButtonElement>('.class-select-card'))
   // Class vitals DOM refs
   const vitalsClassName = document.getElementById('ls-vitals-class-name')
-  const vitalsMechanicName = document.getElementById('ls-mechanic-name')
-  const vitalsMechanicDesc = document.getElementById('ls-mechanic-desc')
   const vitalsValHp = document.getElementById('ls-val-hp')
   const vitalsValMana = document.getElementById('ls-val-mana')
   const vitalsValStam = document.getElementById('ls-val-stam')
@@ -211,7 +185,7 @@ export function initLoadoutStation(
       const raw = localStorage.getItem(STORAGE_KEY)
       if (!raw) return DEFAULT_SLOTS.slice()
       const parsed = JSON.parse(raw) as { slots?: string[] }
-      if (Array.isArray(parsed.slots) && parsed.slots.length === 11)
+      if (Array.isArray(parsed.slots) && parsed.slots.length >= 6)
         return normalizeLoadoutSlots(parsed.slots)
     } catch {
       // Fall through to defaults.
@@ -381,16 +355,19 @@ export function initLoadoutStation(
     const def = ABILITY_DEFS[slots[activeIdx] ?? '']
     if (!detailsName || !detailsMeta || !detailsDesc || !detailsMalus) return
     if (!def) {
+      if (detailsIcon) detailsIcon.innerHTML = '🔮'
       detailsName.textContent = 'Select an ability'
       detailsMeta.textContent = `${slotPoolTitle(currentSlotOrder()[activeIdx] ?? 'utility', activeIdx).toUpperCase()} SLOT`
       detailsDesc.replaceChildren()
       const empty = document.createElement('p')
       empty.textContent = 'Pick a compatible ability from the pool below.'
       detailsDesc.appendChild(empty)
-      rebuildBuildCoach()
       detailsMalus.textContent = ''
       if (detailsInstant) detailsInstant.hidden = true
       return
+    }
+    if (detailsIcon) {
+      detailsIcon.innerHTML = abilityIconMarkup(def.id)
     }
     if (detailsInstant) {
       const instant = isInstantCast(def)
@@ -423,49 +400,7 @@ export function initLoadoutStation(
       quickStatBlock(quickStats),
       textBlock(def.description),
     )
-    rebuildBuildCoach()
     detailsMalus.textContent = def.miniMalus
-  }
-
-  function rebuildBuildCoach(): void {
-    if (!buildCoach) return
-    const report = analyzeBuild(slots, activeClassId)
-    buildCoach.replaceChildren()
-
-    const head = document.createElement('div')
-    head.className = 'coach-head'
-    const title = document.createElement('div')
-    title.className = 'coach-title'
-    title.textContent = 'Build Coach'
-    const rating = document.createElement('div')
-    rating.className = 'coach-rating'
-    rating.textContent = `${report.score}/6`
-    head.append(title, rating)
-
-    const grid = document.createElement('div')
-    grid.className = 'coach-grid'
-    for (const item of report.pills) {
-      const pill = document.createElement('div')
-      pill.className = `coach-pill ${item.ok ? 'good' : 'warn'}`
-      const label = document.createElement('span')
-      label.textContent = item.label
-      const value = document.createElement('b')
-      value.textContent = item.value
-      pill.append(label, value)
-      grid.appendChild(pill)
-    }
-
-    const lines = document.createElement('div')
-    lines.className = 'coach-lines'
-    for (const item of report.lines) {
-      const line = document.createElement('div')
-      line.className = `coach-line ${item.kind}`
-      line.textContent = item.text
-      lines.appendChild(line)
-    }
-
-    buildCoach.append(head, grid, lines)
-    rebuildFlowStrip(report)
   }
 
   filterBtns.forEach((btn) => {
@@ -624,11 +559,17 @@ export function initLoadoutStation(
     const classDef = TARGET_CLASS_DEFS[activeClassId]
     const { hp, mana, stamina } = classDef.resourceMaxima
     if (vitalsClassName) vitalsClassName.textContent = classDef.label.toUpperCase()
-    if (vitalsMechanicName) vitalsMechanicName.textContent = classDef.mechanicId.toUpperCase()
-    if (vitalsMechanicDesc) vitalsMechanicDesc.textContent = CLASS_MECHANIC_DESC[activeClassId]
     if (vitalsValHp) vitalsValHp.textContent = String(hp)
     if (vitalsValMana) vitalsValMana.textContent = String(mana)
     if (vitalsValStam) vitalsValStam.textContent = String(stamina)
+
+    // Dynamic Resource Bar widths
+    const barHp = document.getElementById('ls-bar-hp')
+    const barMana = document.getElementById('ls-bar-mana')
+    const barStam = document.getElementById('ls-bar-stam')
+    if (barHp) barHp.style.width = `${(hp / 250) * 100}%`
+    if (barMana) barMana.style.width = `${(mana / 160) * 100}%`
+    if (barStam) barStam.style.width = `${(stamina / 150) * 100}%`
 
     // Dynamic Allowed Weapons highlights
     const weaponIcons = document.querySelectorAll('#ls-vitals-weapons .vitals-weapon-icon')
@@ -808,124 +749,7 @@ interface AbilityQuickStat {
   className: string
 }
 
-interface BuildCoachReport {
-  score: number
-  pills: Array<{ label: string; value: string; ok: boolean }>
-  lines: Array<{ text: string; kind: 'good' | 'warn' }>
-}
 
-function analyzeBuild(slotIds: readonly string[], classId: ClassId): BuildCoachReport {
-  const defs = slotIds
-    .map((id) => ABILITY_DEFS[id])
-    .filter((def): def is AbilityDef => Boolean(def))
-  const roleCount = (role: AbilityDef['comboRole']): number =>
-    defs.filter((def) => def.comboRole === role).length
-  const starters = roleCount('starter')
-  const extenders = roleCount('extender')
-  const finishers = roleCount('finisher') + roleCount('ray')
-  const survival = roleCount('survival') + roleCount('counter') + roleCount('mobility')
-  const controls = defs.filter((def) => abilityHasControl(def)).length
-  const pointPreviews = defs.filter((def) => def.targeting === 'point').length
-  const instantHits = defs.filter(
-    (def) => def.targeting === 'forward' || def.comboRole === 'ray',
-  ).length
-  const hasAirPunish = defs.some((def) => def.comboRole === 'finisher')
-
-  // Recovery is the core sustain check for each class.
-  const recoveryId = TARGET_CLASS_DEFS[classId].recoveryId
-  const hasRecovery = slotIds.includes(recoveryId)
-
-  let score = 0
-  if (starters > 0) score++
-  if (extenders > 0 || controls >= 2) score++
-  if (finishers > 0) score++
-  if (survival > 0) score++
-  if (hasRecovery) score++
-  if (pointPreviews > 0 && instantHits > 0) score++
-
-  const lines: BuildCoachReport['lines'] = []
-  if (starters === 0)
-    lines.push({
-      kind: 'warn',
-      text: 'Missing opener: add a launch, root, freeze, stun, or blind to start real combos.',
-    })
-  else
-    lines.push({
-      kind: 'good',
-      text: 'Opener online: use the wheel to prime a setup, then confirm with LMB.',
-    })
-  if (finishers === 0)
-    lines.push({
-      kind: 'warn',
-      text: 'Missing finisher: add an air punish, instant ray, or precision shot to cash out CC.',
-    })
-  else
-    lines.push({
-      kind: 'good',
-      text: hasAirPunish
-        ? 'Air punish available: launch into finisher for the damage bonus.'
-        : 'Direct punish available: ray/projectile can cash out roots and freezes.',
-    })
-  if (pointPreviews > 0 && instantHits === 0)
-    lines.push({
-      kind: 'warn',
-      text: 'You have placed previews but few instant hits; add a ray or fast shot for follow-up speed.',
-    })
-  if (!hasRecovery)
-    lines.push({
-      kind: 'warn',
-      text: `Add your class Recovery (${recoveryId.replace(/_/g, ' ')}) to sustain in fights.`,
-    })
-  else
-    lines.push({
-      kind: 'good',
-      text: 'Recovery slotted: your class sustain is covered.',
-    })
-  if (survival === 0)
-    lines.push({
-      kind: 'warn',
-      text: 'No reset tool: consider shield, cleanse, dash, phase, or heal in the utility slot.',
-    })
-
-  return {
-    score,
-    pills: [
-      { label: 'Opener', value: starters > 0 ? String(starters) : 'MISS', ok: starters > 0 },
-      { label: 'Control', value: controls > 0 ? String(controls) : 'LOW', ok: controls > 0 },
-      { label: 'Cashout', value: finishers > 0 ? String(finishers) : 'MISS', ok: finishers > 0 },
-      { label: 'Reset', value: survival > 0 ? String(survival) : 'MISS', ok: survival > 0 },
-      {
-        label: 'Preview',
-        value: pointPreviews > 0 ? String(pointPreviews) : 'NONE',
-        ok: pointPreviews > 0,
-      },
-      {
-        label: 'Recovery',
-        value: hasRecovery ? 'YES' : 'MISS',
-        ok: hasRecovery,
-      },
-    ],
-    lines: lines.slice(0, 5),
-  }
-}
-
-function rebuildFlowStrip(report: BuildCoachReport): void {
-  const state = new Map(report.pills.map((pill) => [pill.label.toLowerCase(), pill.ok]))
-  for (const step of flowStepsGlobal()) {
-    const key = step.dataset['flow'] ?? ''
-    const lookup = key === 'cashout' ? 'cashout' : key
-    const ok = state.get(lookup) ?? false
-    step.classList.toggle('online', ok)
-    step.classList.toggle('missing', !ok)
-    step.title = ok
-      ? `${step.textContent ?? lookup} ready`
-      : `${step.textContent ?? lookup} missing`
-  }
-}
-
-function flowStepsGlobal(): HTMLElement[] {
-  return Array.from(document.querySelectorAll<HTMLElement>('#ls-flow-strip [data-flow]'))
-}
 
 function abilityHasControl(def: AbilityDef): boolean {
   if (['starter', 'extender', 'counter'].includes(def.comboRole)) return true
@@ -1145,7 +969,7 @@ function abilityRole(def: AbilityDef): AbilityRoleInfo {
   if (hasHardCc && (hasPersistentZone || hasAreaHit))
     return { icon: '⌖', title: 'Area Control', line: 'Controls space with AoE and status effects.' }
   if (hasHardCc)
-    return { icon: '↑', title: 'Combo Starter', line: 'Applies a disabling or airborne status.' }
+    return { icon: '↑', title: 'Combo Starter', line: 'Applies launch or control pressure.' }
   if (hasPersistentZone)
     return {
       icon: '□',

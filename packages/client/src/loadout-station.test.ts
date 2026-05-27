@@ -40,7 +40,7 @@ describe('loadout station smoke', () => {
     mountLoadoutDom()
   })
 
-  it('keeps the expected 11-slot keyboard layout', () => {
+  it('keeps the expected 8-slot keyboard layout', () => {
     expect(__loadoutStationSmoke.slotOrder).toEqual([
       'melee',
       'bow',
@@ -48,13 +48,10 @@ describe('loadout station smoke', () => {
       'magic',
       'magic',
       'magic',
-      'magic',
-      'utility',
-      'utility',
       'utility',
       'utility',
     ])
-    expect(__loadoutStationSmoke.defaultSlots).toHaveLength(11)
+    expect(__loadoutStationSmoke.defaultSlots).toHaveLength(8)
   })
 
   it('sends a loadout message including classId and instantCast', () => {
@@ -78,13 +75,10 @@ describe('loadout station smoke', () => {
     expect(msg['utility']).toEqual([
       'adaptive_mend',
       'quick_dash',
-      'cleanse_surge',
-      'barrier',
-      'smoke_screen',
     ])
     // Wire payload stays class-aware; there is no generic magic bucket.
     expect(msg['magic']).toBeUndefined()
-    expect(api.getLoadout()).toHaveLength(11)
+    expect(api.getLoadout()).toHaveLength(8)
   })
 
   it('resets an incompatible saved build before sending the active class loadout', () => {
@@ -101,9 +95,6 @@ describe('loadout station smoke', () => {
           'arc_lift',
           'meteor',
           'adaptive_mend',
-          'quick_dash',
-          'cleanse_surge',
-          'barrier',
         ],
       }),
     )
@@ -121,9 +112,6 @@ describe('loadout station smoke', () => {
     expect(msg['utility']).toEqual([
       'adaptive_mend',
       'quick_dash',
-      'cleanse_surge',
-      'barrier',
-      'smoke_screen',
     ])
     expect(api.getLoadout()).not.toContain('chain_bolt')
   })

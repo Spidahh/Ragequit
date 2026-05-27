@@ -30,11 +30,11 @@ ragequit/                         # repo root (== github.com/Spidahh/Ragequit)
 │   │   ├── index.html            # Vite HTML entrypoint
 │   │   ├── src/
 │   │   │   ├── main.ts           # bootstrap/orchestration entrypoint
-│   │   │   ├── net/              # loadout sync and future room protocol helpers
+│   │   │   ├── net/              # loadout sync and room protocol helpers
 │   │   │   ├── render/           # Three.js scene, characters, camera and viewmodels
 │   │   │   ├── input/            # loadout slots, keybind helpers, cast and wheel logic
 │   │   │   ├── vfx/              # particles, impacts and trails
-│   │   │   ├── hud/              # cooldown, status, mastery and combat HUD modules
+│   │   │   ├── hud/              # cooldown, status and combat HUD modules
 │   │   │   ├── audio/            # WebAudio/SFX helpers
 │   │   │   ├── world/            # runtime arena and map rendering helpers
 │   │   │   └── types/            # client-facing type helpers
@@ -42,13 +42,13 @@ ragequit/                         # repo root (== github.com/Spidahh/Ragequit)
 │   └── server/                   # Node.js server code
 │       ├── src/
 │       │   ├── main.ts           # entrypoint — boots Colyseus + Fly health endpoint
-│       │   ├── rooms/            # GameRoom; per-mode rooms are future work
+│       │   ├── rooms/            # GameRoom
 │       │   ├── sim/              # authoritative systems — input, movement, hits, etc.
 │       │   └── matchmaking/      # target home for queue, ELO, team balance
 │       └── package.json
 ├── tools/
 │   ├── content-validator/        # current ability/content checks
-│   └── asset-pipeline/           # audits plus future offline asset processing
+│   └── asset-pipeline/           # audits and offline asset processing
 ├── package.json                  # monorepo root, pnpm workspaces
 ├── pnpm-workspace.yaml
 ├── tsconfig.base.json            # extended by every package
@@ -59,7 +59,7 @@ ragequit/                         # repo root (== github.com/Spidahh/Ragequit)
 ├── .nvmrc                        # node lts
 ├── LICENSE                       # MIT
 ├── README.md                     # top-level project intro
-└── ROADMAP.md                    # phased plan
+└── ROADMAP.md                    # current project state
 ```
 
 ## TypeScript conventions
@@ -87,8 +87,7 @@ Circular imports within a package are also forbidden (ESLint `import/no-cycle`).
 
 - `packages/shared/src/constants/stats.ts` — HP 200, Mana 100, Stamina 100, regen rates, speeds
 - `packages/shared/src/constants/combat.ts` — TTK window, GCD, parry windows
-- `packages/shared/src/constants/transmute.ts` — transfer ratios and cooldowns
-- `packages/shared/src/abilities/registry.ts` — the current 52 ability definitions
+- `packages/shared/src/abilities/registry.ts` — the current 53 ability definitions
 
 **Every magic number in code must come from a constants module or an AbilityDefinition**. A grep CI check rejects PRs that introduce literals like `200` or `0.3` in sim code without referencing a constants export.
 
@@ -103,7 +102,7 @@ Circular imports within a package are also forbidden (ESLint `import/no-cycle`).
 
 ### Determinism tests
 
-A dedicated determinism replay test is still future work. Until then, keep sim helpers pure where possible and cover movement/resource/status/ability decisions with focused Vitest cases.
+Keep sim helpers pure where possible and cover movement/resource/status/ability decisions with focused Vitest cases.
 
 ### Content validator
 
@@ -114,17 +113,14 @@ The shared ability registry tests remain the first safety net. The root
 ### E2E / browser smoke
 
 - Local browser QA should open the Vite client, check console errors, verify the
-  main menu/loadout station, confirm current runtime fixed-transfer surfaces
-  only when the touched pass still depends on that legacy path, and confirm no
-  rune/passive UI.
-- Combat E2E with two browser clients is planned.
+  main menu/loadout station, and confirm no removed UI surfaces are visible.
 
 ## Commits and PRs
 
 - **Commit style**: imperative, ≤ 72 chars for subject, body explains why. Conventional Commits (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`) encouraged but not gated.
 - **Branch names**: `codex/short-slug` for assistant work unless the user requests another prefix.
 - **PRs**: keep changes reviewable; gameplay, UI, docs, and refactors should be separated when possible.
-- **CI gates on merge**: typecheck, lint, unit tests, build, and later standalone content validation.
+- **CI gates on merge**: typecheck, lint, unit tests, build, and `pnpm validate:content`.
 
 ## Tooling
 

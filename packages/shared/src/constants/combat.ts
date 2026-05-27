@@ -30,8 +30,7 @@ export const ROUND_TIMER_SEC = 120 as const
 export const ROUND_COUNTDOWN_SEC = 3 as const
 export const ROUND_END_HOLD_SEC = 2 as const
 
-// ELO baseline. K-factor 25 ranked, 20 FFA. Seven visible rank tiers;
-// thresholds will tighten with playtest data.
+// ELO baseline. K-factor 25 ranked, 20 FFA. Seven visible rank tiers.
 export const ELO_STARTING = 1000 as const
 export const ELO_K_RANKED = 25 as const
 export const ELO_K_FFA = 20 as const

@@ -104,7 +104,7 @@ export const PLAYER_CAPSULE_HEIGHT_M = 1.8 as const
 // be below half-height; adding full body height here makes shots spawn above
 // the head and breaks close-range crosshair alignment.
 export const PROJECTILE_MUZZLE_Y_OFFSET_M = 0.65 as const
-// Simple terrain floor plane y=0. More complex geo lands later.
+// Server collision uses the arena ground plane at y=0.
 export const TERRAIN_GROUND_Y = 0 as const
 
 // --- Parry -----------------------------------------------------------------

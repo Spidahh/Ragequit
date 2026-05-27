@@ -2,10 +2,8 @@
 
 This file records the UI/VFX rules that keep RAGEQUIT readable and browser-friendly.
 
-Confirmed redesign note: every visual rule now serves a class-aware active arena
-FPS cockpit. Whole-game menu/HUD/loadout/VFX work remains open; keep aim,
-projectiles and enemy silhouettes dominant while replacing legacy transfer and
-Mastery surfaces.
+Every visual rule serves a class-aware active arena FPS cockpit. Keep aim,
+projectiles and enemy silhouettes dominant.
 
 ## CSS / HUD
 
@@ -27,6 +25,6 @@ Mastery surfaces.
 
 ## Asset Direction
 
-- Target low-poly stylized action assets with clean silhouettes.
+- Use low-poly stylized action assets with clean silhouettes.
 - Keep environment colors muted so element VFX carry the saturated color language.
-- Repeated scenery and repeated particle meshes should use instancing when they become a measurable cost.
+- Use instancing for repeated scenery and repeated particle meshes when profiling shows measurable cost.

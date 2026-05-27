@@ -4,17 +4,14 @@ title: Magic Abilities
 section: abilities
 tags: [magic, elements, list]
 provides: [magic_ability_list_per_element]
-deps: [05_abilities_philosophy.md, 03_mastery_system.md]
-status: redesign
+deps: [05_abilities_philosophy.md, 06_loadout_build.md]
+status: current
 ---
 
 # Magic Abilities
 
-> Current runtime pool. Target magic work must split this set into Magic Base
-> and Magic Advanced, clean descriptions, and decide class legality before
-> registry changes.
-
-Player picks **5** magic abilities for their loadout (current classless runtime). Having 4+ of the same element activates Mastery in the **current runtime** (`03_mastery_system.md`). In the target class system, magic slots are split into Magic Base and Magic Advanced per class grammar (`00_classes.md`); Mastery is no longer the target identity axis.
+Magic slots are split into Magic Base and Magic Advanced per class grammar
+(`00_classes.md`, `06_loadout_build.md`).
 
 Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abilities/registry.ts` is the authoritative source for exact numbers, tooltips, cast data, ray/projectile behavior, drain values, and cooldowns. Numeric bullets below are design snapshots for role/readability review, not a second runtime registry.
 
@@ -59,7 +56,7 @@ Each element covers the same core roles so every element-specialist build has th
 
 ### F5 · Eruption [KNOCKUP]
 
-- **Effect**: Geyser under target for 10 damage + 0.8 s airborne with a small outward shove
+- **Effect**: Geyser under target for 10 damage + 0.5 s airborne with a small outward shove
 - **Cost**: 30 mana · **CD**: 14 s · **Range**: 10 m · **AoE**: 2 m radius
 - **Mini-malus**: Low damage — it's a CC setup, not burst
 
@@ -98,7 +95,7 @@ Each element covers the same core roles so every element-specialist build has th
 
 ### I5 · Frost Pillar [KNOCKUP]
 
-- **Effect**: Ice spike under target for 12 damage + 0.8 s airborne, tuned for clean follow-up aim
+- **Effect**: Ice spike under target for 12 damage + 0.5 s airborne, tuned for clean follow-up aim
 - **Cast**: 1.0 s windup · **Cost**: 30 mana · **CD**: 14 s · **Range**: 10 m
 - **Mini-malus**: 1 s windup is the slowest knockup in the game
 
@@ -131,7 +128,7 @@ Each element covers the same core roles so every element-specialist build has th
 
 ### L5 · Arc Lift [KNOCKUP]
 
-- **Effect**: Lightning bolt launches target for 10 damage + 0.7 s airborne with a backward jolt
+- **Effect**: Lightning bolt launches target for 10 damage + 0.5 s airborne with a backward jolt
 - **Cost**: 30 mana · **CD**: 12 s · **Range**: 15 m (line-of-sight required)
 - **Mini-malus**: Line-of-sight required — no arcing around cover
 
@@ -164,7 +161,7 @@ Each element covers the same core roles so every element-specialist build has th
 
 ### D5 · Void Spike [KNOCKUP]
 
-- **Effect**: Dark tendril spike under target for 18 damage + 0.7 s airborne with a shove away
+- **Effect**: Dark tendril spike under target for 18 damage + 0.5 s airborne with a shove away
 - **Cost**: 30 mana · **CD**: 13 s · **Range**: 10 m
 - **Mini-malus**: 10 m max range limits threat projection
 
@@ -199,7 +196,7 @@ Each element covers the same core roles so every element-specialist build has th
 
 ### N5 · Root Upthrow [KNOCKUP]
 
-- **Effect**: Vines launch grounded target for 8 damage + 0.9 s airborne (longest airtime knockup)
+- **Effect**: Vines launch grounded target for 8 damage + 0.5 s airborne
 - **Cost**: 30 mana · **CD**: 14 s · **Range**: 10 m
 - **Mini-malus**: Only works on targets currently on the ground — a jumping target is immune
 
@@ -208,19 +205,3 @@ Each element covers the same core roles so every element-specialist build has th
 - **Effect**: Dash 5 m forward and leave a 2 m root zone at the landing point for 2.5 s
 - **Cost**: 25 mana · **CD**: 12 s · **Range**: 5 m
 - **Mini-malus**: Enemies must walk into the landing zone; it does not pull them
-
-## Mastery numbers summary — CURRENT RUNTIME ONLY
-
-> Mastery is no longer the approved target identity axis. The class redesign
-> (`00_classes.md`) supersedes it. The numbers below apply to the **current live
-> runtime** only; do not design new abilities or features around these bonuses.
-
-When Mastery is active (4+ of one element) in the current runtime, the element's abilities get the bonus listed in `03_mastery_system.md`:
-
-- Fire: +15% damage, Burn duration +50%
-- Ice: +10% CC duration
-- Lightning: -15% cooldown
-- Dark: +20% lifesteal
-- Nature: +25% DoT tick
-
-5/5 perfect stack is detected by the runtime/UI, but its extra perks are still design targets. Current combat behavior applies the active mastery bonus table above at both 4/5 and 5/5.

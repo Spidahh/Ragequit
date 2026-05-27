@@ -20,9 +20,9 @@
     "format": "prettier --write \"**/*.{ts,tsx,json,md,yaml,yml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,json,md,yaml,yml}\"",
     "typecheck": "pnpm -r typecheck",
-    "audit:character": "node tools/asset-pipeline/audit-character-glb.mjs",
+    "audit:character": "node tools/asset-pipeline/audit-character-glb.mjs packages/client/public/characters/UAL1_Standard.glb",
     "validate:content": "tsx tools/content-validator/validate.ts",
-    "clean": "pnpm -r exec rm -rf dist node_modules/.cache && rm -rf node_modules"
+    "clean": "node tools/clean.mjs"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

@@ -115,9 +115,6 @@ import {
   AbilityEngine,
   AIR_PUNISH_DAMAGE_MULT,
   BotController,
-  ClassMechanicRuntime,
-  FLOW_DAMAGE_BONUS_FRAC,
-  FURY_SURGE_DAMAGE_BONUS,
   MatchManager,
   RateLimiter,
   ReplayRecorder,
@@ -277,11 +274,8 @@ export class GameRoom extends Room<GameState> {
   private projectileIdCounter = 0
   private zoneIdCounter = 0
 
-  // Ability engine + status runtime.
   private engine!: AbilityEngine
   private statuses!: StatusRuntime
-  // Class mechanic runtime (Fury / Momentum / Risonanza / Flow).
-  private mechanics!: ClassMechanicRuntime
   // BO5 round flow + ELO + scoreboard.
   private match!: MatchManager
   // Anti-cheat rate limiter + replay recorder.
@@ -458,20 +452,11 @@ export class GameRoom extends Room<GameState> {
         hasLineOfSight: (from, to) => this.hasLineOfSight(from, to),
         resolveDisplacement: (player, dx, dz, cancelOnCollision) =>
           this.resolveAbilityDisplacement(player, dx, dz, cancelOnCollision),
-        // Class mechanic hooks wired after mechanics is instantiated below.
-        getAbilityCooldownMult: (sid) => {
-          const p = this.state.players.get(sid)
-          return p ? this.mechanics.getMomentumCooldownMult(p) : 1
-        },
-        getRecoveryHealBonus: (sid, abilityId, now) =>
-          this.mechanics.getRecoveryHealBonus(sid, abilityId, now),
+        // Class mechanic hooks simplified to no-bonus baseline.
+        getAbilityCooldownMult: (sid) => 1,
+        getRecoveryHealBonus: (sid, abilityId, now) => 0,
       },
       this.statuses,
-    )
-    // Class mechanic runtime. Uses a callback so it can direct
-    // Risonanza proc resolution to GameRoom's existing status/damage path.
-    this.mechanics = new ClassMechanicRuntime(this.state, (req, now) =>
-      this.resolveRisonanzaProc(req, now),
     )
     // Match manager - drives BO5 round flow + ELO + scoreboard.
     // Replay recorder. Records every broadcast tagged with state.tick.
@@ -710,7 +695,6 @@ export class GameRoom extends Room<GameState> {
     this.parryPressTick.delete(sid)
     this.killStreaks.delete(sid)
     this.bots.delete(sid)
-    this.mechanics.forgetPlayer(sid)
     this.pendingSwings = this.pendingSwings.filter((s) => s.attackerId !== sid)
 
     // Clean up projectiles owned by the leaver.
@@ -793,8 +777,6 @@ export class GameRoom extends Room<GameState> {
       for (const [sid, player] of this.state.players) {
         if (!player.alive) continue
         this.tickRegen(sid, player, now)
-        // Class mechanic tick (Fury decay, Momentum gain, Flow decay).
-        this.mechanics.tick(sid, player, dt, now)
       }
 
       // 9. Push position history snapshots for lag comp.
@@ -2701,7 +2683,4 @@ const DEFAULT_LOADOUT: readonly string[] = Object.freeze([
   'meteor', // magicAdvanced
   'adaptive_mend', // utility — Ibrido Recovery
   'quick_dash', // utility
-  'cleanse_surge', // utility
-  'barrier', // utility
-  'smoke_screen', // utility
 ])

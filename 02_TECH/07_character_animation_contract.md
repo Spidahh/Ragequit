@@ -6,18 +6,21 @@ loads; it must support the gameplay states RAGEQUIT actually exposes.
 
 ## Current Runtime
 
-- Primary character asset path: `packages/client/public/characters/legacy/player_base.fbx`
-- Placeholder fallback asset path: `packages/client/public/characters/player.glb`
+- Class model asset paths:
+  - `packages/client/public/characters/Male_Ranger.gltf`
+  - `packages/client/public/characters/Female_Ranger.gltf`
+  - `packages/client/public/characters/Male_Peasant.gltf`
+  - `packages/client/public/characters/Female_Peasant.gltf`
+- Shared animation asset path: `packages/client/public/characters/UAL1_Standard.glb`
 - Loader/runtime: `packages/client/src/render/characters.ts`
 - Local player creation: `packages/client/src/main.ts`
 - Remote player rendering: `packages/client/src/render/remote-players.ts`
 
-The runtime uses a hybrid path:
+The runtime uses the current class-based GLTF path:
 
 - `makeCharacter()` creates a procedural low-poly silhouette immediately.
-- `loadCharacterGlb()` first loads and validates the full legacy FBX
-  character/animation set.
-- If the legacy FBX path fails, `loadCharacterGlb()` falls back to `player.glb`.
+- `loadCharacterGlb()` loads a class model plus `UAL1_Standard.glb`.
+- Class model selection is driven by the replicated class id.
 - After a validated imported asset is installed, the procedural silhouette is
   hidden so the animated character is the single authoritative visual body.
 - Each character instance gets its own skeleton clone and `AnimationMixer`.
@@ -26,7 +29,7 @@ The runtime uses a hybrid path:
 
 ## Required Asset Structure
 
-A playable replacement character model must contain:
+A playable character model must contain:
 
 - At least one renderable `SkinnedMesh`.
 - A skeleton/skin that survives `SkeletonUtils.clone`.
@@ -39,31 +42,28 @@ the current low-poly stylized direction.
 
 ## Required Animation Coverage
 
-These states are required by gameplay. A production-ready asset should include
+These states are required by gameplay. The active playable asset includes
 distinct clips for each row.
 
-| Gameplay state         | Required clip intent                | Active legacy FBX support |
-| ---------------------- | ----------------------------------- | ------------------------- |
-| Idle                   | Relaxed standing combat idle        | `idle_combat.fbx`         |
-| Run                    | Full-speed movement                 | `run_forward.fbx`         |
-| Walk                   | Slow/interpolated movement, if used | `walk_forward.fbx`        |
-| Jump start             | Voluntary jump launch               | `jump.fbx`                |
-| Fall / airborne        | Falling, knockup, or airborne lock  | `airborne.fbx`            |
-| Land                   | Ground contact after jump/fall      | `land.fbx`                |
-| Sword attack 1         | Primary melee swing                 | `melee_attack_01.fbx`     |
-| Sword attack 2 / combo | Alternate melee swing               | `melee_attack_02.fbx`     |
-| Parry / block          | Defensive weapon pose               | `parry_block.fbx`         |
-| Bow draw / aim         | Held bow charge                     | `bow_draw.fbx`            |
-| Bow release            | Shot release                        | `bow_release.fbx`         |
-| Staff cast             | Magic cast gesture                  | `staff_cast.fbx`          |
-| Channel                | Held cast/beam/totem style action   | `channel.fbx`             |
-| Hit reaction           | Damage response                     | `hit_react.fbx`           |
-| Dash / roll            | Utility movement burst              | `dash_roll.fbx`           |
-| Death                  | Death pose/fall                     | `death.fbx`               |
-| Respawn                | Return to controllable idle         | `respawn.fbx`             |
-
-If a new asset lacks required clips, it can be used only as a temporary visual
-placeholder. The missing states must be documented before integration.
+| Gameplay state         | Required clip intent                | Current runtime clip       |
+| ---------------------- | ----------------------------------- | -------------------------- |
+| Idle                   | Relaxed standing combat idle        | `Idle_Loop`                |
+| Run                    | Full-speed movement                 | `Sprint_Loop`              |
+| Walk                   | Slow/interpolated movement, if used | `Walk_Loop`                |
+| Jump start             | Voluntary jump launch               | `Jump_Start`               |
+| Fall / airborne        | Falling, knockup, or airborne lock  | `Jump_Loop`                |
+| Land                   | Ground contact after jump/fall      | `Jump_Land`                |
+| Sword attack 1         | Primary melee swing                 | `Sword_Attack`             |
+| Sword attack 2 / combo | Alternate melee swing               | `Sword_Attack`             |
+| Parry / block          | Defensive weapon pose               | `Sword_Idle`               |
+| Bow draw / aim         | Held bow charge                     | `Spell_Simple_Idle_Loop`   |
+| Bow release            | Shot release                        | `Spell_Simple_Shoot`       |
+| Staff cast             | Magic cast gesture                  | `Spell_Simple_Shoot`       |
+| Channel                | Held cast/beam/totem style action   | `Spell_Simple_Idle_Loop`   |
+| Hit reaction           | Damage response                     | `Hit_Chest`                |
+| Dash / roll            | Utility movement burst              | `Roll`                     |
+| Death                  | Death pose/fall                     | `Death01`                  |
+| Respawn                | Return to controllable idle         | `Spell_Simple_Enter`       |
 
 ## Runtime Mapping Rules
 
@@ -77,10 +77,7 @@ client-only guesses where authoritative state exists.
 - `airborneUntilTick > schemaTick` maps to jump/fall/airborne.
 - `parrying=true` maps to parry/block.
 - Damage feedback should map to hit reaction when available.
-- Legacy FBX animation retargeting converts bone rotations from each source
-  FBX rest pose into the base skin rest pose and discards imported bone-position
-  tracks; gameplay/network transforms own world movement and the current base
-  skin does not share the animation FBXs' Mixamo-scale hip space.
+- Runtime clip mapping lives in `packages/client/src/render/characters.ts`.
 
 Fallbacks are allowed, but they must be intentional and cheap:
 
@@ -107,25 +104,17 @@ Fallbacks are allowed, but they must be intentional and cheap:
   mesh is proven to be a non-render helper.
 - Do not hardcode character scale when a valid renderable bounding box is
   available.
-- Keep `player_base.fbx` as the mesh/skin source. A legacy animation FBX with
-  its own clip is not an acceptable base asset.
 - Keep character materials toon/flat and browser-cheap.
 
-## Current Gaps
+## Current Asset State
 
-The active legacy FBX character set satisfies the animation coverage contract
-and drives the runtime `AnimationMixer`. It is the current primary runtime
-character until a replacement asset is found that is both animation-complete and
-visually stronger.
+The active character set is the class-based GLTF set plus `UAL1_Standard.glb`.
+The procedural silhouette is the runtime fallback when imported assets fail.
 
-The older `player.glb` is still valid only as a visual fallback/placeholder. It
-lacks dedicated bow, staff, parry, jump, fall, land, channel, and respawn clips.
-
-Before replacing the asset, audit the candidate against this file and run the
-local character audit script.
+Character asset acceptance uses this file plus the local audit scripts.
 
 ```bash
 pnpm audit:character
-node tools/asset-pipeline/audit-character-glb.mjs <candidate.glb>
-node tools/asset-pipeline/audit-character-glb.mjs <candidate.gltf>
+node tools/asset-pipeline/audit-character-glb.mjs <character.glb>
+node tools/asset-pipeline/audit-character-glb.mjs <character.gltf>
 ```

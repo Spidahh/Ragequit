@@ -26,7 +26,7 @@ assunzioni precedenti come autorita.
 - Tutte le armi possono agire in aria.
 - Airborne non e hard CC.
 - Parry/protezione deve avere scudo leggibile sul personaggio.
-- Nessuna passiva, slot passivo, runa o sistema rune.
+- Nessun sistema passivo o slot extra fuori loadout.
 - Classi vive: Tank, Arciere, Mago, Ibrido.
 - Sprint e movimento base, non toggle e non costa Stamina di default.
 - Wheel abilita/utility: hold, seleziona, rilascia per primare, LMB per
@@ -62,18 +62,23 @@ assunzioni precedenti come autorita.
 - Il CSS del Loadout Forge deve seguire le classi generate da
   `packages/client/src/loadout-station.ts`; non lasciare stili morti per markup
   vecchio e non usare overlay decorativi come celle di griglia.
-- La Loadout Forge deve mostrare sempre ricerca abilita, filtri utili
-  (`BEST`, `STARTER`, `CONTROL`, `INSTANT`, `PREVIEW`, elementi), key hint e
-  vitals/meccanica della classe selezionata. Non lasciare logiche TS invisibili
-  dietro DOM rimosso.
+- La Loadout Forge deve seguire solo il runtime vivo in
+  `packages/client/src/loadout-station.ts` e
+  `packages/shared/src/constants/classes.ts`.
 - Le chip abilita del Forge usano le classi vive generate da `tagClass()`:
   `tag-role`, `tag-targeting`, `tag-control`, `tag-damage`, `tag-status`,
   `tag-move`, `tag-resource`. Non ripristinare tag CSS vecchi come
   `tag-mobility`, `tag-sustain`, `tag-defense`, `tag-cost`.
-- Studio UI esterno del 2026: per menu/loadout competitivi usare gerarchia
-  forte, search sempre accessibile, filtri/toggle leggibili, stato selezionato
-  evidente e card compatte. Evitare box grandi con poca informazione e stati
-  visivi tutti uguali.
+- Prima di modificare la Loadout Forge leggere il codice vivo:
+  `TARGET_CLASS_DEFS`, `getClassSlotOrder()`, `isAbilityLegalForClass()`,
+  `getAbilitySlotFamily()`, `slotKeybindEntries()` e `rebuildPool()`.
+- Correzione UX Loadout Forge: non progettare intorno a "scegli uno slot" come
+  azione primaria. Il giocatore deve poter modificare tutta la build in una
+  vista unica, con lane editabili e pool/alternative per famiglia visibili
+  insieme. Le stats/vitals della classe non sono il centro della schermata e non
+  devono rubare spazio al cambio build.
+- Classi consentite nella UI: solo Tank, Arciere, Mago, Ibrido.
+- Conservare nel progetto solo asset runtime e contratti presenti approvati.
 - Se l'utente dice che un layout/stile fa schifo, va trattato come feedback
   vincolante: aggiornare subito UI e memoria, poi verificare.
 - Quando l'utente ordina di eliminare una cosa, eliminarla dal gioco e dai

@@ -4,7 +4,7 @@ title: Production Deploy Status
 section: tech
 tags: [deploy, fly, supabase, cloudflare, production]
 provides: [deploy_facts, credentials_location, live_services]
-deps: [10_tech_stack.md in 01_DESIGN]
+deps: []
 status: current
 ---
 
@@ -29,23 +29,22 @@ Il server si connette su WebSocket. Il monitor Colyseus è disabilitato di defau
 
 ## Supabase
 
-| Campo                       | Valore                                                          |
-| --------------------------- | --------------------------------------------------------------- |
-| Stato                       | Credenziali configurate come Fly secrets                        |
-| `SUPABASE_URL`              | Fly secret — non nel codice                                     |
-| `SUPABASE_SERVICE_ROLE_KEY` | Fly secret — non nel codice                                     |
-| Funzionalità live           | **Nessuna** — auth/persistence non ancora attiva nel game flow  |
-| Target                      | M4+ per ROADMAP — Supabase auth + loadout persistence DB-backed |
+| Campo                       | Valore                                           |
+| --------------------------- | ------------------------------------------------ |
+| Stato                       | Credenziali configurate come Fly secrets         |
+| `SUPABASE_URL`              | Fly secret — non nel codice                      |
+| `SUPABASE_SERVICE_ROLE_KEY` | Fly secret — non nel codice                      |
+| Funzionalità live           | Auth/persistence disponibili con fallback locale |
 
 Il client può usare Supabase auth anonima se `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` sono definiti nel `.env` client-side. Non richiesto per il gameplay locale.
 
 ## Client (Cloudflare Pages)
 
-| Campo | Valore                              |
-| ----- | ----------------------------------- |
-| Stato | Target di deploy, non ancora attivo |
-| Build | `apps/web/dist/` (output Vite)      |
-| CDN   | Cloudflare Pages                    |
+| Campo | Valore                                |
+| ----- | ------------------------------------- |
+| Stato | Destinazione statica Cloudflare Pages |
+| Build | `apps/web/dist/` (output Vite)        |
+| CDN   | Cloudflare Pages                      |
 
 Attualmente il client viene servito localmente via `pnpm dev:client` (Vite dev server su `localhost:5173`).
 
@@ -58,10 +57,10 @@ Questi asset sono già nel repo e NON vanno cercati o scaricati:
 | `packages/client/public/ui/ragequit-logo-full.png`         | Logo principale                            |
 | `packages/client/public/ui/ragequit-logo-small.png`        | Logo small                                 |
 | `packages/client/public/icons-sprite.svg`                  | SVG sprite icone (~45 KB)                  |
-| `packages/client/public/graphic-redesign.css`              | CSS overrides visual redesign              |
 | `packages/client/public/arena/gladiators_arena.glb`        | Arena 3D (~171 KB)                         |
-| `packages/client/public/characters/player.glb`             | Character fallback                         |
-| `packages/client/public/characters/legacy/player_base.fbx` | Character primary (animation-complete FBX) |
+| `packages/client/public/characters/*Ranger*.gltf`          | Character class models                     |
+| `packages/client/public/characters/*Peasant*.gltf`         | Character class models                     |
+| `packages/client/public/characters/UAL1_Standard.glb`      | Character animation set                    |
 | `packages/client/public/weapons/sword.glb`                 | Weapon sword                               |
 | `packages/client/public/weapons/bow.glb`                   | Weapon bow                                 |
 | `packages/client/public/weapons/staff.glb`                 | Weapon staff                               |

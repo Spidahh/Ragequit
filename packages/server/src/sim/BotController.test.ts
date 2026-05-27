@@ -132,7 +132,7 @@ describe('BotController', () => {
     // In our test, self is hybrid, holding a sword.
     // Master AI parry check checks if dist <= 4.0 and (opponent.swingEndsAtTick > tick || opponent.casting).
     // Let's force Math.random() in BotController to return 0 inside the test so parry is guaranteed 100% of the time,
-    // or simulate multiple steps to guarantee at least one parry, or mock Math.random.
+    // Simulate enough steps to guarantee at least one parry branch.
     const originalRandom = Math.random
     Math.random = () => 0 // Force success in random checks
 

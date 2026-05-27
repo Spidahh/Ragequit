@@ -29,14 +29,6 @@ export interface SelfHudSchema {
   alive: boolean
   respawnAtTick: number
   classId: string
-  // Class mechanic fields
-  furyStacks: number
-  furyNextMeleeIsSurge: boolean
-  momentum: number
-  risonanzaElement: string
-  risonanzaArmedUntilTick: number
-  flowStacks: number
-  flowPendingBonus: boolean
   statuses: ReadonlyArray<{ kind: string; stacks: number; remainingSec: number }>
   casting: boolean
   castAbilityId: string
@@ -58,7 +50,6 @@ export interface SelfHudOptions {
   respawnSec: HTMLElement
   respawnKillerEl: HTMLElement
   respawnTipEl: HTMLElement | null
-  classMechanicEl: HTMLElement | null
   statusStrip: HTMLElement
   castBar: HTMLElement
   castBarFill: HTMLElement
@@ -87,65 +78,7 @@ export interface SelfHudController {
   update: (params: SelfHudUpdateParams) => void
 }
 
-// Element color map for Risonanza armed state.
-const ELEM_COLOR: Record<string, string> = {
-  fire: '#ff6a2a',
-  ice: '#6dd6ff',
-  lightning: '#ffe244',
-  dark: '#b870ff',
-  nature: '#80e860',
-}
 
-function mechanicFillClass(value: number): string {
-  const pct = Math.max(0, Math.min(100, Math.round(value)))
-  return `fill-${Math.round(pct / 10) * 10}`
-}
-
-function stackDots(filled: number, total: number, filledClass: string): string {
-  return Array.from(
-    { length: total },
-    (_, i) => `<span class="mech-dot ${i < filled ? filledClass : 'empty'}"></span>`,
-  ).join('')
-}
-
-function renderClassMechanic(el: HTMLElement, s: SelfHudSchema, tickNow: number): void {
-  const classId = (s.classId ?? 'hybrid') as ClassId
-  let html = ''
-
-  if (classId === 'tank') {
-    const surge = s.furyNextMeleeIsSurge
-    html =
-      `<span class="mech-label">FURY</span>` +
-      stackDots(s.furyStacks, 5, 'fury') +
-      (surge ? `<span class="mech-surge">SURGE</span>` : '')
-  } else if (classId === 'archer') {
-    const pct = Math.round(s.momentum)
-    html =
-      `<span class="mech-label">MOMENTUM</span>` +
-      `<span class="mech-bar"><span class="mech-bar-fill momentum ${mechanicFillClass(pct)}"></span></span>` +
-      `<span class="mech-val">${pct}</span>`
-  } else if (classId === 'mage') {
-    const armed = s.risonanzaArmedUntilTick > tickNow
-    const el2 = s.risonanzaElement
-    const elemClass = armed && el2 && ELEM_COLOR[el2] ? ` elem-${el2}` : ''
-    html =
-      `<span class="mech-label">RISONANZA</span>` +
-      (armed
-        ? `<span class="mech-dot armed${elemClass}"></span>` +
-          `<span class="mech-elem${elemClass}">${el2.toUpperCase()}</span>`
-        : `<span class="mech-dot empty"></span>`)
-  } else {
-    // hybrid / flow
-    const bonus = s.flowPendingBonus
-    html =
-      `<span class="mech-label">FLOW</span>` +
-      stackDots(s.flowStacks, 3, 'flow') +
-      (bonus ? `<span class="mech-surge">BONUS</span>` : '')
-  }
-
-  el.innerHTML = html
-  el.dataset['class'] = classId
-}
 
 export function initSelfHud({
   hudHpFill,
@@ -160,7 +93,6 @@ export function initSelfHud({
   respawnSec,
   respawnKillerEl,
   respawnTipEl,
-  classMechanicEl,
   statusStrip,
   castBar,
   castBarFill,
@@ -249,9 +181,7 @@ export function initSelfHud({
       respawnOverlay.classList.remove('active')
     }
 
-    if (classMechanicEl) {
-      renderClassMechanic(classMechanicEl, selfSchema, tickNow)
-    }
+
 
     const liveStatuses = Array.from(selfSchema.statuses ?? [])
     while (statusStrip.firstChild) statusStrip.removeChild(statusStrip.firstChild)

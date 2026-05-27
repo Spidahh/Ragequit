@@ -154,7 +154,7 @@ export interface ServerAbilityFailedMessage {
     | 'gcd'
     | 'dead'
     | 'casting'
-    | 'airborne'
+    | 'grounded_required'
     | 'parrying'
     | 'unknown_ability'
     | 'not_in_loadout'

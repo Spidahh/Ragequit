@@ -3,16 +3,12 @@ id: vision
 title: Vision & Pitch
 section: core
 tags: [philosophy, pitch, high-level]
-provides: [game_pitch, target_feel, differentiators]
+provides: [game_pitch, game_feel, differentiators]
 deps: []
 status: final
 ---
 
 # Vision & Pitch
-
-> Redesign decision, 2026-05-22: the target game is now class-based. Current
-> runtime still reflects the older classless loadout slice while the class,
-> resource, ability and HUD passes are rewritten.
 
 ## What RAGEQUIT is
 
@@ -26,7 +22,7 @@ is always doing something meaningful.
 1. **Classes create real play identities**. Tank, Arciere, Mago and Ibrido
    change slot distribution, resource emphasis, weapon access and class mechanic.
 2. **Build-crafting IS the gameplay**. The chosen class defines the build grammar;
-   the selected abilities decide the actual plan, counters and combo routes.
+   the selected abilities decide counters and combo routes.
 3. **Movement is combat**. Falling never hurts, own spells never self-damage,
    all weapon families can matter in air, and spell/weapon impulses may become
    deliberate movement tech.
@@ -38,7 +34,7 @@ is always doing something meaningful.
 7. **Server-authoritative zero-trust**. No auto-aim, no client trust, no RNG in ability output. Pure meritocracy.
 8. **No paywalls**. No season pass, no loot boxes. Everything earned through play and quests.
 
-## Target feel
+## Game Feel
 
 - **Fluid**: arena-FPS pace with crosshair-first aim, weapon/spell transitions,
   active air combat and no artificial lockout that turns a launch into a

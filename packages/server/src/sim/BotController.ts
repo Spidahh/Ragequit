@@ -9,7 +9,6 @@ import {
   TARGET_CLASS_DEFS,
   type ClassId,
   SWORD_M1_RANGE_M,
-  TICK_MS,
   TICK_RATE_HZ,
   type Player,
 } from '@ragequit/shared'
@@ -274,5 +273,3 @@ export class BotController {
     }
   }
 }
-
-void TICK_MS // imported for TICK_RATE_HZ; keep to suppress unused-import lint

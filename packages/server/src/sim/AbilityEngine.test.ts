@@ -51,7 +51,7 @@ function makeRoom(hostOverrides: Partial<Pick<EngineHost, 'hasLineOfSight'>> = {
   const projectiles: RecordedProjectile[] = []
   const failures: { sid: string; abilityId: string; reason: string }[] = []
 
-  // Caster + a target dummy in front (-Z 5 m).
+  // Caster + target player in front (-Z 5 m).
   const caster = new Player()
   caster.id = 'A'
   caster.transform.x = 0
@@ -717,7 +717,7 @@ describe('AbilityEngine — gating', () => {
   it('allows equipped ability casts while airborne unless the ability says otherwise', () => {
     r.caster.airborneUntilTick = 9999
     expect(r.engine.tryCast('A', 'whirlwind', { yaw: 0, pitch: 0 })).toBe(true)
-    expect(r.failures.find((f) => f.reason === 'airborne')).toBeUndefined()
+    expect(r.failures.find((f) => f.reason === 'grounded_required')).toBeUndefined()
   })
 
   it('rejects when stamina is short', () => {

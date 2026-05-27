@@ -44,7 +44,7 @@ export function renderScoreboard(host: HTMLElement, data: ScoreboardData): void 
   const time = `${String(mm).padStart(2, '0')} : ${String(ss).padStart(2, '0')}`
 
   host.innerHTML = `
-    <div class="sb-mock" id="scoreboard">
+    <div class="scoreboard-shell" id="scoreboard">
       <div class="sb-head">
         <div>
           <div class="sb-winner">VICTORY · ${escape(data.arena)}</div>
@@ -108,7 +108,7 @@ function row(l: string, v: string | number): string {
 // ── DEATH CAM ─────────────────────────────────────────────────────────
 export function renderDeathcam(host: HTMLElement, data: DeathcamData): void {
   host.innerHTML = `
-    <div class="dc-mock" id="deathcam">
+    <div class="deathcam-shell" id="deathcam">
       <div class="dc-killer-silhouette"></div>
       <div class="dc-killer-glow"></div>
       <div class="dc-overlay">
@@ -140,7 +140,6 @@ export function renderDeathcam(host: HTMLElement, data: DeathcamData): void {
       </div>
       <div class="dc-replay">
         <span class="k">SPC</span><span>SKIP</span>
-        <span class="k">R</span><span>REPLAY ANGLE</span>
       </div>
       <div class="dc-watermark">UNDERGROUND · FIGHT · LEAGUE</div>
     </div>

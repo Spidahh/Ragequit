@@ -7,9 +7,8 @@
 // knockup, ...). To add a new ability we only add a new entry to ABILITY_DEFS
 // — no engine code touches.
 //
-// Effects are a discriminated union over a small, stable set of primitives.
-// Each primitive maps 1:1 to a handler in the server engine. New primitives
-// can be added later but the existing ones never change shape.
+// Effects are a discriminated union over the live primitive set. Each primitive
+// maps 1:1 to a handler in the server engine and keeps a stable shape.
 
 import type { ClassId, ElementId, TargetAbilitySlotFamily } from '../constants/index.js'
 import type { StatusKind } from '../status/types.js'
@@ -18,10 +17,10 @@ import type { StatusKind } from '../status/types.js'
 
 // Slot families used by the class-aware loadout envelope.
 export type AbilitySlot =
-  | 'melee' // R direct bind or E-wheel sector
-  | 'bow' // G direct bind or E-wheel sector
-  | 'magic' // 1..5 direct binds or E-wheel sectors
-  | 'utility' // U1..U4
+  | 'melee' // sword-family loadout slot
+  | 'bow' // bow-family loadout slot
+  | 'magic' // registry-level spell slot, split into magicBase/magicAdvanced by class grammar
+  | 'utility' // utility/recovery loadout slot
 
 // Weapon required to cast. Auto-swap fires this weapon before consuming cost.
 // 'none' means the cast doesn't change weapon (utility abilities mostly).

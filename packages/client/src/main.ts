@@ -75,6 +75,7 @@ import {
   getCurrentUserId,
   getPlayerStats,
   signInWithGoogle,
+  isSupabaseConfigured,
 } from './net/supabase-auth.js'
 import { updateRankBadge } from './rank-system.js'
 import {
@@ -164,7 +165,7 @@ const respawnSec = document.getElementById('respawn-sec')!
 const castBar = document.getElementById('cast-bar')!
 const castBarFill = document.querySelector<HTMLElement>('#cast-bar .fill')!
 const castBarLabel = document.querySelector<HTMLElement>('#cast-bar .label')!
-const classMechanicEl = document.getElementById('class-mechanic')
+
 const respawnKillerEl = document.getElementById('respawn-killer')!
 const lowHpVignette = document.getElementById('low-hp-vignette')!
 const blindVignette = document.getElementById('blind-vignette')!
@@ -271,7 +272,6 @@ const selfHud = initSelfHud({
   respawnSec,
   respawnKillerEl,
   respawnTipEl,
-  classMechanicEl,
   statusStrip,
   castBar,
   castBarFill,
@@ -1056,6 +1056,12 @@ function updateAuthUI(): void {
         initPlayerProfile()
       })
     }
+  } else if (!isSupabaseConfigured()) {
+    container.innerHTML = `
+      <div class="auth-logged-in-status">
+        <span>GUEST (OFFLINE)</span>
+      </div>
+    `
   } else {
     container.innerHTML = `
       <div class="auth-logged-out-form">
@@ -1292,18 +1298,35 @@ function initDisplayName(): void {
   // Autosave on input (only when not logged in)
   if (nameInput && !email) {
     let saveTimer: ReturnType<typeof setTimeout> | null = null
+    const saveImmediately = () => {
+      const val = nameInput.value.trim().toUpperCase()
+      if (val) {
+        nameInput.value = val
+        localStorage.setItem('ragequit.profile.displayName', val)
+        if (avatarEl) avatarEl.textContent = val[0] ?? '?'
+        if (savedTick) {
+          savedTick.classList.add('visible')
+          setTimeout(() => savedTick.classList.remove('visible'), 1500)
+        }
+      }
+    }
+
     nameInput.addEventListener('input', () => {
       const val = nameInput.value.trim().toUpperCase()
       if (val) nameInput.value = val
       if (avatarEl) avatarEl.textContent = val[0] ?? '?'
       if (saveTimer) clearTimeout(saveTimer)
-      saveTimer = setTimeout(() => {
-        localStorage.setItem('ragequit.profile.displayName', val)
-        if (savedTick) {
-          savedTick.classList.add('visible')
-          setTimeout(() => savedTick.classList.remove('visible'), 1500)
-        }
-      }, 600)
+      saveTimer = setTimeout(saveImmediately, 600)
+    })
+
+    nameInput.addEventListener('change', () => {
+      if (saveTimer) clearTimeout(saveTimer)
+      saveImmediately()
+    })
+
+    nameInput.addEventListener('blur', () => {
+      if (saveTimer) clearTimeout(saveTimer)
+      saveImmediately()
     })
   }
 }
@@ -1520,11 +1543,20 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
       resolvedMode = 'training'
       difficulty = mode.replace('training_', '')
     }
+    const email = getCurrentUserEmail()
+    let initialName = ''
+    if (email) {
+      initialName = email.split('@')[0]?.toUpperCase() ?? 'USER'
+    } else {
+      const stored = localStorage.getItem('ragequit.profile.displayName')
+      initialName = stored ? stored.trim().toUpperCase() : ''
+    }
     const roomOptions: Record<string, unknown> = {
       mode: resolvedMode,
       difficulty,
       botFill: resolvedMode === 'duel_arena',
     }
+    if (initialName) roomOptions['name'] = initialName
     if (token) roomOptions['token'] = token
     const joinedRoom = await client.joinOrCreate('game', roomOptions)
     const mainMenuHidden =

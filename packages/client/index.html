@@ -6,7 +6,7 @@
     <meta name="color-scheme" content="dark" />
     <link rel="icon" href="/ui/ragequit-logo-small.png" type="image/png" />
     <title>RAGEQUIT</title>
-    <link rel="stylesheet" href="/game-ui.css">
+    <link rel="stylesheet" href="/game-ui.css" />
   </head>
   <body class="main-menu-active">
     <div id="app"></div>
@@ -18,30 +18,30 @@
     <div id="utility-wheel" class="radial-menu">
       <div class="radial-bg"></div>
       <div class="radial-dividers"></div>
-      <div class="radial-slot" data-dir="top"    data-slot="7" data-key="Z">
+      <div class="radial-slot" data-dir="top" data-slot="4">
         <span class="r-icon">⚡</span>
-        <span class="r-key">Z</span>
+        <span class="r-key"></span>
         <span class="r-name r-empty">empty</span>
         <span class="r-cd"></span>
         <span class="r-mode"></span>
       </div>
-      <div class="radial-slot" data-dir="right"  data-slot="8" data-key="X">
+      <div class="radial-slot" data-dir="right" data-slot="5">
         <span class="r-icon">⚡</span>
-        <span class="r-key">X</span>
+        <span class="r-key"></span>
         <span class="r-name r-empty">empty</span>
         <span class="r-cd"></span>
         <span class="r-mode"></span>
       </div>
-      <div class="radial-slot" data-dir="bottom" data-slot="9" data-key="F">
+      <div class="radial-slot" data-dir="bottom" data-slot="6">
         <span class="r-icon">⚡</span>
-        <span class="r-key">F</span>
+        <span class="r-key"></span>
         <span class="r-name r-empty">empty</span>
         <span class="r-cd"></span>
         <span class="r-mode"></span>
       </div>
-      <div class="radial-slot" data-dir="left"   data-slot="10" data-key="V">
+      <div class="radial-slot" data-dir="left" data-slot="7">
         <span class="r-icon">⚡</span>
-        <span class="r-key">V</span>
+        <span class="r-key"></span>
         <span class="r-name r-empty">empty</span>
         <span class="r-cd"></span>
         <span class="r-mode"></span>
@@ -52,13 +52,26 @@
     <div id="ability-wheel" class="radial-menu">
       <div class="radial-bg"></div>
       <div class="radial-dividers"></div>
-      <div class="radial-slot" data-dir="top" data-slot="0" data-key="R"><span class="r-icon">⚔</span><span class="r-key">R</span><span class="r-name r-empty">empty</span><span class="r-cd"></span><span class="r-mode"></span></div>
-      <div class="radial-slot" data-dir="top-right" data-slot="1" data-key="BOW"><span class="r-icon">🏹</span><span class="r-key">BOW</span><span class="r-name r-empty">empty</span><span class="r-cd"></span><span class="r-mode"></span></div>
-      <div class="radial-slot" data-dir="right" data-slot="2" data-key="1"><span class="r-icon">✦</span><span class="r-key">1</span><span class="r-name r-empty">empty</span><span class="r-cd"></span><span class="r-mode"></span></div>
-      <div class="radial-slot" data-dir="bottom-right" data-slot="3" data-key="2"><span class="r-icon">✦</span><span class="r-key">2</span><span class="r-name r-empty">empty</span><span class="r-cd"></span><span class="r-mode"></span></div>
-      <div class="radial-slot" data-dir="bottom" data-slot="4" data-key="3"><span class="r-icon">✦</span><span class="r-key">3</span><span class="r-name r-empty">empty</span><span class="r-cd"></span><span class="r-mode"></span></div>
-      <div class="radial-slot" data-dir="bottom-left" data-slot="5" data-key="4"><span class="r-icon">✦</span><span class="r-key">4</span><span class="r-name r-empty">empty</span><span class="r-cd"></span><span class="r-mode"></span></div>
-      <div class="radial-slot" data-dir="left" data-slot="6" data-key="5"><span class="r-icon">✦</span><span class="r-key">5</span><span class="r-name r-empty">empty</span><span class="r-cd"></span><span class="r-mode"></span></div>
+      <div class="radial-slot" data-dir="top" data-slot="0">
+        <span class="r-icon">⚔</span><span class="r-key"></span
+        ><span class="r-name r-empty">empty</span><span class="r-cd"></span
+        ><span class="r-mode"></span>
+      </div>
+      <div class="radial-slot" data-dir="right" data-slot="1">
+        <span class="r-icon">✦</span><span class="r-key"></span
+        ><span class="r-name r-empty">empty</span><span class="r-cd"></span
+        ><span class="r-mode"></span>
+      </div>
+      <div class="radial-slot" data-dir="bottom" data-slot="2">
+        <span class="r-icon">✦</span><span class="r-key"></span
+        ><span class="r-name r-empty">empty</span><span class="r-cd"></span
+        ><span class="r-mode"></span>
+      </div>
+      <div class="radial-slot" data-dir="left" data-slot="3">
+        <span class="r-icon">✦</span><span class="r-key"></span
+        ><span class="r-name r-empty">empty</span><span class="r-cd"></span
+        ><span class="r-mode"></span>
+      </div>
       <div class="radial-center">E</div>
     </div>
     <div id="gcd-ring"></div>
@@ -144,7 +157,10 @@
       </div>
     </div>
 
-    <div id="cast-bar"><div class="fill"></div><div class="label">CAST</div></div>
+    <div id="cast-bar">
+      <div class="fill"></div>
+      <div class="label">CAST</div>
+    </div>
     <div id="status-strip"></div>
 
     <div id="kill-feed"></div>
@@ -156,12 +172,20 @@
     </div>
 
     <div id="round-hud" class="hidden">
-      <div class="pip-row" id="round-pips-self"><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+      <div class="pip-row" id="round-pips-self">
+        <div class="pip"></div>
+        <div class="pip"></div>
+        <div class="pip"></div>
+      </div>
       <span class="phase-label" id="round-phase">LOBBY</span>
       <span class="countdown" id="round-countdown"></span>
       <span id="round-timer"></span>
       <span class="kill-counter hidden" id="kill-counter"></span>
-      <div class="pip-row" id="round-pips-other"><div class="pip"></div><div class="pip"></div><div class="pip"></div></div>
+      <div class="pip-row" id="round-pips-other">
+        <div class="pip"></div>
+        <div class="pip"></div>
+        <div class="pip"></div>
+      </div>
     </div>
 
     <div id="scoreboard" class="hidden">
@@ -190,35 +214,46 @@
           <button class="pause-btn" id="pause-settings">Settings</button>
           <button class="pause-btn danger" id="pause-lobby">Return to Lobby</button>
         </div>
-        <div class="pause-note">The match keeps running online. Resume returns mouse control to the arena.</div>
+        <div class="pause-note">
+          The match keeps running online. Resume returns mouse control to the arena.
+        </div>
         <div class="pause-controls">
-          <div><b><span data-keybind-label="moveForward">W</span><span data-keybind-label="moveLeft">A</span><span data-keybind-label="moveBack">S</span><span data-keybind-label="moveRight">D</span></b><span>Move</span></div>
+          <div>
+            <b
+              ><span data-keybind-label="moveForward">W</span
+              ><span data-keybind-label="moveLeft">A</span
+              ><span data-keybind-label="moveBack">S</span
+              ><span data-keybind-label="moveRight">D</span></b
+            ><span>Move</span>
+          </div>
           <div><b data-keybind-label="jump">Space</b><span>Jump</span></div>
           <div><b>LMB</b><span>Weapon fire</span></div>
           <div><b>RMB</b><span>Parry</span></div>
           <div><b data-keybind-label="swapWeapon">Tab</b><span>Swap weapon</span></div>
-          <div><b><span data-keybind-label="wheelAbility">E</span> / <span data-keybind-label="wheelUtility">Q</span> hold</b><span>Wheels</span></div>
-          <div><b><span data-keybind-label="utilityQuick1">Z</span> <span data-keybind-label="utilityQuick2">X</span> <span data-keybind-label="utilityQuick3">F</span></b><span>Utility slots</span></div>
+          <div>
+            <b
+              ><span data-keybind-label="wheelAbility">E</span> /
+              <span data-keybind-label="wheelUtility">Q</span> hold</b
+            ><span>Wheels</span>
+          </div>
+          <div><b data-keybind-label="wheelUtility">Q</b><span>Utility wheel</span></div>
           <div><b data-keybind-label="openLoadout">L</b><span>Loadout</span></div>
         </div>
       </div>
     </div>
 
     <div id="main-menu">
-
       <!-- ── CENTRO: logo · tile modalità · forge ───────────────────── -->
       <div class="mm-center">
-
         <header class="mm-header">
           <div class="rq-menu-brand" aria-label="RAGEQUIT">
-            <img src="/ui/ragequit-logo-full.png" alt="RAGEQUIT">
+            <img src="/ui/ragequit-logo-full.png" alt="RAGEQUIT" />
           </div>
           <p class="tagline">BUILD IT. BREAK THEM.</p>
         </header>
 
         <!-- 3 tile modalità di gioco -->
         <div class="mm-modes-row">
-
           <button class="mode-tile mode-tile--pvp" id="menu-play">
             <span class="mode-tile-glow"></span>
             <span class="mode-tile-tag">RANKED</span>
@@ -242,7 +277,6 @@
             <span class="mode-tile-name">Allenamento</span>
             <span class="mode-tile-sub">Pratica contro AI · bot avversari</span>
           </button>
-
         </div>
 
         <!-- Sub-opzioni difficoltà training (espandibile) -->
@@ -270,22 +304,30 @@
           <span class="forge-tile-icon">⚙</span>
           <span class="forge-tile-text">
             <span class="forge-tile-name">Loadout Forge</span>
-            <span class="forge-tile-sub">costruisci la classe · scegli gli incantesimi · personalizza il build</span>
+            <span class="forge-tile-sub"
+              >costruisci la classe · scegli gli incantesimi · personalizza il build</span
+            >
           </span>
           <span class="forge-tile-arrow">›</span>
         </button>
 
         <!-- ── PANNELLO PROFILO — barra orizzontale integrata ──────── -->
         <div id="menu-loadout-preview" class="profile-card-floating">
-
           <!-- Avatar + nome -->
           <div class="pc-head">
             <div class="pc-avatar" id="pc-avatar">?</div>
             <div class="pc-ident">
               <div class="pc-name-field">
-                <input type="text" id="pc-display-name" class="pc-name-input"
-                  value="" maxlength="16" placeholder="Nome…"
-                  spellcheck="false" autocomplete="off">
+                <input
+                  type="text"
+                  id="pc-display-name"
+                  class="pc-name-input"
+                  value=""
+                  maxlength="16"
+                  placeholder="Nome…"
+                  spellcheck="false"
+                  autocomplete="off"
+                />
                 <span class="pc-name-saved" id="pc-name-saved" aria-hidden="true">✓</span>
               </div>
               <span class="pc-name-sub">nome in gioco</span>
@@ -335,18 +377,14 @@
               <span id="pc-loadout-text" class="pc-loadout-text">Configura loadout</span>
             </div>
           </div>
-
         </div>
-
       </div>
-
     </div>
 
     <!-- Settings overlay -->
     <div id="settings-overlay" class="hidden">
       <h2>SETTINGS</h2>
       <div class="settings-panel">
-
         <div class="setting-row">
           <span class="setting-label">Graphics Quality</span>
           <div class="quality-btns">
@@ -359,7 +397,7 @@
         <div class="setting-row">
           <span class="setting-label">Field of View</span>
           <div class="setting-control">
-            <input type="range" id="setting-fov" min="60" max="120" step="1" value="90">
+            <input type="range" id="setting-fov" min="60" max="120" step="1" value="90" />
             <span class="setting-value" id="setting-fov-val">90°</span>
           </div>
         </div>
@@ -367,7 +405,7 @@
         <div class="setting-row">
           <span class="setting-label">Mouse Sensitivity</span>
           <div class="setting-control">
-            <input type="range" id="setting-sens" min="4" max="80" step="1" value="22">
+            <input type="range" id="setting-sens" min="4" max="80" step="1" value="22" />
             <span class="setting-value" id="setting-sens-val">0.0022</span>
           </div>
         </div>
@@ -375,7 +413,7 @@
         <div class="setting-row">
           <span class="setting-label">Volume</span>
           <div class="setting-control">
-            <input type="range" id="setting-vol" min="0" max="100" step="1" value="55">
+            <input type="range" id="setting-vol" min="0" max="100" step="1" value="55" />
             <span class="setting-value" id="setting-vol-val">55%</span>
           </div>
         </div>
@@ -383,195 +421,199 @@
         <div class="setting-row controls-row">
           <span class="setting-label">Controls</span>
           <div class="controls-grid">
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="moveForward"></button> Move forward</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="moveBack"></button> Move back</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="moveLeft"></button> Move left</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="moveRight"></button> Move right</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="jump"></button> Jump</div>
+            <div class="keybind-row">
+              <button class="keybind-btn" data-keybind-action="moveForward"></button> Move forward
+            </div>
+            <div class="keybind-row">
+              <button class="keybind-btn" data-keybind-action="moveBack"></button> Move back
+            </div>
+            <div class="keybind-row">
+              <button class="keybind-btn" data-keybind-action="moveLeft"></button> Move left
+            </div>
+            <div class="keybind-row">
+              <button class="keybind-btn" data-keybind-action="moveRight"></button> Move right
+            </div>
+            <div class="keybind-row">
+              <button class="keybind-btn" data-keybind-action="jump"></button> Jump
+            </div>
             <div><span class="key">LMB</span> Attack</div>
             <div><span class="key">RMB</span> Parry</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="swapWeapon"></button> Cycle weapon</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="spell1"></button> Spell 1</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="spell2"></button> Spell 2</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="spell3"></button> Spell 3</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="spell4"></button> Spell 4</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="spell5"></button> Spell 5</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="wheelUtility"></button> Utility wheel</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="wheelAbility"></button> Ability wheel</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="openLoadout"></button> Loadout</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="sensDown"></button> Sens -</div>
-            <div class="keybind-row"><button class="keybind-btn" data-keybind-action="sensUp"></button> Sens +</div>
+            <div class="keybind-row">
+              <button class="keybind-btn" data-keybind-action="swapWeapon"></button> Cycle weapon
+            </div>
+            <div class="keybind-row">
+              <button class="keybind-btn" data-keybind-action="spell1"></button> Spell 1
+            </div>
+            <div class="keybind-row">
+              <button class="keybind-btn" data-keybind-action="spell2"></button> Spell 2
+            </div>
+            <div class="keybind-row">
+              <button class="keybind-btn" data-keybind-action="spell3"></button> Spell 3
+            </div>
+            <div class="keybind-row">
+              <button class="keybind-btn" data-keybind-action="spell4"></button> Spell 4
+            </div>
+            <div class="keybind-row">
+              <button class="keybind-btn" data-keybind-action="spell5"></button> Spell 5
+            </div>
+            <div class="keybind-row">
+              <button class="keybind-btn" data-keybind-action="wheelUtility"></button> Utility wheel
+            </div>
+            <div class="keybind-row">
+              <button class="keybind-btn" data-keybind-action="wheelAbility"></button> Ability wheel
+            </div>
+            <div class="keybind-row">
+              <button class="keybind-btn" data-keybind-action="openLoadout"></button> Loadout
+            </div>
+            <div class="keybind-row">
+              <button class="keybind-btn" data-keybind-action="sensDown"></button> Sens -
+            </div>
+            <div class="keybind-row">
+              <button class="keybind-btn" data-keybind-action="sensUp"></button> Sens +
+            </div>
             <button id="settings-keybind-reset" type="button">RESET KEYBINDS</button>
           </div>
         </div>
-
       </div>
       <button id="settings-back-btn">BACK</button>
     </div>
 
     <div id="loadout-station" class="hidden">
 
-      <!-- Top bar: title + mastery inline -->
+      <!-- ── HEADER: logo · class tabs · compact vitals ── -->
       <div id="ls-header">
         <div id="ls-title-block">
-          <img class="rq-shell-logo" src="/ui/ragequit-logo-small.png" alt="RAGEQUIT">
+          <img class="rq-shell-logo" src="/ui/ragequit-logo-small.png" alt="RAGEQUIT" />
           <h1>LOADOUT <span>FORGE</span></h1>
-          <p class="subtitle">Seleziona la classe e forgia il tuo build da combattimento</p>
+          <p class="subtitle">Seleziona classe · Forgia il build</p>
         </div>
 
-        <!-- Class Selector — 4 metallic arcane tabs -->
         <div id="ls-class-selector" aria-label="Seleziona classe">
           <button class="class-select-card active" data-class="tank" id="ls-class-tank" type="button">
-            <span class="class-tab-icon">🛡️</span>
-            <span class="class-tab-name">TANK</span>
-            <span class="class-tab-sub">Fury · 250 HP</span>
+            <span class="card-icon">🛡️</span>
+            <span class="card-title">TANK</span>
+            <span class="card-desc">Fury · 250 HP</span>
           </button>
           <button class="class-select-card" data-class="archer" id="ls-class-archer" type="button">
-            <span class="class-tab-icon">🏹</span>
-            <span class="class-tab-name">ARCIERE</span>
-            <span class="class-tab-sub">Momentum · 175 HP</span>
+            <span class="card-icon">🏹</span>
+            <span class="card-title">ARCIERE</span>
+            <span class="card-desc">Momentum · 175 HP</span>
           </button>
           <button class="class-select-card" data-class="mage" id="ls-class-mage" type="button">
-            <span class="class-tab-icon">🔮</span>
-            <span class="class-tab-name">MAGO</span>
-            <span class="class-tab-sub">Risonanza · 150 HP</span>
+            <span class="card-icon">🔮</span>
+            <span class="card-title">MAGO</span>
+            <span class="card-desc">Risonanza · 150 HP</span>
           </button>
           <button class="class-select-card" data-class="hybrid" id="ls-class-hybrid" type="button">
-            <span class="class-tab-icon">⚡</span>
-            <span class="class-tab-name">IBRIDO</span>
-            <span class="class-tab-sub">Flow · 200 HP</span>
+            <span class="card-icon">⚡</span>
+            <span class="card-title">IBRIDO</span>
+            <span class="card-desc">Flow · 200 HP</span>
           </button>
         </div>
 
-        <div id="ls-flow-strip" aria-label="Build flow">
-          <span data-flow="opener">Opener</span>
-          <span data-flow="control">Control</span>
-          <span data-flow="cashout">Cashout</span>
-          <span data-flow="reset">Reset</span>
+        <div id="ls-vitals-bar">
+          <span id="ls-vitals-class-name" class="vitals-class-tag">IBRIDO</span>
+          <div class="vital-pill">
+            <span class="vp-icon">❤️</span>
+            <div class="vital-bar-track"><div class="vital-bar hp" id="ls-bar-hp"></div></div>
+            <span class="vital-value" id="ls-val-hp">200</span>
+          </div>
+          <div class="vital-pill">
+            <span class="vp-icon">⚡</span>
+            <div class="vital-bar-track"><div class="vital-bar stamina" id="ls-bar-stam"></div></div>
+            <span class="vital-value" id="ls-val-stam">100</span>
+          </div>
+          <div class="vital-pill">
+            <span class="vp-icon">🔷</span>
+            <div class="vital-bar-track"><div class="vital-bar mana" id="ls-bar-mana"></div></div>
+            <span class="vital-value" id="ls-val-mana">100</span>
+          </div>
         </div>
       </div>
 
+      <!-- ── BODY: left=slots  right=pool+detail ── -->
       <div id="ls-body">
+
+        <!-- LEFT: build slots -->
         <div id="ls-left">
           <div class="ls-section">
-            <div class="ls-section-label"><span>Ability Wheel</span><span class="ls-key" id="ls-ability-wheel-key">E HOLD</span></div>
+            <div class="ls-section-label">
+              <span>⚔ Ability Wheel</span>
+              <span class="ls-key" id="ls-ability-wheel-key">E HOLD</span>
+            </div>
             <div class="slot-list" id="ls-melee"></div>
             <div class="slot-list" id="ls-bow"></div>
-          </div>
-          <div class="ls-section">
-            <div class="ls-section-label"><span>Magic Deck</span><span class="ls-key" id="ls-magic-deck-key">1 2 3 4 5</span></div>
             <div class="slot-list" id="ls-magic-base"></div>
             <div class="slot-list" id="ls-magic-advanced"></div>
           </div>
           <div class="ls-section">
-            <div class="ls-section-label"><span>Utility Wheel</span><span class="ls-key" id="ls-utility-wheel-key">Q HOLD</span></div>
+            <div class="ls-section-label">
+              <span>🛡 Utility Wheel</span>
+              <span class="ls-key" id="ls-utility-wheel-key">Q HOLD</span>
+            </div>
             <div class="slot-list" id="ls-utility"></div>
           </div>
+          <button class="btn ls-preset-btn" id="ls-load-preset" type="button">
+            ⚙ PRESET INIZIALE
+          </button>
         </div>
 
-        <div id="ls-center">
-          <div id="ls-detail-header">
-            <div id="ls-detail-name">Select an ability</div>
-            <div id="ls-detail-meta">SLOT</div>
-            <button id="ls-detail-instant" type="button">
-              <span class="mode-kicker">Cast mode</span>
-              <span class="mode-state">Preview</span>
-              <span class="mode-help">Key primes · LMB confirms</span>
-            </button>
-          </div>
-
-          <!-- Class Vitals Console — dynamically populated per active class -->
-          <div id="ls-class-vitals" aria-label="Statistiche classe">
-            <div class="vitals-title" id="ls-vitals-class-name">IBRIDO</div>
-            <div class="vitals-mechanic" id="ls-vitals-mechanic">
-              <span class="mechanic-label">Meccanica Unica</span>
-              <span class="mechanic-name" id="ls-mechanic-name">FLOW</span>
-              <p class="mechanic-desc" id="ls-mechanic-desc"></p>
-            </div>
-
-            <!-- Allowed Weapons panel -->
-            <div class="vitals-weapons-container">
-              <span class="vitals-section-title">ALLOWED WEAPONS</span>
-              <div id="ls-vitals-weapons" class="vitals-weapons-row">
-                <div class="vitals-weapon-icon" data-weapon="sword" title="Sword ⚔️">⚔️ <span>SWORD</span></div>
-                <div class="vitals-weapon-icon" data-weapon="bow" title="Bow 🏹">🏹 <span>BOW</span></div>
-                <div class="vitals-weapon-icon" data-weapon="staff" title="Staff 🔮">🔮 <span>STAFF</span></div>
-              </div>
-            </div>
-
-            <!-- Spell Budget panel -->
-            <div class="vitals-spells-container">
-              <span class="vitals-section-title">SPELL SLOT BUDGET</span>
-              <div id="ls-vitals-spells" class="vitals-spells-grid"></div>
-            </div>
-            <div class="vitals-bars">
-              <div class="vital-row">
-                <span class="vital-label">❤️ HP</span>
-                <div class="vital-bar-track"><div class="vital-bar hp" id="ls-bar-hp"></div></div>
-                <span class="vital-value" id="ls-val-hp">200</span>
-              </div>
-              <div class="vital-row">
-                <span class="vital-label">🔷 MANA</span>
-                <div class="vital-bar-track"><div class="vital-bar mana" id="ls-bar-mana"></div></div>
-                <span class="vital-value" id="ls-val-mana">100</span>
-              </div>
-              <div class="vital-row">
-                <span class="vital-label">⚡ STAM</span>
-                <div class="vital-bar-track"><div class="vital-bar stamina" id="ls-bar-stam"></div></div>
-                <span class="vital-value" id="ls-val-stam">100</span>
-              </div>
-            </div>
-            <button class="btn ls-preset-btn" id="ls-load-preset" type="button">⚙ CARICA PRESET INIZIALE</button>
-          </div>
-
-          <div id="ls-detail-body">
-            <div id="ls-detail-desc">Pick a slot and choose a compatible ability.</div>
-            <div id="ls-build-coach"></div>
-            <div id="ls-detail-malus"></div>
-          </div>
-        </div>
-
+        <!-- RIGHT: pool (top, scrollable) + detail (bottom, fixed) -->
         <div id="ls-right">
-          <div id="ls-filter-bar">
-            <div class="filter-bar-row">
-              <input id="ls-search" type="text" placeholder="Search abilities…" autocomplete="off" spellcheck="false">
-              <div class="filter-group primary-filters" aria-label="Build filters">
+
+          <div id="ls-pool-section">
+            <div id="ls-filter-bar">
+              <input id="ls-search" type="text" placeholder="Cerca abilità…" autocomplete="off" spellcheck="false" />
+              <div class="filter-group" aria-label="Build filters">
                 <button class="filter-btn smart" data-filter="recommended">SMART</button>
                 <button class="filter-btn starter" data-filter="starter">STARTER</button>
                 <button class="filter-btn" data-filter="control">CONTROL</button>
-              </div>
-              <button id="ls-filter-toggle" type="button" aria-expanded="false" aria-controls="ls-filter-drawer">FILTERS ↓</button>
-            </div>
-            <div id="ls-filter-drawer" aria-hidden="true">
-              <div class="filter-group mode-filters" aria-label="Cast mode filters">
                 <button class="filter-btn" data-filter="instant">INSTANT</button>
                 <button class="filter-btn" data-filter="preview">PREVIEW</button>
-              </div>
-              <div class="filter-group element-filters" aria-label="Element filters">
                 <button class="filter-btn" data-filter="all">ALL</button>
-                <button class="filter-btn fire" data-filter="fire">FIRE</button>
-                <button class="filter-btn ice" data-filter="ice">ICE</button>
-                <button class="filter-btn lightning" data-filter="lightning">LIGHTNING</button>
-                <button class="filter-btn dark" data-filter="dark">DARK</button>
-                <button class="filter-btn nature" data-filter="nature">NATURE</button>
-                <button class="filter-btn" data-filter="none">PHYSICAL</button>
               </div>
             </div>
+            <div class="pool-grid" id="ls-pool"></div>
           </div>
-          <div id="ls-pool-title">Ability Pool</div>
-          <div id="ls-pool-subtitle">Choose a compatible card for the selected slot</div>
-          <div class="pool-grid" id="ls-pool"></div>
-        </div>
 
-      </div>
+          <div id="ls-detail-panel">
+            <div id="ls-detail-header">
+              <div id="ls-detail-icon-frame">🔮</div>
+              <div class="ls-detail-text-block">
+                <div id="ls-detail-name">Seleziona un'abilità</div>
+                <div id="ls-detail-meta">SLOT</div>
+              </div>
+              <button id="ls-detail-instant" type="button">
+                <span class="mode-kicker">Cast mode</span>
+                <span class="mode-state">Preview</span>
+                <span class="mode-help">Key primes · LMB confirms</span>
+              </button>
+            </div>
+            <div id="ls-detail-body">
+              <div id="ls-detail-desc">Scegli uno slot e seleziona un'abilità compatibile.</div>
+              <div id="ls-detail-malus"></div>
+            </div>
+          </div>
 
-      <!-- Bottom bar: action buttons -->
+        </div><!-- /ls-right -->
+      </div><!-- /ls-body -->
+
+      <!-- ── FOOTER ── -->
       <div class="station-buttons">
         <button class="btn secondary" id="ls-back">← BACK</button>
         <button class="btn" id="ls-default">RESET DEFAULT</button>
         <button class="btn primary" id="ls-confirm">CONFIRM &amp; ENTER MATCH</button>
       </div>
 
+    </div><!-- /loadout-station -->
+
+    <!-- REMOVED LEGACY: class-vitals-panel, flow-strip, ls-center, filter-drawer -->
+    <!-- All slot IDs retained: ls-melee, ls-bow, ls-magic-base, ls-magic-advanced, ls-utility, ls-pool -->
+
+    <div id="ls-dummy-removed">
+      <!-- vitals kept inline in header; spells/weapons grid removed; build coach removed -->
+      <div id="ls-vitals-spells" style="display:none"></div>
+      <div id="ls-vitals-weapons" style="display:none"></div>
     </div>
 
     <div id="hint" class="hidden" aria-hidden="true"></div>

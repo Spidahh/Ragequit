@@ -23,7 +23,7 @@ Questo documento descrive lo stato vivo.
 - La wheel e una palette di selezione: hold, selezione, rilascio per primare,
   LMB per cast/conferma quando richiesto.
 - Fall damage e self-damage dalle proprie abilita sono zero.
-- Nessuna passiva, rune o slot passivo.
+- Nessun sistema passivo o slot extra fuori loadout.
 
 ## UI
 

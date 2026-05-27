@@ -64,8 +64,8 @@ export function initAbilityFailHud({
         return `Cannot ${actionVerb} while controlled`
       case 'casting':
         return 'Already casting'
-      case 'airborne':
-        return `Cannot ${actionVerb} while airborne`
+      case 'grounded_required':
+        return `${abilityName}: requires ground`
       case 'parrying':
         return `Cannot ${actionVerb} while parrying`
       case 'wrong_weapon':

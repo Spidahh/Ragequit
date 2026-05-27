@@ -118,7 +118,7 @@ CI GitHub Actions gira su ogni push/PR: lint + typecheck + test + build. Finché
 | Build production            | `pnpm build`                                          |
 | Reset totale (cache + deps) | `pnpm clean && pnpm install`                          |
 
-## Verifica locale consigliata
+## Verifica locale
 
 Prima di considerare buono un cambio:
 

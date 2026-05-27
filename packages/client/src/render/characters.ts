@@ -706,7 +706,7 @@ export function makeParryShieldVisual(radius = 0.62): THREE.Group {
     depthWrite: false,
     side: THREE.DoubleSide,
   })
-  const runeMat = new THREE.MeshBasicMaterial({
+  const glyphMat = new THREE.MeshBasicMaterial({
     color: 0x00d0ff,
     transparent: true,
     opacity: 0.78,
@@ -716,11 +716,11 @@ export function makeParryShieldVisual(radius = 0.62): THREE.Group {
 
   const core = new THREE.Mesh(new THREE.CircleGeometry(radius, 8), coreMat)
   const edge = new THREE.Mesh(new THREE.RingGeometry(radius * 0.84, radius, 8), edgeMat)
-  const rune = new THREE.Mesh(new THREE.RingGeometry(radius * 0.38, radius * 0.46, 6), runeMat)
+  const glyph = new THREE.Mesh(new THREE.RingGeometry(radius * 0.38, radius * 0.46, 6), glyphMat)
   core.userData['parryShieldCore'] = true
   edge.userData['parryShieldEdge'] = true
-  rune.userData['parryShieldRune'] = true
-  shield.add(core, edge, rune)
+  glyph.userData['parryShieldGlyph'] = true
+  shield.add(core, edge, glyph)
   return shield
 }
 
@@ -743,7 +743,7 @@ export function setParryShieldState(
     const mat = child.material as THREE.MeshBasicMaterial
     if (child.userData['parryShieldCore']) mat.opacity = hold ? 0.16 + pulse * 0.09 : 0.26
     if (child.userData['parryShieldEdge']) mat.opacity = hold ? 0.68 + pulse * 0.22 : 0.96
-    if (child.userData['parryShieldRune']) mat.opacity = hold ? 0.58 + pulse * 0.2 : 0.9
+    if (child.userData['parryShieldGlyph']) mat.opacity = hold ? 0.58 + pulse * 0.2 : 0.9
   })
 }
 
@@ -833,11 +833,11 @@ export function applyWeaponProp(
             const hasMap = !!(src && 'map' in src && src.map && !(src.map instanceof Function))
             const color = src?.color?.clone() ?? new THREE.Color(0xffffff)
 
-            // If the mesh is named "glow", "rune", "orb", or "element", we tint it with the element color
+            // Tint obvious emissive/detail meshes with the element color.
             const nameLower = child.name.toLowerCase()
             const isGlowing =
               nameLower.includes('glow') ||
-              nameLower.includes('rune') ||
+              nameLower.includes('glyph') ||
               nameLower.includes('orb') ||
               nameLower.includes('element')
 

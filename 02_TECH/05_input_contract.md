@@ -2,10 +2,10 @@
 
 This file records the current browser-game input rules so we do not regress the basic play loop.
 
-Confirmed redesign note: wheel selection behavior and pointer-lock safety stay
-important, while slot counts, class legality and recovery surfaces change. Air
-action rules now follow `../01_DESIGN/01_arena_fps_reference_study.md`; browser
-smoke must cover air combat after that pass.
+Wheel selection behavior, pointer-lock safety, class legality and recovery
+surfaces are part of the current input contract. Air action rules follow
+`../01_DESIGN/01_arena_fps_air_contract.md`; browser smoke must cover air
+combat.
 
 ## Arena Capture
 
@@ -26,7 +26,8 @@ smoke must cover air combat after that pass.
 
 - Ability and utility wheels are selectors, not launchers.
 - Holding the wheel key opens the wheel; moving the mouse changes the highlighted sector; releasing the key primes the selected slot; LMB fires the primed ability.
-- Direct binds still cast immediately unless the selected ability is configured for preview placement.
+- Number keys `1`-`5` cast class-legal spell slots immediately. `Q` and `E` wheels select and prime utility/ability sectors; LMB confirms the primed action.
+- Removed direct binds `Z`, `X`, `F`, `V`, `R`, and `G` are not gameplay input surfaces.
 
 ## Regression Checks
 

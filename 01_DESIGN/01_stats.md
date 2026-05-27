@@ -5,14 +5,10 @@ section: combat
 tags: [numbers, resources, movement]
 provides: [hp, mana, stamina, move_speed, regen]
 deps: []
-status: redesign
+status: current
 ---
 
 # Player Stats
-
-> Current runtime still uses the shared-stat table below. Confirmed class
-> redesign supersedes it as the target model; `00_classes.md` owns the starting
-> class resource pools until tuning and implementation replace the runtime.
 
 ## Resources
 
@@ -28,13 +24,13 @@ status: redesign
 
 ## Movement
 
-| Action                      | Value                                                 |
-| --------------------------- | ----------------------------------------------------- |
-| Base move speed (always on) | 9.0 m/s                                               |
-| Jump height (tap Space)     | 1.5 m                                                 |
-| Jump height (hold Space)    | 2.2 m                                                 |
-| Jump cost                   | 10 stamina                                            |
-| Fall damage                 | 0 HP at every height in the confirmed target redesign |
+| Action                      | Value                |
+| --------------------------- | -------------------- |
+| Base move speed (always on) | 9.0 m/s              |
+| Jump height (tap Space)     | 1.5 m                |
+| Jump height (hold Space)    | 2.2 m                |
+| Jump cost                   | 10 stamina           |
+| Fall damage                 | 0 HP at every height |
 
 Sprint is the default and only move speed. There is no Shift sprint, no walk toggle.
 
@@ -53,7 +49,6 @@ All damage values across weapons and abilities are tuned against the **20-30 sec
 
 ## Sustain and transfers
 
-The old runtime converts resources through fixed transfers. The target class
-redesign removes fixed transfers: in-combat self-sustain comes from Recovery
-utility choices and explicit magic sustain abilities that pay their own
-slot/cost/counterplay budget. See `04_resource_sustain_study.md`.
+There are no fixed resource-transfer slots. In-combat self-sustain comes from
+Recovery utility choices and explicit magic sustain abilities that pay their own
+slot, cost and counterplay budget. See `04_resource_sustain_study.md`.

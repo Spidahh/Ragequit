@@ -149,3 +149,8 @@ export async function getPlayerStats(userId: string): Promise<{ elo_rating: numb
   return data as { elo_rating: number; wins: number; losses: number } | null
 }
 
+export function isSupabaseConfigured(): boolean {
+  return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY)
+}
+
+

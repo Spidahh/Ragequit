@@ -110,7 +110,7 @@ describe('ability registry', () => {
     const dmg = u.effects.find((e) => e.kind === 'damage')
     expect(dmg && 'amount' in dmg ? dmg.amount : -1).toBe(16)
     const ku = u.effects.find((e) => e.kind === 'knockup')
-    expect(ku && 'airborneSec' in ku ? ku.airborneSec : -1).toBeCloseTo(1.0, 5)
+    expect(ku && 'airborneSec' in ku ? ku.airborneSec : -1).toBeCloseTo(0.5, 5)
   })
 
   it('fireball is staff/fire/projectile with onHit burn application', () => {

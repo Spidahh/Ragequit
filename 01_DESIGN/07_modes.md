@@ -10,9 +10,7 @@ status: current
 
 # Game Modes
 
-This document describes both the playable local slice and the product mode
-target. Do not read target ladders, queues or 5v5 rules as already-shipped local
-runtime behavior.
+This document describes playable modes and locked mode rules.
 
 ## Current local slice
 
@@ -21,12 +19,9 @@ runtime behavior.
 | 1v1             | Main menu -> Loadout Station -> local duel flow; solo tests bot-fill the second slot |
 | Training        | Main menu -> Loadout Station -> training/bot flow                                    |
 | Free For All    | Main menu -> Loadout Station -> kill-based FFA runtime without bot fill              |
-| Team Battle 5v5 | Product target, not a completed local launch path                                    |
+| Team Battle 5v5 | Team mode rule set                                                                   |
 
-Full matchmaking, separate ladders and production persistence remain roadmap
-items. **1v1 and team modes remain both shipping goals**.
-
-## Product mode summary
+## Mode Summary
 
 | Mode            | Team size  | Win condition           | Respawn     | ELO      | Est. duration |
 | --------------- | ---------- | ----------------------- | ----------- | -------- | ------------- |
@@ -35,16 +30,17 @@ items. **1v1 and team modes remain both shipping goals**.
 | FFA 10          | 10 solo    | 40 kills (solo)         | 3 s         | FFA ELO  | 8-12 min      |
 | Training        | 1v1 vs bot | N/A (practice)          | 0 s         | None     | Free          |
 
-## Target Team Battle 5v5
+## Team Battle 5v5
 
 - 5 players per side
 - First team to **75 total kills** wins
 - Respawn: **5 s**, 2 s spawn invulnerability
 - Map: `gladiators_arena` (the single existing arena, re-textured in new art style)
 - ELO: team-based ELO, K-factor 25, ±100 team balance at matchmaking
-- Scoreboard: dedicated HUD/menu surface shows kills, deaths, damage dealt, parries, mastery procs, pings
+- Scoreboard: dedicated HUD/menu surface shows kills, deaths, damage dealt,
+  parries and pings
 
-## Target 1v1 Ranked
+## 1v1 Ranked
 
 - Best-of-5 rounds, first to 3 round wins takes the match
 - Rounds are timed: 2 minutes max; if timer expires, higher-HP player wins the round
@@ -54,7 +50,7 @@ items. **1v1 and team modes remain both shipping goals**.
 - Map: smaller symmetric arena (`duel_arena`) using the current compact duel layout
 - Current local build: the main-menu 1v1 button bot-fills the second slot so solo testing enters a live duel immediately. Real matchmaking must replace this with a human opponent queue before ranked launch.
 
-## Target FFA 10
+## FFA 10
 
 - 10 players, every player for themselves
 - First to **40 kills** wins
@@ -63,9 +59,7 @@ items. **1v1 and team modes remain both shipping goals**.
 - ELO: separate FFA ladder, K-factor 20 (slower convergence because games are more chaotic)
 - Scoreboard: live leaderboard visible on HUD (top 3 + self position)
 
-## Training target
-
-> **Product target — not current local behavior.** The current local Training mode spawns a single bot with no difficulty selection. The items below describe the intended final Training experience.
+## Training
 
 - 1v1 vs a bot
 - 3 difficulty levels: Novice / Competent / Master (current local build has one fixed bot difficulty)
@@ -76,11 +70,11 @@ items. **1v1 and team modes remain both shipping goals**.
 
 ### Bot difficulty behavior spec
 
-| Level     | Behavior description                                                                                                                                                                                                                                                                 |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Novice    | Moves and uses M1. Does not parry. Does not use knockup → follow-up. Cast timing is slow and predictable. Reaction delay: ~600ms.                                                                                                                                                    |
-| Competent | Uses all ability slots. Parries obvious M1 patterns. Occasionally staggers after being hit. Does not chain knockup into follow-up. Reaction delay: ~350ms.                                                                                                                           |
-| Master    | **Uses knockup → follow-up combos**: when it lands a KNOCKUP ability, it immediately queues an instant follow-up (Marksman Shot, Fireball, or Chain Bolt) to hit during the airborne window. Parries predictably. Uses transmutation when resources are low. Reaction delay: ~150ms. |
+| Level     | Behavior description                                                                                                                                                                                                                      |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Novice    | Moves and uses M1. Does not parry. Does not use knockup → follow-up. Cast timing is slow and predictable. Reaction delay: ~600ms.                                                                                                         |
+| Competent | Uses all ability slots. Parries obvious M1 patterns. Occasionally staggers after being hit. Does not chain knockup into follow-up. Reaction delay: ~350ms.                                                                                |
+| Master    | **Uses knockup → follow-up combos**: when it lands a KNOCKUP ability, it immediately queues an instant follow-up (Marksman Shot, Fireball, or Chain Bolt) to hit during the airborne window. Parries predictably. Reaction delay: ~150ms. |
 
 The Master bot existing in Training before Supabase auth is implemented is intentional: the player needs to learn by receiving knockup combos, not just by reading a tutorial.
 
@@ -97,8 +91,6 @@ After each Training session (manual exit or death), show a compact summary:
 This is the feedback loop that teaches the game. Without it, the player has no signal on whether they are improving.
 
 ## Matchmaking rules (cross-mode)
-
-Status: design target, not implemented in the current local build.
 
 - Matchmaking is **per-mode ELO**. 1v1 rating does not affect 5v5 rating and vice versa.
 - **Team balance**: ±100 ELO average difference between the two teams; waits up to 60s then loosens to ±200

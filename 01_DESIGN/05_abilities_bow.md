@@ -5,15 +5,14 @@ section: abilities
 tags: [bow, ranged, list]
 provides: [bow_ability_list]
 deps: [05_abilities_philosophy.md, 02_weapon_bow.md]
-status: redesign
+status: current
 ---
 
 # Bow Abilities
 
-> Current runtime pool. Target bow work must be re-evaluated for Arciere/Tank/
-> Ibrido legality, air-combat behavior and class starter/recovery coverage.
-
-Player picks **1** bow ability per loadout. Auto-swap applies — binding a bow ability while holding sword means pressing the bind swaps to bow and casts in the same input frame (`01_controls.md`).
+Bow abilities live in class-legal Bow slots. Auto-swap applies: using a bow
+ability from another weapon swaps to bow and casts through the same input frame
+when validation allows it (`01_controls.md`).
 
 Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abilities/registry.ts` is the authoritative source for exact projectile speed, gravity, splash, setup duration, cast data, and tooltip text. Numeric bullets below are design snapshots for role/readability review, not a second runtime registry.
 
@@ -41,7 +40,7 @@ Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abil
 
 ### B3 · Pin Shot [KNOCKUP]
 
-- **Effect**: Hit launches target airborne for 0.7 s
+- **Effect**: Hit launches target airborne for 0.5 s
 - **Damage**: 15
 - **Charge**: 0.8 s required (shot won't fire below charge threshold)
 - **Cost**: 0
@@ -86,8 +85,7 @@ Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abil
 - **Range**: 22 m arcing projectile
 - **Mini-malus**: Gravity arc increases travel error against lateral movement
 - **Cleanse counter-play**: Broadhead Bleed needs visible cleanse counterplay.
-  Current runtime still cleanses Bleed through transmutation; target counterplay
-  moves to explicit cleanse rules after fixed transfers are removed.
+  Counterplay uses explicit cleanse rules.
 
 ### B8 · Blast Arrow
 

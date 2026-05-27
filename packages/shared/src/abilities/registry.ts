@@ -92,9 +92,9 @@ export const ABILITY_M3_UPPERCUT: AbilityDef = {
   comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 16 },
-    { at: 'onCast', kind: 'knockup', airborneSec: 1.0, knockbackDistance: 0.8 },
+    { at: 'onCast', kind: 'knockup', airborneSec: 0.5, knockbackDistance: 0.8 },
   ],
-  description: '16 damage. Launches the target Airborne 1.0s with a small 0.8m pop.',
+  description: '16 damage. Launches the target Airborne 0.5s with a small 0.8m pop.',
   miniMalus: '0.4s windup. Parryable.',
   canParry: true,
   isKnockup: true,
@@ -138,9 +138,9 @@ export const ABILITY_M5_GUARD_BREAK: AbilityDef = {
   effects: [
     { at: 'onCast', kind: 'damage', amount: 10 },
     { at: 'onCast', kind: 'applyStatus', status: 'stun', durationSec: 1.5, stacks: 1 },
-    { at: 'onCast', kind: 'knockup', airborneSec: 0.45, knockbackDistance: 1.2 },
+    { at: 'onCast', kind: 'knockup', airborneSec: 0.5, knockbackDistance: 1.2 },
   ],
-  description: '10 damage. Applies Stun 1.5s plus a short 0.45s pop.',
+  description: '10 damage. Applies Stun 1.5s plus a short 0.5s pop.',
   miniMalus: 'Very short 2.2m reach and fully parryable.',
   canParry: true,
 }
@@ -521,9 +521,9 @@ export const ABILITY_F5_ERUPTION: AbilityDef = {
   comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 8, radius: 2.4, element: 'fire' },
-    { at: 'onCast', kind: 'knockup', airborneSec: 0.9, radius: 2.4, knockbackDistance: 1.0 },
+    { at: 'onCast', kind: 'knockup', airborneSec: 0.5, radius: 2.4, knockbackDistance: 1.0 },
   ],
-  description: 'Instant ray detonates under the aimed enemy. 8 damage in 2.4m and Airborne 0.9s.',
+  description: 'Instant ray detonates under the aimed enemy. 8 damage in 2.4m and Airborne 0.5s.',
   miniMalus: 'Low direct damage and short detonation range.',
   isKnockup: true,
 }
@@ -689,9 +689,9 @@ export const ABILITY_I5_FROST_PILLAR: AbilityDef = {
   comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 12, element: 'ice' },
-    { at: 'onCast', kind: 'knockup', airborneSec: 1.0, knockbackDistance: 0.6 },
+    { at: 'onCast', kind: 'knockup', airborneSec: 0.5, knockbackDistance: 0.6 },
   ],
-  description: 'Ray pillar within 10m. 12 damage and Airborne 1.0s with minimal shove.',
+  description: 'Ray pillar within 10m. 12 damage and Airborne 0.5s with minimal shove.',
   miniMalus: '1.0s windup gives enemies time to dodge or interrupt.',
   isKnockup: true,
 }
@@ -815,9 +815,9 @@ export const ABILITY_L5_ARC_LIFT: AbilityDef = {
   comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 8, element: 'lightning' },
-    { at: 'onCast', kind: 'knockup', airborneSec: 0.8, knockbackDistance: 1.4 },
+    { at: 'onCast', kind: 'knockup', airborneSec: 0.5, knockbackDistance: 1.4 },
   ],
-  description: 'Instant ray within 15m. 8 damage, Airborne 0.8s and backward jolt.',
+  description: 'Instant ray within 15m. 8 damage, Airborne 0.5s and backward jolt.',
   miniMalus: 'Requires line of sight.',
   isKnockup: true,
 }
@@ -949,10 +949,10 @@ export const ABILITY_D5_VOID_SPIKE: AbilityDef = {
   comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 14, element: 'dark' },
-    { at: 'onCast', kind: 'knockup', airborneSec: 0.9, knockbackDistance: 1.0 },
+    { at: 'onCast', kind: 'knockup', airborneSec: 0.5, knockbackDistance: 1.0 },
     { at: 'onCast', kind: 'resourceDrain', resource: 'mana', amount: 12, gainFraction: 0.5 },
   ],
-  description: 'Void ray within 10m. 14 damage, Airborne 0.9s and drains 12 Mana.',
+  description: 'Void ray within 10m. 14 damage, Airborne 0.5s and drains 12 Mana.',
   miniMalus: 'Short range and clear line of sight required.',
   isKnockup: true,
 }
@@ -1081,9 +1081,9 @@ export const ABILITY_N5_ROOT_UPTHROW: AbilityDef = {
   comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 8, element: 'nature' },
-    { at: 'onCast', kind: 'knockup', airborneSec: 1.1, requiresGroundedTarget: true },
+    { at: 'onCast', kind: 'knockup', airborneSec: 0.5, requiresGroundedTarget: true },
   ],
-  description: 'Grounded target ray. 8 damage and Airborne 1.1s.',
+  description: 'Grounded target ray. 8 damage and Airborne 0.5s.',
   miniMalus: 'Fails against already airborne targets.',
   isKnockup: true,
 }

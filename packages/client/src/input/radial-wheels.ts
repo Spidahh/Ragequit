@@ -39,20 +39,17 @@ export interface RadialWheelControllerOptions {
 }
 
 const utilitySectors: readonly WheelSector[] = [
-  { dir: 'top', angleDeg: -90, slotIdx: 7 },
-  { dir: 'right', angleDeg: 0, slotIdx: 8 },
-  { dir: 'bottom', angleDeg: 90, slotIdx: 9 },
-  { dir: 'left', angleDeg: 180, slotIdx: 10 },
+  { dir: 'top', angleDeg: -90, slotIdx: 4 },
+  { dir: 'right', angleDeg: 0, slotIdx: 5 },
+  { dir: 'bottom', angleDeg: 90, slotIdx: 6 },
+  { dir: 'left', angleDeg: 180, slotIdx: 7 },
 ]
 
 const abilitySectors: readonly WheelSector[] = [
   { dir: 'top', angleDeg: -90, slotIdx: 0 },
-  { dir: 'top-right', angleDeg: -45, slotIdx: 1 },
-  { dir: 'right', angleDeg: 0, slotIdx: 2 },
-  { dir: 'bottom-right', angleDeg: 45, slotIdx: 3 },
-  { dir: 'bottom', angleDeg: 90, slotIdx: 4 },
-  { dir: 'bottom-left', angleDeg: 135, slotIdx: 5 },
-  { dir: 'left', angleDeg: 180, slotIdx: 6 },
+  { dir: 'right', angleDeg: 0, slotIdx: 1 },
+  { dir: 'bottom', angleDeg: 90, slotIdx: 2 },
+  { dir: 'left', angleDeg: 180, slotIdx: 3 },
 ]
 
 export function initRadialWheels({

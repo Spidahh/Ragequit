@@ -22,7 +22,6 @@ import {
   MessageTypes,
   PLAYER_CAPSULE_HEIGHT_M,
   STAMINA_MAX,
-  TICK_MS,
   TICK_RATE_HZ,
   directionFromYawPitch,
   isElementId,
@@ -190,7 +189,7 @@ export class AbilityEngine {
       return false
     }
     if (baseDef.airPolicy === 'groundedCaster' && now < player.airborneUntilTick) {
-      this.host.sendAbilityFailed(sid, abilityId, 'airborne')
+      this.host.sendAbilityFailed(sid, abilityId, 'grounded_required')
       return false
     }
     if (player.parrying) {
@@ -1070,5 +1069,3 @@ export class AbilityEngine {
     }
   }
 }
-
-void TICK_MS // avoid unused-import warning when the file changes shape

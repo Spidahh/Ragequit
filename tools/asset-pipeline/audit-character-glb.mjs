@@ -2,23 +2,23 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const REQUIRED_CLIPS = [
-  { state: 'idle', names: ['Idle', 'Attacking_Idle'] },
-  { state: 'run', names: ['Run'] },
-  { state: 'walk', names: ['Walk'] },
+  { state: 'idle', names: ['Idle_Loop', 'Idle', 'Attacking_Idle'] },
+  { state: 'run', names: ['Sprint_Loop', 'Run'] },
+  { state: 'walk', names: ['Walk_Loop', 'Walk'] },
   { state: 'jump_start', names: ['Jump', 'Jump_Start', 'JumpStart'] },
-  { state: 'fall_airborne', names: ['Fall', 'Falling', 'Airborne', 'Knockup'] },
-  { state: 'land', names: ['Land', 'Landing'] },
+  { state: 'fall_airborne', names: ['Jump_Loop', 'Fall', 'Falling', 'Airborne', 'Knockup'] },
+  { state: 'land', names: ['Jump_Land', 'Land', 'Landing'] },
   { state: 'sword_attack_1', names: ['Sword_Attack', 'Sword_Attack1', 'Dagger_Attack'] },
-  { state: 'sword_attack_2', names: ['Sword_Attack2', 'Dagger_Attack2'] },
-  { state: 'parry_block', names: ['Parry', 'Block', 'Guard'] },
-  { state: 'bow_draw', names: ['Bow_Draw', 'Bow_Aim', 'Bow_Charge'] },
-  { state: 'bow_release', names: ['Bow_Release', 'Bow_Shoot', 'Shoot'] },
-  { state: 'staff_cast', names: ['Staff_Cast', 'Cast', 'Spell_Cast', 'Punch'] },
-  { state: 'channel', names: ['Channel', 'Staff_Channel', 'Beam_Channel'] },
-  { state: 'hit_reaction', names: ['ReceiveHit', 'RecieveHit', 'Hit', 'HitReact'] },
+  { state: 'sword_attack_2', names: ['Sword_Attack', 'Sword_Attack2', 'Dagger_Attack2'] },
+  { state: 'parry_block', names: ['Sword_Idle', 'Parry', 'Block', 'Guard'] },
+  { state: 'bow_draw', names: ['Spell_Simple_Idle_Loop', 'Bow_Draw', 'Bow_Aim', 'Bow_Charge'] },
+  { state: 'bow_release', names: ['Spell_Simple_Shoot', 'Bow_Release', 'Bow_Shoot', 'Shoot'] },
+  { state: 'staff_cast', names: ['Spell_Simple_Shoot', 'Staff_Cast', 'Cast', 'Spell_Cast', 'Punch'] },
+  { state: 'channel', names: ['Spell_Simple_Idle_Loop', 'Channel', 'Staff_Channel', 'Beam_Channel'] },
+  { state: 'hit_reaction', names: ['Hit_Chest', 'ReceiveHit', 'RecieveHit', 'Hit', 'HitReact'] },
   { state: 'dash_roll', names: ['Dash', 'Roll'] },
-  { state: 'death', names: ['Death', 'Die'] },
-  { state: 'respawn', names: ['Respawn', 'Revive', 'Spawn'] },
+  { state: 'death', names: ['Death01', 'Death', 'Die'] },
+  { state: 'respawn', names: ['Spell_Simple_Enter', 'Respawn', 'Revive', 'Spawn'] },
 ]
 
 function usage() {

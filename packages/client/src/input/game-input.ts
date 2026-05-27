@@ -250,9 +250,10 @@ export function initGameInput(
   addEventListener(
     'keydown',
     (e) => {
+      if (isTextEditingTarget(e.target)) return
       const k = e.code
       const gameplaySurfaceKey =
-        canEngageGameplaySurface() && !isTextEditingTarget(e.target) && isGameplayKeyCode(k)
+        canEngageGameplaySurface() && isGameplayKeyCode(k)
       if (gameplaySurfaceKey) {
         e.preventDefault()
         e.stopImmediatePropagation()
@@ -299,7 +300,6 @@ export function initGameInput(
       }
 
       if (
-        isTextEditingTarget(e.target) ||
         isOverlayOpen(settingsOverlay) ||
         !loadoutStationHidden() ||
         isPauseMenuOpen()
@@ -364,8 +364,9 @@ export function initGameInput(
   addEventListener(
     'keyup',
     (e) => {
+      if (isTextEditingTarget(e.target)) return
       const gameplaySurfaceKey =
-        canEngageGameplaySurface() && !isTextEditingTarget(e.target) && isGameplayKeyCode(e.code)
+        canEngageGameplaySurface() && isGameplayKeyCode(e.code)
       if (gameplaySurfaceKey) {
         e.preventDefault()
         e.stopImmediatePropagation()

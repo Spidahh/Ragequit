@@ -5,19 +5,21 @@ section: combat
 tags: [ttk, gcd, parry, knockup, respawn]
 provides: [ttk_window, gcd, parry_rules, knockup_rules, respawn_rules]
 deps: [01_stats.md]
-status: redesign
+status: current
 ---
 
 # Combat Fundamentals
 
 ## TTK (time to kill)
 
-**Target window: 20-30 seconds** full-HP duel between two skill-matched players
+**Real window: 20-30 seconds** full-HP duel between two skill-matched players
 who are actively defending through aim, movement, aerial responses, parry/shield
-windows, ability choices and the final sustain system. M1 and ability tuning must
-be recalibrated after the class redesign.
+windows, ability choices and sustain.
 
-This is the _effective_ TTK in real play — not the theoretical minimum. A passive target can be killed faster (Sword M1 at 17.5 DPS = ~11s theoretical minimum), but any competent player parries, evades, and heals. The 20-30s window emerges from the friction of defense, not from low damage numbers.
+This is the _effective_ TTK in real play — not the theoretical minimum. An
+inactive target can be killed faster (Sword M1 at 17.5 DPS = ~11s theoretical
+minimum), but any competent player parries, evades, and heals. The 20-30s window
+emerges from the friction of defense, not from low damage numbers.
 
 Long TTK is deliberate — it:
 
@@ -33,8 +35,7 @@ Long TTK is deliberate — it:
 GCD rules:
 
 - **M1 basic attacks**: NOT bound by GCD
-- **Recovery utility and magic sustain casts**: share the ability GCD unless a
-  future ability spec documents a narrow exception before implementation
+- **Recovery utility and magic sustain casts**: share the ability GCD
 - **Combat ability slots** (Melee, Bow, Magic): ALL trigger and share the 0.3 s GCD
 
 Ability casts from direct binds and primed wheel fire go through the server ability path.
@@ -46,18 +47,16 @@ Ability casts from direct binds and primed wheel fire go through the server abil
 - **No perfect-timing bonus**. Parry is binary (blocked or not) — no riposte window, no stamina refund on "perfect" timing. Keeps parry readable and avoids skill gap extremes.
 - **Efficiency**: Tap costs 20 stamina for a 0.5 s window. Hold costs 15/s, meaning after 1.33 s it becomes more expensive than a tap. Use tap for reactive blocks against a single known hit; use hold only when you need to absorb a sustained burst and can afford the bleed. The design intentionally favors tap parry to reward read-and-react over holding block.
 
-Parry/shield must show a readable visible protection state. Exact airborne parry
-rules are part of the air-combat redesign; do not preserve the old assumption
-that launched players have no defensive answer.
+Parry/shield must show a readable visible protection state. Airborne state alone
+does not remove defensive answers.
 
 ## Knockup (signature mechanic)
 
-Abilities tagged `[KNOCKUP]` still create air pressure and aim challenges. The
-old target lockout model is rejected: the launched player must keep meaningful
-arena-FPS answers through allowed weapons, abilities, movement tech or
-disruption. The target contract in `01_arena_fps_reference_study.md` treats
-knockup as displacement/aim pressure rather than a universal airborne silence;
-final timings still wait on browser prototype tuning.
+Abilities tagged `[KNOCKUP]` create air pressure and aim challenges. The
+launched player keeps meaningful arena-FPS answers through allowed weapons,
+abilities, movement tech or disruption. The contract in
+`01_arena_fps_air_contract.md` treats knockup as displacement/aim pressure
+rather than a universal airborne silence.
 
 ## Knockup combo feedback (UI spec)
 
@@ -95,7 +94,7 @@ These stats are **end-screen only** — no mid-match counter or running combo po
 ### Counter-play
 
 - Knockup abilities have cooldowns long enough that spamming is not viable
-- A second knockup while already airborne does NOT extend the airtime — anti-chain protection, not a hard-CC immunity window. The target still retains skill-based arena responses (aim, movement abilities, disruption) per `01_arena_fps_reference_study.md`.
+- A second knockup while already airborne does NOT extend the airtime — anti-chain protection, not a hard-CC immunity window. The target still retains skill-based arena responses (aim, movement abilities, disruption) per `01_arena_fps_air_contract.md`.
 - Positioning away from predictable knockup angles defeats the setup
 - Parry (M2) during the knockup windup blocks the launch entirely
 
@@ -112,4 +111,7 @@ See `07_modes.md` for mode details.
 
 ## Damage types
 
-All damage is **physical** or **elemental**. There is no armor/resist attribute system. Each element has a distinct _effect_ (burn, slow, chain, lifesteal, DoT) on top of base damage — no element is strong or weak against another. See `00_vision.md` (no elemental counter pillar). The current runtime still applies Mastery bonuses at 4/5 slots (`03_mastery_system.md`), but Mastery is no longer the target identity axis — the class/affinity pass replaces it.
+All damage is **physical** or **elemental**. There is no armor/resist attribute
+system. Each element has a distinct effect (burn, slow, chain, lifesteal, DoT)
+on top of base damage; no element is strong or weak against another. See
+`00_vision.md`.

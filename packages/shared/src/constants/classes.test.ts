@@ -12,7 +12,7 @@ import {
 } from './classes.js'
 
 describe('target class definitions', () => {
-  it('keeps every target class on the agreed 11-slot grammar', () => {
+  it('keeps every target class on the agreed 8-slot grammar', () => {
     for (const classId of CLASS_IDS) {
       expect(targetClassSlotCount(classId), classId).toBe(TARGET_LOADOUT_SLOT_COUNT)
     }
@@ -32,7 +32,7 @@ describe('target class definitions', () => {
 })
 
 describe('ability slot family and class legality', () => {
-  it('maps sample abilities to their correct target slot families', () => {
+  it('maps selected abilities to their correct target slot families', () => {
     expect(getAbilitySlotFamily('uppercut')).toBe('melee')
     expect(getAbilitySlotFamily('piercing_shot')).toBe('bow')
     expect(getAbilitySlotFamily('fireball')).toBe('magicBase')
@@ -118,19 +118,15 @@ describe('ability slot family and class legality', () => {
     const starters: Record<string, string[]> = {
       tank: [
         'uppercut',
-        'piercing_shot',
         'gap_closer',
         'guard_break',
+        'piercing_shot',
         'disengage_shot',
         'brace_recovery',
         'barrier',
-        'cleanse_surge',
         'quick_dash',
-        'energize',
-        'smoke_screen',
       ],
       archer: [
-        'dark_barrier',
         'pin_shot',
         'marksman_shot',
         'disengage_shot',
@@ -139,21 +135,16 @@ describe('ability slot family and class legality', () => {
         'lightning_dash',
         'hunters_flow',
         'quick_dash',
-        'cleanse_surge',
-        'smoke_screen',
       ],
       mage: [
         'fireball',
-        'ignite',
         'frost_bolt',
         'dark_barrier',
         'eruption',
         'meteor',
         'frost_pillar',
-        'blizzard',
         'arcane_rebind',
         'phase_shift',
-        'cleanse_surge',
       ],
       hybrid: [
         'uppercut',
@@ -164,9 +155,6 @@ describe('ability slot family and class legality', () => {
         'meteor',
         'adaptive_mend',
         'quick_dash',
-        'cleanse_surge',
-        'barrier',
-        'smoke_screen',
       ],
     }
 
@@ -194,8 +182,8 @@ describe('ability slot family and class legality', () => {
         ).toBeLessThanOrEqual(budget[family as keyof typeof budget] ?? 0)
       }
 
-      // 3. Exactly 11 slots (no duplicates counted, but length matters)
-      expect(build.length, `${classId} starter must be 11 slots`).toBe(TARGET_LOADOUT_SLOT_COUNT)
+      // 3. Exactly 8 slots (no duplicates counted, but length matters)
+      expect(build.length, `${classId} starter must be 8 slots`).toBe(TARGET_LOADOUT_SLOT_COUNT)
     }
   })
 })

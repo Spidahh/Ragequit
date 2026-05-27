@@ -10,24 +10,23 @@ status: current
 
 # Ability DSL
 
-> Current runtime contract. The confirmed class redesign will change loadout
-> legality, split Magic into Base / Advanced, revisit airborne casts and replace
-> fixed-transfer target assumptions. Do not treat current counts and transfer
-> tests as the approved future ability grammar.
+> Current runtime contract. Class-aware loadout legality is owned by
+> `packages/shared/src/constants/classes.ts`; exact ability values are owned by
+> `packages/shared/src/abilities/registry.ts`.
 
 ## Current Contract
 
-All 52 abilities live in `packages/shared/src/abilities/registry.ts` and use the schema in `packages/shared/src/abilities/types.ts`.
+All abilities live in `packages/shared/src/abilities/registry.ts` and use the schema in `packages/shared/src/abilities/types.ts`.
 
 Counts:
 
-| Slot    | Count | Notes                                                |
-| ------- | ----: | ---------------------------------------------------- |
-| melee   |     6 | One selected in the loadout                          |
-| bow     |     8 | One selected in the loadout                          |
-| magic   |    27 | Five selected; only these drive Mastery              |
-| utility |    11 | Three fixed transfer utilities plus one flex utility |
-| total   |    52 | No passive/rune system                               |
+| Slot    | Count | Notes                                             |
+| ------- | ----: | ------------------------------------------------- |
+| melee   |     6 | One selected in the loadout                       |
+| bow     |     8 | One selected in the loadout                       |
+| magic   |    27 | Split by class grammar into Magic Base / Advanced |
+| utility |    11 | Class-aware utility and recovery tools            |
+| total   |    53 | Class-aware active abilities                      |
 
 The server executes these definitions through `AbilityEngine`. New abilities should be added as data first; engine changes are only for genuinely new primitives.
 
@@ -84,7 +83,7 @@ Current primitives:
 | ---------------- | ---------------------------------------------------------------------------------------- |
 | `damage`         | Direct or radius damage, optional element/lifesteal/excludePrimary                       |
 | `applyStatus`    | Burn/chill/bleed/poison/slow/root/stun/freeze/curse/blind/mark/shield/haste/invulnerable |
-| `knockup`        | Current airborne lock/displacement primitive; target air rules are under redesign        |
+| `knockup`        | Launch/displacement primitive; airborne is not hard CC                                   |
 | `heal`           | Instant or over-time healing                                                             |
 | `lifesteal`      | Cast-level lifesteal fraction                                                            |
 | `resourceDrain`  | Drain Mana or Stamina from the resolved enemy and optionally refund part to the caster   |
@@ -94,7 +93,6 @@ Current primitives:
 | `channel`        | Sustained tick effect; can break on movement or damage                                   |
 | `cleanse`        | Remove one status or all debuffs                                                         |
 | `restoreStamina` | Flat stamina restore                                                                     |
-| `transmute`      | Fixed HP/Mana/Stamina transfer utilities                                                 |
 
 ## Combo Role Contract
 
@@ -111,19 +109,17 @@ Current primitives:
 | `counter`  | Cleanse, phase, disengage, anti-melee, or interrupt answer                            |
 | `mobility` | Repositioning tool that changes engage/disengage geometry                             |
 | `drain`    | Attacks enemy Mana/Stamina or converts enemy tempo into your resources                |
-| `resource` | Fixed transfer or resource restore utility                                            |
+| `resource` | Resource restore utility                                                              |
 
 ## Runtime Guarantees
 
-- Ability casts currently validate alive state, cast lock, swing/charge lock,
-  airborne, parry, Phase Shift, GCD, per-ability cooldown, weapon requirement,
-  and resource cost. The target air-combat pass replaces the blanket airborne
-  assumption.
+- Ability casts validate alive state, cast lock, swing/charge lock, parry,
+  Phase Shift, GCD, per-ability cooldown, weapon requirement and resource cost.
+  Airborne alone is not a global rejection reason.
 - Windups are interruptible through `AbilityEngine.cancelCast`.
 - Channels keep `Player.casting` active and block other casts until finished/interrupted.
 - Parryable abilities skip status/knockup followups when the initial hit is parried.
 - Point-target abilities use `ClientCastMessage.targetPoint`; the client may preview range, but the server clamps the final point to the ability range.
-- Mastery applies through shared constants and is computed from the five magic slots only.
 - "Ray" abilities are implemented with `targeting: 'forward'` plus direct `damage`, `applyStatus`, `knockup`, or `resourceDrain` effects. The server picks the aimed line-of-sight enemy within range, so these are instant but still require crosshair discipline.
 - HP drain must stay as `damage` + `lifesteal`; `resourceDrain` is only for Mana/Stamina so shields, parry, invulnerability, damage events, and death credit are not bypassed.
 - Finisher air punish is authoritative on the server: `comboRole: 'finisher'` damage is multiplied by 1.25 when the victim is still in the airborne window. Projectile finishers carry `abilityId` and `comboRole` in server projectile metadata so the same rule applies on impact.
@@ -134,11 +130,10 @@ Core checks live in:
 
 - `packages/shared/src/abilities/registry.test.ts`
 - `packages/server/src/sim/AbilityEngine.test.ts`
-- `packages/shared/src/constants/mastery.test.ts`
 - `packages/client/src/input/loadout-slots.test.ts`
 - `packages/client/src/loadout-station.test.ts`
 
-These tests protect the current runtime counts, fixed transfers, slow fractions,
-mastery slot rules, targeting, movement collision contracts, parry followups,
-channel interruption, and loadout payload shape. Redesign work must change tests
-with the contracts rather than preserving obsolete assertions.
+These tests protect the current runtime counts, slow fractions, targeting,
+movement collision contracts, parry followups, channel interruption, and
+class-aware loadout payload shape. Tests must change with live contracts rather
+than preserving obsolete assertions.

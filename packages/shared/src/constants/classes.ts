@@ -34,7 +34,6 @@ export interface ClassTargetDefinition {
   resourceMaxima: ClassResourceMaxima
   slots: ClassSlotGrammar
   weapons: readonly WeaponId[]
-  mechanicId: 'fury' | 'momentum' | 'resonance' | 'flow'
   recoveryId: 'brace_recovery' | 'hunters_flow' | 'arcane_rebind' | 'adaptive_mend'
 }
 
@@ -43,41 +42,37 @@ export const TARGET_CLASS_DEFS = {
     id: 'tank',
     label: 'Tank',
     resourceMaxima: { hp: 250, mana: 50, stamina: 150 },
-    slots: { melee: 3, bow: 2, magicBase: 0, magicAdvanced: 0, utility: 6 },
+    slots: { melee: 3, bow: 2, magicBase: 0, magicAdvanced: 0, utility: 3 },
     weapons: ['sword', 'bow'],
-    mechanicId: 'fury',
     recoveryId: 'brace_recovery',
   },
   archer: {
     id: 'archer',
     label: 'Arciere',
     resourceMaxima: { hp: 175, mana: 80, stamina: 110 },
-    slots: { melee: 0, bow: 3, magicBase: 4, magicAdvanced: 0, utility: 4 },
+    slots: { melee: 0, bow: 3, magicBase: 3, magicAdvanced: 0, utility: 2 },
     weapons: ['bow', 'staff'],
-    mechanicId: 'momentum',
     recoveryId: 'hunters_flow',
   },
   mage: {
     id: 'mage',
     label: 'Mago',
     resourceMaxima: { hp: 150, mana: 160, stamina: 80 },
-    slots: { melee: 0, bow: 0, magicBase: 4, magicAdvanced: 4, utility: 3 },
+    slots: { melee: 0, bow: 0, magicBase: 3, magicAdvanced: 3, utility: 2 },
     weapons: ['staff'],
-    mechanicId: 'resonance',
     recoveryId: 'arcane_rebind',
   },
   hybrid: {
     id: 'hybrid',
     label: 'Ibrido',
     resourceMaxima: { hp: 200, mana: 100, stamina: 100 },
-    slots: { melee: 1, bow: 1, magicBase: 2, magicAdvanced: 2, utility: 5 },
+    slots: { melee: 1, bow: 1, magicBase: 2, magicAdvanced: 2, utility: 2 },
     weapons: ['sword', 'bow', 'staff'],
-    mechanicId: 'flow',
     recoveryId: 'adaptive_mend',
   },
 } as const satisfies Readonly<Record<ClassId, ClassTargetDefinition>>
 
-export const TARGET_LOADOUT_SLOT_COUNT = 11 as const
+export const TARGET_LOADOUT_SLOT_COUNT = 8 as const
 
 export function targetClassSlotCount(classId: ClassId): number {
   return Object.values(TARGET_CLASS_DEFS[classId].slots).reduce<number>(

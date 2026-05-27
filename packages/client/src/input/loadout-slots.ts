@@ -8,32 +8,13 @@ export const LOADOUT_SLOT_ORDER: readonly AbilitySlot[] = [
   'magic',
   'magic',
   'magic',
-  'magic',
-  'utility',
-  'utility',
   'utility',
   'utility',
 ]
 
-export const LOADOUT_SLOT_LABELS = ['R', 'G', '1', '2', '3', '4', '5', 'Z', 'X', 'F', 'V'] as const
-
-export const KEY_SLOT: ReadonlyArray<readonly [code: string, label: string, slotIdx: number]> = [
-  ['KeyR', 'R', 0],
-  ['KeyG', 'G', 1], // bow ability — active slot, same cast path as melee/magic
-  ['Digit1', '1', 2],
-  ['Digit2', '2', 3],
-  ['Digit3', '3', 4],
-  ['Digit4', '4', 5],
-  ['Digit5', '5', 6],
-  ['KeyZ', 'Z', 7],
-  ['KeyX', 'X', 8],
-  ['KeyF', 'F', 9],
-  ['KeyV', 'V', 10],
-]
-
-/** Pads or trims the slot array to exactly 11 entries. No injection occurs. */
+/** Pads or trims the slot array to exactly 8 entries. No injection occurs. */
 export function normalizeLoadoutSlots(slots: readonly string[]): string[] {
-  return Array.from({ length: 11 }, (_, idx) => slots[idx] ?? '')
+  return Array.from({ length: 8 }, (_, idx) => slots[idx] ?? '')
 }
 
 /**

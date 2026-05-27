@@ -10,9 +10,8 @@ status: current
 
 # Network Protocol
 
-> Current runtime protocol. Class loadouts, final recovery/sustain, all-weapon
-> air combat and server-owned self-impulse are redesign work. Keep this document
-> honest when those protocol shapes change.
+> Current runtime protocol. Keep this document aligned with `messages.ts` and
+> server validation.
 
 ## Summary
 
@@ -35,18 +34,17 @@ status: current
 | `fireStaff`     | `{ atTick, yaw, pitch }`                                          | Staff M1                                                                                        |
 | `parryPress`    | `{ atTick }`                                                      | RMB press                                                                                       |
 | `parryRelease`  | `{ atTick }`                                                      | RMB release                                                                                     |
-| `transmute`     | `{ direction, atTick }`                                           | Legacy/direct transfer path                                                                     |
-| `loadoutSet`    | `{ melee, bow, magic[5], utility[4] }`                            | Server normalizes fixed transfer slots, rejects duplicates, and rejects transfer utilities in V |
+| `loadoutSet`    | Class-aware loadout payload                                       | Server validates class legality, slot family membership, duplicates, cost and cooldown surfaces |
 | `heartbeat`     | `{ clientTime }`                                                  | Ping/keepalive                                                                                  |
 
 The wheel interaction itself is client-side UI. Releasing Q/E primes a slot; the subsequent LMB either sends `cast` immediately or opens the placement preview for non-instant abilities. Placement previews send `cast` only when LMB confirms the target point.
 
-Server validation currently clamps `targetPoint` to the ability range and
-rejects/ignores impossible casts after checking loadout membership, locks, cost,
-cooldown, weapon requirement, Phase Shift, parry state, and airborne state.
-Target redesign replaces blanket airborne rejection with explicit air-combat
-rules. Direct forward/target abilities must also pass server line-of-sight
-against static map cover before selecting a victim.
+Server validation clamps `targetPoint` to the ability range and rejects or
+ignores impossible casts after checking loadout membership, locks, cost,
+cooldown, weapon requirement, Phase Shift and parry state. Weapons and abilities
+can act in air unless a specific ability rule says otherwise. Direct forward or
+target abilities must also pass server line-of-sight against static map cover
+before selecting a victim.
 
 ## Server To Client Events
 
@@ -57,7 +55,6 @@ against static map cover before selecting a victim.
 | `abilityCasted`                           | `{ casterId, abilityId, atTick }`                                    | Cast bar, HUD pending clear, VFX    |
 | `abilityFailed`                           | `{ abilityId, reason }`                                              | Rejected cast feedback              |
 | `statusApplied` / `statusExpired`         | status payload                                                       | HUD icons and VFX                   |
-| `transmuteResult`                         | `{ playerId, direction, ok, reason?, atTick }`                       | Transfer feedback                   |
 | `zoneSpawned` / `zoneExpired`             | zone payload                                                         | Zone VFX                            |
 | `projectileSpawned` / `projectileExpired` | projectile payload                                                   | Projectile and impact VFX           |
 | `weaponSwapped`                           | `{ playerId, weapon, atTick }`                                       | Weapon HUD/model feedback           |
@@ -75,7 +72,8 @@ against static map cover before selecting a victim.
 Current schemas live in `packages/shared/src/schema/`:
 
 - `GameState`: tick, phase, mode, map, players, projectiles, zones, scores.
-- `Player`: transform, velocity, resources, alive/respawn, weapon, cast state, parry state, bow/staff timers, cooldown maps, statuses, loadout, mastery.
+- `Player`: transform, velocity, resources, alive/respawn, weapon, cast state,
+  parry state, bow/staff timers, cooldown maps, statuses, and loadout.
 - `Projectile`: arrow/bolt transform, velocity, gravity, damage, owner, element, TTL.
 - `Zone`: circle/wall shape, owner, ability id, element, position, radius/width, armed tick, expire tick, tick cadence, damage/status payload.
 - `StatusInstance`: kind, stacks, remaining seconds, source id, slow override.
@@ -94,10 +92,14 @@ There are no replicated `Totem`, `IceWall`, or `Trap` maps; those are represente
 
 `abilityFailed.reason` currently includes:
 
-`cooldown`, `cost`, `range`, `cc`, `unreachable`, `wrong_weapon`, `gcd`, `dead`, `casting`, `airborne`, `parrying`, `unknown_ability`, `not_in_loadout`.
+`cooldown`, `cost`, `range`, `cc`, `unreachable`, `wrong_weapon`, `gcd`,
+`dead`, `casting`, `grounded_required`, `parrying`, `unknown_ability`,
+`not_in_loadout`.
 
 Projectile hit payload statuses are applied during damage drain, after parry, shield, and invulnerability checks. A parried or fully shielded projectile does not leak root, bleed, chill, burn, or similar on-hit effects.
 
 ## Rate Limiting
 
-Rate limiting is implemented server-side by `RateLimiter` and applied to high-frequency message families (`input`, `swing`, `cast`, `weaponSwap`, `charge`, `fireStaff`, `parry`, `transmute`, `loadoutSet`, `heartbeat`).
+Rate limiting is implemented server-side by `RateLimiter` and applied to
+high-frequency message families (`input`, `swing`, `cast`, `weaponSwap`,
+`charge`, `fireStaff`, `parry`, `loadoutSet`, `heartbeat`).
