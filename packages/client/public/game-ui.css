@@ -1853,9 +1853,9 @@ button.locked {
 .pool-visual {
   grid-area: visual;
   display: grid;
-  grid-template-rows: 50px 12px;
-  gap: 4px;
+  grid-template-rows: 50px;
   justify-items: center;
+  align-self: start;
 }
 
 /* Pool icon */
@@ -1870,18 +1870,15 @@ button.locked {
   font-size: 30px;
 }
 
-/* Pool name */
+/* Pool name — prominent ability title */
 .pool-name {
   display: block;
   overflow: hidden;
-  max-width: 62px;
-  font: 800 7px/1 var(--font-mono);
+  font: 900 13px/1.1 var(--font-hud);
   text-transform: uppercase;
-  text-overflow: unset;
+  text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text);
-  min-height: 10px;
-  text-align: center;
 }
 
 /* Pool meta */
@@ -1902,19 +1899,20 @@ button.locked {
   grid-area: nature;
   min-width: 0;
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 3px;
   overflow: hidden;
-  color: var(--text);
-  font: 900 11px/1 var(--font-hud);
-  text-transform: uppercase;
 }
 
-.pool-nature b {
-  min-width: 0;
+/* Category subtitle under name */
+.pool-category {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   overflow: hidden;
-  color: var(--text);
-  text-overflow: ellipsis;
+  color: var(--muted);
+  font: 800 8px/1 var(--font-mono);
+  text-transform: uppercase;
   white-space: nowrap;
 }
 

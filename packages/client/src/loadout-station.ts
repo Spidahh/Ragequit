@@ -488,8 +488,8 @@ export function initLoadoutStation(
         `${def.name}. ${nature}. ${def.element !== 'none' ? def.element : 'physical'}. ${formatCost(def)}. ${formatEffectTags(def).join(', ')}`,
       )
       card.innerHTML = [
-        `<span class="pool-visual"><span class="pool-icon-box">${abilityIconMarkup(def.id)}</span><span class="pool-name">${escapeHtml(def.name)}</span></span>`,
-        `<span class="pool-nature"><b>${escapeHtml(nature)}</b>${recTags.length > 0 ? ` <span class="recommend-tag">${escapeHtml(recTags[0]!)}</span>` : ''}</span>`,
+        `<span class="pool-visual"><span class="pool-icon-box">${abilityIconMarkup(def.id)}</span></span>`,
+        `<span class="pool-nature"><span class="pool-name">${escapeHtml(def.name)}</span><span class="pool-category">${escapeHtml(nature)}${recTags.length > 0 ? ` <span class="recommend-tag">${escapeHtml(recTags[0]!)}</span>` : ''}</span></span>`,
         `<span class="pool-meta"><b>${poolInputLabel}</b> · ${def.element !== 'none' ? def.element.toUpperCase() : 'PHYSICAL'} · ${formatCost(def)} · ${def.cooldownSec}s CD</span>`,
         `<span class="pool-summary">${formatDesc(def.description)}</span>`,
         `<span class="effect-tags">${formatEffectTags(def)
