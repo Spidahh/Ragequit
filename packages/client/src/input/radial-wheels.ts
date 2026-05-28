@@ -84,18 +84,24 @@ export function initRadialWheels({
       return indices.slice(0, wheel.sectors.length)
     }
 
-    // E-wheel: melee + bow if the class has any; otherwise magicAdvanced
-    // (Mage has no melee/bow, so its E-wheel shows advanced spells instead).
+    // E-wheel: melee + bow if the class has any; otherwise magicAdvanced.
+    // When total weapon slots exceed the 4 sectors, BOW takes priority over
+    // the last melee slot so ranged access is always available.
     const hasMeleeBow = order.some((f) => f === 'melee' || f === 'bow')
-    const indices: number[] = []
+    const allIndices: number[] = []
     for (let idx = 0; idx < order.length; idx++) {
       const family = order[idx]!
       const matches = hasMeleeBow
         ? family === 'melee' || family === 'bow'
         : family === 'magicAdvanced'
-      if (matches) indices.push(idx)
+      if (matches) allIndices.push(idx)
     }
-    return indices.slice(0, wheel.sectors.length)
+    if (allIndices.length <= wheel.sectors.length) return allIndices
+    // More weapon slots than sectors: keep all bow slots, fill remaining with melee.
+    const bowIndices = allIndices.filter((i) => order[i] === 'bow' || order[i] === 'magicAdvanced')
+    const meleeIndices = allIndices.filter((i) => order[i] === 'melee')
+    const remaining = wheel.sectors.length - bowIndices.length
+    return [...meleeIndices.slice(0, Math.max(0, remaining)), ...bowIndices]
   }
 
   function sectorSlotIdx(wheel: RadialWheel, sector: WheelSector, loadout: readonly string[]): number {

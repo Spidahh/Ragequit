@@ -775,15 +775,17 @@ button.locked {
 .class-select-card {
   position: relative;
   min-width: 0;
-  min-height: 68px;
+  min-height: 90px;
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
+  /* Banner image takes the left column; text takes the right */
+  grid-template-columns: 56px minmax(0, 1fr);
   grid-template-areas:
-    "icon title"
-    "icon desc";
-  gap: 4px 8px;
+    "banner title"
+    "banner desc";
+  gap: 3px 10px;
   align-items: center;
-  padding: 9px 10px;
+  padding: 0 10px 0 0;
+  overflow: hidden;
   background: rgba(0, 0, 0, 0.34);
   border: 1px solid rgba(145, 170, 220, 0.16);
   border-left: 3px solid rgba(145, 170, 220, 0.18);
@@ -796,6 +798,20 @@ button.locked {
     transform 0.15s,
     box-shadow 0.15s;
 }
+
+/* Class banner image — fills the left column exactly */
+.class-select-card .card-banner {
+  grid-area: banner;
+  width: 56px;
+  height: 90px;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+  opacity: 0.82;
+  transition: opacity 0.15s;
+}
+.class-select-card:hover .card-banner,
+.class-select-card.active .card-banner { opacity: 1; }
 
 .class-select-card[data-class="tank"]   { --class-color: #d4a04a; }
 .class-select-card[data-class="archer"] { --class-color: #39ff14; }
@@ -828,7 +844,7 @@ button.locked {
 }
 
 .card-icon {
-  grid-area: icon;
+  grid-area: banner;
   width: 34px;
   height: 34px;
   display: grid;
@@ -895,6 +911,22 @@ button.locked {
   font: 900 9px/1 var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.18em;
+  white-space: nowrap;
+}
+
+/* Class mechanic explanation — shown next to class name in vitals bar */
+.vitals-mechanic-tag {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 3px 8px;
+  border: 1px solid rgba(145, 170, 220, 0.16);
+  border-radius: 3px;
+  background: rgba(145, 170, 220, 0.06);
+  color: rgba(180, 195, 230, 0.88);
+  font: 600 10px/1.4 var(--font-ui);
+  text-transform: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -1505,14 +1537,16 @@ button.locked {
   --ability-color: var(--gold);
   display: grid;
   grid-template-columns: 70px minmax(0, 1fr);
-  grid-template-rows: 34px 15px minmax(40px, 1fr) auto;
+  grid-template-rows: 34px 15px minmax(50px, 1fr) auto auto auto;
   grid-template-areas:
     "visual nature"
     "visual meta"
     "visual summary"
-    "visual tags";
+    "visual dmgrow"
+    "visual tags"
+    "visual costs";
   align-items: start;
-  gap: 5px 10px;
+  gap: 4px 10px;
   padding: 10px;
   border: 1px solid color-mix(in srgb, var(--ability-color) 30%, rgba(145,170,220,0.1));
   border-left: 3px solid color-mix(in srgb, var(--ability-color) 65%, transparent);
@@ -1625,15 +1659,15 @@ button.locked {
   grid-area: summary;
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 4;
   overflow: hidden;
-  min-height: 44px;
-  padding: 6px 9px;
+  min-height: 50px;
+  padding: 5px 8px;
   border: 1px solid rgba(145,170,220,0.08);
   border-radius: 4px;
   background: rgba(255,255,255,0.025);
   color: #ccd2e4;
-  font: 400 12px/1.5 var(--font-ui);
+  font: 400 11.5px/1.55 var(--font-ui);
   text-transform: none;
   letter-spacing: 0.01em;
 }
@@ -1669,6 +1703,50 @@ button.locked {
 .pool-bars {
   display: none;
 }
+
+/* ── Ability card: damage row — prominent number pills ── */
+.pool-dmg-row {
+  grid-area: dmgrow;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+.tag-dmg-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(255, 100, 40, 0.18);
+  border: 1px solid rgba(255, 100, 40, 0.38);
+  color: #ff8050;
+  font: 800 10px/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Ability card: cost row — mana / stamina / windup / CD ── */
+.pool-cost-row {
+  grid-area: costs;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+.cost-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font: 800 10px/1 var(--font-mono);
+  text-transform: uppercase;
+}
+.cost-chip .cc-unit { font-weight: 600; opacity: 0.8; margin-left: 1px; }
+.cost-mp      { background: rgba(30,100,200,0.2);  border: 1px solid rgba(30,140,255,0.32);  color: #5ab8ff; }
+.cost-sp      { background: rgba(20,160,80,0.18);  border: 1px solid rgba(30,210,90,0.32);   color: #50e096; }
+.cost-windup  { background: rgba(220,180,40,0.15); border: 1px solid rgba(240,200,60,0.32);  color: #ffd060; }
+.cost-cd      { background: rgba(120,120,140,0.12); border: 1px solid rgba(160,160,180,0.22); color: #9ba0b4; }
 
 /* Element colors */
 .pool-card.el-fire      { --ability-color: #ff6b35; }

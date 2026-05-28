@@ -675,7 +675,7 @@ function openPauseMenu(): void {
   settingsOverlay.classList.add('hidden')
   const loadoutLocked = currentMatchPhase === 'live'
   pauseLoadoutBtn.disabled = loadoutLocked
-  pauseLoadoutBtn.textContent = loadoutLocked ? 'Loadout Locked' : 'Loadout'
+  pauseLoadoutBtn.textContent = loadoutLocked ? 'Build Bloccata' : 'Forge Build'
   pauseMenu.classList.remove('hidden')
   if (document.pointerLockElement) document.exitPointerLock()
 }
@@ -1866,7 +1866,7 @@ function onHit(msg: ServerHitMessage): void {
     if (isAirPunish) {
       soundEngine.playCrack(Math.max(power, 0.85))
       combatFeedHud.triggerComboFlash()
-      combatFeedHud.showComboPopupLabel('AIR PUNISH')
+      combatFeedHud.showComboPopupLabel('AIR PUNISH ✈')
       hitStopUntilMs = now + hitstopAttacker(msg.cause)
       applyDirectionalShake(getPlayerWorldPos(msg.victimId), 1.0)
       localComboCount = 0
@@ -2076,8 +2076,8 @@ function onDeath(msg: ServerDeathMessage): void {
     while (recentKillTimes.length > 0 && now - recentKillTimes[0]! > 8000) recentKillTimes.shift()
     const streak = recentKillTimes.length
     if (streak >= 4) combatFeedHud.showKillSplash('ULTRA KILL!', 'kill')
-    else if (streak === 3) combatFeedHud.showKillSplash('TRIPLE KILL!', 'kill')
-    else if (streak === 2) combatFeedHud.showKillSplash('DOUBLE KILL!', 'kill')
+    else if (streak === 3) combatFeedHud.showKillSplash('TRIPLA KILL!', 'kill')
+    else if (streak === 2) combatFeedHud.showKillSplash('DOPPIA KILL!', 'kill')
     else combatFeedHud.showKillSplash('KILL!', 'kill')
   }
 }
@@ -2094,7 +2094,7 @@ function onChannelInterrupted(msg: ServerChannelInterruptedMessage): void {
   castStartedAtMs = 0
   castBar.classList.remove('active')
   castBarFill.style.width = '0%'
-  castBarLabel.textContent = 'INTERRUPTED'
+  castBarLabel.textContent = 'INTERROTTO'
   castBar.classList.add('interrupted')
   setTimeout(() => castBar.classList.remove('interrupted'), 600)
 }

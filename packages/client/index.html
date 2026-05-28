@@ -379,7 +379,7 @@
 
     <!-- Settings overlay -->
     <div id="settings-overlay" class="hidden">
-      <h2>SETTINGS</h2>
+      <h2>IMPOSTAZIONI</h2>
       <div class="settings-panel">
         <div class="setting-row">
           <span class="setting-label">Graphics Quality</span>
@@ -491,29 +491,30 @@
             <small>scegli classe e meccanica</small>
           </div>
           <button class="class-select-card active" data-class="tank" id="ls-class-tank" type="button">
-            <span class="card-icon">🛡️</span>
+            <img class="card-banner" src="/ui/classes/tank.png" alt="Tank" loading="eager">
             <span class="card-title">TANK</span>
-            <span class="card-desc">Sword/Bow · FURY</span>
+            <span class="card-desc">Spada/Arco · FURY</span>
           </button>
           <button class="class-select-card" data-class="archer" id="ls-class-archer" type="button">
-            <span class="card-icon">🏹</span>
+            <img class="card-banner" src="/ui/classes/archer.png" alt="Arciere" loading="eager">
             <span class="card-title">ARCIERE</span>
-            <span class="card-desc">Bow/Staff · MOMENTUM</span>
+            <span class="card-desc">Arco/Staff · MOMENTUM</span>
           </button>
           <button class="class-select-card" data-class="mage" id="ls-class-mage" type="button">
-            <span class="card-icon">🔮</span>
+            <img class="card-banner" src="/ui/classes/mage.png" alt="Mago" loading="eager">
             <span class="card-title">MAGO</span>
             <span class="card-desc">Staff · RISONANZA</span>
           </button>
           <button class="class-select-card" data-class="hybrid" id="ls-class-hybrid" type="button">
-            <span class="card-icon">⚡</span>
+            <img class="card-banner" src="/ui/classes/hybrid.png" alt="Ibrido" loading="eager">
             <span class="card-title">IBRIDO</span>
-            <span class="card-desc">All weapons · FLOW</span>
+            <span class="card-desc">Tutte le armi · FLOW</span>
           </button>
         </div>
 
         <div id="ls-vitals-bar">
           <span id="ls-vitals-class-name" class="vitals-class-tag">IBRIDO</span>
+          <span id="ls-vitals-mechanic" class="vitals-mechanic-tag" title="Meccanica di classe">⚡ FLOW</span>
           <div class="vital-pill">
             <span class="vp-icon">❤️</span>
             <div class="vital-bar-track"><div class="vital-bar hp" id="ls-bar-hp"></div></div>

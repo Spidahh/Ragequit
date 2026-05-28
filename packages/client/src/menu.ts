@@ -327,8 +327,8 @@ export function initMenu(handlers: {
         killCounter.classList.add('hidden')
         sbSelf.textContent = String(selfWins)
         sbOther.textContent = String(otherWins)
-        if (selfWins >= MATCH_ROUNDS_TO_WIN) sbWinner.textContent = 'YOU WIN'
-        else if (otherWins >= MATCH_ROUNDS_TO_WIN) sbWinner.textContent = 'YOU LOSE'
+        if (selfWins >= MATCH_ROUNDS_TO_WIN) sbWinner.textContent = 'HAI VINTO'
+        else if (otherWins >= MATCH_ROUNDS_TO_WIN) sbWinner.textContent = 'HAI PERSO'
         else sbWinner.textContent = 'DRAW'
       } else if (msg.solo) {
         // FFA mode — live kill counter in the round HUD; no pips needed
@@ -336,7 +336,7 @@ export function initMenu(handlers: {
         const selfKills = solo[selfId] ?? 0
         const topKills = Math.max(0, ...Object.values(solo))
         const isLeading = selfKills === topKills && selfKills > 0
-        killCounter.textContent = `${selfKills} / ${FFA_KILLS_TO_WIN} kills${isLeading ? ' 👑 LEADING' : ` · leader: ${topKills}`}`
+        killCounter.textContent = `${selfKills} / ${FFA_KILLS_TO_WIN} kill${isLeading ? ' 👑 IN TESTA' : ` · top: ${topKills}`}`
         killCounter.classList.remove('hidden')
         pipsSelf.style.display = 'none'
         pipsOther.style.display = 'none'
@@ -344,10 +344,10 @@ export function initMenu(handlers: {
         sbOther.textContent = `top: ${topKills}`
         sbWinner.textContent =
           selfKills >= FFA_KILLS_TO_WIN
-            ? 'YOU WIN'
+            ? 'HAI VINTO'
             : topKills >= FFA_KILLS_TO_WIN
-              ? 'GAME OVER'
-              : 'ONGOING'
+              ? 'PARTITA FINITA'
+              : 'IN CORSO'
       } else if (msg.team) {
         // 5v5 team mode — live team kill counter; no round pips needed
         const team = msg.team
@@ -360,7 +360,7 @@ export function initMenu(handlers: {
         sbSelf.textContent = `Red ${red}`
         sbOther.textContent = `Blue ${blue}`
         sbWinner.textContent =
-          red >= TEAM_KILLS_TO_WIN ? 'RED WINS' : blue >= TEAM_KILLS_TO_WIN ? 'BLUE WINS' : ''
+          red >= TEAM_KILLS_TO_WIN ? 'ROSSO VINCE' : blue >= TEAM_KILLS_TO_WIN ? 'BLU VINCE' : ''
       }
     },
     updateProfile: (profile) => {

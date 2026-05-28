@@ -382,20 +382,33 @@ export function initLoadoutStation(
         'aria-label',
         `${def.name}. ${nature}. ${def.element !== 'none' ? def.element : 'physical'}. ${formatCost(def)}. ${formatEffectTags(def).join(', ')}`,
       )
+      // Split effect tags: damage tags (with numbers) separate from status/control tags.
+      const allTags = formatEffectTags(def)
+      const damageTags = allTags.filter((t) => tagClass(t) === 'tag-damage')
+      const otherTags = allTags.filter((t) => tagClass(t) !== 'tag-damage').slice(0, 4)
+
+      // Cost chips: mana and stamina shown as separate colored badges.
+      const costChips: string[] = []
+      if (def.costMana > 0) costChips.push(`<span class="cost-chip cost-mp">${def.costMana}<span class="cc-unit">MP</span></span>`)
+      if (def.costStamina > 0) costChips.push(`<span class="cost-chip cost-sp">${def.costStamina}<span class="cc-unit">SP</span></span>`)
+      if (def.windupSec > 0) costChips.push(`<span class="cost-chip cost-windup">${def.windupSec}s</span>`)
+      costChips.push(`<span class="cost-chip cost-cd">${def.cooldownSec}s CD</span>`)
+
       card.innerHTML = [
         `<span class="pool-visual"><span class="pool-icon-box">${abilityIconMarkup(def.id)}</span></span>`,
         `<span class="pool-nature"><span class="pool-name">${escapeHtml(def.name)}</span><span class="pool-category">${escapeHtml(nature)}${recTags.length > 0 ? ` <span class="recommend-tag">${escapeHtml(recTags[0]!)}</span>` : ''}</span></span>`,
-        `<span class="pool-meta"><b>${poolInputLabel}</b> · ${def.element !== 'none' ? def.element.toUpperCase() : 'PHYSICAL'} · ${formatCost(def)} · ${def.cooldownSec}s CD</span>`,
+        `<span class="pool-meta"><b>${poolInputLabel}</b> · ${def.element !== 'none' ? def.element.toUpperCase() : 'PHYSICAL'}</span>`,
         `<span class="pool-summary">${formatDesc(def.description)}</span>`,
-        `<span class="effect-tags">${formatEffectTags(def)
-          .map((tag) => `<span class="${tagClass(tag)}">${escapeHtml(tag)}</span>`)
-          .join('')}</span>`,
-        `<span class="pool-bars">${quickStats
-          .map((s) => {
-            const widthClass = `fill-${Math.max(0, Math.min(5, Math.round(s.value)))}`
-            return `<span class="pool-bar ${s.className}" title="${escapeHtml(s.label)}"><i class="${widthClass}"></i></span>`
-          })
-          .join('')}</span>`,
+        // Damage tags: prominent visual with numbers (e.g. "24 DMG", "0.5s AIRBORNE")
+        damageTags.length > 0
+          ? `<span class="pool-dmg-row">${damageTags.map((t) => `<span class="tag-dmg-pill">${escapeHtml(t)}</span>`).join('')}</span>`
+          : '',
+        // Status / control / move tags: smaller chips
+        otherTags.length > 0
+          ? `<span class="effect-tags">${otherTags.map((t) => `<span class="${tagClass(t)}">${escapeHtml(t)}</span>`).join('')}</span>`
+          : '',
+        // Resource cost row: separated and color-coded
+        `<span class="pool-cost-row">${costChips.join('')}</span>`,
       ].join('')
       card.addEventListener('click', () => {
         if (buildLocked()) return
@@ -451,10 +464,19 @@ export function initLoadoutStation(
 
   // --- Class Vitals Console --------------------------------------------------
 
+  const CLASS_MECHANIC_LABEL: Record<ClassId, string> = {
+    tank:   '🔥 FURY — ricevi colpi per accumulare stack, scatena la Surge per danno esplosivo',
+    archer: '⚡ MOMENTUM — muoviti per accelerare i cast e ridurre i CD delle magie',
+    mage:   '🌀 RISONANZA — lancia lo stesso elemento due volte in 2.5s per un bonus elementale',
+    hybrid: '💧 FLOW — cambia arma per accumulare stack e potenziare heal e danno',
+  }
+
   function rebuildClassVitals(): void {
     const classDef = TARGET_CLASS_DEFS[activeClassId]
     const { hp, mana, stamina } = classDef.resourceMaxima
     if (vitalsClassName) vitalsClassName.textContent = classDef.label.toUpperCase()
+    const mechanicEl = document.getElementById('ls-vitals-mechanic')
+    if (mechanicEl) mechanicEl.textContent = CLASS_MECHANIC_LABEL[activeClassId] ?? ''
     if (vitalsValHp) vitalsValHp.textContent = String(hp)
     if (vitalsValMana) vitalsValMana.textContent = String(mana)
     if (vitalsValStam) vitalsValStam.textContent = String(stamina)
@@ -500,11 +522,11 @@ export function initLoadoutStation(
 
   btnConfirm.addEventListener('click', () => {
     if (getRoom() && canApplyBuild && !canApplyBuild()) {
-      btnConfirm.textContent = 'LOCKED IN COMBAT'
+      btnConfirm.textContent = 'BLOCCATO IN BATTAGLIA'
       btnConfirm.classList.add('locked')
       window.setTimeout(() => {
         btnConfirm.classList.remove('locked')
-        btnConfirm.textContent = 'CONFIRM BUILD'
+        btnConfirm.textContent = 'CONFERMA BUILD'
       }, 900)
       return
     }
@@ -543,9 +565,9 @@ export function initLoadoutStation(
       rerender()
       const locked = buildLocked()
       btnConfirm.textContent = locked
-        ? 'LOCKED IN COMBAT'
+        ? 'BLOCCATO IN BATTAGLIA'
         : getRoom()
-          ? 'CONFIRM BUILD'
+          ? 'CONFERMA BUILD'
           : (getLaunchCtaLabel?.() ?? 'SAVE BUILD')
       btnConfirm.classList.toggle('locked', locked)
       overlay.classList.toggle('build-locked', locked)

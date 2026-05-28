@@ -7,16 +7,16 @@ import { statusIcon } from '../icons.js'
 import { ELEMENT_COLOR, type CooldownStripController } from './cd-strip.js'
 
 const RESPAWN_TIPS: readonly string[] = [
-  'RMB: tap for a parry window, hold to block repeated hits.',
-  'Coyote time: jump remains valid for 83 ms after leaving a ledge.',
-  'Class mechanic: each class has a unique combat resource — Fury, Momentum, Risonanza, or Flow.',
-  'Burn + Chill: Steam explosion combo.',
-  'Poison + Bleed: Festering doubles damage-over-time effects.',
-  'Space: fixed tap-height jump; holding Space does not add height.',
-  'Sprint momentum: sustained running grants a small speed boost.',
-  'Staff M1: instant low-cost projectile pressure.',
-  'Air launches pressure aim and positioning; keep fighting while you recover.',
-  'Collision stops dash abilities; walls are hard cover.',
+  'Tasto destro: tap = finestra di parry, tieni premuto = blocco ripetuto.',
+  'Coyote time: il salto è valido per 83 ms dopo aver lasciato un bordo.',
+  'Meccanica di classe: ogni classe ha una risorsa unica — Fury, Momentum, Risonanza o Flow.',
+  'Burn + Chill: esplosione di vapore (Steam combo).',
+  'Veleno + Bleed: Festering raddoppia il danno nel tempo.',
+  'Spazio: salto a impulso fisso — tenerlo premuto non aggiunge altezza.',
+  'Staff M1: proiettile rapido e poco costoso per pressione costante.',
+  'Air launch: colpisci in aria per massimizzare il danno finisher.',
+  'Le dash si fermano sulle pareti — usa le coperture come scudo.',
+  'Parry tap: consuma stamina e CD; parry hold: drena stamina continua.',
 ]
 
 // Minimal schema shape consumed by this module.

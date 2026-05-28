@@ -162,7 +162,7 @@ describe('loadout station smoke', () => {
 
     expect(send).not.toHaveBeenCalled()
     expect(document.getElementById('loadout-station')?.classList.contains('hidden')).toBe(false)
-    expect(document.getElementById('ls-confirm')?.textContent).toBe('LOCKED IN COMBAT')
+    expect(document.getElementById('ls-confirm')?.textContent).toBe('BLOCCATO IN BATTAGLIA')
   })
 
   it('keeps build editing read-only while locked', () => {

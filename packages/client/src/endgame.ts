@@ -113,7 +113,7 @@ export function renderDeathcam(host: HTMLElement, data: DeathcamData): void {
       <div class="dc-killer-glow"></div>
       <div class="dc-overlay">
         <div class="dc-banner">
-          <div class="dc-eliminated">ELIMINATED</div>
+          <div class="dc-eliminated">ELIMINATO</div>
           <div class="dc-by">
             KILLED BY
             <b>${escapeHtml(data.killer.toUpperCase())}</b>

@@ -108,13 +108,13 @@ export function createCombatFeedHud({
 
     const label =
       msg.streak >= 5
-        ? `UNSTOPPABLE  ×${msg.streak}`
+        ? `INARRESTABILE  ×${msg.streak}`
         : msg.streak === 4
-          ? 'DOMINATING   ×4'
+          ? 'DOMINANTE   ×4'
           : msg.streak === 3
-            ? 'TRIPLE KILL  ×3'
+            ? 'TRIPLA KILL  ×3'
             : msg.streak === 2
-              ? 'DOUBLE KILL  ×2'
+              ? 'DOPPIA KILL  ×2'
               : `KILL  ×${msg.streak}`
 
     streakCountEl.textContent = label
