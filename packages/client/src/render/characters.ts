@@ -476,11 +476,19 @@ function _installCharacterModel(
   charGroup.add(model)
   charGroup.userData['charModel'] = model
 
-  // Attach weaponGroup directly to the hand bone with reset transform for perfect grip!
+  // Attach weaponGroup to the RightHand bone.
+  // The grip correction offsets compensate for the Mixamo hand bone's coordinate
+  // system vs the weapon GLB's natural orientation. Without these, the blade
+  // points in unexpected directions during Run/Walk animations because the bone
+  // rotates significantly as the arm swings.
   if (rightHand && wg) {
     rightHand.add(wg)
-    wg.position.set(0, 0, 0)
-    wg.rotation.set(0, 0, 0)
+    wg.position.set(0.04, 0.02, 0.0)
+    // Rotate the weapon so the blade extends forward along the character's
+    // facing direction in idle/combat pose. The character model is itself
+    // rotated Math.PI on Y (faces forward), so these corrections are in
+    // the hand bone's local space after that rotation.
+    wg.rotation.set(-Math.PI / 2, 0, Math.PI / 2)
     wg.scale.set(1, 1, 1)
   }
 

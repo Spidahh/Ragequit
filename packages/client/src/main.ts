@@ -50,7 +50,7 @@ import * as THREE from 'three'
 import { SoundEngine } from './audio/sound-engine.js'
 import { type DeathcamData, type ScoreboardData } from './endgame.js'
 import { initAbilityFailHud } from './hud/ability-fail-hud.js'
-import { initCooldownStrip } from './hud/cd-strip.js'
+import { initCooldownStrip, ELEMENT_COLOR } from './hud/cd-strip.js'
 import { createCombatFeedHud } from './hud/combat-feed.js'
 import { initCombatOverlayHud } from './hud/combat-overlay-hud.js'
 import { createHudFlash } from './hud/flash.js'
@@ -256,6 +256,15 @@ const castDispatcher = initCastDispatcher({
   },
   sendCast: (id, tick) => sendAbilityCast(id, tick),
   showShootFlash,
+  // Immediately show the swing arc + start attack animation on the local character
+  // without waiting for the server schema echo (~16 ms). Makes the weapon
+  // animation feel perfectly in sync with the click.
+  onSwingSent: () => {
+    if (selfArc) {
+      selfArc.visible = true
+      selfArcExpiresAt = performance.now() + 400
+    }
+  },
 })
 
 // --- HUD helpers -----------------------------------------------------------
@@ -401,7 +410,9 @@ function clearFirstPersonViewModel(): void {
 }
 
 function rebuildFirstPersonViewModel(weapon: Weapon): void {
-  clearFirstPersonViewModel()
+  // Don't clear the existing model immediately — keep it visible while the
+  // new GLB loads to prevent a 1-frame flash of empty first-person view.
+  // The old model stays until the new one is fully ready.
   firstPersonViewWeapon = weapon
 
   // Re-use the same weapon GLB cache as third-person props.
@@ -410,6 +421,7 @@ function rebuildFirstPersonViewModel(weapon: Weapon): void {
       // Guard against race conditions (if player swapped weapons while loading)
       if (firstPersonViewWeapon !== weapon) return
 
+      // Only clear the old model now that the replacement is ready.
       clearFirstPersonViewModel()
       const model = scene.clone()
 
@@ -579,6 +591,12 @@ const inp = makeGameInputState()
 let loadoutReturnsToPause = false
 // Local cast-bar start timestamp — set when casting becomes true, cleared on reset.
 let castStartedAtMs = 0
+// Track previous casting state to detect cast COMPLETION (windup resolved without
+// interruption). Used to trigger sound + VFX feedback at resolution.
+let prevSelfCasting = false
+let lastCastAbilityId = ''
+// Last target point sent with the most recent cast (for resolution VFX).
+let lastCastTargetPoint: { x: number; y: number; z: number } | null = null
 
 function isPauseMenuOpen(): boolean {
   return !pauseMenu.classList.contains('hidden')
@@ -2425,6 +2443,8 @@ function sendAbilityCast(abilityId: string, tick: number): void {
   room.send(MessageTypes.Cast, msg)
   cooldownStrip.markPending(abilityId)
   showShootFlash()
+  // Remember the target for resolution VFX (shown when windup completes).
+  lastCastTargetPoint = msg.targetPoint ?? null
 
   selfStats.abilitiesUsed[abilityId] = (selfStats.abilitiesUsed[abilityId] ?? 0) + 1
   if (['uppercut', 'eruption', 'arc_lift', 'frost_pillar'].includes(abilityId)) {
@@ -2728,6 +2748,29 @@ function render(now: number): void {
 
     const wSchema =
       selfSchema && isWeapon(selfSchema.activeWeapon) ? selfSchema.activeWeapon : 'sword'
+
+    // Detect windup cast COMPLETION: casting was true last frame, now false,
+    // and no interruption fired (interruptions clear castStartedAtMs to 0).
+    // Trigger: cast-release sound + impact VFX at the stored target point.
+    const nowCasting = !!(selfSchema?.casting && selfSchema.castEndsAtTick > tickNow)
+    if (prevSelfCasting && !nowCasting && castStartedAtMs > 0 && lastCastAbilityId) {
+      const def = ABILITY_DEFS[lastCastAbilityId]
+      if (def && def.windupSec > 0) {
+        // Second sound at resolution so the player knows the spell fired.
+        soundEngine.playCast(def.element ?? 'none')
+        // VFX at target point for point-targeted spells (meteor, zone placement, etc.)
+        if (lastCastTargetPoint) {
+          const elemColor = (ELEMENT_COLOR[def.element] ?? '#4a90d8').replace('#', '')
+          const col = parseInt(elemColor, 16) || 0x4a90d8
+          spawnImpact(new THREE.Vector3(lastCastTargetPoint.x, lastCastTargetPoint.y, lastCastTargetPoint.z), col, 'magic')
+          lastCastTargetPoint = null
+        }
+      }
+    }
+    prevSelfCasting = nowCasting
+    if (nowCasting && selfSchema?.castAbilityId) {
+      lastCastAbilityId = selfSchema.castAbilityId
+    }
 
     // Drive character animations
     tickCharacterMixer(selfMesh, dt)

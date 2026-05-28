@@ -29,6 +29,9 @@ export interface CastDispatcherOptions {
   hidePlacementVisual: () => void
   sendCast: (abilityId: string, tick: number) => void
   showShootFlash: () => void
+  /** Called immediately when a sword swing is sent — used to trigger
+   *  the local swing arc / attack animation without waiting for schema echo. */
+  onSwingSent?: () => void
 }
 
 export interface CastDispatchParams {
@@ -59,6 +62,7 @@ export function initCastDispatcher({
   hidePlacementVisual,
   sendCast,
   showShootFlash,
+  onSwingSent,
 }: CastDispatcherOptions): CastDispatcherController {
   let primedSlotIdx: number | null = null
   let placementAbilityId: string | null = null
@@ -165,6 +169,10 @@ export function initCastDispatcher({
           // contamination when the camera orbited at an angle.
           const msg: ClientSwingMessage = { atTick: schemaTick + 1, yaw: inp.mouseYaw }
           room.send(MessageTypes.Swing, msg)
+          // Trigger arc + animation immediately (client-side prediction).
+          // Without this, the swing arc waits for schema echo (~16 ms) and the
+          // attack animation starts late, making the weapon look slower than the hit.
+          onSwingSent?.()
           showShootFlash()
         }
       } else if (activeWeapon === 'staff') {
