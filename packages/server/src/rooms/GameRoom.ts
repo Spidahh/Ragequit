@@ -2038,10 +2038,14 @@ export class GameRoom extends Room<GameState> {
       })
     }
 
+    // chainChance is currently unset on all abilities (defaults to 1 = always chain).
+    // Math.random() is kept for future probabilistic infusion support but is
+    // effectively Math.random() <= 1 (always true) with the current registry data.
+    const chainChance = meta.chainChance ?? 1
     const shouldChain =
       (meta.chainTargets ?? 0) > 0 &&
       (meta.chainDamage ?? 0) > 0 &&
-      Math.random() <= (meta.chainChance ?? 1)
+      (chainChance >= 1 || Math.random() <= chainChance)
     if (shouldChain) {
       const chained = this.findChainVictims(
         meta.ownerId,

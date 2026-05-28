@@ -1,4 +1,5 @@
-import { HP_MAX } from '@ragequit/shared'
+import { HP_MAX, TARGET_CLASS_DEFS } from '@ragequit/shared'
+import type { ClassId } from '@ragequit/shared'
 import * as THREE from 'three'
 
 export const STATUS_EMISSIVE: Record<string, number> = {
@@ -19,6 +20,7 @@ export const STATUS_EMISSIVE: Record<string, number> = {
 
 export interface SelfEmissiveSchema {
   hp: number
+  classId?: string
   statuses: ReadonlyArray<{ kind: string }>
   invulnUntilTick: number
 }
@@ -49,7 +51,8 @@ export function initSelfEmissive({
   ): void {
     const selfMesh = getSelfMesh()
     if (!selfMesh || !selfSchema) return
-    const hpFrac = selfSchema.hp / HP_MAX
+    const hpMax = TARGET_CLASS_DEFS[selfSchema.classId as ClassId]?.resourceMaxima.hp ?? HP_MAX
+    const hpFrac = selfSchema.hp / hpMax
     const mat = selfMesh.userData['armorMat'] as THREE.MeshToonMaterial | undefined
     if (!mat) return
 

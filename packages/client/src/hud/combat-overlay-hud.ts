@@ -1,7 +1,9 @@
-import { HP_MAX, TICK_RATE_HZ, ROUND_TIMER_SEC } from '@ragequit/shared'
+import { HP_MAX, TICK_RATE_HZ, ROUND_TIMER_SEC, TARGET_CLASS_DEFS } from '@ragequit/shared'
+import type { ClassId } from '@ragequit/shared'
 
 export interface CombatOverlaySchema {
   hp: number
+  classId?: string
   alive: boolean
   statuses: ReadonlyArray<{ kind: string }>
   parrying: boolean
@@ -124,7 +126,8 @@ export function initCombatOverlayHud({
 
     // Low-HP vignette + blind vignette + death overlay + heal flash.
     if (selfSchema) {
-      const hpFrac = selfSchema.hp / HP_MAX
+      const hpMax = TARGET_CLASS_DEFS[selfSchema.classId as ClassId]?.resourceMaxima.hp ?? HP_MAX
+      const hpFrac = selfSchema.hp / hpMax
       lowHpVignette.classList.toggle('active', selfSchema.alive && hpFrac < 0.25)
       const blinded =
         selfSchema.alive && Array.from(selfSchema.statuses).some((s) => s.kind === 'blind')
