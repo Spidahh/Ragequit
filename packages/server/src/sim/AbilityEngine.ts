@@ -242,7 +242,7 @@ export class AbilityEngine {
     // Swap lock: if the player just swapped to the current weapon and the
     // lock window hasn't expired, defer (reject) the cast.
     if (player.weaponSwapEndTick > now) {
-      this.host.sendAbilityFailed(sid, abilityId, 'gcd') // reuse 'gcd' reason for UI
+      this.host.sendAbilityFailed(sid, abilityId, 'swapping')
       return false
     }
 

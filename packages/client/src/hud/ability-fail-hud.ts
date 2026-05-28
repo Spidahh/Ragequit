@@ -99,7 +99,8 @@ export function initAbilityFailHud({
   // Reasons that are already fully communicated by the slot flash / resource
   // bar / GCD ring — no toast needed. Everything else gets a 1.5 s compact
   // note rather than a long persistent label.
-  const SILENT_REASONS = new Set(['cooldown', 'gcd', 'parrying'])
+  // 'swapping' is silent — the weapon-swap VFX (0.12 s lock) already communicates it.
+  const SILENT_REASONS = new Set(['cooldown', 'gcd', 'parrying', 'swapping'])
 
   function showAbilityFailNote(msg: ServerAbilityFailedMessage): void {
     if (SILENT_REASONS.has(msg.reason)) return
