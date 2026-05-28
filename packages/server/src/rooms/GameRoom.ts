@@ -2682,16 +2682,15 @@ const BOT_NAMES = ['Shadow', 'Ember', 'Frost', 'Storm', 'Void', 'Blaze', 'Riven'
 
 // Default loadout applied at onJoin (and to bots). Matches the client's
 // DEFAULT_SLOTS in loadout-station.ts (Ibrido preset build).
-// Slot positions are packed by family: melee, bow, magicBase×2, magicAdvanced×2,
-// utility×2. Server validates by family budget, not wire position.
-// See 01_DESIGN/06_loadout_build.md for the preset build rationale.
+// Slot positions packed: melee×2, bow×1, magicBase×2, magicAdvanced×1, utility×2.
+// Matches Ibrido (hybrid) preset. Server validates by family budget, not position.
 const DEFAULT_LOADOUT: readonly string[] = Object.freeze([
   'uppercut', // melee
+  'gap_closer', // melee
   'marksman_shot', // bow
   'fireball', // magicBase
   'lightning_dash', // magicBase
   'arc_lift', // magicAdvanced
-  'meteor', // magicAdvanced
   'adaptive_mend', // utility — Ibrido Recovery
   'quick_dash', // utility
 ])

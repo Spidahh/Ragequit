@@ -55,25 +55,25 @@ const CLASS_PRESET_BUILDS: Record<ClassId, string[]> = {
     'hunters_flow', // slot 6 — utility (Recovery)
     'quick_dash', // slot 7 — utility
   ],
-  // Mago: 3 magicBase + 2 magicAdvanced + 3 utility = 8
+  // Mago: 3 magicBase + 3 magicAdvanced + 2 utility = 8
   mage: [
     'fireball', // slot 0 — magicBase (Fire projectile pressure)
     'frost_bolt', // slot 1 — magicBase (Ice pressure)
-    'dark_barrier', // slot 2 — magicBase (Magic protection)
+    'chain_bolt', // slot 2 — magicBase (Lightning chain)
     'eruption', // slot 3 — magicAdvanced (launch setup)
     'meteor', // slot 4 — magicAdvanced (high-commit Fire cashout)
-    'arcane_rebind', // slot 5 — utility (Recovery)
-    'phase_shift', // slot 6 — utility (timed survival counter)
-    'smoke_screen', // slot 7 — utility (blind / vision denial)
+    'frost_pillar', // slot 5 — magicAdvanced (Ice knockup)
+    'arcane_rebind', // slot 6 — utility (Recovery)
+    'phase_shift', // slot 7 — utility (timed survival counter)
   ],
-  // Ibrido: 1 melee + 1 bow + 2 magicBase + 2 magicAdvanced + 2 utility = 8
+  // Ibrido: 2 melee + 1 bow + 2 magicBase + 1 magicAdvanced + 2 utility = 8
   hybrid: [
-    'uppercut', // slot 0 — melee (sword setup)
-    'marksman_shot', // slot 1 — bow (bow cashout)
-    'fireball', // slot 2 — magicBase (staff projectile pressure)
-    'lightning_dash', // slot 3 — magicBase (staff movement)
-    'arc_lift', // slot 4 — magicAdvanced (spell launch path)
-    'meteor', // slot 5 — magicAdvanced (advanced cashout)
+    'uppercut', // slot 0 — melee (knockup setup)
+    'gap_closer', // slot 1 — melee (engage dash)
+    'marksman_shot', // slot 2 — bow (precision cashout)
+    'fireball', // slot 3 — magicBase (staff pressure)
+    'lightning_dash', // slot 4 — magicBase (staff movement)
+    'arc_lift', // slot 5 — magicAdvanced (launch cashout)
     'adaptive_mend', // slot 6 — utility (Recovery)
     'quick_dash', // slot 7 — utility
   ],
@@ -84,11 +84,11 @@ const CLASS_PRESET_BUILDS: Record<ClassId, string[]> = {
 // Server DEFAULT_LOADOUT in GameRoom.ts must stay in sync with this.
 const DEFAULT_SLOTS: string[] = [
   'uppercut', // melee
+  'gap_closer', // melee
   'marksman_shot', // bow
   'fireball', // magicBase
   'lightning_dash', // magicBase
   'arc_lift', // magicAdvanced
-  'meteor', // magicAdvanced
   'adaptive_mend', // utility (Ibrido Recovery)
   'quick_dash', // utility
 ]

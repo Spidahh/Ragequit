@@ -86,7 +86,7 @@ function spellLabel(loadout: ReadonlyArray<string>, slotIdx: number): string {
     const family = getAbilitySlotFamily(id)
     if (family === 'magicBase' || family === 'magicAdvanced') spellIdx++
   }
-  return spellIdx > 0 && spellIdx <= 5
+  return spellIdx > 0 && spellIdx <= 6
     ? actionLabel(`spell${spellIdx}` as Parameters<typeof actionLabel>[0])
     : ''
 }
@@ -101,16 +101,25 @@ function slotMeta(
   const family = getAbilitySlotFamily(id)
   if (family === 'utility') {
     const label = getSlotDirectionalLabel(slotIdx, classId, 'utility')
-    return { kind: 'utility', label, pipClass: 'utility-pip' }
+    return { kind: 'utility', label, pipClass: 'utility-pip pip-utility' }
   }
-  if (family === 'magicBase' || family === 'magicAdvanced') {
+  if (family === 'magicBase') {
     const label = spellLabel(loadout, slotIdx)
     if (!label) return null
-    return { kind: 'spell', label, pipClass: 'spell-pip' }
+    return { kind: 'spell', label, pipClass: 'spell-pip pip-magic' }
   }
-  if (family === 'melee' || family === 'bow') {
+  if (family === 'magicAdvanced') {
+    const label = spellLabel(loadout, slotIdx)
+    if (!label) return null
+    return { kind: 'spell', label, pipClass: 'spell-pip pip-magic-adv' }
+  }
+  if (family === 'melee') {
     const label = getSlotDirectionalLabel(slotIdx, classId, 'melee')
-    return { kind: 'weapon', label, pipClass: 'ability-pip' }
+    return { kind: 'weapon', label, pipClass: 'ability-pip pip-sword' }
+  }
+  if (family === 'bow') {
+    const label = getSlotDirectionalLabel(slotIdx, classId, 'bow')
+    return { kind: 'weapon', label, pipClass: 'ability-pip pip-bow' }
   }
   return null
 }

@@ -637,21 +637,26 @@ export function setCharAnimState(charGroup: THREE.Group, state: CharAnimState): 
   const target = _chooseAnimState(store, state)
   const fadeSec =
     target === 'Death' || target === 'Respawn'
-      ? 0.3
-      : target === 'Dagger_Attack' ||
-          target === 'Dagger_Attack2' ||
-          target === 'Punch' ||
-          target === 'RecieveHit' ||
-          target === 'RecieveHit_Attacking'
-        ? 0.08
-        : target === 'Jump' ||
-            target === 'Land' ||
-            target === 'Roll' ||
-            target === 'Bow_Draw' ||
-            target === 'Bow_Release' ||
-            target === 'Staff_Cast'
-          ? 0.1
-          : 0.18
+      ? 0.25
+      // Attack animations: zero-fade so the swing snaps in immediately.
+      // A crossfade here delays the visual and makes hits feel soft.
+      : target === 'Dagger_Attack' || target === 'Dagger_Attack2'
+        ? 0.04
+        : target === 'Punch'
+          ? 0.05
+          : target === 'RecieveHit' || target === 'RecieveHit_Attacking'
+            ? 0.05
+            : target === 'Roll'
+              ? 0.07
+              : target === 'Jump' || target === 'Land'
+                ? 0.08
+                : target === 'Bow_Release' || target === 'Staff_Cast'
+                  ? 0.07
+                  : target === 'Bow_Draw'
+                    ? 0.12
+                    : target === 'Run' || target === 'Walk'
+                      ? 0.14
+                      : 0.18
   _crossfade(store, target, fadeSec)
 }
 

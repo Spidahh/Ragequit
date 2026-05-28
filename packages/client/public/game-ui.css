@@ -292,17 +292,17 @@ button.locked {
 .mode-tile,
 .forge-tile {
   position: relative;
-  min-height: 86px;
+  min-height: 108px;
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr);
+  grid-template-columns: 60px minmax(0, 1fr);
   grid-template-rows: auto auto;
   grid-template-areas:
     "icon name"
     "icon sub";
   align-items: center;
-  column-gap: 14px;
-  row-gap: 6px;
-  padding: 16px;
+  column-gap: 16px;
+  row-gap: 7px;
+  padding: 20px 18px;
   overflow: hidden;
   text-align: left;
 }
@@ -1800,7 +1800,8 @@ button.locked {
   position: fixed;
   left: 24px;
   bottom: 28px;
-  z-index: 900;
+  /* 600: above game canvas (0) but below all overlays (pause 850, scoreboard 850, loadout 760) */
+  z-index: 600;
   width: 318px;
   display: grid;
   gap: 6px;
@@ -1843,10 +1844,10 @@ button.locked {
 
 .bar {
   position: relative;
-  height: 21px;
+  height: 26px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-left: 4px solid var(--bar-color);
+  border-left: 5px solid var(--bar-color);
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.35);
 }
@@ -1863,9 +1864,9 @@ button.locked {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 8px;
+  padding: 0 10px;
   color: var(--text);
-  font: 900 10px/1 var(--font-mono);
+  font: 900 11px/1 var(--font-mono);
 }
 
 #hud-hp { --bar-color: var(--hp); }
@@ -2133,6 +2134,14 @@ button.locked {
   background: rgba(0, 0, 0, 0.45);
   transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
 }
+
+/* ── Hotbar family color coding ── */
+/* Bottom border color makes weapon/spell/utility family instantly readable. */
+.cd-pip.pip-sword   { border-bottom-color: #e04a4a; } /* red — sword */
+.cd-pip.pip-bow     { border-bottom-color: #f08020; } /* amber — bow */
+.cd-pip.pip-magic   { border-bottom-color: #4a90d8; } /* blue — magic base */
+.cd-pip.pip-magic-adv { border-bottom-color: #b060ff; } /* purple — advanced */
+.cd-pip.pip-utility { border-bottom-color: #2ec89a; } /* teal — utility */
 
 .cd-pip.utility-pip {
   width: 56px;

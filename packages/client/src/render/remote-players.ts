@@ -576,15 +576,16 @@ export function initRemotePlayers({
       }
       const rBlinkUntil = remoteDamageBlinkUntil.get(sid) ?? 0
       if (now < rBlinkUntil) {
-        const bf = 1 - (rBlinkUntil - now) / 160
-        const bs = bf < 0.5 ? bf * 2 : (1 - bf) * 2
-        tR = Math.max(tR, bs * 0.95)
-        tG = Math.max(tG, bs * 0.95)
-        tB = Math.max(tB, bs * 0.95)
+        // Stronger white flash: peaks sharply then decays (feel of impact).
+        const bf = 1 - (rBlinkUntil - now) / 220
+        const bs = bf < 0.3 ? bf / 0.3 : (1 - bf) / 0.7 // sharp rise, slow fall
+        tR = Math.max(tR, bs * 1.0)
+        tG = Math.max(tG, bs * 0.85)
+        tB = Math.max(tB, bs * 0.7)
       } else if (rBlinkUntil > 0) {
         remoteDamageBlinkUntil.delete(sid)
       }
-      const LERP = 0.12
+      const LERP = 0.16
       mat.emissive.r += (tR - mat.emissive.r) * LERP
       mat.emissive.g += (tG - mat.emissive.g) * LERP
       mat.emissive.b += (tB - mat.emissive.b) * LERP
@@ -615,11 +616,12 @@ export function initRemotePlayers({
   }
 
   function setDamageBlink(sid: string, untilMs: number): void {
-    remoteDamageBlinkUntil.set(sid, untilMs)
-    // Also drive the hit-react animation for this remote character.
-    // untilMs covers the 160 ms blink; hit-react should last ~600 ms.
+    // Blink now lasts 220 ms (up from 160) for a more satisfying flash.
+    const blinkEnd = Math.max(untilMs, performance.now() + 220)
+    remoteDamageBlinkUntil.set(sid, blinkEnd)
+    // Hit-react animation lasts 700 ms — visible stagger on the remote character.
     const r = remotePlayers.get(sid)
-    if (r) r.hitReactUntilMs = untilMs - 160 + 600
+    if (r) r.hitReactUntilMs = blinkEnd - 220 + 700
   }
 
   function triggerRoll(sid: string, untilMs: number): void {

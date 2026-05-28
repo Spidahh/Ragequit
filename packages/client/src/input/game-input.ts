@@ -181,6 +181,7 @@ export function initGameInput(
       actionCode('spell3'),
       actionCode('spell4'),
       actionCode('spell5'),
+      actionCode('spell6'),
       actionCode('sensDown'),
       actionCode('sensUp'),
     ]
@@ -375,7 +376,7 @@ export function initGameInput(
         state.weaponSwapRequest = weaponIds[(idx + 1) % weaponIds.length] ?? null
       }
 
-      const spellActions: readonly KeybindAction[] = ['spell1', 'spell2', 'spell3', 'spell4', 'spell5']
+      const spellActions: readonly KeybindAction[] = ['spell1', 'spell2', 'spell3', 'spell4', 'spell5', 'spell6']
       for (let spellIdx = 0; spellIdx < spellActions.length; spellIdx++) {
         const action = spellActions[spellIdx]!
         if (!matchesAction(k, action)) continue

@@ -51,10 +51,11 @@ describe('loadout station smoke', () => {
     // classId must always be sent for server-side class validation
     expect(msg['classId']).toBe('hybrid')
     // class-aware envelope: arrays classified by target slot family
-    expect(msg['melee']).toEqual(['uppercut'])
+    // Hybrid now: 2 melee + 1 bow + 2 magicBase + 1 magicAdvanced + 2 utility = 8
+    expect(msg['melee']).toEqual(['uppercut', 'gap_closer'])
     expect(msg['bow']).toEqual(['marksman_shot'])
     expect(msg['magicBase']).toEqual(['fireball', 'lightning_dash'])
-    expect(msg['magicAdvanced']).toEqual(['arc_lift', 'meteor'])
+    expect(msg['magicAdvanced']).toEqual(['arc_lift'])
     expect(msg['utility']).toEqual([
       'adaptive_mend',
       'quick_dash',
@@ -96,8 +97,10 @@ describe('loadout station smoke', () => {
     document.getElementById('ls-confirm')?.click()
 
     const msg = send.mock.calls[0]?.[1] as Record<string, unknown>
+    // Incompatible saved build is reset to the hybrid preset (2m+1b+2mb+1ma+2u)
+    expect(msg['melee']).toEqual(['uppercut', 'gap_closer'])
     expect(msg['magicBase']).toEqual(['fireball', 'lightning_dash'])
-    expect(msg['magicAdvanced']).toEqual(['arc_lift', 'meteor'])
+    expect(msg['magicAdvanced']).toEqual(['arc_lift'])
     expect(msg['utility']).toEqual([
       'adaptive_mend',
       'quick_dash',

@@ -1014,22 +1014,35 @@ let hitStopUntilMs = 0
 let victimHitStopUntilMs = 0
 
 // Hit-stop durations by damage source category (milliseconds).
-const HITSTOP_ATTACKER: Record<string, number> = { sword_m1: 65, uppercut: 65, bow: 35, staff: 35 }
-const HITSTOP_VICTIM: Record<string, number> = { sword_m1: 45, uppercut: 45, bow: 30, staff: 30 }
+// Keys are RAW cause ids (without 'ability:' prefix). The helper below strips
+// the prefix so both 'sword_m1' and 'ability:uppercut' resolve correctly.
+const HITSTOP_ATTACKER: Record<string, number> = {
+  sword_m1: 80, uppercut: 80, whirlwind: 70, gap_closer: 65,
+  bleed_strike: 65, guard_break: 65, rending_dash: 60,
+  bow: 45, staff: 45,
+}
+const HITSTOP_VICTIM: Record<string, number> = {
+  sword_m1: 55, uppercut: 55, whirlwind: 50, gap_closer: 50,
+  bleed_strike: 50, guard_break: 50, rending_dash: 45,
+  bow: 35, staff: 35,
+}
+
+// Strip the 'ability:' prefix so both raw ids and engine-prefixed ids resolve.
+function rawCauseId(cause: string): string {
+  return cause.startsWith('ability:') ? cause.slice(8) : cause
+}
 function isAirPunishCause(cause: string): boolean {
   return cause.includes(':air_punish')
 }
 function hitstopAttacker(cause: string): number {
-  if (isAirPunishCause(cause)) return 95
-  return (
-    HITSTOP_ATTACKER[cause] ?? (cause.startsWith('zone:') || cause.startsWith('combo:') ? 20 : 45)
-  )
+  if (isAirPunishCause(cause)) return 100
+  const raw = rawCauseId(cause)
+  return HITSTOP_ATTACKER[raw] ?? (cause.startsWith('zone:') || cause.startsWith('combo:') ? 20 : 50)
 }
 function hitstopVictim(cause: string): number {
-  if (isAirPunishCause(cause)) return 70
-  return (
-    HITSTOP_VICTIM[cause] ?? (cause.startsWith('zone:') || cause.startsWith('combo:') ? 25 : 35)
-  )
+  if (isAirPunishCause(cause)) return 75
+  const raw = rawCauseId(cause)
+  return HITSTOP_VICTIM[raw] ?? (cause.startsWith('zone:') || cause.startsWith('combo:') ? 25 : 40)
 }
 
 // Client-side combo tracking for the attacker (independent of server combo state).
@@ -1882,7 +1895,14 @@ function onHit(msg: ServerHitMessage): void {
   if (amISelf && msg.damage > 0 && !msg.didParry) {
     soundEngine.playHurtByType(msg.cause, power)
     victimHitStopUntilMs = now + hitstopVictim(msg.cause)
-    selfHitReactUntilMs = now + 600 // trigger hit-react animation for 600 ms
+    selfHitReactUntilMs = now + 650
+    // Victim camera shake — melee hits harder, felt directly on screen.
+    const raw = rawCauseId(msg.cause)
+    const isMeleeHit = ['sword_m1','uppercut','whirlwind','gap_closer','bleed_strike','guard_break','rending_dash'].includes(raw)
+    const victimShakeIntensity = isMeleeHit
+      ? Math.min(1.4, msg.damage / 20)
+      : Math.min(0.9, msg.damage / 30)
+    applyDirectionalShake(getPlayerWorldPos(msg.attackerId), victimShakeIntensity)
   }
 
   // --- Observer: world-space impact sound (attenuated) ---
@@ -1932,6 +1952,8 @@ function onHit(msg: ServerHitMessage): void {
 
     if (midpoint) {
       const cause = msg.cause
+      // Strip 'ability:' prefix so melee/bow abilities match their VFX category.
+      const rawC = rawCauseId(cause)
       if (msg.didParry) {
         // Parry spark — bright silver flash at contact midpoint.
         spawnImpact(midpoint, 0xddeeff, 'parry')
@@ -1942,26 +1964,29 @@ function onHit(msg: ServerHitMessage): void {
           spawnImpact(new THREE.Vector3(vicPos.x, vicPos.y + 0.6, vicPos.z), 0xff4422, 'magic')
         }
         if (
-          cause === 'sword_m1' ||
-          cause === 'uppercut' ||
-          cause === 'gap_closer' ||
-          cause === 'bleed_strike' ||
-          cause === 'guard_break' ||
-          cause === 'rending_dash' ||
-          cause === 'whirlwind'
+          rawC === 'sword_m1' ||
+          rawC === 'uppercut' ||
+          rawC === 'gap_closer' ||
+          rawC === 'bleed_strike' ||
+          rawC === 'guard_break' ||
+          rawC === 'rending_dash' ||
+          rawC === 'whirlwind'
         ) {
-          // Melee — gold spark.
+          // Melee — gold spark + secondary red burst for hard hits.
           spawnImpact(midpoint, 0xffcc44, 'melee')
+          if (msg.damage >= 10 && vicPos) {
+            spawnImpact(new THREE.Vector3(vicPos.x, vicPos.y + 0.4, vicPos.z), 0xff6622, 'melee')
+          }
         } else if (
-          cause === 'bow_m1' ||
-          cause === 'piercing_shot' ||
-          cause === 'pin_shot' ||
-          cause === 'marksman_shot' ||
-          cause === 'broadhead' ||
-          cause === 'blast_arrow' ||
-          cause === 'volley' ||
-          cause === 'disengage_shot' ||
-          cause === 'snare_trap'
+          rawC === 'bow' ||
+          rawC === 'piercing_shot' ||
+          rawC === 'pin_shot' ||
+          rawC === 'marksman_shot' ||
+          rawC === 'broadhead' ||
+          rawC === 'blast_arrow' ||
+          rawC === 'volley' ||
+          rawC === 'disengage_shot' ||
+          rawC === 'snare_trap'
         ) {
           // Bow / arrow — amber.
           spawnImpact(midpoint, 0xf08020, 'pierce')

@@ -58,7 +58,8 @@ export const TARGET_CLASS_DEFS = {
     id: 'mage',
     label: 'Mago',
     resourceMaxima: { hp: 150, mana: 160, stamina: 80 },
-    slots: { melee: 0, bow: 0, magicBase: 3, magicAdvanced: 2, utility: 3 },
+    // 3 base + 3 advanced + 2 utility = 8
+    slots: { melee: 0, bow: 0, magicBase: 3, magicAdvanced: 3, utility: 2 },
     weapons: ['staff'],
     recoveryId: 'arcane_rebind',
   },
@@ -66,7 +67,8 @@ export const TARGET_CLASS_DEFS = {
     id: 'hybrid',
     label: 'Ibrido',
     resourceMaxima: { hp: 200, mana: 100, stamina: 100 },
-    slots: { melee: 1, bow: 1, magicBase: 2, magicAdvanced: 2, utility: 2 },
+    // 2 melee + 1 bow + 2 base + 1 advanced + 2 utility = 8
+    slots: { melee: 2, bow: 1, magicBase: 2, magicAdvanced: 1, utility: 2 },
     weapons: ['sword', 'bow', 'staff'],
     recoveryId: 'adaptive_mend',
   },

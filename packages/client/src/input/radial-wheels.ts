@@ -74,14 +74,26 @@ export function initRadialWheels({
   function wheelSlotIndices(wheel: RadialWheel, _loadout: readonly string[]): number[] {
     const classId = getClassId()
     const order = getClassSlotOrder(classId)
+
+    if (wheel.kind === 'utility') {
+      // Q-wheel: utility slots only
+      const indices: number[] = []
+      for (let idx = 0; idx < order.length; idx++) {
+        if (order[idx] === 'utility') indices.push(idx)
+      }
+      return indices.slice(0, wheel.sectors.length)
+    }
+
+    // E-wheel: melee + bow if the class has any; otherwise magicAdvanced
+    // (Mage has no melee/bow, so its E-wheel shows advanced spells instead).
+    const hasMeleeBow = order.some((f) => f === 'melee' || f === 'bow')
     const indices: number[] = []
     for (let idx = 0; idx < order.length; idx++) {
       const family = order[idx]!
-      const utility = family === 'utility'
-      const weaponAbility = family === 'melee' || family === 'bow'
-      if (wheel.kind === 'utility' ? utility : weaponAbility) {
-        indices.push(idx)
-      }
+      const matches = hasMeleeBow
+        ? family === 'melee' || family === 'bow'
+        : family === 'magicAdvanced'
+      if (matches) indices.push(idx)
     }
     return indices.slice(0, wheel.sectors.length)
   }
@@ -96,6 +108,13 @@ export function initRadialWheels({
     if (!id) return ''
     const family = getAbilitySlotFamily(id)
     if (family === 'utility') return `${actionLabel('wheelUtility')}`
+    // magicAdvanced slots on mage's E-wheel show E key label.
+    // magicBase and magicAdvanced on direct keys show spell number.
+    if (family === 'magicAdvanced') {
+      const classId = getClassId()
+      const hasMeleeBow = getClassSlotOrder(classId).some((f) => f === 'melee' || f === 'bow')
+      if (!hasMeleeBow) return `${actionLabel('wheelAbility')}`
+    }
     if (family === 'magicBase' || family === 'magicAdvanced') {
       let spellIdx = 0
       for (let idx = 0; idx <= slotIdx; idx++) {
@@ -104,7 +123,7 @@ export function initRadialWheels({
         const otherFamily = getAbilitySlotFamily(other)
         if (otherFamily === 'magicBase' || otherFamily === 'magicAdvanced') spellIdx++
       }
-      return spellIdx > 0 && spellIdx <= 5 ? actionLabel(`spell${spellIdx}` as Parameters<typeof actionLabel>[0]) : ''
+      return spellIdx > 0 && spellIdx <= 6 ? actionLabel(`spell${spellIdx}` as Parameters<typeof actionLabel>[0]) : ''
     }
     return `${actionLabel('wheelAbility')}`
   }

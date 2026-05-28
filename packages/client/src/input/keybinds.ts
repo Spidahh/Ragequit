@@ -13,6 +13,7 @@ export type KeybindAction =
   | 'spell3'
   | 'spell4'
   | 'spell5'
+  | 'spell6'
   | 'sensDown'
   | 'sensUp'
 
@@ -40,6 +41,7 @@ export const DEFAULT_KEYBINDS: Record<KeybindAction, KeybindDef> = {
   spell3: { action: 'spell3', label: 'Spell 3', code: 'Digit3' },
   spell4: { action: 'spell4', label: 'Spell 4', code: 'Digit4' },
   spell5: { action: 'spell5', label: 'Spell 5', code: 'Digit5' },
+  spell6: { action: 'spell6', label: 'Spell 6', code: 'Digit6' },
   sensDown: { action: 'sensDown', label: 'Sensitivity down', code: 'BracketLeft' },
   sensUp: { action: 'sensUp', label: 'Sensitivity up', code: 'BracketRight' },
 }
