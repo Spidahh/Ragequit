@@ -1221,30 +1221,6 @@ button.locked {
   color: rgba(232, 236, 245, 0.42);
 }
 
-.ability-quickstats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.ability-quickstat {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 68px;
-  gap: 8px;
-  align-items: center;
-  color: var(--text-soft);
-  font: 800 9px/1 var(--font-mono);
-  text-transform: uppercase;
-}
-
-.ability-quickstat i {
-  height: 5px;
-  overflow: hidden;
-  border-radius: 99px;
-  background: var(--gold);
-}
-
 .fill-0 { width: 0; }
 .fill-1 { width: 20%; }
 .fill-2 { width: 40%; }

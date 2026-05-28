@@ -1,4 +1,4 @@
-import { ABILITY_DEFS, HP_MAX, INTERPOLATION_DELAY_MS } from '@ragequit/shared'
+import { ABILITY_DEFS, HP_MAX, INTERPOLATION_DELAY_MS, TARGET_CLASS_DEFS } from '@ragequit/shared'
 import * as THREE from 'three'
 
 import {
@@ -67,6 +67,8 @@ interface RemoteState {
   /** Cached status array from updateFromSchema — used by renderFrame for badge updates. */
   statuses: ReadonlyArray<{ kind: string; stacks: number; remainingSec: number }>
   hp: number
+  /** Class-specific HP maximum — updated when classId changes. */
+  hpMax: number
   alive: boolean
   lastWeapon: string
   activeWeapon: string
@@ -306,6 +308,7 @@ export function initRemotePlayers({
       lastStatusKey: '',
       statuses: [],
       hp: HP_MAX,
+      hpMax: TARGET_CLASS_DEFS[p.classId as keyof typeof TARGET_CLASS_DEFS]?.resourceMaxima.hp ?? HP_MAX,
       alive: true,
       lastWeapon: '',
       activeWeapon: 'sword',
@@ -367,6 +370,7 @@ export function initRemotePlayers({
         const currentClassId = p.classId || 'hybrid'
         if (r.mesh.userData['loadedClassId'] !== currentClassId) {
           loadCharacterGlb(r.mesh, resolveRemoteColor(p), toonGradient, currentClassId)
+          r.hpMax = TARGET_CLASS_DEFS[currentClassId as keyof typeof TARGET_CLASS_DEFS]?.resourceMaxima.hp ?? HP_MAX
         }
       }
       r.hp = p.hp
@@ -520,7 +524,7 @@ export function initRemotePlayers({
         r.nameplate.style.left = `${sx}px`
         r.nameplate.style.top = `${sy}px`
         r.nameplate.style.display = ''
-        const pct = Math.max(0, Math.min(1, r.hp / HP_MAX))
+        const pct = Math.max(0, Math.min(1, r.hp / r.hpMax))
         r.hpFill.style.width = `${pct * 100}%`
         if (pct > 0.55) {
           r.hpFill.style.background = 'linear-gradient(90deg,#1a8a3a,#2ec850,#70f090)'

@@ -52,6 +52,7 @@ export function initCombatOverlayHud({
   healFlash,
 }: CombatOverlayHudOptions): CombatOverlayHudController {
   let prevSelfHp = -1
+  let prevSelfAlive = false
 
   function update({
     now: _now,
@@ -130,12 +131,15 @@ export function initCombatOverlayHud({
       blindVignette.classList.toggle('active', blinded)
       deathOverlay.classList.toggle('active', !selfSchema.alive)
       document.body.classList.toggle('player-dead', !selfSchema.alive)
-      if (prevSelfHp > 0 && selfSchema.hp > prevSelfHp + 3 && selfSchema.alive) {
+      // Only flash heal if both frames are alive — suppresses false flash at
+      // respawn where hp jumps from near-death to full in one frame.
+      if (prevSelfHp > 0 && prevSelfAlive && selfSchema.alive && selfSchema.hp > prevSelfHp + 3) {
         healFlash.classList.add('active')
         void healFlash.offsetHeight
         healFlash.classList.remove('active')
       }
       prevSelfHp = selfSchema.hp
+      prevSelfAlive = selfSchema.alive
     }
   }
 

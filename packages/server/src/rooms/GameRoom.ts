@@ -44,6 +44,8 @@ import {
   STAFF_M1_MANA_COST,
   STAFF_M1_SPEED_MPS,
   CURSE_OUTGOING_DAMAGE_MULT,
+  KNOCKUP_AIRBORNE_MIN_SEC,
+  KNOCKUP_AIRBORNE_MAX_SEC,
   STAMINA_MAX,
   STAMINA_REGEN_PER_SEC_IDLE,
   STAMINA_REGEN_PER_SEC_MOVING,
@@ -1638,9 +1640,12 @@ export class GameRoom extends Room<GameState> {
     })
   }
 
-  private weaponInfusionFor(player: Player, weapon: 'bow' | 'staff'): WeaponInfusion {
-    void player
-    void weapon
+  // TODO: implement weapon infusion.
+  // This function should derive the elemental infusion for bow/staff projectiles
+  // from the player's loadout or class (e.g. a passive ability that grants
+  // fire arrows, chain-lightning bolts, or lifesteal on hit).
+  // Until implemented all ranged projectiles are non-elemental with no modifiers.
+  private weaponInfusionFor(_player: Player, _weapon: 'bow' | 'staff'): WeaponInfusion {
     return { element: 'none' }
   }
 
@@ -2583,7 +2588,8 @@ export class GameRoom extends Room<GameState> {
     player.vx = 0
     player.vz = 0
     player.onGround = false
-    player.airborneUntilTick = this.state.tick + Math.max(1, Math.round(airborneSec * TICK_RATE_HZ))
+    const clampedSec = Math.max(KNOCKUP_AIRBORNE_MIN_SEC, Math.min(KNOCKUP_AIRBORNE_MAX_SEC, airborneSec))
+    player.airborneUntilTick = this.state.tick + Math.max(1, Math.round(clampedSec * TICK_RATE_HZ))
   }
 }
 

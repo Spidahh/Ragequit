@@ -626,9 +626,8 @@ export class AbilityEngine {
   private effectHeal(sid: string, e: HealEffect, abilityId?: string): void {
     const caster = this.host.state.players.get(sid)
     if (!caster) return
-    if (e.overSec && e.overSec > 0) {
-      // Channeled heal applies through the current instant server path.
-    }
+    // TODO: HoT (overSec > 0) is not implemented — heal is always applied instantly.
+    // If a future ability needs a heal-over-time, wire it through the channel system.
     const bonus =
       abilityId && this.host.getRecoveryHealBonus
         ? (this.host.getRecoveryHealBonus(sid, abilityId, this.host.state.tick) ?? 0)

@@ -233,12 +233,10 @@ export class ClassMechanicRuntime {
     switch (abilityId) {
       case 'brace_recovery':
         if (classId !== 'tank') return 0
+        // furyNextMeleeIsSurge is always set together with furyStacks reset in
+        // triggerFurySurge(), so this is the only reachable path for a full-fury bonus.
         if (player.furyNextMeleeIsSurge) {
           player.furyNextMeleeIsSurge = false
-          return 50
-        }
-        if (player.furyStacks >= FURY_MAX_STACKS) {
-          player.furyStacks = 0
           return 50
         }
         return 0

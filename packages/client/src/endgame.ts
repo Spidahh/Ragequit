@@ -47,13 +47,13 @@ export function renderScoreboard(host: HTMLElement, data: ScoreboardData): void 
     <div class="scoreboard-shell" id="scoreboard">
       <div class="sb-head">
         <div>
-          <div class="sb-winner">VICTORY · ${escape(data.arena)}</div>
+          <div class="sb-winner">VICTORY · ${escapeHtml(data.arena)}</div>
           <div class="sb-title">YOU <span class="ele">WIN.</span></div>
         </div>
         <div class="sb-meta">
           <b>${time}</b>
-          Match · ${escape(data.rounds)}<br>
-          League ${escape(data.league)}
+          Match · ${escapeHtml(data.rounds)}<br>
+          League ${escapeHtml(data.league)}
         </div>
       </div>
       <div class="sb-body">
@@ -83,14 +83,14 @@ function playerBlock(p: PlayerSummary, lose: boolean): string {
     abilitiesHtml = `<div class="sb-abilities-header">Abilities Used</div>`
     for (const [id, count] of Object.entries(p.abilitiesUsed)) {
       const name = ABILITY_DEFS[id]?.name ?? id.toUpperCase()
-      abilitiesHtml += `<div class="sb-row sub"><span class="l">${escape(name)}</span><span class="v">x${count}</span></div>`
+      abilitiesHtml += `<div class="sb-row sub"><span class="l">${escapeHtml(name)}</span><span class="v">x${count}</span></div>`
     }
   }
 
   return `
     <div class="sb-player${lose ? ' lose' : ''}">
-      <div class="sb-nm">${escape(p.name)}</div>
-      <div class="sb-tag">${escape(p.build)}</div>
+      <div class="sb-nm">${escapeHtml(p.name)}</div>
+      <div class="sb-tag">${escapeHtml(p.build)}</div>
       ${row('Kills', p.kills)}
       ${row('Damage dealt', p.damageDealt.toLocaleString())}
       ${row('Damage taken', p.damageTaken.toLocaleString())}
@@ -116,19 +116,19 @@ export function renderDeathcam(host: HTMLElement, data: DeathcamData): void {
           <div class="dc-eliminated">ELIMINATED</div>
           <div class="dc-by">
             KILLED BY
-            <b>${escape(data.killer.toUpperCase())}</b>
-            <div class="dc-tape">${escape(data.element)} · ${escape(data.ability)} · ${data.damage} DMG</div>
+            <b>${escapeHtml(data.killer.toUpperCase())}</b>
+            <div class="dc-tape">${escapeHtml(data.element)} · ${escapeHtml(data.ability)} · ${data.damage} DMG</div>
           </div>
         </div>
         <div class="dc-bottom">
           <div class="dc-card death">
             <div class="l">FINAL HIT</div>
             <div class="v blood">−${data.damage} HP</div>
-            <div class="meta">${escape(data.ability)}</div>
+            <div class="meta">${escapeHtml(data.ability)}</div>
           </div>
           <div class="dc-card">
             <div class="l">ROUND</div>
-            <div class="v brass">${escape(data.round)}</div>
+            <div class="v brass">${escapeHtml(data.round)}</div>
             <div class="meta">Next round in ${Math.ceil(data.timeToNextMs / 1000)}s</div>
           </div>
           <div class="dc-card">
@@ -146,7 +146,7 @@ export function renderDeathcam(host: HTMLElement, data: DeathcamData): void {
   `
 }
 
-function escape(s: string | number): string {
+function escapeHtml(s: string | number): string {
   return String(s).replace(
     /[&<>"']/g,
     (c) =>

@@ -5,6 +5,7 @@ import {
   ABILITY_DEFS,
   CLASS_IDS,
   BOW_CHARGE_FULL_SEC,
+  ELO_STARTING,
   BOW_CHARGE_MIN_SEC,
   CAPSULE_HALF_HEIGHT_M,
   CAPSULE_HEIGHT_M,
@@ -766,6 +767,8 @@ function applyDirectionalShake(attackerWorldPos: THREE.Vector3 | null, intensity
 // Live round phase start tick — set when MatchPhase 'live' arrives.
 let livePhaseStartTick = -1
 let currentMatchPhase: ServerMatchPhaseMessage['phase'] = 'lobby'
+// ELO deltas from the last matchEnd score broadcast (session ID → delta).
+let lastMatchEloDeltas: Record<string, number> = {}
 let lastKillerName = ''
 // Timestamps of self kills for streak detection (ms).
 const recentKillTimes: number[] = []
@@ -853,6 +856,7 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
     roundTimer.classList.remove('urgent')
   }
   if (msg.phase === 'lobby' || msg.phase === 'countdown') {
+    lastMatchEloDeltas = {}
     selfStats = {
       kills: 0,
       yourHits: 0,
@@ -907,8 +911,11 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
 
     // Determine winner based on score or kills
     const isWin = selfStats.kills >= opponentStats.kills
-    const eloDelta = isWin ? 25 : -18
-    const eloBefore = 1500
+    // Use real server-computed ELO delta when available (from matchEnd score msg);
+    // fall back to K-factor estimate if the server didn't send deltas.
+    const selfEloDelta = lastMatchEloDeltas[selfId]
+    const eloDelta = selfEloDelta !== undefined ? selfEloDelta : isWin ? 25 : -18
+    const eloBefore = ELO_STARTING
 
     const arenaName = getSchemaMapId()
     const matchMs = performance.now() - matchStartMs
@@ -1722,6 +1729,7 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
       players?.forEach((_p, sid) => {
         if (sid !== selfId) otherId = sid
       })
+      if (msg.eloDeltas) lastMatchEloDeltas = msg.eloDeltas
       menu.onScore(msg, selfId, otherId)
     })
 
@@ -2210,7 +2218,7 @@ function returnToTrainingScoreboard(): void {
 
   const isWin = selfStats.kills >= opponentStats.kills
   const eloDelta = 0
-  const eloBefore = 1500
+  const eloBefore = ELO_STARTING
 
   const arenaName = getSchemaMapId()
   const matchMs = performance.now() - matchStartMs

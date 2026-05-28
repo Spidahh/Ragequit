@@ -211,6 +211,8 @@ export interface ServerScoreMessage {
   team?: Record<string, number>
   solo?: Record<string, number>
   roundWins?: Record<string, number>
+  /** ELO delta per session ID — only present in the matchEnd score broadcast. */
+  eloDeltas?: Record<string, number>
 }
 
 export interface ServerPongAckMessage {

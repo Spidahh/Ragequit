@@ -186,7 +186,12 @@ export class MatchManager {
     this.host.state.phase = 'matchEnd'
     this.broadcastPhase('matchEnd')
     const { winnerId, loserId, winnerEloDelta, loserEloDelta } = this.applyEloUpdates()
-    this.broadcastScore()
+    // Build per-session ELO delta map for the score broadcast so clients can
+    // display accurate post-match ELO changes instead of hardcoded estimates.
+    const eloDeltas: Record<string, number> = {}
+    if (winnerId) eloDeltas[winnerId] = winnerEloDelta
+    if (loserId) eloDeltas[loserId] = loserEloDelta
+    this.broadcastScore(Object.keys(eloDeltas).length > 0 ? eloDeltas : undefined)
     if (winnerId && loserId && this.host.onMatchEnd) {
       this.host.onMatchEnd(winnerId, loserId, winnerEloDelta, loserEloDelta)
     }
@@ -279,8 +284,9 @@ export class MatchManager {
     this.host.broadcast(MessageTypes.MatchPhase, msg)
   }
 
-  private broadcastScore(): void {
+  private broadcastScore(eloDeltas?: Record<string, number>): void {
     const msg: ServerScoreMessage = {}
+    if (eloDeltas) msg.eloDeltas = eloDeltas
     if (this.isRoundMode) {
       const wins: Record<string, number> = {}
       this.host.state.roundWins.forEach((n, sid) => {
