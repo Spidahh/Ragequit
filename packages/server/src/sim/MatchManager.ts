@@ -14,8 +14,7 @@
 // a host hook so the existing respawn pipeline is reused.
 
 import {
-  ELO_K_RANKED,
-  ELO_STARTING,
+  RUNTIME_BALANCE,
   FFA_KILLS_TO_WIN,
   MATCH_MAX_ROUNDS,
   MATCH_ROUNDS_TO_WIN,
@@ -80,7 +79,7 @@ export class MatchManager {
 
   // Get / seed in-memory ELO for a player.
   ratingFor(sid: string): number {
-    return this.elo.get(sid) ?? ELO_STARTING
+    return this.elo.get(sid) ?? RUNTIME_BALANCE.match.elo_starting
   }
 
   // Server-side death notification — call from GameRoom drainDamage when a
@@ -269,8 +268,9 @@ export class MatchManager {
     const rL = this.ratingFor(loserId)
     const exW = 1 / (1 + Math.pow(10, (rL - rW) / 400))
     const exL = 1 / (1 + Math.pow(10, (rW - rL) / 400))
-    const winnerEloDelta = Math.round(ELO_K_RANKED * (1 - exW))
-    const loserEloDelta = Math.round(ELO_K_RANKED * (0 - exL))
+    const K = RUNTIME_BALANCE.match.elo_k_ranked
+    const winnerEloDelta = Math.round(K * (1 - exW))
+    const loserEloDelta = Math.round(K * (0 - exL))
     this.elo.set(winnerId, rW + winnerEloDelta)
     this.elo.set(loserId, rL + loserEloDelta)
     return { winnerId, loserId, winnerEloDelta, loserEloDelta }
