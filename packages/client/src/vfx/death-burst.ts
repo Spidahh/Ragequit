@@ -26,6 +26,11 @@ export class DeathBurst {
   private readonly hiddenMat = new THREE.Matrix4().makeScale(0, 0, 0)
   private readonly bursts: Burst[] = []
   private nextBurstIdx = 0
+  // Pre-allocated temporaries to avoid per-frame Matrix4/Vector3/Quaternion allocation.
+  private readonly _tmpPos = new THREE.Vector3()
+  private readonly _tmpScale = new THREE.Vector3()
+  private readonly _tmpQuat = new THREE.Quaternion()
+  private readonly _tmpMat = new THREE.Matrix4()
 
   constructor() {
     const geo = new THREE.IcosahedronGeometry(0.055, 0)
@@ -116,12 +121,11 @@ export class DeathBurst {
 
         // Shrink + fade: scale 1→0.1 over life
         const scale = (1 - k) * 0.9 + 0.1
-        const mat4 = new THREE.Matrix4().compose(
-          new THREE.Vector3(x, y, z),
-          new THREE.Quaternion(),
-          new THREE.Vector3(scale, scale, scale),
-        )
-        this.mesh.setMatrixAt(burst.baseSlot + i, mat4)
+        this._tmpPos.set(x, y, z)
+        this._tmpScale.set(scale, scale, scale)
+        this._tmpQuat.identity()
+        this._tmpMat.compose(this._tmpPos, this._tmpQuat, this._tmpScale)
+        this.mesh.setMatrixAt(burst.baseSlot + i, this._tmpMat)
         matDirty = true
       }
     }

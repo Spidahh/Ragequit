@@ -49,30 +49,18 @@ export function makeSwingArcMesh(): THREE.Mesh {
   return m
 }
 
-export function makeProjectileMesh(kind: 'arrow' | 'bolt'): THREE.Mesh {
-  if (kind === 'arrow') {
-    // Tapered shaft — narrow at tip, wider at nock — with a warm amber glow.
-    const geo = new THREE.CylinderGeometry(0.025, 0.065, 1.1, 6)
-    geo.rotateX(Math.PI / 2)
-    const mat = new THREE.MeshStandardMaterial({
-      color: 0xffa030,
-      emissive: 0xff8000,
-      emissiveIntensity: 0.65,
-      roughness: 0.4,
-      metalness: 0.0,
-    })
-    return new THREE.Mesh(geo, mat)
-  }
-  // Magic bolt — glowing cyan orb.
-  const geo = new THREE.SphereGeometry(0.2, 12, 8)
+// Arrow physical mesh — tapered shaft with warm amber glow.
+// Bolts are rendered as textured crossed-planes in projectile-visuals.ts
+// (makeProjectileObject), so makeProjectileMesh is only called for 'arrow'.
+export function makeProjectileMesh(_kind: 'arrow'): THREE.Mesh {
+  const geo = new THREE.CylinderGeometry(0.025, 0.065, 1.1, 6)
+  geo.rotateX(Math.PI / 2)
   const mat = new THREE.MeshStandardMaterial({
-    color: 0x40e8ff,
-    emissive: 0x00ccff,
-    emissiveIntensity: 1.2,
-    roughness: 0.15,
+    color: 0xffa030,
+    emissive: 0xff8000,
+    emissiveIntensity: 0.65,
+    roughness: 0.4,
     metalness: 0.0,
-    transparent: true,
-    opacity: 0.92,
   })
   return new THREE.Mesh(geo, mat)
 }

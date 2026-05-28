@@ -87,7 +87,9 @@ export function initHitFeedback({
     const v = worldPos.clone().project(camera)
     const sx = (v.x * 0.5 + 0.5) * window.innerWidth
     const sy = (-v.y * 0.5 + 0.5) * window.innerHeight
-    if (v.z > 1) return
+    // Filter points outside the frustum: NDC z > 1 (beyond far plane) OR
+    // z < -1 (behind camera — projected coords would be inverted/garbage).
+    if (v.z < -1 || v.z > 1) return
     const el = document.createElement('span')
     const cls = ['popup']
     if (inbound) cls.push('inbound')

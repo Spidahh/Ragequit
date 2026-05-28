@@ -84,7 +84,7 @@ function makeProjectileObject(
   const group = new THREE.Group()
 
   if (style === 'arrow') {
-    const baseMesh = makeProjectileMesh('arrow')
+    const baseMesh = makeProjectileMesh('arrow' as const)
     baseMesh.userData['pulse'] = false
 
     // Draw outline directly around the physical arrow body (thickness: 0.02)
@@ -383,6 +383,10 @@ export function initProjectileVisuals({
     })
     projectileVisuals.forEach((vis, id) => {
       if (!proj.has(id)) {
+        // Projectile left the schema without a matching onExpired event — spawn
+        // a fallback impact at its last known position so VFX/audio aren't silent.
+        const impactProfile: ImpactProfile = vis.kind === 'arrow' ? 'pierce' : 'magic'
+        spawnImpact(vis.lastPos.clone(), 0x80d0ff, impactProfile)
         disposeVisual(vis)
         projectileVisuals.delete(id)
       }

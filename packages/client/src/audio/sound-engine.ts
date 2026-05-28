@@ -273,7 +273,9 @@ export class SoundEngine {
    */
   playHitByType(cause: string, power = 1): void {
     if (cause === 'sword_m1' || cause === 'uppercut') return this.playMeleeThud(power)
-    if (cause === 'bow' || cause === 'staff') return this.playProjectileImpact(power)
+    // bow/staff cause may be suffixed with ':air_punish' or ':chain'.
+    if (cause === 'bow' || cause.startsWith('bow:')) return this.playProjectileImpact(power)
+    if (cause === 'staff' || cause.startsWith('staff:')) return this.playProjectileImpact(power)
     if (cause.startsWith('zone:') || cause.startsWith('combo:')) return this.playAoeImpact(power)
     return this.playAbilityHit(power)
   }
@@ -398,7 +400,8 @@ export class SoundEngine {
   /** Play the victim-side "received damage" sound based on damage source. */
   playHurtByType(cause: string, power = 1): void {
     if (cause === 'sword_m1' || cause === 'uppercut') return this.playHurtMelee(power)
-    if (cause === 'bow' || cause === 'staff') return this.playHurtProjectile(power)
+    if (cause === 'bow' || cause.startsWith('bow:')) return this.playHurtProjectile(power)
+    if (cause === 'staff' || cause.startsWith('staff:')) return this.playHurtProjectile(power)
     if (cause.startsWith('zone:') || cause.startsWith('combo:')) return this.playHurtAoe(power)
     return this.playHurtAbility(power)
   }

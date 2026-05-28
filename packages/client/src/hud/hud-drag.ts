@@ -188,11 +188,7 @@ export function initDraggableHud({
   }
   dragHandle.addEventListener('pointerup', stopDrag)
   dragHandle.addEventListener('pointercancel', stopDrag)
-  dragHandle.addEventListener('mousedown', (e) => {
-    if (dragging) return
-    beginDrag(e.clientX, e.clientY)
-    e.preventDefault()
-  })
+  // Note: pointerdown already covers mouse input — no mousedown listener needed.
 
   resizeHandle.addEventListener('pointerdown', (e) => {
     resizePointer = e.pointerId
