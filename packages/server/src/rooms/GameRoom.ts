@@ -1116,7 +1116,10 @@ export class GameRoom extends Room<GameState> {
       }
       // Class mechanic damage modifiers.
       if (attacker) {
-        const isMeleeHit = d.cause === 'sword_m1' || MELEE_ABILITY_IDS.has(d.cause)
+        // Ability causes are prefixed: 'ability:uppercut'. Strip the prefix before
+        // checking the set (sword_m1 is a raw cause with no prefix).
+        const rawCause = d.cause.startsWith('ability:') ? d.cause.slice(8) : d.cause
+        const isMeleeHit = rawCause === 'sword_m1' || MELEE_ABILITY_IDS.has(rawCause)
         if (isMeleeHit) {
           // Fury stack bonus: +8% per stack for Tank melee hits.
           const furyMult = this.mechanics.getMeleeDamageMult(attacker)
@@ -1282,7 +1285,7 @@ export class GameRoom extends Room<GameState> {
     }
   }
 
-  private tickRegen(_sid: string, player: Player, now: number): void {
+  private tickRegen(sid: string, player: Player, now: number): void {
     const dt = TICK_MS / 1000
     const classId = player.classId as ClassId
     const maxima = TARGET_CLASS_DEFS[classId]?.resourceMaxima ?? {
@@ -1304,7 +1307,7 @@ export class GameRoom extends Room<GameState> {
     // the drain has zero net effect. The drain itself runs in tickParry.
     if (player.stamina < maxima.stamina && !(player.parrying && player.parryIsHold)) {
       player.stamina = Math.min(maxima.stamina, player.stamina + rate * dt)
-      const simState = this.sim.get(_sid)
+      const simState = this.sim.get(sid)
       if (simState) simState.stamina = player.stamina
     }
   }
