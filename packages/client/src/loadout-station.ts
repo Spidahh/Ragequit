@@ -21,23 +21,18 @@ import type { Room } from 'colyseus.js'
 
 import { abilityIconMarkup } from './icons.js'
 import { actionLabel, onKeybindsChanged } from './input/keybinds.js'
-import {
-  LOADOUT_SLOT_ORDER,
-  buildLoadoutMessage,
-  normalizeLoadoutSlots,
-} from './input/loadout-slots.js'
+import { buildLoadoutMessage, normalizeLoadoutSlots } from './input/loadout-slots.js'
 
 const STORAGE_KEY = 'ragequit.loadout.v6'
-const INSTANT_CAST_STORAGE_KEY = 'ragequit.instantCast.v2'
 const CLASS_STORAGE_KEY = 'ragequit.loadout.classId'
 
 
 
-// Starter preset builds per class — full 8-slot class-aware builds.
+// Preset builds per class — full 8-slot class-aware builds.
 // Slot positions are packed by family regardless of wire-field name; the server
 // validates by family budget (not position). See 01_DESIGN/06_loadout_build.md for rationale.
-// Each starter includes the class Recovery utility.
-const CLASS_STARTER_PRESETS: Record<ClassId, string[]> = {
+// Each preset includes the class Recovery utility.
+const CLASS_PRESET_BUILDS: Record<ClassId, string[]> = {
   // Tank: 4 melee + 1 bow + 3 utility = 8
   tank: [
     'uppercut', // slot 0 — melee (Uppercut: knockup setup)
@@ -85,7 +80,7 @@ const CLASS_STARTER_PRESETS: Record<ClassId, string[]> = {
 }
 
 // Default build used when no class is selected or no saved build exists.
-// Matches the Ibrido (hybrid) starter.
+// Matches the Ibrido (hybrid) preset.
 // Server DEFAULT_LOADOUT in GameRoom.ts must stay in sync with this.
 const DEFAULT_SLOTS: string[] = [
   'uppercut', // melee
@@ -104,9 +99,7 @@ export interface LoadoutStationApi {
   getLoadout: () => readonly string[]
   /** Returns the active class id for the current build. Used by sendLoadout. */
   getClassId: () => ClassId
-  isInstantCast: (abilityId: string) => boolean
-  /** Merge server-persisted instant-cast flags into local state and save to localStorage. */
-  applyPersistedInstantCast: (flags: Record<string, boolean>) => void
+  isDirectCast: (abilityId: string) => boolean
 }
 
 export function initLoadoutStation(
@@ -131,12 +124,6 @@ export function initLoadoutStation(
   const searchInput = document.getElementById('ls-search') as HTMLInputElement | null
   const filterBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-filter]'))
 
-  const detailsIcon = document.getElementById('ls-detail-icon-frame')
-  const detailsName = document.getElementById('ls-detail-name')
-  const detailsMeta = document.getElementById('ls-detail-meta')
-  const detailsDesc = document.getElementById('ls-detail-desc')
-  const detailsMalus = document.getElementById('ls-detail-malus')
-  const detailsInstant = document.getElementById('ls-detail-instant') as HTMLButtonElement | null
   const abilityWheelKey = document.getElementById('ls-ability-wheel-key')
   const utilityWheelKey = document.getElementById('ls-utility-wheel-key')
 
@@ -150,7 +137,6 @@ export function initLoadoutStation(
   const btnPreset = document.getElementById('ls-load-preset') as HTMLButtonElement | null
 
   let slots = loadSlots()
-  let instantCast = loadInstantCastPrefs()
   let activeIdx = 0
   let poolFilterEl = 'all'
   let poolSearch = ''
@@ -218,45 +204,15 @@ export function initLoadoutStation(
   }
 
   function resetSlotsForClass(classId: ClassId): void {
-    slots = normalizeLoadoutSlots(CLASS_STARTER_PRESETS[classId])
+    slots = normalizeLoadoutSlots(CLASS_PRESET_BUILDS[classId])
     setActiveSlot(0)
     save()
   }
 
-  function loadInstantCastPrefs(): Record<string, boolean> {
-    try {
-      const raw = localStorage.getItem(INSTANT_CAST_STORAGE_KEY)
-      if (!raw) return {}
-      const parsed = JSON.parse(raw) as Record<string, boolean>
-      return parsed && typeof parsed === 'object' ? parsed : {}
-    } catch {
-      return {}
-    }
-  }
-
-  function saveInstantCastPrefs(): void {
-    try {
-      localStorage.setItem(INSTANT_CAST_STORAGE_KEY, JSON.stringify(instantCast))
-    } catch {
-      // Storage is optional.
-    }
-  }
-
-  function defaultInstantCast(def: AbilityDef): boolean {
-    return def.targeting !== 'point'
-  }
-
-  function isInstantCast(defOrId: AbilityDef | string): boolean {
+  function isDirectCast(defOrId: AbilityDef | string): boolean {
     const def = typeof defOrId === 'string' ? ABILITY_DEFS[defOrId] : defOrId
     if (!def) return true
-    return instantCast[def.id] ?? defaultInstantCast(def)
-  }
-
-  function toggleInstantCast(def: AbilityDef): void {
-    if (buildLocked()) return
-    instantCast = { ...instantCast, [def.id]: !isInstantCast(def) }
-    saveInstantCastPrefs()
-    rerender()
+    return def.targeting !== 'point'
   }
 
   function requestCanvasPointerLock(): void {
@@ -359,45 +315,6 @@ export function initLoadoutStation(
     }
   }
 
-  function rebuildDetails(): void {
-    const def = ABILITY_DEFS[slots[activeIdx] ?? '']
-    if (!detailsName || !detailsMeta || !detailsDesc || !detailsMalus) return
-    if (!def) {
-      if (detailsIcon) detailsIcon.innerHTML = '🔮'
-      detailsName.textContent = 'Select an ability'
-      detailsMeta.textContent = `${slotPoolTitle(currentSlotOrder()[activeIdx] ?? 'utility', activeIdx).toUpperCase()} SLOT`
-      detailsDesc.replaceChildren()
-      const empty = document.createElement('p')
-      empty.textContent = 'Pick a compatible ability from the pool below.'
-      detailsDesc.appendChild(empty)
-      detailsMalus.textContent = ''
-      if (detailsInstant) detailsInstant.hidden = true
-      return
-    }
-    if (detailsIcon) {
-      detailsIcon.innerHTML = abilityIconMarkup(def.id)
-    }
-    if (detailsInstant) {
-      detailsInstant.hidden = true
-    }
-    detailsName.textContent = def.name
-    const quickStats = abilityQuickStats(def)
-    detailsMeta.textContent = [
-      abilityNatureLabel(def),
-      def.slot.toUpperCase(),
-      def.element !== 'none' ? def.element.toUpperCase() : 'PHYSICAL',
-      formatCost(def),
-      `${def.cooldownSec}s CD`,
-      def.range > 0 ? `${def.range}m` : 'self',
-    ].join(' · ')
-    detailsDesc.replaceChildren(
-      renderEffectTags(def),
-      quickStatBlock(quickStats),
-      textBlock(def.description),
-    )
-    detailsMalus.textContent = def.miniMalus
-  }
-
   filterBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       poolFilterEl = btn.dataset['filter'] ?? 'all'
@@ -412,10 +329,6 @@ export function initLoadoutStation(
     rebuildPool()
   })
   searchInput?.addEventListener('keydown', (e) => e.stopPropagation())
-  detailsInstant?.addEventListener('click', () => {
-    const def = ABILITY_DEFS[slots[activeIdx] ?? '']
-    if (def) toggleInstantCast(def)
-  })
 
   function rebuildPool(): void {
     while (lsPool.firstChild) lsPool.removeChild(lsPool.firstChild)
@@ -554,38 +467,6 @@ export function initLoadoutStation(
     if (barMana) barMana.style.width = `${(mana / 160) * 100}%`
     if (barStam) barStam.style.width = `${(stamina / 150) * 100}%`
 
-    // Dynamic Allowed Weapons highlights
-    const weaponIcons = document.querySelectorAll('#ls-vitals-weapons .vitals-weapon-icon')
-    weaponIcons.forEach((iconEl) => {
-      const weapon = iconEl.getAttribute('data-weapon')
-      const isAllowed = (classDef.weapons as readonly string[]).includes(weapon || '')
-      iconEl.classList.toggle('active', isAllowed)
-      iconEl.classList.toggle('disabled', !isAllowed)
-    })
-
-    // Dynamic Spells budgets grid
-    const spellsGrid = document.getElementById('ls-vitals-spells')
-    if (spellsGrid) {
-      spellsGrid.innerHTML = ''
-      const families: { key: keyof typeof classDef.slots; label: string; icon: string }[] = [
-        { key: 'melee', label: 'Melee', icon: '⚔️' },
-        { key: 'bow', label: 'Bow', icon: '🏹' },
-        { key: 'magicBase', label: 'Spell Base', icon: '✨' },
-        { key: 'magicAdvanced', label: 'Spell Adv', icon: '🔥' },
-        { key: 'utility', label: 'Utility', icon: '🛠️' },
-      ]
-      families.forEach((fam) => {
-        const count = classDef.slots[fam.key]
-        const badge = document.createElement('div')
-        badge.className = `vitals-budget-badge ${count > 0 ? 'has-budget' : 'no-budget'}`
-        badge.innerHTML = `
-          <span class="budget-icon">${fam.icon}</span>
-          <span class="budget-label">${fam.label}</span>
-          <span class="budget-count">${count}</span>
-        `
-        spellsGrid.appendChild(badge)
-      })
-    }
   }
 
   // --- Preset Loader ---------------------------------------------------------
@@ -602,7 +483,6 @@ export function initLoadoutStation(
     refreshSectionKeyLabels()
     rebuildSlots()
     rebuildClassVitals()
-    rebuildDetails()
     rebuildPool()
   }
 
@@ -636,7 +516,7 @@ export function initLoadoutStation(
     }
     const room = getRoom()
     if (room) {
-      room.send(MessageTypes.Loadout, buildLoadoutMessage(slots, instantCast, activeClassId))
+      room.send(MessageTypes.Loadout, buildLoadoutMessage(slots, activeClassId))
       document.body.classList.remove('loadout-active')
       overlay.classList.add('hidden')
       getCanvas?.()?.focus({ preventScroll: true })
@@ -679,14 +559,7 @@ export function initLoadoutStation(
     },
     getLoadout: () => slots as readonly string[],
     getClassId: () => activeClassId,
-    isInstantCast,
-    applyPersistedInstantCast: (flags: Record<string, boolean>) => {
-      // Server flags win only for keys the server explicitly sent; local prefs
-      // for other abilities are preserved.
-      instantCast = { ...instantCast, ...flags }
-      saveInstantCastPrefs()
-      rerender()
-    },
+    isDirectCast,
   }
 }
 
@@ -695,12 +568,6 @@ function formatCost(def: AbilityDef): string {
   if (def.costMana > 0) return `${def.costMana} MP`
   if (def.costStamina > 0) return `${def.costStamina} SP`
   return 'FREE'
-}
-
-function textBlock(text: string): HTMLParagraphElement {
-  const p = document.createElement('p')
-  p.textContent = text
-  return p
 }
 
 interface AbilityQuickStat {
@@ -761,34 +628,6 @@ function recommendationTags(
   )
     tags.push('FOLLOWUP')
   return Array.from(new Set(tags)).slice(0, 2)
-}
-
-function quickStatBlock(stats: AbilityQuickStat[]): HTMLDivElement {
-  const block = document.createElement('div')
-  block.className = 'ability-quickstats'
-  for (const stat of stats) {
-    const row = document.createElement('div')
-    row.className = `ability-quickstat ${stat.className}`
-    const label = document.createElement('span')
-    label.textContent = stat.label
-    const meter = document.createElement('i')
-    meter.style.width = `${stat.value * 20}%`
-    row.append(label, meter)
-    block.appendChild(row)
-  }
-  return block
-}
-
-function renderEffectTags(def: AbilityDef): HTMLDivElement {
-  const wrap = document.createElement('div')
-  wrap.className = 'effect-tags detail-tags'
-  for (const tag of formatEffectTags(def)) {
-    const chip = document.createElement('span')
-    chip.className = tagClass(tag)
-    chip.textContent = tag
-    wrap.appendChild(chip)
-  }
-  return wrap
 }
 
 function abilityNatureLabel(def: AbilityDef): string {
@@ -978,9 +817,7 @@ function formatDesc(text: string): string {
 
 function tagClass(tag: string): string {
   if (
-    /\b(STARTER|EXTENDER|FINISHER|RAY|PRESSURE|SURVIVAL|COUNTER|MOBILITY|DRAIN|RESOURCE)\b/.test(
-      tag,
-    )
+    /\b(OPENER|EXTENDER|CASHOUT|RAY|PRESSURE|SURVIVAL|COUNTER|MOBILITY|DRAIN|RESOURCE)\b/.test(tag)
   )
     return 'tag-role'
   if (/\b(SELF|POINT AREA|SKILL SHOT|AIM LOCK|TARGET)\b/.test(tag)) return 'tag-targeting'
@@ -1006,7 +843,5 @@ function slotPoolTitle(slot: TargetAbilitySlotFamily, _idx: number): string {
 export const __loadoutStationSmoke = {
   storageKey: STORAGE_KEY,
   classStorageKey: CLASS_STORAGE_KEY,
-  instantCastStorageKey: INSTANT_CAST_STORAGE_KEY,
-  slotOrder: LOADOUT_SLOT_ORDER,
   defaultSlots: DEFAULT_SLOTS,
 }

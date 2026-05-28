@@ -93,8 +93,8 @@ export class Player extends Schema {
   // movement modifiers, and cast locks.
   @type([StatusInstance]) statuses = new ArraySchema<StatusInstance>()
 
-  // Loadout snapshot — 11 ability ids in slot order. Filled at room join from
-  // a default loadout and replaced whenever the client sends loadoutSet.
+  // Loadout snapshot — class-aware ability ids in family order. Filled at room
+  // join from a default loadout and replaced whenever the client sends loadoutSet.
   @type(['string']) loadout = new ArraySchema<string>()
 
   @type('string') classId = 'hybrid'
@@ -112,4 +112,8 @@ export class Player extends Schema {
   @type('number') flowStacks: number = 0
   @type('boolean') flowPendingBonus = false
 
+  // Replicated movement prediction fields
+  @type('number') momentumTicks: number = 0
+  @type('number') jumpHoldTicksLeft: number = 0
+  @type('number') coyoteTicksLeft: number = 0
 }

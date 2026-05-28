@@ -135,8 +135,8 @@ import {
 // GameRoom - three weapons (sword / bow / staff), parry, projectiles.
 //
 // Current behavior:
-//   - Weapon swap is atomic, no delay, no cost. Active charge/bolt cadence
-//     is reset on swap.
+//   - Weapon swap changes the active weapon immediately, costs nothing, resets
+//     charge/bolt cadence, and opens the short authoritative swap lock window.
 //   - Bow M1: M1-held charge -> release spawns a Projectile. Damage + speed
 //     scale linearly from min charge (0.3 s) to full (2.0 s). Charge cancels
 //     on damage taken.
@@ -253,7 +253,6 @@ export class GameRoom extends Room<GameState> {
   private readonly swingQueues = new Map<string, ClientSwingMessage[]>()
   private readonly castQueues = new Map<string, ClientCastMessage[]>()
   private readonly lastSeqSeen = new Map<string, number>()
-  private readonly prevJumpHeld = new Map<string, boolean>()
 
   // Ring buffer of last LAG_COMP_BUFFER_TICKS position snapshots per player.
   // Used to rewind victim positions when resolving melee hits.
@@ -499,7 +498,7 @@ export class GameRoom extends Room<GameState> {
       const player = this.state.players.get(client.sessionId)
       if (player?.userId) {
         const loadoutArr = Array.from(player.loadout)
-        saveLoadout(player.userId, loadoutArr, message.instantCast ?? {}).catch((e: unknown) =>
+        saveLoadout(player.userId, loadoutArr).catch((e: unknown) =>
           console.warn('[supabase] saveLoadout failed:', e),
         )
       }
@@ -545,7 +544,6 @@ export class GameRoom extends Room<GameState> {
     this.swingQueues.set(botId, [])
     this.castQueues.set(botId, [])
     this.lastSeqSeen.set(botId, 0)
-    this.prevJumpHeld.set(botId, false)
     this.positionHistory.set(botId, [])
 
     const bot = new BotController(
@@ -649,12 +647,10 @@ export class GameRoom extends Room<GameState> {
 
     // Load persisted loadout if user is authenticated; otherwise use defaults.
     let resolvedLoadout: readonly string[] = DEFAULT_LOADOUT
-    let persistedInstantCast: Record<string, boolean> = {}
     if (verifiedUserId) {
       const saved = await loadLoadout(verifiedUserId).catch(() => null)
       if (saved?.loadout_data?.length) {
         resolvedLoadout = saved.loadout_data
-        persistedInstantCast = saved.instant_cast_data ?? {}
       }
     }
     let resolvedClassId = inferClassFromLoadout(resolvedLoadout)
@@ -663,10 +659,6 @@ export class GameRoom extends Room<GameState> {
       resolvedClassId = 'hybrid'
     }
     for (const id of resolvedLoadout) player.loadout.push(id)
-    // Broadcast persisted instant-cast settings back to this client.
-    if (Object.keys(persistedInstantCast).length > 0) {
-      client.send('persistedInstantCast', persistedInstantCast)
-    }
     {
       player.classId = resolvedClassId
       const maxima = TARGET_CLASS_DEFS[resolvedClassId].resourceMaxima
@@ -680,7 +672,6 @@ export class GameRoom extends Room<GameState> {
     this.swingQueues.set(client.sessionId, [])
     this.castQueues.set(client.sessionId, [])
     this.lastSeqSeen.set(client.sessionId, 0)
-    this.prevJumpHeld.set(client.sessionId, false)
     this.positionHistory.set(client.sessionId, [])
 
     trackPlayerConnected(this.roomId, this.state.mode)
@@ -700,7 +691,6 @@ export class GameRoom extends Room<GameState> {
     this.castQueues.delete(sid)
     this.rateLimiter.forgetClient(sid)
     this.lastSeqSeen.delete(sid)
-    this.prevJumpHeld.delete(sid)
     this.positionHistory.delete(sid)
     this.parryPressTick.delete(sid)
     this.killStreaks.delete(sid)
@@ -872,14 +862,6 @@ export class GameRoom extends Room<GameState> {
     let inputsThisTick = 0
     let effective: SimInput | null = null
     let lastProcessedSeq = lastSeq
-    // prevHeld is used only to carry the jumpHold state into the idle-tick
-    // simulation (so the hold-apex gravity reduction continues when no input
-    // arrives this tick). It is NOT used for edge detection — the client
-    // already sends msg.jump=true for exactly one tick per key-press, and
-    // using !prevHeld to gate it incorrectly drops valid jumps whenever the
-    // player was holding jump in the previous tick (land + re-jump pattern).
-    let prevHeld = this.prevJumpHeld.get(sid) ?? false
-
     while (queue.length > 0 && inputsThisTick < GameRoom.MAX_INPUTS_PER_TICK) {
       const msg = queue.shift()!
       if (msg.seq <= lastSeq) continue
@@ -904,7 +886,6 @@ export class GameRoom extends Room<GameState> {
 
       effective = input
       lastProcessedSeq = msg.seq
-      prevHeld = msg.jumpHold
       inputsThisTick += 1
     }
 
@@ -915,14 +896,13 @@ export class GameRoom extends Room<GameState> {
         moveZ: 0,
         yaw: yawNow,
         jump: false,
-        jumpHold: !dead && prevHeld,
+        jumpHold: false,
       }
       simulatePlayer(simState, input, dt, this.activeMap, movementCaps)
       effective = input
     }
 
     this.lastSeqSeen.set(sid, lastProcessedSeq)
-    this.prevJumpHeld.set(sid, prevHeld)
 
     const t = player.transform
     if (t.x !== simState.pos.x) t.x = simState.pos.x
@@ -934,6 +914,9 @@ export class GameRoom extends Room<GameState> {
     if (player.vz !== simState.vel.z) player.vz = simState.vel.z
     if (player.onGround !== simState.onGround) player.onGround = simState.onGround
     if (player.stamina !== simState.stamina) player.stamina = simState.stamina
+    if (player.momentumTicks !== simState.momentumTicks) player.momentumTicks = simState.momentumTicks
+    if (player.jumpHoldTicksLeft !== simState.jumpHoldTicksLeft) player.jumpHoldTicksLeft = simState.jumpHoldTicksLeft
+    if (player.coyoteTicksLeft !== simState.coyoteTicksLeft) player.coyoteTicksLeft = simState.coyoteTicksLeft
     if (player.lastProcessedInputSeq !== lastProcessedSeq) {
       player.lastProcessedInputSeq = lastProcessedSeq
     }
@@ -1372,6 +1355,9 @@ export class GameRoom extends Room<GameState> {
     player.vy = 0
     player.vz = 0
     player.onGround = true
+    player.momentumTicks = 0
+    player.jumpHoldTicksLeft = 0
+    player.coyoteTicksLeft = 0
 
     const classId = player.classId as ClassId
     const maxima = TARGET_CLASS_DEFS[classId]?.resourceMaxima ?? {
@@ -2682,10 +2668,10 @@ export function computeProjectileOrigin(
 const BOT_NAMES = ['Shadow', 'Ember', 'Frost', 'Storm', 'Void', 'Blaze', 'Riven', 'Dusk'] as const
 
 // Default loadout applied at onJoin (and to bots). Matches the client's
-// DEFAULT_SLOTS in loadout-station.ts (Ibrido starter build).
+// DEFAULT_SLOTS in loadout-station.ts (Ibrido preset build).
 // Slot positions are packed by family: melee, bow, magicBase×2, magicAdvanced×2,
-// utility×5. Server validates by family budget, not wire position.
-// See 01_DESIGN/06_loadout_build.md for the starter build rationale.
+// utility×2. Server validates by family budget, not wire position.
+// See 01_DESIGN/06_loadout_build.md for the preset build rationale.
 const DEFAULT_LOADOUT: readonly string[] = Object.freeze([
   'uppercut', // melee
   'marksman_shot', // bow

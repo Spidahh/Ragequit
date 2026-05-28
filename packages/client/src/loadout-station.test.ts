@@ -11,21 +11,14 @@ function mountLoadoutDom(): void {
       <div id="ls-magic-base"></div>
       <div id="ls-magic-advanced"></div>
       <div id="ls-utility"></div>
-      <div id="ls-detail-name"></div>
-      <div id="ls-detail-meta"></div>
-      <div id="ls-detail-desc"></div>
-      <div id="ls-detail-malus"></div>
-      <button id="ls-detail-instant"></button>
       <input id="ls-search" />
+      <button data-filter="recommended"></button>
+      <button data-filter="control"></button>
+      <button data-filter="projectile"></button>
+      <button data-filter="recovery"></button>
+      <button data-filter="zone"></button>
+      <button data-filter="mobility"></button>
       <button data-filter="all"></button>
-      <button data-filter="instant"></button>
-      <button data-filter="preview"></button>
-      <button data-filter="fire"></button>
-      <button data-filter="ice"></button>
-      <button data-filter="lightning"></button>
-      <button data-filter="dark"></button>
-      <button data-filter="nature"></button>
-      <button data-filter="none"></button>
       <div id="ls-pool"></div>
       <button id="ls-back"></button>
       <button id="ls-default"></button>
@@ -40,21 +33,11 @@ describe('loadout station smoke', () => {
     mountLoadoutDom()
   })
 
-  it('keeps the expected 8-slot keyboard layout', () => {
-    expect(__loadoutStationSmoke.slotOrder).toEqual([
-      'melee',
-      'bow',
-      'magic',
-      'magic',
-      'magic',
-      'magic',
-      'utility',
-      'utility',
-    ])
+  it('keeps the default build at 8 class-aware slots', () => {
     expect(__loadoutStationSmoke.defaultSlots).toHaveLength(8)
   })
 
-  it('sends a loadout message including classId and instantCast', () => {
+  it('sends a class-aware loadout message', () => {
     const send = vi.fn()
     const room = { send } as never
     const api = initLoadoutStation(() => room)
@@ -76,8 +59,14 @@ describe('loadout station smoke', () => {
       'adaptive_mend',
       'quick_dash',
     ])
-    // Wire payload stays class-aware; there is no generic magic bucket.
-    expect(msg['magic']).toBeUndefined()
+    expect(Object.keys(msg).sort()).toEqual([
+      'bow',
+      'classId',
+      'magicAdvanced',
+      'magicBase',
+      'melee',
+      'utility',
+    ])
     expect(api.getLoadout()).toHaveLength(8)
   })
 
@@ -145,20 +134,14 @@ describe('loadout station smoke', () => {
     expect(document.getElementById('ls-confirm')?.textContent).toBe('START TRAINING')
   })
 
-  it('defaults placed spells to preview and persists explicit instant-cast overrides', () => {
+  it('derives cast flow from targeting without persisted cast-mode overrides', () => {
     const api = initLoadoutStation(() => undefined)
 
-    expect(api.isInstantCast('flame_wall')).toBe(false)
-    expect(api.isInstantCast('fireball')).toBe(true)
+    expect(api.isDirectCast('flame_wall')).toBe(false)
+    expect(api.isDirectCast('fireball')).toBe(true)
 
     api.open()
-    document.getElementById('ls-detail-instant')?.click()
-
-    const stored = JSON.parse(
-      localStorage.getItem(__loadoutStationSmoke.instantCastStorageKey) ?? '{}',
-    ) as Record<string, boolean>
-    expect(stored['uppercut']).toBe(false)
-    expect(api.isInstantCast('uppercut')).toBe(false)
+    expect(api.isDirectCast('uppercut')).toBe(true)
   })
 
   it('does not send or close when build changes are locked', () => {
@@ -192,7 +175,6 @@ describe('loadout station smoke', () => {
     const before = api.getLoadout().join('|')
     document.querySelector<HTMLButtonElement>('.pool-card:not(.equipped)')?.click()
     document.getElementById('ls-default')?.click()
-    document.getElementById('ls-detail-instant')?.click()
 
     expect(api.getLoadout().join('|')).toBe(before)
     expect(localStorage.getItem(__loadoutStationSmoke.storageKey)).toBeNull()
@@ -203,10 +185,10 @@ describe('loadout station smoke', () => {
     const api = initLoadoutStation(() => undefined)
 
     api.open()
-    document.querySelector<HTMLButtonElement>('[data-filter="instant"]')?.click()
+    document.querySelector<HTMLButtonElement>('[data-filter="control"]')?.click()
     expect(
       document
-        .querySelector<HTMLButtonElement>('[data-filter="instant"]')
+        .querySelector<HTMLButtonElement>('[data-filter="control"]')
         ?.classList.contains('active-filter'),
     ).toBe(true)
 
@@ -220,28 +202,28 @@ describe('loadout station smoke', () => {
     ).toBe(true)
     expect(
       document
-        .querySelector<HTMLButtonElement>('[data-filter="instant"]')
+        .querySelector<HTMLButtonElement>('[data-filter="control"]')
         ?.classList.contains('active-filter'),
     ).toBe(false)
   })
 
-  it('supports cast-mode filters in the ability pool', () => {
+  it('supports functional filters in the ability pool', () => {
     const api = initLoadoutStation(() => undefined)
 
     api.open()
     document.querySelectorAll<HTMLButtonElement>('.ls-slot')[2]?.click()
 
-    document.querySelector<HTMLButtonElement>('[data-filter="preview"]')?.click()
+    document.querySelector<HTMLButtonElement>('[data-filter="projectile"]')?.click()
     expect(
       document
-        .querySelector<HTMLButtonElement>('[data-filter="preview"]')
+        .querySelector<HTMLButtonElement>('[data-filter="projectile"]')
         ?.classList.contains('active-filter'),
     ).toBe(true)
 
-    document.querySelector<HTMLButtonElement>('[data-filter="instant"]')?.click()
+    document.querySelector<HTMLButtonElement>('[data-filter="mobility"]')?.click()
     expect(
       document
-        .querySelector<HTMLButtonElement>('[data-filter="instant"]')
+        .querySelector<HTMLButtonElement>('[data-filter="mobility"]')
         ?.classList.contains('active-filter'),
     ).toBe(true)
   })

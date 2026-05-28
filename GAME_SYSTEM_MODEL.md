@@ -8,8 +8,9 @@ Questo documento descrive lo stato vivo.
 2. Codice runtime quando un documento e in conflitto col codice.
 3. `packages/shared/src/abilities/registry.ts` per numeri e comportamento delle
    abilita.
-4. `packages/shared/src/loadout.ts` e `packages/client/src/loadout-station.ts`
-   per grammatica loadout e UI Forge.
+4. `packages/shared/src/constants/classes.ts`,
+   `packages/client/src/input/loadout-slots.ts` e
+   `packages/client/src/loadout-station.ts` per grammatica loadout e UI Forge.
 5. `packages/client/public/game-ui.css` per lo stile UI.
 
 ## Runtime

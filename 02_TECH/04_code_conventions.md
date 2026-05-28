@@ -20,7 +20,7 @@ ragequit/                         # repo root (== github.com/Spidahh/Ragequit)
 │   ├── shared/                   # shared types, constants, sim primitives
 │   │   ├── src/
 │   │   │   ├── constants/        # stats, TTK, GCD — one file per concern
-│   │   │   ├── abilities/        # current 52 ability registry + schema
+│   │   │   ├── abilities/        # current 53 ability registry + schema
 │   │   │   ├── schema/           # @colyseus/schema shared state classes
 │   │   │   ├── sim/              # pure simulation functions (movement, regen, rng)
 │   │   │   ├── protocol/         # message types + version

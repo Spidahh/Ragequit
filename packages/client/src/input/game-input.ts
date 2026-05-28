@@ -131,11 +131,17 @@ export function initGameInput(
       const result = rendererDomElement.requestPointerLock?.()
       if (result && typeof result.catch === 'function') {
         void result.catch(() => {
+          // Pointer lock denied by browser — enable absolute-mouse fallback.
+          // Reset coordinates so the first move delta is 0 (not a stale position).
           state.pointerLookActive = true
+          state.lastPointerClientX = 0
+          state.lastPointerClientY = 0
         })
       }
     } catch {
       state.pointerLookActive = true
+      state.lastPointerClientX = 0
+      state.lastPointerClientY = 0
     }
   }
 
@@ -186,7 +192,7 @@ export function initGameInput(
     if (!el) return false
     return Boolean(
       el.closest(
-        'button, input, textarea, select, [contenteditable="true"], #settings-overlay, #loadout-station, #pause-menu, #main-menu',
+        'button, input, textarea, select, [contenteditable="true"], #settings-overlay, #loadout-station, #pause-menu, #main-menu, #hud',
       ),
     )
   }
@@ -203,19 +209,20 @@ export function initGameInput(
   function handleCombatPointerDown(button: number): void {
     if (!canEngageGameplaySurface()) return
     engageCanvasInput()
-    if (!isGameplayInputAllowed()) return
     if (!state.pointerLocked) {
       state.pointerLookActive = true
       state.lastPointerClientX = 0
       state.lastPointerClientY = 0
     }
+    if (button === 0 || button === 2) {
+      requestArenaPointerLock()
+    }
+    if (!isGameplayInputAllowed()) return
     if (button === 0) {
       if (!state.lmbDown) state.lmbPressEdge = true
       state.lmbDown = true
-      requestArenaPointerLock()
     } else if (button === 2) {
       state.rmbPressEdge = true
-      requestArenaPointerLock()
     }
   }
 
@@ -237,7 +244,7 @@ export function initGameInput(
     if (state.pointerLocked) {
       state.mouseYaw -= e.movementX * mouseSensitivity.value
       state.mousePitch -= e.movementY * mouseSensitivity.value
-    } else if (state.canvasInputEngaged && state.pointerLookActive && isGameplayInputAllowed()) {
+    } else if (state.canvasInputEngaged && state.pointerLookActive && canEngageGameplaySurface()) {
       if (state.lastPointerClientX !== 0 || state.lastPointerClientY !== 0) {
         state.mouseYaw -= (e.clientX - state.lastPointerClientX) * mouseSensitivity.value
         state.mousePitch -= (e.clientY - state.lastPointerClientY) * mouseSensitivity.value
@@ -330,10 +337,27 @@ export function initGameInput(
         return
       }
 
-      const gameplayInputActive = isGameplayInputAllowed()
-      if (!gameplayInputActive) return
+      if (matchesAction(k, 'jump')) {
+        state.jumpEdgeQueued = true
+        return
+      }
 
-      if (matchesAction(k, 'jump')) state.jumpEdgeQueued = true
+      if (k === 'Backquote') {
+        document.getElementById('debug')?.classList.toggle('hidden')
+        return
+      }
+
+      if (matchesAction(k, 'sensDown')) {
+        mouseSensitivity.scale(0.9)
+        return
+      }
+      if (matchesAction(k, 'sensUp')) {
+        mouseSensitivity.scale(1.1)
+        return
+      }
+
+      // Gated combat actions — only allowed while match phase is 'live'
+      if (!isGameplayInputAllowed()) return
 
       if (matchesAction(k, 'wheelUtility')) {
         e.preventDefault()
@@ -342,9 +366,6 @@ export function initGameInput(
       if (matchesAction(k, 'wheelAbility')) {
         e.preventDefault()
         radialWheels.openAbility(k)
-      }
-      if (k === 'Backquote') {
-        document.getElementById('debug')?.classList.toggle('hidden')
       }
 
       if (matchesAction(k, 'swapWeapon')) {
@@ -362,9 +383,6 @@ export function initGameInput(
         if (targetSlotIdx >= 0) activateAbilitySlot(targetSlotIdx, false)
         break
       }
-
-      if (matchesAction(k, 'sensDown')) mouseSensitivity.scale(0.9)
-      if (matchesAction(k, 'sensUp')) mouseSensitivity.scale(1.1)
     },
     { capture: true },
   )
@@ -449,6 +467,11 @@ export function initGameInput(
       state.lastPointerClientY = 0
       document.body.classList.add('input-locked')
     } else {
+      // Pointer lock lost — disable look input immediately. The player must
+      // click again to re-acquire the lock (or trigger the absolute fallback).
+      // Without this reset, the fallback path would fire on every pointermove
+      // and spin the camera wildly with large clientX/Y deltas.
+      state.pointerLookActive = false
       document.body.classList.toggle('input-locked', state.canvasInputEngaged)
     }
     hint.classList.toggle('hidden', state.pointerLocked)

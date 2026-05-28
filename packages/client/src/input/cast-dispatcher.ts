@@ -25,7 +25,7 @@ interface RoomLike {
 
 export interface CastDispatcherOptions {
   getLoadout: () => string[]
-  isInstantCast: (id: string) => boolean
+  isDirectCast: (id: string) => boolean
   hidePlacementVisual: () => void
   sendCast: (abilityId: string, tick: number) => void
   showShootFlash: () => void
@@ -55,7 +55,7 @@ const STAFF_FIRE_THROTTLE_MS = STAFF_M1_CADENCE_SEC * 1000
 
 export function initCastDispatcher({
   getLoadout,
-  isInstantCast,
+  isDirectCast,
   hidePlacementVisual,
   sendCast,
   showShootFlash,
@@ -84,7 +84,7 @@ export function initCastDispatcher({
       primedSlotIdx = slotIdx
       return
     }
-    if (isInstantCast(id)) {
+    if (isDirectCast(id)) {
       cancelPlacementPreview()
       abilityCastQueue.push(id)
       return
@@ -126,7 +126,7 @@ export function initCastDispatcher({
       const id = loadout[primedSlotIdx] ?? ''
       primedSlotIdx = null
       if (id) {
-        if (isInstantCast(id)) sendCast(id, schemaTick + 1)
+        if (isDirectCast(id)) sendCast(id, schemaTick + 1)
         else beginPlacementPreview(id)
       }
       inp.lmbPressEdge = false

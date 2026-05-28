@@ -42,6 +42,9 @@ Ultimo riallineamento: 2026-05-26.
   `packages/client/public/ability-icons/<ability_id>.png`. Il colore dell'icona
   identifica il tipo/elemento e queste icone sono usate da Loadout Station,
   ruote abilita e hotbar/cooldown.
+- Il 2026-05-28 il Loadout Forge non ha piu pannello dettagli separato ne
+  toggle/persistenza cast-mode: le card mostrano direttamente le informazioni
+  e il flow cast e deterministico dal targeting dell'abilita.
 
 
 ## Regola Documentale
@@ -97,6 +100,9 @@ astratte.
   videogioco; niente pannello dettagli separato che ruba spazio, niente scroll
   del build sinistro, niente filtri `STARTER`/`INSTANT`/`PREVIEW` nel pool.
   Le info necessarie devono stare direttamente nelle card compatte.
+- Regola Loadout Forge 2026-05-28: non esiste piu pannello dettagli separato e
+  non esistono toggle di cast-mode nel Forge. Le abilita `targeting: 'point'`
+  aprono placement, le altre sono dirette/primed dal runtime.
 - Mapping runtime wheel 2026-05-27: `E` wheel usa solo `melee`/`bow`, `Q` wheel
   usa solo `utility`, le spell `magicBase`/`magicAdvanced` sono sui tasti
   diretti `1`-`5` derivati dal loadout corrente.

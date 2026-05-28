@@ -1,6 +1,6 @@
 // Arena blockout map. Ground plane plus five boxes positioned for movement
 // testing: four cardinal cubes at 8 m distance + one taller central cube to
-// require jump-hold to clear.
+// create vertical cover that cannot be cleared by a single base jump.
 
 import { CAPSULE_HALF_HEIGHT_M, GROUND_Y } from '../constants/world.js'
 
@@ -25,7 +25,7 @@ const BOXES: readonly AABB[] = [
   box(-8, 1, 0, 2, 2, 2),
   box(0, 1, 8, 2, 2, 2),
   box(0, 1, -8, 2, 2, 2),
-  // Taller central obstacle — 3 m high, requires jump-hold to top out (2.2 m max height).
+  // Taller central obstacle: blocks movement and line of sight.
   box(0, 1.5, 0, 3, 3, 3),
 ]
 
@@ -86,7 +86,7 @@ export const DUEL_ARENA: StaticMap = {
 }
 
 // gladiators_arena — large multi-player map: concentric cover ring, four
-// raised corner platforms accessible by jump-hold, and perimeter walls.
+// raised corner platforms, and perimeter walls.
 const G_BOXES: readonly AABB[] = [
   // Inner ring of low cover (jumpable).
   box(5, 0.8, 5, 2.5, 1.6, 2.5),
@@ -98,7 +98,7 @@ const G_BOXES: readonly AABB[] = [
   box(0, 0.8, -10, 4, 1.6, 0.8),
   box(10, 0.8, 0, 0.8, 1.6, 4),
   box(-10, 0.8, 0, 0.8, 1.6, 4),
-  // Corner raised platforms (height 3 m — jump-hold required).
+  // Corner raised platforms: high cover for spawn variety and traversal tests.
   box(12, 1.5, 12, 4, 3, 4),
   box(-12, 1.5, 12, 4, 3, 4),
   box(12, 1.5, -12, 4, 3, 4),

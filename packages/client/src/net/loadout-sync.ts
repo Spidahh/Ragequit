@@ -9,5 +9,5 @@ export function sendLoadout(
   classId?: string,
 ): void {
   if (!room) return
-  room.send(MessageTypes.Loadout, buildLoadoutMessage(slots, undefined, classId))
+  room.send(MessageTypes.Loadout, buildLoadoutMessage(slots, classId))
 }

@@ -33,7 +33,6 @@ export const MOVE_SPEED_MPS = 9.0 as const
 
 // Jump.
 export const JUMP_HEIGHT_TAP_M = 1.5 as const
-export const JUMP_HEIGHT_HOLD_M = 2.2 as const
 export const JUMP_COST_STAMINA = 10 as const
 
 // Spawn protection.

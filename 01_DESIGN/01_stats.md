@@ -28,11 +28,12 @@ status: current
 | --------------------------- | -------------------- |
 | Base move speed (always on) | 9.0 m/s              |
 | Jump height (tap Space)     | 1.5 m                |
-| Jump height (hold Space)    | 2.2 m                |
+| Jump hold                   | Disabled             |
 | Jump cost                   | 10 stamina           |
 | Fall damage                 | 0 HP at every height |
 
 Sprint is the default and only move speed. There is no Shift sprint, no walk toggle.
+Jump is a fixed tap-height impulse; holding Space does not add extra height.
 
 ## Combat timings
 

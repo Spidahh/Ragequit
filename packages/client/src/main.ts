@@ -249,7 +249,7 @@ const PITCH_DOWN_LIMIT = -Math.PI * 0.36 //  -65° — max look-down angle
 // placementAbilityId, lastStaffFireMs and dispatches combat actions each sim tick.
 const castDispatcher = initCastDispatcher({
   getLoadout: currentLoadoutArray,
-  isInstantCast: (id) => loadoutStation.isInstantCast(id),
+  isDirectCast: (id) => loadoutStation.isDirectCast(id),
   hidePlacementVisual: () => {
     placementPreview.group.visible = false
   },
@@ -1422,7 +1422,6 @@ const radialWheels = initRadialWheels({
     const remaining = (readyAtTick - currentTick) / TICK_RATE_HZ
     return Math.max(0, remaining)
   },
-  isInstantCast: (abilityId) => loadoutStation.isInstantCast(abilityId),
   getClassId: getCurrentClassId,
 })
 
@@ -1586,7 +1585,7 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
       difficulty,
       botFill: resolvedMode === 'duel_arena',
     }
-    if (initialName) roomOptions['name'] = initialName
+    roomOptions['name'] = initialName || 'PLAYER'
     if (token) roomOptions['token'] = token
     const joinedRoom = await client.joinOrCreate('game', roomOptions)
     const mainMenuHidden =
@@ -1706,12 +1705,6 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
     // Kill streak events.
     joinedRoom.onMessage(MessageTypes.KillStreak, (msg: ServerKillStreakMessage) => {
       if (isCurrentRoom()) onKillStreak(msg)
-    })
-
-    // Supabase — restore persisted instant-cast flags from previous session.
-    joinedRoom.onMessage('persistedInstantCast', (flags: Record<string, boolean>) => {
-      if (!isCurrentRoom()) return
-      loadoutStation.applyPersistedInstantCast(flags)
     })
 
     // Match flow events
@@ -2115,7 +2108,7 @@ function clearGameplayUi(): void {
   castBarLabel.textContent = ''
   damageFlash.classList.remove('active', 'death')
   comboFlash.classList.remove('active')
-  comboPopup.classList.remove('show')
+  comboPopup.classList.remove('pop')
   blindVignette.classList.remove('active')
   deathOverlay.classList.remove('active')
   respawnOverlay.classList.remove('active')
@@ -2374,6 +2367,9 @@ interface SchemaPlayer {
   flowStacks: number
   flowPendingBonus: boolean
   gcdReadyAtTick: number
+  momentumTicks: number
+  jumpHoldTicksLeft: number
+  coyoteTicksLeft: number
 }
 
 function getSchemaPlayers(): Map<string, SchemaPlayer> | null {
@@ -2590,12 +2586,10 @@ function reconcileSelf(): void {
     pos: { x: p.transform.x, y: p.transform.y, z: p.transform.z },
     vel: { x: p.vx, y: p.vy, z: p.vz },
     onGround: p.onGround,
-    jumpHoldTicksLeft: 0,
+    jumpHoldTicksLeft: p.jumpHoldTicksLeft ?? 0,
     stamina: p.stamina,
-    coyoteTicksLeft: 0,
-    // Momentum is not replicated — reset to 0 on reconcile. The bonus
-    // re-accrues after ~0.5 s of continued input, imperceptible in play.
-    momentumTicks: 0,
+    coyoteTicksLeft: p.coyoteTicksLeft ?? 0,
+    momentumTicks: p.momentumTicks ?? 0,
   }
 
   const predictedBefore = { x: self.sim.pos.x, y: self.sim.pos.y, z: self.sim.pos.z }
@@ -2709,7 +2703,7 @@ function render(now: number): void {
       renderPos.set(self.sim.pos.x, self.sim.pos.y, self.sim.pos.z)
       renderPosInitialized = true
     } else {
-      const lerpSpeed = 25
+      const lerpSpeed = 50
       const lerpFactor = Math.min(1, lerpSpeed * dt)
       renderPos.x += (self.sim.pos.x - renderPos.x) * lerpFactor
       renderPos.y += (self.sim.pos.y - renderPos.y) * lerpFactor

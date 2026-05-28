@@ -104,6 +104,9 @@ assunzioni precedenti come autorita.
   dettagli separato che ruba spazio, niente scroll del build sinistro, niente
   filtri `STARTER`/`INSTANT`/`PREVIEW` nel pool. Le informazioni necessarie
   stanno direttamente nelle card compatte.
+- La Loadout Forge non ha pannello dettagli separato e non salva toggle
+  cast-mode: il cast e deterministico dal targeting dell'abilita (`point`
+  apre placement, gli altri targeting sono diretti).
 - Mapping runtime wheel: `E` wheel contiene solo abilita weapon (`melee`/`bow`),
   `Q` wheel contiene solo `utility`, le spell `magicBase`/`magicAdvanced` sono
   sui tasti diretti `1`-`5` calcolati dal loadout corrente.

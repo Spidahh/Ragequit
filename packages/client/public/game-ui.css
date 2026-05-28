@@ -81,6 +81,16 @@ body.loadout-active canvas {
   filter: none;
 }
 
+/* When player is dead: hide combat UI to reduce noise */
+body.player-dead #crosshair,
+body.player-dead #gcd-ring,
+body.player-dead #combat-console,
+body.player-dead #weapons {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
 body.main-menu-active #hud,
 body.main-menu-active #combat-console,
 body.main-menu-active #crosshair,
@@ -136,8 +146,7 @@ body.loadout-active #round-hud {
 .class-select-card,
 .element-tab,
 .ls-slot,
-.pool-card,
-#ls-detail-instant {
+.pool-card {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: rgba(8, 10, 18, 0.82);
@@ -157,8 +166,7 @@ body.loadout-active #round-hud {
 .class-select-card:hover,
 .element-tab:hover,
 .ls-slot:hover,
-.pool-card:hover,
-#ls-detail-instant:hover {
+.pool-card:hover {
   transform: translateY(-1px);
   border-color: var(--line-strong);
   background: rgba(17, 20, 32, 0.94);
@@ -184,6 +192,13 @@ button.locked {
   cursor: not-allowed;
   opacity: 0.46;
   transform: none;
+}
+
+.lock-icon {
+  margin-left: 6px;
+  font-size: 0.8em;
+  vertical-align: middle;
+  pointer-events: none;
 }
 
 /* Main menu */
@@ -665,32 +680,33 @@ button.locked {
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 220px minmax(720px, 1fr) 300px;
   align-items: stretch;
+  overflow: hidden;
   border-bottom: 1px solid rgba(255, 210, 96, 0.18);
   background: rgba(4, 6, 11, 0.55);
 }
 
 #ls-title-block {
   display: grid;
-  grid-template-columns: 48px auto;
+  grid-template-columns: 42px minmax(0, 1fr);
   grid-template-rows: auto auto;
-  column-gap: 12px;
+  column-gap: 10px;
   align-items: center;
-  padding: 12px 22px 12px 18px;
+  padding: 10px 14px 10px 16px;
   border-right: 1px solid rgba(255, 210, 96, 0.1);
 }
 
 .rq-shell-logo {
   grid-row: 1 / 3;
-  width: 48px;
-  height: 48px;
+  width: 42px;
+  height: 42px;
   object-fit: contain;
 }
 
 #ls-title-block h1 {
   margin: 0;
-  font: 900 26px/0.9 var(--font-hud);
+  font: 900 24px/0.9 var(--font-hud);
   text-transform: uppercase;
 }
 
@@ -709,7 +725,7 @@ button.locked {
 #ls-class-selector {
   min-height: 86px;
   display: grid;
-  grid-template-columns: minmax(130px, 0.7fr) repeat(4, minmax(100px, 1fr));
+  grid-template-columns: 126px repeat(4, minmax(132px, 1fr));
   gap: 8px;
   align-items: stretch;
   padding: 8px 12px;
@@ -761,13 +777,13 @@ button.locked {
   min-width: 0;
   min-height: 68px;
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr);
+  grid-template-columns: 34px minmax(0, 1fr);
   grid-template-areas:
     "icon title"
     "icon desc";
-  gap: 4px 10px;
+  gap: 4px 8px;
   align-items: center;
-  padding: 10px 12px;
+  padding: 9px 10px;
   background: rgba(0, 0, 0, 0.34);
   border: 1px solid rgba(145, 170, 220, 0.16);
   border-left: 3px solid rgba(145, 170, 220, 0.18);
@@ -813,14 +829,14 @@ button.locked {
 
 .card-icon {
   grid-area: icon;
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   display: grid;
   place-items: center;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 5px;
   background: rgba(0, 0, 0, 0.25);
-  font-size: 22px;
+  font-size: 20px;
   line-height: 1;
   filter: grayscale(0.4);
   transition: filter 0.15s;
@@ -831,7 +847,7 @@ button.locked {
 .card-title {
   grid-area: title;
   min-width: 0;
-  font: 900 16px/1 var(--font-hud);
+  font: 900 15px/1 var(--font-hud);
   letter-spacing: 0;
   text-transform: uppercase;
   color: var(--text-soft);
@@ -847,12 +863,13 @@ button.locked {
   grid-area: desc;
   min-width: 0;
   overflow: hidden;
-  font: 800 10px/1.2 var(--font-mono);
+  max-height: 22px;
+  font: 800 8px/1.15 var(--font-mono);
   letter-spacing: 0;
   text-transform: uppercase;
   color: var(--muted);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-overflow: clip;
+  white-space: normal;
 }
 .class-select-card.active .card-desc {
   color: color-mix(in srgb, var(--class-color, var(--gold)) 60%, var(--muted));
@@ -862,13 +879,15 @@ button.locked {
 #ls-vitals-bar {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 0 20px 0 20px;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 12px;
   border-left: 1px solid rgba(255, 210, 96, 0.1);
+  overflow: hidden;
 }
 
 .vitals-class-tag {
-  padding: 3px 9px;
+  padding: 3px 7px;
   border: 1px solid rgba(255, 210, 96, 0.22);
   border-radius: 3px;
   background: rgba(255, 210, 96, 0.08);
@@ -882,7 +901,8 @@ button.locked {
 .vital-pill {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
+  min-width: 0;
 }
 
 .vp-icon {
@@ -892,7 +912,7 @@ button.locked {
 
 /* Width for vital bar track inside compact header pills */
 .vital-pill .vital-bar-track {
-  width: 72px;
+  width: 48px;
   height: 6px;
   border-radius: 3px;
 }
@@ -956,17 +976,6 @@ button.locked {
   min-height: 0;
 }
 
-/* Detail panel (bottom of right) */
-#ls-detail-panel {
-  display: none;
-  flex-direction: column;
-  border: 1px solid var(--line);
-  border-top-color: rgba(0, 208, 255, 0.28);
-  border-radius: var(--radius);
-  background: rgba(10, 12, 20, 0.94);
-  overflow: hidden;
-}
-
 .ls-column-header {
   flex: 0 0 auto;
   padding: 16px;
@@ -989,35 +998,6 @@ button.locked {
   text-transform: uppercase;
 }
 
-/* (legacy class-cards-list / class-select-card grid removed — new tab style at top of Loadout Forge block) */
-
-.class-vitals-panel {
-  margin: 0 14px 14px;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--class-color, var(--gold));
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.22);
-}
-
-.vitals-topline,
-.vitals-bars {
-  display: grid;
-  gap: 6px;
-}
-
-.vitals-topline {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-}
-
-/* #ls-vitals-class-name now styled via .vitals-class-tag (compact pill) */
-#ls-mechanic-name {
-  color: var(--gold);
-  font: 900 17px/1 var(--font-hud);
-  text-transform: uppercase;
-}
-
 /* Preset button — compact console footer */
 #ls-load-preset,
 .ls-preset-btn {
@@ -1036,28 +1016,6 @@ button.locked {
   border-bottom: none;
   border-top-color: rgba(255, 210, 96, 0.12);
   background: rgba(0, 0, 0, 0.22);
-}
-
-.vitals-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.vital-row {
-  display: grid;
-  grid-template-columns: 80px 1fr 40px;
-  align-items: center;
-  gap: 10px;
-}
-
-.vital-label {
-  font: 900 11px/1 var(--font-hud);
-  color: var(--text-soft);
-  text-transform: uppercase;
-  display: flex;
-  align-items: center;
 }
 
 .vital-bar-track {
@@ -1092,139 +1050,6 @@ button.locked {
   color: var(--text);
   text-align: right;
 }
-
-/* Allowed Weapons & Spells Console Styles */
-.vitals-weapons-container,
-.vitals-spells-container {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
-}
-
-.vitals-section-title {
-  display: block;
-  font: 900 9px/1 var(--font-mono);
-  color: var(--gold);
-  text-transform: uppercase;
-  margin-bottom: 8px;
-  letter-spacing: 0.05em;
-}
-
-.vitals-weapons-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.vitals-weapon-icon {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 8px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  font: 900 11px/1.2 var(--font-hud);
-  color: var(--text-soft);
-  transition: all 0.2s ease;
-  user-select: none;
-}
-
-.vitals-weapon-icon span {
-  font-size: 8px;
-  color: var(--muted);
-  margin-top: 4px;
-  font-family: var(--font-mono);
-}
-
-.vitals-weapon-icon.active {
-  border-color: var(--class-color, var(--gold));
-  background: rgba(255, 210, 96, 0.05);
-  color: #fff;
-  box-shadow: 0 0 8px rgba(255, 210, 96, 0.1);
-}
-
-.vitals-weapon-icon.active span {
-  color: var(--class-color, var(--gold));
-  font-weight: bold;
-}
-
-.vitals-weapon-icon.disabled {
-  opacity: 0.35;
-  filter: grayscale(1);
-  border-color: rgba(255, 255, 255, 0.05);
-  background: rgba(0, 0, 0, 0.2);
-  cursor: not-allowed;
-}
-
-.vitals-spells-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 4px;
-}
-
-.vitals-budget-badge {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 2px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--line);
-  font-size: 8px;
-  font-family: var(--font-mono);
-  text-align: center;
-  transition: all 0.2s ease;
-}
-
-.vitals-budget-badge.has-budget {
-  border-color: rgba(0, 208, 255, 0.3);
-}
-
-.vitals-budget-badge.no-budget {
-  opacity: 0.3;
-  border-color: rgba(255, 255, 255, 0.05);
-  background: rgba(0, 0, 0, 0.1);
-}
-
-.vitals-budget-badge .budget-icon {
-  font-size: 11px;
-  margin-bottom: 2px;
-}
-
-.vitals-budget-badge .budget-label {
-  color: var(--text-soft);
-  font-size: 7px;
-  text-transform: uppercase;
-  margin-bottom: 2px;
-}
-
-.vitals-budget-badge .budget-count {
-  color: #fff;
-  font-size: 11px;
-  font-weight: 900;
-  font-family: var(--font-hud);
-}
-
-.vitals-budget-badge.has-budget .budget-count {
-  color: var(--class-color, var(--gold));
-}
-
-.mechanic-card {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
-}
-
-.mechanic-card p {
-  margin: 6px 0 0;
-  color: var(--text-soft);
-  font: 700 12px/1.35 var(--font-ui);
-}
-
-/* #ls-flow-strip removed — no longer in layout */
 
 /* Hide section only if ALL slot-lists have no children (class has 0 of this family) */
 .ls-section:not(:has(.slot-list > *)) {
@@ -1269,107 +1094,6 @@ button.locked {
 #ls-magic-base:not(:empty)::before { content: "Magic Base · keys 1-5"; }
 #ls-magic-advanced:not(:empty)::before { content: "Magic Advanced · keys 1-5"; }
 #ls-utility:not(:empty)::before { content: "Utility + Recovery · Q wheel"; }
-
-#ls-active-detail-panel {
-  flex: 0 0 auto;
-  border-top: 1px solid var(--line);
-  background: rgba(4, 6, 11, 0.42);
-}
-
-#ls-detail-header {
-  display: grid;
-  grid-template-columns: 46px minmax(0, 1fr) minmax(120px, 150px);
-  gap: 10px;
-  align-items: center;
-  padding: 10px;
-  border-bottom: 1px solid var(--line);
-  flex: 0 0 auto;
-}
-
-.ls-detail-text-block {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-#ls-detail-icon-frame {
-  width: 46px;
-  height: 46px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.24);
-  font-size: 24px;
-}
-
-#ls-detail-name {
-  overflow: hidden;
-  color: var(--text);
-  font: 900 18px/1 var(--font-hud);
-  text-transform: uppercase;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-#ls-detail-meta {
-  margin-top: 5px;
-  color: var(--gold);
-  font: 800 9px/1.35 var(--font-mono);
-  text-transform: uppercase;
-}
-
-#ls-detail-instant {
-  min-height: 42px;
-  display: grid;
-  gap: 2px;
-  padding: 8px;
-  text-align: left;
-}
-
-#ls-detail-instant.on {
-  border-color: rgba(0, 255, 136, 0.45);
-  color: var(--stamina);
-}
-
-.mode-kicker,
-.mode-help {
-  color: var(--text-soft);
-  font: 800 8px/1 var(--font-mono);
-  text-transform: uppercase;
-}
-
-.mode-state {
-  font: 900 15px/1 var(--font-hud);
-  text-transform: uppercase;
-}
-
-#ls-detail-body {
-  max-height: 150px;
-  padding: 10px;
-  overflow: hidden;
-}
-
-#ls-detail-desc {
-  display: grid;
-  gap: 6px;
-  color: var(--text-soft);
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-#ls-detail-desc p,
-#ls-detail-malus p {
-  margin: 0;
-}
-
-#ls-detail-malus {
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.22);
-}
 
 /* Station footer button row */
 .station-buttons {
@@ -1465,7 +1189,7 @@ button.locked {
   color: var(--text);
   background: rgba(255, 255, 255, 0.05);
 }
-/* active-filter = classe aggiunta da JS; .active legacy non usata */
+/* active-filter is the state class added by the Loadout runtime. */
 .filter-btn.active-filter {
   border-color: rgba(255, 210, 96, 0.55);
   background: rgba(255, 210, 96, 0.08);
@@ -1794,7 +1518,7 @@ button.locked {
   align-content: start;
   gap: 8px;
   padding: 10px;
-  overflow: hidden;
+  overflow-y: auto;
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -1805,6 +1529,7 @@ button.locked {
   --ability-color: var(--gold);
   display: grid;
   grid-template-columns: 70px minmax(0, 1fr);
+  grid-template-rows: 34px 15px minmax(40px, 1fr) auto;
   grid-template-areas:
     "visual nature"
     "visual meta"
@@ -1819,7 +1544,7 @@ button.locked {
   background: rgba(6, 8, 16, 0.92);
   cursor: pointer;
   text-align: left;
-  min-height: 120px;
+  min-height: 166px;
   transition: transform 0.08s, border-color 0.1s, background 0.1s, box-shadow 0.12s;
 }
 
@@ -1892,6 +1617,7 @@ button.locked {
 .pool-nature {
   grid-area: nature;
   min-width: 0;
+  min-height: 32px;
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -1910,19 +1636,13 @@ button.locked {
   white-space: nowrap;
 }
 
-.recommend-tag,
-.starter-tag {
+.recommend-tag {
   flex: 0 0 auto;
   padding: 2px 4px;
   border: 1px solid rgba(0, 255, 136, 0.34);
   border-radius: 3px;
   color: var(--stamina);
   font: 900 8px/1 var(--font-mono);
-}
-
-.starter-tag {
-  border-color: rgba(255, 210, 96, 0.38);
-  color: var(--gold);
 }
 
 .pool-summary {
@@ -1994,7 +1714,6 @@ button.locked {
 .pool-icon-box img,
 .pool-icon img,
 .ls-slot-icon img,
-#ls-detail-icon-frame img,
 .ability-icon img,
 .r-icon img,
 .tt-name img {
@@ -2011,8 +1730,7 @@ button.locked {
 }
 
 .ls-slot-icon .ability-png-icon,
-.pool-icon-box .ability-png-icon,
-#ls-detail-icon-frame .ability-png-icon {
+.pool-icon-box .ability-png-icon {
   width: calc(100% - 4px);
   height: calc(100% - 4px);
 }
@@ -2100,16 +1818,13 @@ button.locked {
     min-height: 260px;
   }
 
-  #ls-detail-header {
-    grid-template-columns: 1fr;
-  }
 }
 /* HUD */
 #hud {
   position: fixed;
   left: 24px;
   bottom: 28px;
-  z-index: 610;
+  z-index: 900;
   width: 318px;
   display: grid;
   gap: 6px;
@@ -2119,6 +1834,17 @@ button.locked {
   border-radius: var(--radius);
   background: var(--panel);
   user-select: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+#hud.dragging {
+  border-color: var(--gold);
+  box-shadow: 0 0 12px rgba(255, 210, 96, 0.45);
+}
+
+#hud.resizing {
+  border-color: var(--stamina);
+  box-shadow: 0 0 12px rgba(0, 255, 136, 0.45);
 }
 
 #hud-drag-handle {
@@ -2128,6 +1854,15 @@ button.locked {
   font: 900 9px/1 var(--font-mono);
   text-transform: uppercase;
   cursor: grab;
+  transition: color 0.15s ease;
+}
+
+#hud-drag-handle:hover {
+  color: var(--gold);
+}
+
+#hud-drag-handle:active {
+  cursor: grabbing;
 }
 
 .bar {
@@ -2233,24 +1968,31 @@ button.locked {
 
 #combat-console {
   position: fixed;
-  left: calc(50% + 150px);
+  left: 50%;
   bottom: 24px;
   z-index: 600;
   transform: translateX(-50%);
-  width: min(880px, calc(100vw - 480px));
-  min-width: 720px;
-  border: 1px solid var(--line);
-  border-bottom: 3px solid rgba(255, 210, 96, 0.44);
-  border-radius: var(--radius);
-  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  box-shadow: none;
+  pointer-events: none;
 }
 
 #weapons {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px;
-  border-bottom: 1px solid var(--line);
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(15, 17, 26, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius);
+  backdrop-filter: blur(12px);
+  pointer-events: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
 #hud-combo {
@@ -2270,6 +2012,27 @@ button.locked {
   background: var(--gold);
 }
 
+/* Full combo (3rd swing) — golden pulse */
+#hud-combo.full .dot {
+  background: var(--gold);
+  box-shadow: 0 0 5px var(--gold);
+}
+
+/* Low-resource warning states */
+#hud-hp.warn .fill {
+  animation: bar-warn-pulse 0.75s ease-in-out infinite;
+}
+
+#hud-mana.warn .fill,
+#hud-stam.warn .fill {
+  opacity: 0.6;
+}
+
+@keyframes bar-warn-pulse {
+  0%, 100% { filter: brightness(1); }
+  50%       { filter: brightness(1.6); }
+}
+
 .wslot {
   width: 60px;
   height: 60px;
@@ -2278,22 +2041,23 @@ button.locked {
   align-items: center;
   justify-content: center;
   position: relative;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
-  background: rgba(0, 0, 0, 0.28);
+  background: rgba(0, 0, 0, 0.45);
   transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
   cursor: pointer;
 }
 
 .wslot:hover {
-  border-color: rgba(255, 210, 96, 0.24);
-  background: rgba(17, 20, 32, 0.38);
+  border-color: var(--gold);
+  background: rgba(255, 210, 96, 0.08);
+  box-shadow: 0 0 10px rgba(255, 210, 96, 0.25);
 }
 
 .wslot.active {
-  border-color: var(--line-strong);
-  background: linear-gradient(180deg, rgba(255, 210, 96, 0.18), rgba(255, 210, 96, 0.06));
-  box-shadow: 0 0 10px rgba(255, 210, 96, 0.15);
+  border-color: var(--gold);
+  background: linear-gradient(180deg, rgba(255, 210, 96, 0.22), rgba(255, 210, 96, 0.08));
+  box-shadow: 0 0 12px rgba(255, 210, 96, 0.35);
   transform: scale(1.02);
 }
 
@@ -2311,15 +2075,22 @@ button.locked {
 
 .wslot .wname {
   position: absolute;
-  bottom: 4px;
-  left: 0;
-  right: 0;
+  left: 2px;
+  right: 2px;
+  bottom: 3px;
+  overflow: hidden;
+  color: var(--text);
+  font: 900 7px/1.2 var(--font-mono);
   text-align: center;
-  font: 900 7px/1 var(--font-mono);
-  color: var(--text-soft);
+  text-overflow: ellipsis;
   text-transform: uppercase;
+  white-space: nowrap;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 2px 0;
+  border-radius: 2px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
   letter-spacing: 0.5px;
-  opacity: 0.85;
 }
 
 .wslot.active .wname {
@@ -2330,57 +2101,66 @@ button.locked {
 .wslot .key {
   position: absolute;
   top: 4px;
-  left: 5px;
-  font: 900 8px/1 var(--font-mono);
+  left: 6px;
+  font: 900 10px var(--font-mono);
   color: var(--gold);
   text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
+}
+
+/* Weapon swap server-confirm flash */
+@keyframes wslot-swap-flash {
+  0%   { box-shadow: 0 0 0 2px var(--gold), 0 0 18px rgba(255, 210, 96, 0.7); background: rgba(255, 210, 96, 0.35); }
+  100% { box-shadow: none; background: rgba(0, 0, 0, 0.45); }
+}
+
+.wslot.swap-flash {
+  animation: wslot-swap-flash 0.22s ease-out forwards;
 }
 
 #cd-strip {
   display: flex;
-  gap: 8px;
-  padding: 8px;
-  overflow: hidden;
+  gap: 12px;
+  padding: 6px 12px;
+  background: rgba(15, 17, 26, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius);
+  backdrop-filter: blur(12px);
+  pointer-events: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
 .hotbar-section {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 4px;
 }
 
 .hotbar-section.spell-section,
 .hotbar-section.utility-section {
-  padding-left: 8px;
-  border-left: 1px solid var(--line);
-}
-
-.hotbar-title {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--muted);
-  font: 900 8px/1 var(--font-mono);
-  text-transform: uppercase;
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .hotbar-rail {
   display: flex;
-  gap: 5px;
+  gap: 6px;
 }
 
 .cd-pip {
   position: relative;
-  width: 58px;
-  height: 58px;
-  border: 1px solid var(--line);
+  width: 56px;
+  height: 56px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-bottom: 3px solid var(--elem-color, var(--gold));
-  border-radius: 5px;
-  background: rgba(0, 0, 0, 0.22);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
 }
 
 .cd-pip.utility-pip {
-  width: 50px;
-  height: 54px;
+  width: 56px;
+  height: 56px;
 }
 
 .cd-pip.spell-pip {
@@ -2389,12 +2169,13 @@ button.locked {
 }
 
 .cd-pip.ready {
-  border-color: rgba(255, 210, 96, 0.32);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .cd-pip.primed {
   border-color: var(--gold);
-  background: var(--gold-soft);
+  background: rgba(255, 210, 96, 0.15);
+  box-shadow: 0 0 12px rgba(255, 210, 96, 0.35);
 }
 
 .cd-pip .label {
@@ -2411,52 +2192,177 @@ button.locked {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%) translateY(-2px);
-  z-index: 3;
+  z-index: 15;
+}
+
+.cd-pip .cd-arc-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 3px;
+}
+
+.cd-pip .cd-arc-fill {
+  fill: none;
+  stroke: var(--elem-color, var(--gold));
+  stroke-width: 3px;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.1s linear;
 }
 
 .cd-pip .ability-icon {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) translateY(-2px);
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
+  top: 3px;
+  left: 3px;
+  right: 3px;
+  bottom: 3px;
+  display: block;
   overflow: hidden;
   border-radius: 4px;
   z-index: 2;
+}
+
+.cd-pip .ability-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: filter 0.15s ease;
+}
+
+/* Cooling down state visual feedback */
+.cd-pip.cooling .ability-icon img {
+  filter: grayscale(90%) brightness(30%);
+}
+
+.cd-pip.cooling {
+  background: rgba(0, 0, 0, 0.45);
+  border-color: rgba(255, 255, 255, 0.06);
 }
 
 .cd-pip .cd-timer {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%) translateY(-2px);
-  z-index: 5;
+  transform: translate(-50%, -50%);
+  z-index: 18;
   color: #ffffff;
-  font: 900 13px/1 var(--font-mono);
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.9);
+  font: 900 15px/1 var(--font-mono);
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.95), 0 0 3px rgba(0, 0, 0, 0.95);
   pointer-events: none;
 }
 
-.cd-pip .ability-name {
-  position: absolute;
-  left: 4px;
-  right: 4px;
-  bottom: 4px;
-  overflow: hidden;
-  color: var(--text-soft);
-  font: 800 7px/1 var(--font-mono);
-  text-align: center;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
-  z-index: 10;
-}
+
 
 .cd-pip .icon {
   font-size: 20px;
+}
+
+/* ─── cd-pip interactive states ─────────────────────────────────────── */
+
+/* Pending: ability queued, waiting for server ack */
+.cd-pip.pending {
+  border-color: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.25);
+}
+
+/* Placing: ground-target ability needs cursor placement */
+.cd-pip.placing {
+  border-color: var(--elem-color, var(--gold));
+  box-shadow: 0 0 16px color-mix(in srgb, var(--elem-color, var(--gold)) 60%, transparent);
+  animation: placing-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes placing-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+
+/* Fail flash: ability refused (out of mana, blocked, etc.) */
+.cd-pip.fail-flash {
+  border-color: var(--danger);
+  box-shadow: 0 0 14px rgba(255, 51, 68, 0.65);
+}
+
+.cd-pip.fail-flash .ability-icon img {
+  filter: brightness(35%) sepia(1) saturate(4) hue-rotate(-20deg);
+}
+
+/* Ready flash: cooldown just finished */
+.cd-pip.cd-ready-flash {
+  animation: cd-ready-pop 0.5s ease-out forwards;
+}
+
+@keyframes cd-ready-pop {
+  0%   { box-shadow: 0 0 0   rgba(255,255,255,0);    border-color: rgba(255,255,255,0.12); }
+  25%  { box-shadow: 0 0 20px rgba(255,255,255,0.55); border-color: rgba(255,255,255,0.9); }
+  100% { box-shadow: 0 0 0   rgba(255,255,255,0);    border-color: rgba(255,255,255,0.12); }
+}
+
+/* ─── Ability tooltip ────────────────────────────────────────────────── */
+
+.cd-pip .ability-tooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(8, 10, 18, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 2px solid var(--elem-color, rgba(255, 255, 255, 0.25));
+  border-radius: 8px;
+  padding: 10px 12px;
+  min-width: 150px;
+  max-width: 230px;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 200;
+  transition: opacity 0.12s ease;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75);
+  white-space: nowrap;
+}
+
+.cd-pip:hover .ability-tooltip {
+  opacity: 1;
+}
+
+.ability-tooltip .tt-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 700 12px/1.4 var(--font-mono);
+  color: #fff;
+  margin-bottom: 5px;
+}
+
+.ability-tooltip .tt-name img {
+  width: 18px;
+  height: 18px;
+  object-fit: cover;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.ability-tooltip .tt-el {
+  font: 600 9px/1.2 var(--font-mono);
+  color: var(--elem-color, var(--muted));
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 3px;
+}
+
+.ability-tooltip .tt-cost {
+  font: 600 10px/1.2 var(--font-mono);
+  color: var(--muted);
+}
+
+.ability-tooltip .tt-malus {
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font: 400 10px/1.5 var(--font-mono);
+  color: var(--danger);
+  white-space: normal;
+  max-width: 210px;
 }
 
 /* Crosshair and contextual combat */
@@ -2496,6 +2402,23 @@ button.locked {
 
 #crosshair.hit {
   border-color: var(--danger);
+}
+
+/* Bow charge crosshair feedback */
+#crosshair[data-charge="low"] {
+  border-color: rgba(80, 220, 80, 0.7);
+  transform: translate(-50%, -50%) scale(0.9);
+}
+
+#crosshair[data-charge="high"] {
+  border-color: rgba(255, 200, 50, 0.9);
+  transform: translate(-50%, -50%) scale(0.85);
+}
+
+#crosshair[data-charge="full"] {
+  border-color: #ff6030;
+  transform: translate(-50%, -50%) scale(0.75);
+  box-shadow: 0 0 8px rgba(255, 96, 48, 0.7);
 }
 
 #gcd-ring,
@@ -2555,7 +2478,24 @@ button.locked {
   opacity: 1;
 }
 
-#bow-charge .fill,
+/* Bow charge fill color shifts as it reaches full */
+#bow-charge .fill {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--stamina), var(--gold));
+  transition: background 0.15s ease;
+}
+
+#bow-charge.mid .fill {
+  background: linear-gradient(90deg, var(--stamina), #ffe090);
+}
+
+#bow-charge.full .fill {
+  background: linear-gradient(90deg, var(--gold), #ffffff);
+  box-shadow: 0 0 8px rgba(255, 210, 96, 0.8);
+}
+
 #cast-bar .fill {
   width: 0;
   height: 100%;
@@ -2574,6 +2514,18 @@ button.locked {
   place-items: center;
   color: var(--text);
   font: 900 8px/1 var(--font-mono);
+}
+
+/* Cast interrupted — brief red flash */
+#cast-bar.interrupted {
+  opacity: 1;
+  border-color: var(--danger);
+  animation: cast-interrupt 0.6s ease-out forwards;
+}
+
+@keyframes cast-interrupt {
+  0%   { opacity: 1; border-color: var(--danger); }
+  100% { opacity: 0; border-color: var(--line); }
 }
 
 #status-strip {
@@ -2624,6 +2576,17 @@ button.locked {
   font: 900 22px/1 var(--font-hud);
 }
 
+/* Urgent: last 15 seconds — pulse red */
+#round-timer.urgent {
+  color: var(--danger);
+  animation: timer-urgent-pulse 1s ease-in-out infinite;
+}
+
+@keyframes timer-urgent-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.65; }
+}
+
 .pip-row {
   display: flex;
   gap: 4px;
@@ -2664,11 +2627,137 @@ button.locked {
 }
 
 .kill-entry {
-  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
   border: 1px solid var(--line);
   border-left: 4px solid var(--gold);
   border-radius: var(--radius);
   background: var(--panel);
+  font: 800 11px/1 var(--font-mono);
+  text-transform: uppercase;
+  animation: entry-slide-in 0.25s ease-out;
+}
+
+@keyframes entry-slide-in {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Self was the killer: gold left accent */
+.kill-entry.self-kill {
+  border-left-color: var(--gold);
+  background: rgba(255, 210, 96, 0.07);
+}
+
+/* Self died: danger red left accent */
+.kill-entry.self-died {
+  border-left-color: var(--danger);
+  background: rgba(255, 51, 68, 0.07);
+}
+
+/* Icon span */
+.kill-entry .k-icon {
+  font-size: 13px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* Name spans */
+.kill-entry .kname {
+  font: 800 11px/1 var(--font-mono);
+  letter-spacing: 0.03em;
+  color: var(--text-soft);
+}
+
+/* Self player name: gold highlight */
+.kill-entry .kname.you {
+  color: var(--gold);
+  font-weight: 900;
+}
+
+/* Opponent name: subdued red */
+.kill-entry .kname.enemy {
+  color: #e8656f;
+}
+
+/* ── Kill splash — temporary full-screen center message ── */
+
+.kill-splash {
+  position: fixed;
+  left: 50%;
+  top: 38%;
+  transform: translate(-50%, -50%);
+  z-index: 760;
+  pointer-events: none;
+  font: 900 52px/1 var(--font-hud);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-shadow: 0 2px 28px rgba(0, 0, 0, 0.8), 0 0 40px currentColor;
+  animation: kill-splash-pop 1.6s ease-out forwards;
+}
+
+@keyframes kill-splash-pop {
+  0%   { opacity: 0; transform: translate(-50%, -55%) scale(0.7); }
+  12%  { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  20%  { transform: translate(-50%, -50%) scale(1.0); }
+  70%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -46%) scale(0.95); }
+}
+
+/* Kill: gold */
+.kill-splash.kill {
+  color: var(--gold);
+}
+
+/* Died: red */
+.kill-splash.died {
+  color: var(--danger);
+}
+
+/* ── Kill streak display ── */
+
+#streak-display {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 755;
+  text-align: center;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+#streak-display.hidden {
+  display: none !important;
+}
+
+.streak-count,
+#streak-count {
+  font: 900 34px/1 var(--font-hud);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  text-shadow: 0 0 30px rgba(255, 210, 96, 0.5), 0 2px 20px rgba(0, 0, 0, 0.7);
+  animation: streak-reveal 0.35s cubic-bezier(0.22, 0.68, 0, 1.3);
+}
+
+@keyframes streak-reveal {
+  from { opacity: 0; transform: scale(0.5) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.streak-bonus,
+#streak-bonus {
+  color: var(--stamina);
+  font: 800 12px/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 12px rgba(0, 255, 136, 0.4);
 }
 
 /* Radial wheels */
@@ -2735,8 +2824,7 @@ button.locked {
   font-size: 22px;
 }
 
-.r-key,
-.r-mode {
+.r-key {
   color: var(--gold);
   font: 900 10px/1 var(--font-mono);
 }
@@ -2752,6 +2840,92 @@ button.locked {
 
 .radial-slot.selected {
   color: var(--gold);
+}
+
+/* Currently primed slot: persistent highlight even when wheel is closed */
+.radial-slot.r-primed .r-icon {
+  border-color: var(--gold);
+  box-shadow: 0 0 8px rgba(255, 210, 96, 0.4);
+}
+
+.radial-slot.r-primed .r-name {
+  color: var(--gold);
+}
+
+/* Wheel has an active direction: fade out unselected slots */
+.radial-menu.has-selection .radial-slot:not(.selected) {
+  opacity: 0.45;
+  transition: opacity 0.12s ease;
+}
+
+.radial-menu.has-selection .radial-slot.selected {
+  transform: scale(1.08);
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+
+/* ─── Radial wheel slot internals ────────────────────────────────────── */
+
+/* Icon container — fixed size so PNG fills correctly */
+.r-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+/* Make the PNG img fill the icon box */
+.r-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+/* Empty slot: subtle outline, no content */
+.r-icon:empty {
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Empty name label */
+.r-name.r-empty {
+  color: var(--muted);
+  opacity: 0.45;
+  font-style: italic;
+}
+
+/* Cooldown badge — shows remaining seconds next to the slot */
+.r-cd {
+  display: none;
+  font: 900 10px/1 var(--font-mono);
+  color: #fff;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.9);
+}
+
+.r-cd.r-cd-active {
+  display: block;
+  color: var(--gold);
+}
+
+/* On-cooldown state: dim the icon + name */
+.radial-slot.r-on-cd .r-icon {
+  filter: grayscale(80%) brightness(35%);
+}
+
+.radial-slot.r-on-cd .r-name {
+  opacity: 0.4;
+}
+
+/* Selected slot on cooldown: still highlight but keep dim hint */
+.radial-slot.selected.r-on-cd .r-icon {
+  filter: grayscale(40%) brightness(60%);
 }
 
 /* Settings, pause, scoreboard, respawn */
@@ -2982,6 +3156,32 @@ button.locked {
   font: 900 54px/1 var(--font-hud);
 }
 
+#respawn p {
+  margin: 4px 0;
+  color: var(--text-soft);
+  font: 800 13px/1.5 var(--font-mono);
+}
+
+#respawn #respawn-sec {
+  color: var(--gold);
+  font-weight: 900;
+}
+
+#respawn #respawn-killer {
+  color: var(--muted);
+  font: 800 11px/1 var(--font-mono);
+  text-transform: uppercase;
+}
+
+#respawn .tips {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font: 800 11px/1.5 var(--font-mono);
+  text-align: left;
+}
+
 /* Feedback overlays */
 #server-toast,
 #hint {
@@ -2997,6 +3197,58 @@ button.locked {
   color: var(--text);
   font: 900 11px/1 var(--font-mono);
   text-transform: uppercase;
+}
+
+/* Server toast severity states */
+#server-toast.warn {
+  border-color: rgba(255, 210, 96, 0.4);
+  color: var(--gold);
+}
+
+#server-toast.error {
+  border-color: rgba(255, 51, 68, 0.5);
+  color: var(--danger);
+}
+
+#server-toast.info {
+  border-color: rgba(0, 208, 255, 0.35);
+  color: #00d0ff;
+}
+
+/* Resource flash: bar flashes red when ability fails due to cost */
+#hud-mana.flash-cost,
+#hud-stam.flash-cost {
+  animation: resource-flash 0.4s ease-out;
+}
+
+@keyframes resource-flash {
+  0%   { filter: brightness(1) drop-shadow(0 0 0 transparent); }
+  40%  { filter: brightness(2.2) drop-shadow(0 0 6px rgba(255, 51, 68, 0.8)); }
+  100% { filter: brightness(1) drop-shadow(0 0 0 transparent); }
+}
+
+/* GCD ring pulse on GCD-blocked activation */
+#gcd-ring.pulse {
+  animation: gcd-pulse 0.3s ease-out forwards;
+}
+
+@keyframes gcd-pulse {
+  0%   { transform: translate(-50%, -50%) scale(1);   opacity: 0.8; }
+  50%  { transform: translate(-50%, -50%) scale(1.35); opacity: 1;   }
+  100% { transform: translate(-50%, -50%) scale(1);   opacity: 0.38; }
+}
+
+/* Status strip CC-lock: shake to signal crowd-control */
+#status-strip.cc-locked {
+  animation: cc-shake 0.5s ease;
+}
+
+@keyframes cc-shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-5px); }
+  45% { transform: translateX(5px); }
+  70% { transform: translateX(-3px); }
+  90% { transform: translateX(2px); }
 }
 
 #debug {
@@ -3027,6 +3279,244 @@ button.locked {
   pointer-events: none;
 }
 
+/* ================================================================
+   VISUAL FEEDBACK OVERLAYS
+   All elements are full-viewport, transparent by default.
+   ================================================================ */
+
+/* ── Directional hit indicators ─────────────────────────────────── */
+.hit-dir {
+  position: fixed;
+  z-index: 730;
+  opacity: 0;
+}
+
+.hit-dir[data-dir="top"] {
+  top: 0; left: 0; right: 0;
+  height: 120px;
+  background: linear-gradient(to bottom, rgba(255, 30, 30, 0.55), transparent);
+}
+
+.hit-dir[data-dir="bottom"] {
+  bottom: 0; left: 0; right: 0;
+  height: 120px;
+  background: linear-gradient(to top, rgba(255, 30, 30, 0.55), transparent);
+}
+
+.hit-dir[data-dir="left"] {
+  top: 0; left: 0; bottom: 0;
+  width: 120px;
+  background: linear-gradient(to right, rgba(255, 30, 30, 0.55), transparent);
+}
+
+.hit-dir[data-dir="right"] {
+  top: 0; right: 0; bottom: 0;
+  width: 120px;
+  background: linear-gradient(to left, rgba(255, 30, 30, 0.55), transparent);
+}
+
+.hit-dir.flash {
+  animation: hit-dir-flash 0.45s ease-out forwards;
+}
+
+@keyframes hit-dir-flash {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ── Damage flash (red screen edge when hit) ────────────────────── */
+/* Uses add→reflow→remove pattern: transition-based (no animation) */
+#damage-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 731;
+  opacity: 0;
+  background: radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(200, 0, 0, 0.55) 100%);
+  /* Slow fade-out when .active is removed */
+  transition: opacity 0.5s ease-out;
+}
+
+#damage-flash.active {
+  opacity: 1;
+  /* Instant show when .active is added */
+  transition: opacity 0s;
+}
+
+/* ── Shoot flash (brief centre glow on firing) ──────────────────── */
+/* Uses remove→reflow→add pattern: animation-based */
+#shoot-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 570;
+  opacity: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.18) 0%, transparent 60%);
+}
+
+#shoot-flash.fire {
+  animation: opacity-flash 0.22s ease-out forwards;
+}
+
+/* ── Parry flash (teal burst when parry lands) ──────────────────── */
+/* Uses add→reflow→remove pattern: transition-based */
+#parry-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 730;
+  opacity: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(100, 220, 255, 0.3) 0%, transparent 55%);
+  transition: opacity 0.4s ease-out;
+}
+
+#parry-flash.active {
+  opacity: 1;
+  transition: opacity 0s;
+}
+
+/* ── Heal flash (green glow from below) ─────────────────────────── */
+/* Uses add→reflow→remove pattern: transition-based */
+#heal-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 729;
+  opacity: 0;
+  background: radial-gradient(ellipse at 50% 120%, rgba(80, 255, 140, 0.4) 0%, transparent 55%);
+  transition: opacity 0.55s ease-out;
+}
+
+#heal-flash.active {
+  opacity: 1;
+  transition: opacity 0s;
+}
+
+/* ── Combo flash (golden burst at screen center) ────────────────── */
+/* Uses add→reflow→remove pattern: transition-based */
+#combo-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 728;
+  opacity: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 210, 96, 0.38) 0%, transparent 50%);
+  transition: opacity 0.5s ease-out;
+}
+
+#combo-flash.active {
+  opacity: 1;
+  transition: opacity 0s;
+}
+
+/* Shared animation for opacity-only flashes */
+@keyframes opacity-flash {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ── Low HP vignette (pulsing red border) ───────────────────────── */
+#low-hp-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 725;
+  opacity: 0;
+  background: radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(180, 0, 0, 0.55) 100%);
+  transition: opacity 0.4s ease;
+}
+
+#low-hp-vignette.active {
+  opacity: 1;
+  animation: hp-warn-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes hp-warn-pulse {
+  0%, 100% { opacity: 0.65; }
+  50%       { opacity: 1; }
+}
+
+/* ── Blind vignette (black ink wipe) ────────────────────────────── */
+#blind-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 726;
+  opacity: 0;
+  background: rgba(0, 0, 0, 0.82);
+  transition: opacity 0.25s ease;
+}
+
+#blind-vignette.active {
+  opacity: 1;
+}
+
+/* ── Death overlay (full black dim — separate from respawn UI) ───── */
+#death-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 724;
+  opacity: 0;
+  background: rgba(0, 0, 0, 0.55);
+  transition: opacity 0.35s ease;
+}
+
+#death-overlay.active {
+  opacity: 1;
+}
+
+/* ── Weapon swap banner ─────────────────────────────────────────── */
+#weapon-banner {
+  position: fixed;
+  left: 50%;
+  top: calc(50% - 72px);
+  z-index: 732;
+  transform: translateX(-50%) translateY(-8px);
+  padding: 6px 18px;
+  border: 1px solid rgba(255, 210, 96, 0.35);
+  border-radius: 6px;
+  background: rgba(8, 10, 18, 0.85);
+  color: var(--gold);
+  font: 900 16px/1 var(--font-hud);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#weapon-banner.active {
+  animation: weapon-banner-show 1.2s ease-out forwards;
+}
+
+@keyframes weapon-banner-show {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+  15%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  70%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+}
+
+/* ── Combo popup (combo proc label) ────────────────────────────── */
+#combo-popup {
+  position: fixed;
+  left: 50%;
+  top: calc(50% - 100px);
+  z-index: 733;
+  transform: translateX(-50%);
+  color: var(--gold);
+  font: 900 18px/1 var(--font-hud);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 0 0 12px rgba(255, 210, 96, 0.7), 0 2px 8px #000;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#combo-popup.pop {
+  animation: combo-pop 0.9s ease-out forwards;
+}
+
+@keyframes combo-pop {
+  0%   { opacity: 0; transform: translateX(-50%) scale(0.8) translateY(6px); }
+  18%  { opacity: 1; transform: translateX(-50%) scale(1.08) translateY(0); }
+  55%  { opacity: 1; transform: translateX(-50%) scale(1) translateY(-4px); }
+  100% { opacity: 0; transform: translateX(-50%) scale(0.95) translateY(-12px); }
+}
+
+/* ── Damage / combat popups ─────────────────────────────────────── */
+
 #popups {
   position: fixed;
   inset: 0;
@@ -3038,6 +3528,37 @@ button.locked {
   color: var(--gold);
   font: 900 22px/1 var(--font-hud);
   text-shadow: 0 2px 10px #000;
+  animation: popup-float 0.9s ease-out forwards;
+  white-space: nowrap;
+}
+
+@keyframes popup-float {
+  0%   { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-42px); }
+}
+
+/* Inbound damage: red, floats up */
+.popup.inbound {
+  color: var(--danger);
+  font-size: 18px;
+}
+
+/* Parried: dimmed, smaller */
+.popup.parried {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* Big hit: larger, brighter */
+.popup.big {
+  font-size: 28px;
+  color: #fff;
+  text-shadow: 0 0 16px var(--gold), 0 2px 12px #000;
+}
+
+/* Air-punish: teal */
+.popup.air-punish {
+  color: #9adfff;
 }
 
 /* ================================================================
@@ -3742,4 +4263,434 @@ button.locked {
 /* Separatori verticali */
 .profile-card-floating > .pc-sep {
   height: clamp(28px, 2.8vh, 48px);
+}
+
+/* ================================================================
+   STATUS OVERLAY — kill-fade keyframe (used inline by status-overlay.ts)
+   ================================================================ */
+
+@keyframes kill-fade {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ================================================================
+   SCOREBOARD — renderScoreboard() output classes
+   ================================================================ */
+
+/* Shell: fills #scoreboard (position: fixed; inset: 0; display: grid; place-items: center) */
+.scoreboard-shell {
+  width: min(860px, 94vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  backdrop-filter: blur(18px);
+}
+
+/* Header: arena / WIN text on left, match meta on right */
+.sb-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sb-winner {
+  color: var(--gold);
+  font: 800 11px/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 6px;
+}
+
+.sb-title {
+  font: 900 54px/1 var(--font-hud);
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.sb-title .ele {
+  color: var(--gold);
+}
+
+.sb-meta {
+  text-align: right;
+  color: var(--text-soft);
+  font: 800 12px/1.7 var(--font-mono);
+  text-transform: uppercase;
+}
+
+.sb-meta b {
+  color: var(--text);
+  font-size: 18px;
+  font-family: var(--font-hud);
+}
+
+/* Body: two player columns with VS in the middle */
+.sb-body {
+  display: flex;
+  gap: 0;
+  align-items: stretch;
+}
+
+.sb-player {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.sb-player.lose {
+  opacity: 0.7;
+  border-color: rgba(145, 170, 220, 0.08);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.sb-nm {
+  font: 900 24px/1 var(--font-hud);
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+.sb-tag {
+  color: var(--muted);
+  font: 800 10px/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 12px;
+}
+
+.sb-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(145, 170, 220, 0.07);
+  font: 800 12px/1 var(--font-mono);
+}
+
+.sb-row .l {
+  color: var(--text-soft);
+  text-transform: uppercase;
+}
+
+.sb-row .v {
+  color: var(--text);
+  font: 900 14px/1 var(--font-hud);
+}
+
+.sb-row.sub {
+  padding-left: 10px;
+  opacity: 0.75;
+}
+
+.sb-row.sub .l {
+  font-size: 11px;
+}
+
+.sb-abilities-header {
+  color: var(--gold);
+  font: 800 9px/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 10px 0 4px;
+}
+
+.sb-vs {
+  flex: 0 0 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 900 18px/1 var(--font-hud);
+  color: var(--muted);
+}
+
+/* Footer: ELO + key hints */
+.sb-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.sb-elo {
+  color: var(--text-soft);
+  font: 800 12px/1 var(--font-mono);
+  text-transform: uppercase;
+}
+
+.sb-elo b {
+  color: var(--gold);
+  font-family: var(--font-hud);
+  font-size: 16px;
+}
+
+.sb-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.sb-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-soft);
+  font: 800 10px/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sb-chip.primary {
+  border-color: rgba(255, 210, 96, 0.35);
+  background: var(--gold-soft);
+  color: var(--gold);
+}
+
+/* ================================================================
+   DEATHCAM — renderDeathcam() output classes
+   ================================================================ */
+
+/* Shell: covers full viewport (escapes the grid-centering of #respawn) */
+.deathcam-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 701;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+/* Atmospheric silhouette + glow behind content */
+.dc-killer-silhouette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 55% 90% at 50% 115%, rgba(180, 20, 20, 0.18) 0%, transparent 65%),
+    linear-gradient(to top, rgba(180, 20, 20, 0.12) 0%, transparent 40%);
+  pointer-events: none;
+}
+
+.dc-killer-glow {
+  position: absolute;
+  bottom: -80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 300px;
+  background: radial-gradient(ellipse at center, rgba(220, 30, 30, 0.18), transparent 65%);
+  pointer-events: none;
+  filter: blur(12px);
+}
+
+/* Main overlay content */
+.dc-overlay {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 0 20px;
+  width: min(700px, 94vw);
+}
+
+/* Banner: ELIMINATED + killer info */
+.dc-banner {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dc-eliminated {
+  font: 900 72px/1 var(--font-hud);
+  text-transform: uppercase;
+  color: var(--danger);
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 40px rgba(255, 51, 68, 0.5), 0 2px 24px rgba(0, 0, 0, 0.8);
+}
+
+.dc-by {
+  font: 800 13px/1.6 var(--font-mono);
+  text-transform: uppercase;
+  color: var(--text-soft);
+  letter-spacing: 0.08em;
+}
+
+.dc-by b {
+  color: var(--text);
+  font-family: var(--font-hud);
+  font-size: 20px;
+  font-weight: 900;
+  display: block;
+  margin: 4px 0 6px;
+}
+
+.dc-tape {
+  display: inline-block;
+  padding: 3px 12px;
+  background: rgba(255, 51, 68, 0.14);
+  border: 1px solid rgba(255, 51, 68, 0.3);
+  border-radius: 3px;
+  color: #ff8a93;
+  font: 800 11px/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Bottom stat cards */
+.dc-bottom {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.dc-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+}
+
+.dc-card.death {
+  border-color: rgba(255, 51, 68, 0.28);
+  background: rgba(255, 51, 68, 0.06);
+}
+
+.dc-card .l {
+  color: var(--muted);
+  font: 800 9px/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.dc-card .v {
+  font: 900 24px/1 var(--font-hud);
+  color: var(--text);
+}
+
+.dc-card .v.blood {
+  color: var(--danger);
+}
+
+.dc-card .v.brass {
+  color: var(--gold);
+}
+
+.dc-card .meta {
+  color: var(--text-soft);
+  font: 800 10px/1.3 var(--font-mono);
+  text-transform: uppercase;
+}
+
+/* Skip hint */
+.dc-replay {
+  position: absolute;
+  bottom: 24px;
+  right: 28px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font: 800 11px/1 var(--font-mono);
+  text-transform: uppercase;
+}
+
+.dc-replay .k {
+  display: inline-grid;
+  place-items: center;
+  min-width: 32px;
+  height: 22px;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  background: var(--gold-soft);
+  color: var(--gold);
+  font: 900 10px/1 var(--font-mono);
+}
+
+/* Watermark */
+.dc-watermark {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(145, 170, 220, 0.18);
+  font: 800 10px/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ================================================================
+   KEYBIND BUTTON — listening state (waiting for key press)
+   ================================================================ */
+
+@keyframes listen-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 210, 96, 0.4); }
+  50%       { box-shadow: 0 0 0 4px rgba(255, 210, 96, 0.15); }
+}
+
+.keybind-btn.listening {
+  border-color: var(--gold);
+  background: rgba(255, 210, 96, 0.18);
+  color: var(--text);
+  animation: listen-pulse 1s ease-in-out infinite;
+}
+
+/* ================================================================
+   LOADOUT STATION — build-locked state
+   ================================================================ */
+
+/* When in-combat build lock is active: tint the pool and add warning */
+#loadout-station.build-locked #ls-pool {
+  pointer-events: none;
+  opacity: 0.55;
+  filter: saturate(0.4);
+  position: relative;
+}
+
+#loadout-station.build-locked #ls-pool::after {
+  content: 'LOCKED IN COMBAT';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 900 18px/1 var(--font-hud);
+  text-transform: uppercase;
+  color: var(--danger);
+  letter-spacing: 0.12em;
+  background: rgba(255, 51, 68, 0.06);
+  border: 1px solid rgba(255, 51, 68, 0.2);
+  border-radius: var(--radius);
+  pointer-events: none;
+  z-index: 10;
 }

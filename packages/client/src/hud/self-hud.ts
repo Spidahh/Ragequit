@@ -12,7 +12,7 @@ const RESPAWN_TIPS: readonly string[] = [
   'Class mechanic: each class has a unique combat resource — Fury, Momentum, Risonanza, or Flow.',
   'Burn + Chill: Steam explosion combo.',
   'Poison + Bleed: Festering doubles damage-over-time effects.',
-  'Space: hold for a higher jump, release early for a short hop.',
+  'Space: fixed tap-height jump; holding Space does not add height.',
   'Sprint momentum: sustained running grants a small speed boost.',
   'Staff M1: instant low-cost projectile pressure.',
   'Air launches pressure aim and positioning; keep fighting while you recover.',
@@ -149,7 +149,7 @@ export function initSelfHud({
     // completed (index wrapped back to start), so all 3 dots should light up.
     const delivered = live && nextIdx === 0 ? 3 : nextIdx
     for (let i = 0; i < 3; i++) {
-      comboDots[i]?.classList.toggle('on', live && i < delivered)
+      comboDots[i]?.classList.toggle('active', live && i < delivered)
     }
     hudComboEl.classList.toggle('full', live && delivered === 3)
 

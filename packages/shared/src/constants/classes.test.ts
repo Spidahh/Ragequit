@@ -112,10 +112,10 @@ describe('ability slot family and class legality', () => {
     )
   })
 
-  it('validates the starter build family budgets for all four classes', () => {
-    // Verify each starter build satisfies its class slot budget.
-    // These are the same builds used in CLASS_STARTER_PRESETS and DEFAULT_LOADOUT.
-    const starters: Record<string, string[]> = {
+  it('validates the preset build family budgets for all four classes', () => {
+    // Verify each preset build satisfies its class slot budget.
+    // These are the same builds used by the client presets and DEFAULT_LOADOUT.
+    const presets: Record<string, string[]> = {
       tank: [
         'uppercut',
         'gap_closer',
@@ -158,7 +158,7 @@ describe('ability slot family and class legality', () => {
       ],
     }
 
-    for (const [classId, build] of Object.entries(starters)) {
+    for (const [classId, build] of Object.entries(presets)) {
       // 1. All abilities are legal for this class
       for (const id of build) {
         expect(
@@ -183,7 +183,7 @@ describe('ability slot family and class legality', () => {
       }
 
       // 3. Exactly 8 slots (no duplicates counted, but length matters)
-      expect(build.length, `${classId} starter must be 8 slots`).toBe(TARGET_LOADOUT_SLOT_COUNT)
+      expect(build.length, `${classId} preset must be 8 slots`).toBe(TARGET_LOADOUT_SLOT_COUNT)
     }
   })
 })

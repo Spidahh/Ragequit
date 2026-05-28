@@ -23,7 +23,7 @@ status: current
 | Key      | Action                                                         |
 | -------- | -------------------------------------------------------------- |
 | WASD     | Movement (sprint is always on — no Shift)                      |
-| Space    | Jump (tap = short, hold = higher)                              |
+| Space    | Jump (fixed tap-height impulse; hold adds no extra height)      |
 | Q (hold) | Open **Utility Wheel** — utility/recovery slots from the chosen class build |
 | E (hold) | Open **Weapon Wheel** — melee/bow ability slots from the chosen class build |
 | Tab      | Cycle equipped weapon (rebindable)                             |
@@ -33,11 +33,11 @@ status: current
 
 - Wheel opens when the key is pressed and closes on release
 - Mouse direction selects the sector; releasing the key primes that action
-- Releasing the wheel key primes the selected action; M1 fires the primed ability (instant → casts immediately; preview → opens placement preview and then M1 confirms)
+- Releasing the wheel key primes the selected action; M1 fires direct abilities or opens placement for point-target abilities, then M1 confirms the target point.
 - For placement abilities primed via wheel: the preview ground circle appears on the FIRST M1 press after priming; a SECOND M1 press confirms the cast. Releasing Q/E alone does not show the preview — it only primes.
 - Direct hotkeys `1-5` are for magic slots (`magicBase`/`magicAdvanced`) only
-  and bypass the wheel prime step. Instant abilities cast immediately on
-  keypress; placement abilities open the preview immediately on keypress, then
+  and bypass the wheel prime step. Direct abilities cast immediately on
+  keypress; point-target abilities open placement immediately on keypress, then
   M1 confirms.
 - Movement is not blocked while holding Q/E (10% speed reduction while any key is held for readability; does not prevent ability firing)
 - The game does NOT pause while a wheel is open — server clock keeps running. Visual UI dims the world for focus.
@@ -63,11 +63,11 @@ The consolidated keyboard layout is:
 If a magic direct bind needs Staff and another weapon is currently equipped, pressing the direct bind performs two sequential actions:
 
 1. Switch weapon to the ability's required weapon
-2. Cast the ability immediately (instant) or open its placement preview (non-instant)
+2. Cast the ability immediately when it is direct, or open placement when it is point-targeted.
 
-For **instant abilities** the swap and cast happen in the same server tick — imperceptible to the player. For **preview abilities** the swap completes first, then the placement preview opens; M1 confirms.
+For **direct abilities** the swap and cast happen in the same server tick when server checks pass. For **point-target abilities** the swap completes first, then placement opens; M1 confirms.
 
-**Example**: sword equipped. Press `2` for an instant staff spell → staff is equipped and the ability casts in the same frame if all server checks pass. Press `2` for a non-instant placement spell → staff equips first, then the preview circle appears; M1 confirms placement.
+**Example**: sword equipped. Press `2` for a direct staff spell -> staff is equipped and the ability casts in the same frame if all server checks pass. Press `2` for a point-target spell -> staff equips first, then the placement circle appears; M1 confirms placement.
 
 - No swap penalty (no cast delay from the swap itself)
 - No stamina/mana cost from the swap

@@ -1,16 +1,5 @@
 import { getClassSlotOrder } from '@ragequit/shared'
-import type { AbilitySlot, ClientLoadoutMessage, ClassId } from '@ragequit/shared'
-
-export const LOADOUT_SLOT_ORDER: readonly AbilitySlot[] = [
-  'melee',
-  'bow',
-  'magic',
-  'magic',
-  'magic',
-  'magic',
-  'utility',
-  'utility',
-]
+import type { ClientLoadoutMessage, ClassId } from '@ragequit/shared'
 
 /** Pads or trims the slot array to exactly 8 entries. No injection occurs. */
 export function normalizeLoadoutSlots(slots: readonly string[]): string[] {
@@ -24,7 +13,6 @@ export function normalizeLoadoutSlots(slots: readonly string[]): string[] {
  */
 export function buildLoadoutMessage(
   slots: readonly string[],
-  instantCast?: Record<string, boolean>,
   classId?: string,
 ): ClientLoadoutMessage {
   const resolvedClassId = (classId ?? 'hybrid') as ClassId
@@ -65,6 +53,5 @@ export function buildLoadoutMessage(
     magicBase,
     magicAdvanced,
     utility,
-    ...(instantCast ? { instantCast } : {}),
   }
 }

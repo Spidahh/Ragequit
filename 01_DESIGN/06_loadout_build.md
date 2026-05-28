@@ -24,7 +24,7 @@ Utility slots are legal utility choices. There are no passive systems, extra slo
 
 ## Recovery
 
-Every starter build includes exactly one class Recovery:
+Every preset build includes exactly one class Recovery:
 
 | Class   | Recovery       |
 | ------- | -------------- |
@@ -67,9 +67,9 @@ The Forge must show the whole build at once:
 
 The UI must make slot legality obvious before the player reads descriptions. Forbidden families are not shown as selectable dead space.
 
-## Starter Builds
+## Preset Builds
 
-Starter builds are teaching builds, not ranked recommendations.
+Preset builds are teaching builds, not ranked recommendations.
 
 ### Tank
 

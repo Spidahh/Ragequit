@@ -11,7 +11,7 @@ Utility is a class-legal slot family. It contains recovery, movement, protection
 | Mago    | Arcane Rebind  | Spend Mana and cast a visible heal                                     |
 | Ibrido  | Adaptive Mend  | Fast lower-peak heal                                                   |
 
-Every starter build includes its class Recovery.
+Every preset build includes its class Recovery.
 
 ## Utility Pool
 

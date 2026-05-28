@@ -137,21 +137,18 @@ export function initCooldownStrip(
 
     const weaponSection = document.createElement('div')
     weaponSection.className = 'hotbar-section ability-section'
-    weaponSection.innerHTML = '<div class="hotbar-title"><span>E</span><b>Weapon Wheel</b></div>'
     const weaponRail = document.createElement('div')
     weaponRail.className = 'hotbar-rail'
     weaponSection.appendChild(weaponRail)
 
     const spellSection = document.createElement('div')
     spellSection.className = 'hotbar-section spell-section'
-    spellSection.innerHTML = '<div class="hotbar-title"><span>1-5</span><b>Spells</b></div>'
     const spellRail = document.createElement('div')
     spellRail.className = 'hotbar-rail'
     spellSection.appendChild(spellRail)
 
     const utilitySection = document.createElement('div')
     utilitySection.className = 'hotbar-section utility-section'
-    utilitySection.innerHTML = '<div class="hotbar-title"><span>Q</span><b>Utility Wheel</b></div>'
     const utilityRail = document.createElement('div')
     utilityRail.className = 'hotbar-rail'
     utilitySection.appendChild(utilityRail)
@@ -191,18 +188,15 @@ export function initCooldownStrip(
 
       const icon = abilityIconMarkup(id)
       pip.innerHTML = `
+        <span class="ability-icon">${icon}</span>
+        <span class="label">${meta.label}</span>
         <svg class="cd-arc" viewBox="0 0 44 44" width="44" height="44">
-          <circle class="cd-arc-bg" cx="22" cy="22" r="${CD_ARC_R}"/>
-          <circle class="cd-arc-fill" cx="22" cy="22" r="${CD_ARC_R}"
+          <circle class="cd-arc-bg" cx="22" cy="22" r="${CD_ARC_R}" fill="none"/>
+          <circle class="cd-arc-fill" cx="22" cy="22" r="${CD_ARC_R}" fill="none"
             stroke-dasharray="${CD_ARC_CIRC}" stroke-dashoffset="${CD_ARC_CIRC}"
             transform="rotate(-90 22 22)"/>
         </svg>
-        <span class="label">${meta.label}</span>
-        <span class="ability-icon">${icon}</span>
-        <span class="ability-name">${def?.name ?? id}</span>
-        <span class="cd-timer">-</span>
-        ${hasMana ? '<span class="cost-dot mana"></span>' : ''}
-        ${hasStamina ? '<span class="cost-dot stam"></span>' : ''}
+        <span class="cd-timer"></span>
         <div class="ability-tooltip">
           <div class="tt-name">${icon} <span>${def?.name ?? id}</span></div>
           <div class="tt-el">${elemLabel}${cdLabel ? ' · ' + cdLabel : ''}</div>
@@ -219,9 +213,9 @@ export function initCooldownStrip(
         .appendChild(pip)
       pipEls.set(id, pip)
     }
-    root.appendChild(weaponSection)
-    root.appendChild(spellSection)
-    root.appendChild(utilitySection)
+    if (weaponRail.children.length > 0) root.appendChild(weaponSection)
+    if (spellRail.children.length > 0) root.appendChild(spellSection)
+    if (utilityRail.children.length > 0) root.appendChild(utilitySection)
   }
 
   function markPending(abilityId: string): void {

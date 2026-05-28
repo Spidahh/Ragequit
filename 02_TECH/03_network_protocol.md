@@ -27,7 +27,7 @@ status: current
 | --------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | `input`         | `{ tick, seq, moveX, moveZ, yaw, pitch, jump, jumpHold, m1, m2 }` | Movement intent; server echoes processed seq through player schema                              |
 | `swing`         | `{ atTick, yaw }`                                                 | Sword M1 rising edge                                                                            |
-| `cast`          | `{ abilityId, atTick, targetYaw?, targetPitch?, targetPoint? }`   | Instant direct casts, LMB-fired primed wheel abilities, and LMB-confirmed placement previews    |
+| `cast`          | `{ abilityId, atTick, targetYaw?, targetPitch?, targetPoint? }`   | Direct casts, LMB-fired primed wheel abilities, and LMB-confirmed point-target placement casts   |
 | `weaponSwap`    | `{ weapon, atTick }`                                              | `sword`, `bow`, or `staff`                                                                      |
 | `chargeStart`   | `{ atTick }`                                                      | Bow M1 press                                                                                    |
 | `chargeRelease` | `{ atTick, yaw, pitch }`                                          | Bow M1 release                                                                                  |
@@ -37,7 +37,7 @@ status: current
 | `loadoutSet`    | Class-aware loadout payload                                       | Server validates class legality, slot family membership, duplicates, cost and cooldown surfaces |
 | `heartbeat`     | `{ clientTime }`                                                  | Ping/keepalive                                                                                  |
 
-The wheel interaction itself is client-side UI. Releasing Q/E primes a slot; the subsequent LMB either sends `cast` immediately or opens the placement preview for non-instant abilities. Placement previews send `cast` only when LMB confirms the target point.
+The wheel interaction itself is client-side UI. Releasing Q/E primes a slot; the subsequent LMB either sends `cast` immediately for direct abilities or opens placement for `targeting: 'point'`. Placement sends `cast` only when LMB confirms the target point. The loadout payload carries only class id and family arrays; cast mode is not saved.
 
 Server validation clamps `targetPoint` to the ability range and rejects or
 ignores impossible casts after checking loadout membership, locks, cost,

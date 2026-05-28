@@ -40,33 +40,25 @@ export async function upsertPlayer(userId: string, username: string): Promise<vo
 /** Load the saved loadout for a user (returns null if not found). */
 export async function loadLoadout(userId: string): Promise<{
   loadout_data: string[]
-  instant_cast_data: Record<string, boolean>
 } | null> {
   const sb = getSupabase()
   if (!sb) return null
   const { data, error } = await sb
     .from('loadouts')
-    .select('loadout_data, instant_cast_data')
+    .select('loadout_data')
     .eq('user_id', userId)
     .maybeSingle()
   if (error || !data) return null
-  return data as { loadout_data: string[]; instant_cast_data: Record<string, boolean> }
+  return data as { loadout_data: string[] }
 }
 
 /** Persist the current loadout for a user. */
-export async function saveLoadout(
-  userId: string,
-  loadoutData: string[],
-  instantCastData: Record<string, boolean>,
-): Promise<void> {
+export async function saveLoadout(userId: string, loadoutData: string[]): Promise<void> {
   const sb = getSupabase()
   if (!sb) return
   await sb
     .from('loadouts')
-    .upsert(
-      { user_id: userId, loadout_data: loadoutData, instant_cast_data: instantCastData },
-      { onConflict: 'user_id' },
-    )
+    .upsert({ user_id: userId, loadout_data: loadoutData }, { onConflict: 'user_id' })
 }
 
 /** Record a match result and update ELO.

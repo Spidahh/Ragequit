@@ -49,15 +49,12 @@ export const LAG_COMP_BUFFER_MS = 400 as const
 export const LAG_COMP_MAX_COMPENSATE_MS = 200 as const
 
 // --- Weapons list + swap ---------------------------------------------------
-// Three default weapons every player can use. Weapon swap is atomic: 0 delay,
-// cancels any charge/bolt cadence but does NOT affect GCD or cooldowns.
+// Three default weapons every player can use. Weapon swap changes the active
+// weapon immediately, cancels any charge/bolt cadence, and opens the short
+// server-authoritative swap lock window defined in world.ts.
 
 export const WEAPON_IDS = ['sword', 'bow', 'staff'] as const
 export type WeaponId = (typeof WEAPON_IDS)[number]
-
-// Weapon swap is instantaneous per 01_controls.md — there is no swap penalty
-// on auto-swap. We still emit an event on swap so the client can play a VFX.
-export const WEAPON_SWAP_GCD_SEC = 0 as const
 
 // --- Bow M1 ----------------------------------------------------------------
 // Charge 0.3 s minimum → 4 dmg. Full charge 2.0 s → 22 dmg. Linear scaling.

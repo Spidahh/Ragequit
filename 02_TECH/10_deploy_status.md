@@ -43,7 +43,7 @@ Il client può usare Supabase auth anonima se `VITE_SUPABASE_URL` e `VITE_SUPABA
 | Campo | Valore                                |
 | ----- | ------------------------------------- |
 | Stato | Destinazione statica Cloudflare Pages |
-| Build | `apps/web/dist/` (output Vite)        |
+| Build | `packages/client/dist/` (output Vite) |
 | CDN   | Cloudflare Pages                      |
 
 Attualmente il client viene servito localmente via `pnpm dev:client` (Vite dev server su `localhost:5173`).

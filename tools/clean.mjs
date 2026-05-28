@@ -6,7 +6,6 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 
 const targets = [
   'node_modules',
-  'apps/web/dist',
   'packages/client/dist',
   'packages/client/node_modules/.cache',
   'packages/server/dist',

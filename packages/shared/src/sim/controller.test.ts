@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { JUMP_HEIGHT_HOLD_M, JUMP_HEIGHT_TAP_M, MOVE_SPEED_MPS } from '../constants/stats.js'
+import { JUMP_HEIGHT_TAP_M, MOVE_SPEED_MPS } from '../constants/stats.js'
 import { TICK_MS } from '../constants/tick.js'
 import { CAPSULE_HALF_HEIGHT_M, COYOTE_TICKS, GROUND_Y } from '../constants/world.js'
 
@@ -27,10 +27,8 @@ describe('simulatePlayer', () => {
     expect(s.vel.y).toBeCloseTo(0, 4)
   })
 
-  it('moves at MOVE_SPEED_MPS when pressing forward (before momentum bonus kicks in)', () => {
+  it('moves at MOVE_SPEED_MPS when pressing forward', () => {
     const s = makePlayerSimState({ x: 0, y: BASE_Y, z: 20 })
-    // Run for 20 ticks — below MOMENTUM_THRESHOLD_TICKS (30), so no bonus yet.
-    // 20 ticks = 20/60 seconds → expected displacement ≈ MOVE_SPEED_MPS * (20/60).
     const TICKS = 20
     const expectedDisplacement = MOVE_SPEED_MPS * (TICKS * DT)
     for (let i = 0; i < TICKS; i++) {
@@ -59,7 +57,7 @@ describe('simulatePlayer', () => {
     expect(apex - BASE_Y).toBeLessThan(JUMP_HEIGHT_TAP_M + 0.15)
   })
 
-  it('held jump reaches ~JUMP_HEIGHT_HOLD_M apex', () => {
+  it('held jump reaches same apex as tap jump (~JUMP_HEIGHT_TAP_M) because hold to jump is disabled', () => {
     const s = makePlayerSimState({ x: 20, y: BASE_Y, z: -20 })
     s.stamina = 100
     simulatePlayer(s, { ...idle(), jump: true, jumpHold: true }, DT, STATIC_MAP)
@@ -69,8 +67,8 @@ describe('simulatePlayer', () => {
       if (s.pos.y > apex) apex = s.pos.y
       if (s.onGround && i > 10) break
     }
-    expect(apex - BASE_Y).toBeGreaterThan(JUMP_HEIGHT_HOLD_M - 0.2)
-    expect(apex - BASE_Y).toBeLessThan(JUMP_HEIGHT_HOLD_M + 0.2)
+    expect(apex - BASE_Y).toBeGreaterThan(JUMP_HEIGHT_TAP_M - 0.15)
+    expect(apex - BASE_Y).toBeLessThan(JUMP_HEIGHT_TAP_M + 0.15)
   })
 
   it('blocks horizontal movement into a box', () => {

@@ -1,14 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { LOADOUT_SLOT_ORDER, buildLoadoutMessage, normalizeLoadoutSlots } from './loadout-slots.js'
+import { buildLoadoutMessage, normalizeLoadoutSlots } from './loadout-slots.js'
 
 describe('loadout slot helpers', () => {
-  it('keeps the flat loadout order at 8 slots', () => {
-    expect(LOADOUT_SLOT_ORDER).toHaveLength(8)
-  })
-
   it('builds the class-aware envelope by classifying abilities by target family', () => {
-    // Hybrid starter build — abilities classified by getAbilitySlotFamily
+    // Hybrid preset build — abilities classified by getAbilitySlotFamily
     const hybridBuild = [
       'uppercut',
       'marksman_shot',
@@ -19,7 +15,7 @@ describe('loadout slot helpers', () => {
       'adaptive_mend',
       'quick_dash',
     ]
-    expect(buildLoadoutMessage(hybridBuild, undefined, 'hybrid')).toEqual({
+    expect(buildLoadoutMessage(hybridBuild, 'hybrid')).toEqual({
       classId: 'hybrid',
       melee: ['uppercut'],
       bow: ['marksman_shot'],
@@ -28,7 +24,7 @@ describe('loadout slot helpers', () => {
       utility: ['adaptive_mend', 'quick_dash'],
     })
     // Default classId falls back to 'hybrid'
-    expect(buildLoadoutMessage(['quick_dash'], undefined, undefined)['classId']).toBe('hybrid')
+    expect(buildLoadoutMessage(['quick_dash'])['classId']).toBe('hybrid')
   })
 
   it('normalizeLoadoutSlots pads to 8 without injecting abilities', () => {

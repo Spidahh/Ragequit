@@ -81,7 +81,7 @@ The Colyseus monitor is an admin surface, not public gameplay API. It is disable
 | Package | Build output            | Consumer               |
 | ------- | ----------------------- | ---------------------- |
 | shared  | `packages/shared/dist/` | client + server        |
-| client  | `apps/web/dist/`        | browser/static hosting |
+| client  | `packages/client/dist/` | browser/static hosting |
 | server  | `packages/server/dist/` | Node runtime           |
 
 `shared` must be rebuilt when shared types or ability schema change, because client/server import its built package entrypoints.

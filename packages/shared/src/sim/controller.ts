@@ -2,29 +2,20 @@
 // the same outputs on client and server, enabling prediction + reconciliation.
 //
 // Movement scope: flat ground plus static AABBs. No slopes, no moving platforms,
-// no character-character collision (players pass through each other). Jump
-// tap/hold produces JUMP_HEIGHT_TAP_M / JUMP_HEIGHT_HOLD_M respectively.
+// no character-character collision (players pass through each other). Jump is
+// a fixed tap-height impulse; hold-to-jump is intentionally disabled.
 //
 // This function is called once per simulation tick with dt = TICK_MS / 1000.
 // Do NOT call it with variable dt — determinism requires fixed-step.
 
-import {
-  JUMP_COST_STAMINA,
-  JUMP_HEIGHT_HOLD_M,
-  JUMP_HEIGHT_TAP_M,
-  MOVE_SPEED_MPS,
-} from '../constants/stats.js'
-import { TICK_MS } from '../constants/tick.js'
+import { JUMP_COST_STAMINA, JUMP_HEIGHT_TAP_M, MOVE_SPEED_MPS } from '../constants/stats.js'
 import {
   CAPSULE_HALF_HEIGHT_M,
   CAPSULE_HALF_WIDTH_M,
   COYOTE_TICKS,
   GRAVITY_MPS2,
   GROUND_EPSILON_M,
-  JUMP_HOLD_MAX_TICKS,
   MAX_FALL_SPEED_MPS,
-  MOMENTUM_BONUS,
-  MOMENTUM_THRESHOLD_TICKS,
 } from '../constants/world.js'
 
 import type { AABB, PlayerSimState, SimInput, StaticMap, Vec3 } from './types.js'
@@ -42,29 +33,6 @@ export interface MovementCaps {
 
 // Initial vy from vertical-motion equation: v0 = sqrt(2 * g * h).
 const JUMP_TAP_VY = Math.sqrt(2 * GRAVITY_MPS2 * JUMP_HEIGHT_TAP_M)
-
-// Jump-hold reduces effective gravity during the boost window. Factor is
-// derived so that keeping the key held for the full window lifts the apex
-// from h_tap to h_hold. Derivation:
-//   apex = v0*T - 0.5*k*g*T^2 + (v0 - k*g*T)^2 / (2g) = h_hold
-//   → quadratic in u = k*g*T → solve for smaller (physical) root.
-// If h_hold cannot be reached within the hold window, k clamps to 1
-// (no boost); the designer should then shorten JUMP_HOLD_MAX_TICKS or
-// raise JUMP_HEIGHT_HOLD_M / lower gravity.
-function solveJumpHoldGravityFactor(): number {
-  const T = JUMP_HOLD_MAX_TICKS * (TICK_MS / 1000)
-  const g = GRAVITY_MPS2
-  const v0 = JUMP_TAP_VY
-  const c1 = 1 / (2 * g)
-  const c2 = -(0.5 * T + v0 / g)
-  const c3 = v0 * T - (JUMP_HEIGHT_HOLD_M - JUMP_HEIGHT_TAP_M)
-  const disc = c2 * c2 - 4 * c1 * c3
-  if (disc < 0) return 1
-  const u = (-c2 - Math.sqrt(disc)) / (2 * c1)
-  const k = u / (g * T)
-  return Math.max(0, Math.min(1, k))
-}
-const JUMP_HOLD_GRAVITY_FACTOR = solveJumpHoldGravityFactor()
 
 export function makePlayerSimState(spawn: Vec3): PlayerSimState {
   return {
@@ -104,16 +72,8 @@ export function simulatePlayer(
     mz /= mag
   }
 
-  // Momentum accumulator — track consecutive ticks of sustained directional
-  // input. The bonus kicks in after MOMENTUM_THRESHOLD_TICKS (~0.5 s) so
-  // accidental taps don't grant it. Locked movement resets the counter.
-  const hasInput = !locked && mag > 0.05
-  if (hasInput) {
-    state.momentumTicks = Math.min(state.momentumTicks + 1, MOMENTUM_THRESHOLD_TICKS + 1)
-  } else {
-    state.momentumTicks = 0
-  }
-  const momentumMul = state.momentumTicks >= MOMENTUM_THRESHOLD_TICKS ? 1 + MOMENTUM_BONUS : 1
+  // Momentum and hold-to-jump are disabled as per gameplay specification.
+  state.momentumTicks = 0
 
   // Rotate by yaw — forward is -Z, right is +X (three.js convention).
   const cos = Math.cos(input.yaw)
@@ -121,12 +81,10 @@ export function simulatePlayer(
   const worldX = mx * cos + mz * sin
   const worldZ = -mx * sin + mz * cos
 
-  state.vel.x = worldX * MOVE_SPEED_MPS * speedMul * momentumMul
-  state.vel.z = worldZ * MOVE_SPEED_MPS * speedMul * momentumMul
+  state.vel.x = worldX * MOVE_SPEED_MPS * speedMul
+  state.vel.z = worldZ * MOVE_SPEED_MPS * speedMul
 
-  // --- 2. Jump: tap edge + optional hold ------------------------------
-  const rising = state.vel.y > 0
-  const holdActive = input.jumpHold && state.jumpHoldTicksLeft > 0 && rising
+  // --- 2. Jump: static instant tap jump ------------------------------
   const wasOnGround = state.onGround
   const canJump = state.onGround || state.coyoteTicksLeft > 0
   let didJump = false
@@ -134,27 +92,14 @@ export function simulatePlayer(
   if (input.jump && canJump && state.stamina >= JUMP_COST_STAMINA && !locked) {
     state.vel.y = JUMP_TAP_VY
     state.onGround = false
-    state.jumpHoldTicksLeft = JUMP_HOLD_MAX_TICKS
     state.coyoteTicksLeft = 0
     state.stamina = Math.max(0, state.stamina - JUMP_COST_STAMINA)
     didJump = true
-  } else if (holdActive) {
-    state.jumpHoldTicksLeft -= 1
-  } else {
-    // Hold released or no longer rising — end the boost window.
-    state.jumpHoldTicksLeft = 0
   }
+  state.jumpHoldTicksLeft = 0
 
-  // --- 3. Gravity (reduced during hold window) ------------------------
-  // `holdActive` covers all subsequent rising ticks.
-  // `didJump && input.jumpHold` covers the first tick of a jump: `rising`
-  // is evaluated before the impulse so holdActive is false even when
-  // the player is holding jump and just launched off the ground.
-  const effectiveGravity =
-    holdActive || (didJump && input.jumpHold)
-      ? GRAVITY_MPS2 * JUMP_HOLD_GRAVITY_FACTOR
-      : GRAVITY_MPS2
-  state.vel.y -= effectiveGravity * dt
+  // --- 3. Gravity (constant standard gravity) ------------------------
+  state.vel.y -= GRAVITY_MPS2 * dt
   if (state.vel.y < -MAX_FALL_SPEED_MPS) state.vel.y = -MAX_FALL_SPEED_MPS
 
   // --- 4. Integrate position -----------------------------------------

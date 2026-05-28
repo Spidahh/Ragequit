@@ -24,8 +24,7 @@ export interface PlayerSimState {
   pos: Vec3
   vel: Vec3
   onGround: boolean
-  // Ticks remaining in which jumpHold can still add upward impulse. Counts
-  // down automatically while hold is sustained; resets on jump.
+  // Compatibility field replicated as zero. Runtime jump-hold is disabled.
   jumpHoldTicksLeft: number
   // Stamina is read by the controller to gate jumps. Written by a separate
   // regen system, not by the controller itself.
@@ -33,11 +32,8 @@ export interface PlayerSimState {
   // Coyote-time: ticks remaining after walking off a ledge in which a jump
   // is still allowed. Set by the controller, read only for the jump gate.
   coyoteTicksLeft: number
-  // Consecutive ticks of sustained horizontal input. When this reaches
-  // MOMENTUM_THRESHOLD_TICKS the controller grants a MOMENTUM_BONUS speed
-  // multiplier (Quake-inspired feel). Resets when input drops to zero or the
-  // player is CC'd. Client carries it through reconcile from serverState=0
-  // (bonus re-accrues after ~0.5 s of continued movement — imperceptible).
+  // Compatibility field replicated as zero. Runtime base movement has no
+  // generic momentum ramp; class-specific Momentum is separate.
   momentumTicks: number
 }
 
@@ -47,7 +43,7 @@ export interface SimInput {
   moveZ: number // -1..1
   yaw: number // radians
   jump: boolean
-  jumpHold: boolean
+  jumpHold: boolean // accepted for protocol compatibility; currently ignored
 }
 
 export interface StaticMap {

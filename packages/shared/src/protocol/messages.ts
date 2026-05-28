@@ -21,7 +21,7 @@ export interface ClientInputMessage {
   pitch: number
   // Buttons.
   jump: boolean // edge: true only on the tick jump was pressed
-  jumpHold: boolean // continuous: true while the key is held
+  jumpHold: boolean // accepted for protocol compatibility; movement sim ignores hold height
   m1: boolean // left-click: basic attack
   m2: boolean // right-click: parry hold (tap detected by server from edge)
 }
@@ -104,8 +104,6 @@ export interface ClientLoadoutMessage {
   magicBase: string[]
   magicAdvanced: string[]
   utility: string[]
-  /** Per-ability instant-cast flags. Included when sending from loadout station. */
-  instantCast?: Record<string, boolean>
 }
 
 export interface ClientHeartbeatMessage {
