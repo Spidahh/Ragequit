@@ -582,8 +582,8 @@ function rebuildFirstPersonViewModel(weapon: Weapon): void {
         // bow.glb: limbs along local X, riser/arrow-shelf along local Z.
         // Stand it upright (limbs vertical) with Z about -90°, then yaw about Y
         // so the riser/arrow points FORWARD (into the screen, away from camera)
-        // instead of broadside. Held left-of-centre.
-        model.position.set(-0.26, -0.05, -0.6)
+        // instead of broadside. Held just left of centre (not far to the side).
+        model.position.set(-0.12, -0.05, -0.58)
         model.rotation.set(0.0, -Math.PI / 2 + 0.15, -Math.PI / 2 + 0.12)
         model.scale.setScalar(0.42)
       } else if (weapon === 'staff') {

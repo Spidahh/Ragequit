@@ -316,11 +316,14 @@ export function setParryShieldState(
   // Raise/lower the physical shield_A model (sword wielders only — handled inside).
   updateShieldAttachment(charGroup)
 
-  // The translucent magic barrier is ONLY for casters (staff/bow). Sword
-  // wielders block with the physical shield model, so suppress the barrier for
-  // them — otherwise both appear and the physical shield is hidden behind it.
-  const activeWeapon = (charGroup.userData['activeWeaponProp'] as string) ?? 'sword'
-  const usesPhysicalShield = activeWeapon === 'sword'
+  // Suppress the translucent magic barrier ONLY for a real character model that
+  // is wielding a sword (it blocks with the physical shield instead). The
+  // first-person parry shield is a standalone group with NO charModel — it must
+  // always show its barrier, otherwise bow/staff parries have no visual at all
+  // ("the parry doesn't fire").
+  const hasCharModel = !!charGroup.userData['charModel']
+  const activeWeapon = (charGroup.userData['activeWeaponProp'] as string) ?? 'bow'
+  const usesPhysicalShield = hasCharModel && activeWeapon === 'sword'
 
   const shield = charGroup.userData['parryShield'] as THREE.Group | undefined
   if (!shield) return
@@ -356,7 +359,11 @@ export function applyParryArmPose(charGroup: THREE.Group, parrying: boolean, dt:
   if (!model) return
   const prev = (charGroup.userData['parryArmBlend'] as number) ?? 0
   const target = parrying ? 1 : 0
-  const blend = prev + (target - prev) * Math.min(1, dt * 14)
+  // Snap UP fast (≈50 ms) so even a quick tap-parry visibly raises the shield;
+  // ease DOWN a little slower so it doesn't pop. Without the fast rise, brief
+  // parries showed almost no shield motion ("the parry doesn't fire").
+  const rate = parrying ? dt * 45 : dt * 18
+  const blend = prev + (target - prev) * Math.min(1, rate)
   charGroup.userData['parryArmBlend'] = blend
   if (blend < 0.01) return
 
