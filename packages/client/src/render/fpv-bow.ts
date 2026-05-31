@@ -15,15 +15,24 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 
 const BOW_GLB = '/weapons/animated_fps_bow.glb'
 
-// Viewmodel placement in camera space. Tuned live in-browser against the rig:
-// the bow sits lower-left, broad face toward the camera (not edge-on), arrow
-// pointing up toward the crosshair without covering it. The rig's geometry is
-// authored far from its origin (Sketchfab FBX nesting), so these values frame
-// the skinned arms+bow, not a centred mesh — re-tune via screenshots if the GLB
-// is ever replaced.
-const VM_POSITION = new THREE.Vector3(-0.06, -0.49, -0.6)
+// Viewmodel placement in camera space. Tuned live in-browser against the rig so
+// the arms + bow sit close to the eye ("almost attached"), broad face toward the
+// camera, arrow pointing toward the crosshair without covering it. The rig's
+// geometry is authored far from its origin (Sketchfab FBX nesting), so these
+// values frame the skinned arms+bow, not a centred mesh — re-tune via screenshots
+// if the GLB is ever replaced.
+const VM_POSITION = new THREE.Vector3(-0.02, -0.46, -0.5)
 const VM_ROTATION = new THREE.Euler(0, 0, 0.14)
-const VM_SCALE = 0.225
+const VM_SCALE = 0.26
+
+// The rig's relaxed clips (idle/walk/run) hold the bow edge-on — realistic for an
+// archer at rest, but it reads as a thin sliver in first person. We fix it with a
+// 90° yaw applied about the rig's bone centroid so the broad face turns toward the
+// camera; pivoting about the centroid (not the origin) keeps the framing put. The
+// aim/fire clips stay broad-faced under the same correction. CENTROID is the bone
+// centroid in root-local space, captured live; re-measure if the GLB changes.
+const BROAD_FACE_PIVOT = new THREE.Vector3(-0.3317, 0.9372, 0.4673)
+const BROAD_FACE_YAW = Math.PI / 2
 
 export interface FpvBowState {
   moving: boolean
@@ -78,7 +87,17 @@ export function createFpvBow(): FpvBowController {
           ;(m as THREE.MeshStandardMaterial).side = THREE.FrontSide
         }
       })
-      root.add(model)
+      // Broad-face correction: pivot (rotates about the centroid) wraps a recentre
+      // group (offsets the model so the centroid sits at the pivot origin) wraps the
+      // model. Net effect: a 90° yaw of the rig about its own centre.
+      const pivot = new THREE.Group()
+      pivot.position.copy(BROAD_FACE_PIVOT)
+      pivot.rotation.y = BROAD_FACE_YAW
+      const recentre = new THREE.Group()
+      recentre.position.copy(BROAD_FACE_PIVOT).multiplyScalar(-1)
+      recentre.add(model)
+      pivot.add(recentre)
+      root.add(pivot)
 
       mixer = new THREE.AnimationMixer(model)
       for (const clip of gltf.animations) {
