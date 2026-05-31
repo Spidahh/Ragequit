@@ -4,6 +4,22 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 
 import { createOutlineMesh } from '../render/outlines.js'
 
+// ─────────────────────────────────────────────────────────────────────────────
+// VERTICAL COORDINATE SYSTEM (read before touching any *.position.y here)
+// ─────────────────────────────────────────────────────────────────────────────
+// • GROUND_Y = 0 is the world floor. The server physics capsule rests with its
+//   FEET at y=0 and its CENTRE at y=CAPSULE_HALF_HEIGHT (0.9). Characters are
+//   rendered with feet anchored to y≈0 (see characters.ts _installCharacterModel).
+// • The sand fighting floor sits at y≈0 (a hair below, so feet never clip it).
+// • The gladiators_arena.glb is authored with its TERRACE/ARENA FLOOR surface at
+//   local y=+1 (a wide horizontal band at radius 16.7–26.8). It must therefore be
+//   dropped by 1 m (model.position.y = -1) so that floor lands on world y=0 —
+//   i.e. LEVEL with the players' feet. Any other offset makes players look sunk
+//   into a pit (the surrounding coliseum floor rises to their knees/waist) or
+//   makes the floor float above them. Do NOT change the offset without
+//   re-measuring the GLB floor band.
+// ─────────────────────────────────────────────────────────────────────────────
+
 // The ArenaObjects interface returned by buildArena for main.ts.
 export interface ArenaObjects {
   loadMapGeometry: (mapId: string) => boolean
@@ -50,11 +66,12 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
     '/arena/gladiators_arena.glb',
     (gltf) => {
       const model = gltf.scene
-      // The coliseum's inner barrier wall (the gladiator-pit rim) bottoms out at
-      // local Y ≈ 0, so NO offset is needed: the pit floor sits at GROUND_Y = 0
-      // where the sand disc and the characters' feet are. (A previous +1 lift
-      // pushed the whole structure 1 m up, leaving the sand floating mid-arena.)
-      model.position.y = 0
+      // The coliseum's arena/terrace FLOOR surface is at local Y = +1 (a wide
+      // horizontal band, radius 16.7–26.8). To make players stand level with
+      // that floor (instead of in a 1 m-deep pit where the floor reaches their
+      // knees) we drop the whole model by 1 m so its terrace floor lands on
+      // GROUND_Y = 0 — exactly where the sand disc and characters' feet are.
+      model.position.y = -1.0
       // Collect outlines during traversal, attach AFTER — adding a child mesh
       // mid-traverse causes infinite recursion (outline-of-outline).
       const outlines: Array<{ mesh: THREE.Mesh; outline: THREE.Mesh }> = []
