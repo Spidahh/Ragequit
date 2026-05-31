@@ -1,6 +1,6 @@
-import { getAbilitySlotFamily, type SimInput, type Weapon } from '@ragequit/shared'
+import { type SimInput, type Weapon, TARGET_CLASS_DEFS, type ClassId } from '@ragequit/shared'
 
-import { actionCode, matchesAction, type KeybindAction } from './keybinds.js'
+import { actionCode, matchesAction, SLOT_ACTIONS } from './keybinds.js'
 import { type RadialWheelController } from './radial-wheels.js'
 import { type MouseSensitivityController } from './sensitivity.js'
 
@@ -58,7 +58,7 @@ export interface GameInputOptions {
   mouseSensitivity: MouseSensitivityController
   radialWheels: RadialWheelController
   pitchLimits: { up: number; down: number }
-  weaponIds: readonly Weapon[]
+  getCurrentClassId: () => ClassId
   hint: HTMLElement
   pingHud: HTMLElement
   settingsOverlay: HTMLElement
@@ -78,8 +78,9 @@ export interface GameInputOptions {
   openPauseMenu: () => void
   closePauseMenu: (lockPointer: boolean) => void
   cancelPlacementPreview: () => void
-  activateAbilitySlot: (slotIdx: number, fromWheel: boolean) => void
   onClear: () => void
+  /** Fire the ability in hotbar slot `slotIdx` (0-7) via its direct key. */
+  onActivateSlot: (slotIdx: number) => void
 }
 
 export function initGameInput(
@@ -89,7 +90,7 @@ export function initGameInput(
     mouseSensitivity,
     radialWheels,
     pitchLimits,
-    weaponIds,
+    getCurrentClassId,
     hint,
     pingHud,
     settingsOverlay,
@@ -103,14 +104,13 @@ export function initGameInput(
     setLoadoutReturnsToPause,
     getPing,
     getCurrentWeaponForInput,
-    getCurrentLoadout,
     isGameplayInputAllowed,
     canEngageGameplaySurface,
     openPauseMenu,
     closePauseMenu,
     cancelPlacementPreview,
-    activateAbilitySlot,
     onClear,
+    onActivateSlot,
   }: GameInputOptions,
 ): GameInputController {
   function engageCanvasInput(): void {
@@ -176,14 +176,9 @@ export function initGameInput(
       actionCode('wheelUtility'),
       actionCode('wheelAbility'),
       actionCode('openLoadout'),
-      actionCode('spell1'),
-      actionCode('spell2'),
-      actionCode('spell3'),
-      actionCode('spell4'),
-      actionCode('spell5'),
-      actionCode('spell6'),
       actionCode('sensDown'),
       actionCode('sensUp'),
+      ...SLOT_ACTIONS.map((a) => actionCode(a)),
     ]
     return actionCodes.includes(code)
   }
@@ -360,6 +355,17 @@ export function initGameInput(
       // Gated combat actions — only allowed while match phase is 'live'
       if (!isGameplayInputAllowed()) return
 
+      // Direct ability binds (default 1-8): fire the matching hotbar slot.
+      // The wheels remain an alternative radial way to fire the same ability.
+      for (let slotIdx = 0; slotIdx < SLOT_ACTIONS.length; slotIdx++) {
+        if (matchesAction(k, SLOT_ACTIONS[slotIdx]!)) {
+          e.preventDefault()
+          if (radialWheels.isOpen()) radialWheels.close(false)
+          onActivateSlot(slotIdx)
+          return
+        }
+      }
+
       if (matchesAction(k, 'wheelUtility')) {
         e.preventDefault()
         radialWheels.openUtility(k)
@@ -371,18 +377,13 @@ export function initGameInput(
 
       if (matchesAction(k, 'swapWeapon')) {
         e.preventDefault()
-        const cur = getCurrentWeaponForInput() as Weapon
-        const idx = weaponIds.indexOf(cur)
-        state.weaponSwapRequest = weaponIds[(idx + 1) % weaponIds.length] ?? null
-      }
-
-      const spellActions: readonly KeybindAction[] = ['spell1', 'spell2', 'spell3', 'spell4', 'spell5', 'spell6']
-      for (let spellIdx = 0; spellIdx < spellActions.length; spellIdx++) {
-        const action = spellActions[spellIdx]!
-        if (!matchesAction(k, action)) continue
-        const targetSlotIdx = nthMagicSlotIndex(getCurrentLoadout(), spellIdx)
-        if (targetSlotIdx >= 0) activateAbilitySlot(targetSlotIdx, false)
-        break
+        const activeClassId = getCurrentClassId()
+        const allowedWeapons = (TARGET_CLASS_DEFS[activeClassId]?.weapons ?? ['sword']) as readonly Weapon[]
+        if (allowedWeapons.length > 1) {
+          const cur = getCurrentWeaponForInput() as Weapon
+          const idx = allowedWeapons.indexOf(cur)
+          state.weaponSwapRequest = allowedWeapons[(idx + 1) % allowedWeapons.length] ?? null
+        }
       }
     },
     { capture: true },
@@ -502,11 +503,15 @@ export function initGameInput(
     if (shouldIgnoreGameplayPointerTarget(e.target)) return
     e.preventDefault()
     engageCanvasInput()
-    const cur = getCurrentWeaponForInput() as Weapon
-    const idx = weaponIds.indexOf(cur)
-    const dir = e.deltaY > 0 ? 1 : -1
-    const next = weaponIds[(idx + dir + weaponIds.length) % weaponIds.length]
-    state.weaponSwapRequest = next ?? null
+    const activeClassId = getCurrentClassId()
+    const allowedWeapons = (TARGET_CLASS_DEFS[activeClassId]?.weapons ?? ['sword']) as readonly Weapon[]
+    if (allowedWeapons.length > 1) {
+      const cur = getCurrentWeaponForInput() as Weapon
+      const idx = allowedWeapons.indexOf(cur)
+      const dir = e.deltaY > 0 ? 1 : -1
+      const next = allowedWeapons[(idx + dir + allowedWeapons.length) % allowedWeapons.length]
+      state.weaponSwapRequest = next ?? null
+    }
   }
   document.addEventListener('wheel', handleGameplayWheel, { capture: true, passive: false })
 
@@ -539,17 +544,4 @@ export function initGameInput(
   }
 
   return { engageCanvasInput, disengageCanvasInput, requestArenaPointerLock, sampleInput }
-}
-
-function nthMagicSlotIndex(loadout: readonly string[], wantedIdx: number): number {
-  let seen = 0
-  for (let idx = 0; idx < loadout.length; idx++) {
-    const id = loadout[idx]
-    if (!id) continue
-    const family = getAbilitySlotFamily(id)
-    if (family !== 'magicBase' && family !== 'magicAdvanced') continue
-    if (seen === wantedIdx) return idx
-    seen++
-  }
-  return -1
 }

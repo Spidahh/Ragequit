@@ -32,6 +32,11 @@ export class SoundEngine {
     return this.masterGain!
   }
 
+  /** Randomise playbackRate +/- variance to avoid machine-gun effect. */
+  private _pitch(bufSrc: AudioBufferSourceNode, variance = 0.08): void {
+    bufSrc.playbackRate.value = 1 + (Math.random() * 2 - 1) * variance
+  }
+
   get muted(): boolean {
     return this._muted
   }
@@ -70,6 +75,7 @@ export class SoundEngine {
     src.connect(filt)
     filt.connect(gain)
     gain.connect(out)
+    this._pitch(src)
     src.start()
   }
 
@@ -108,6 +114,7 @@ export class SoundEngine {
     src.connect(filt)
     filt.connect(ng)
     ng.connect(out)
+    this._pitch(src)
     src.start()
   }
 
@@ -154,6 +161,7 @@ export class SoundEngine {
     src.connect(filt)
     filt.connect(ng)
     ng.connect(out)
+    this._pitch(src)
     src.start()
   }
 
@@ -198,6 +206,7 @@ export class SoundEngine {
     src.connect(filt)
     filt.connect(ng)
     ng.connect(out)
+    this._pitch(src)
     src.start()
   }
 
@@ -223,6 +232,7 @@ export class SoundEngine {
     src.connect(filt)
     filt.connect(ng)
     ng.connect(out)
+    this._pitch(src)
     src.start()
     // Body resonance.
     const osc = ac.createOscillator()
@@ -273,7 +283,7 @@ export class SoundEngine {
    */
   playHitByType(cause: string, power = 1): void {
     if (cause === 'sword_m1' || cause === 'uppercut') return this.playMeleeThud(power)
-    // bow/staff cause may be suffixed with ':air_punish' or ':chain'.
+    // bow/staff cause may be suffixed (e.g. ':chain').
     if (cause === 'bow' || cause.startsWith('bow:')) return this.playProjectileImpact(power)
     if (cause === 'staff' || cause.startsWith('staff:')) return this.playProjectileImpact(power)
     if (cause.startsWith('zone:') || cause.startsWith('combo:')) return this.playAoeImpact(power)
@@ -313,6 +323,7 @@ export class SoundEngine {
     src.connect(lpf)
     lpf.connect(ng)
     ng.connect(out)
+    this._pitch(src)
     src.start()
   }
 
@@ -337,6 +348,7 @@ export class SoundEngine {
     src.connect(filt)
     filt.connect(ng)
     ng.connect(out)
+    this._pitch(src)
     src.start()
     // Soft resonance.
     const osc = ac.createOscillator()
@@ -370,6 +382,7 @@ export class SoundEngine {
     src.connect(lpf)
     lpf.connect(ng)
     ng.connect(out)
+    this._pitch(src)
     src.start()
   }
 
@@ -509,6 +522,7 @@ export class SoundEngine {
     src.connect(filt)
     filt.connect(gain)
     gain.connect(out)
+    this._pitch(src)
     src.start()
   }
 
@@ -549,11 +563,301 @@ export class SoundEngine {
               : element === 'nature'
                 ? 550
                 : 360
-    gain.gain.setValueAtTime(0.12, ac.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.18)
+  }
+
+  // ─── Spatial audio ───────────────────────────────────────────────────────
+
+  /**
+   * Update the AudioContext listener position (call every frame with camera pos).
+   * yaw: camera rotation Y in radians.
+   */
+  updateListener(x: number, y: number, z: number, yaw: number): void {
+    const ac = this.ctx
+    if (!ac) return
+    const l = ac.listener
+    if (l.positionX) {
+      l.positionX.value = x
+      l.positionY.value = y
+      l.positionZ.value = z
+      l.forwardX.value = -Math.sin(yaw)
+      l.forwardY.value = 0
+      l.forwardZ.value = -Math.cos(yaw)
+      l.upX.value = 0
+      l.upY.value = 1
+      l.upZ.value = 0
+    } else {
+      // Legacy API
+      l.setPosition(x, y, z)
+      l.setOrientation(-Math.sin(yaw), 0, -Math.cos(yaw), 0, 1, 0)
+    }
+  }
+
+  /**
+   * Create a PannerNode at the given world position, connected to masterGain.
+   * Returns an AudioNode to connect sound sources to.
+   * Max distance 40m; beyond that the sound is inaudible.
+   */
+  private _spatialOut(wx: number, wy: number, wz: number): AudioNode {
+    const ac = this.ac
+    const panner = ac.createPanner()
+    panner.panningModel = 'HRTF'
+    panner.distanceModel = 'inverse'
+    panner.refDistance = 3
+    panner.maxDistance = 40
+    panner.rolloffFactor = 1.2
+    if (panner.positionX) {
+      panner.positionX.value = wx
+      panner.positionY.value = wy
+      panner.positionZ.value = wz
+    } else {
+      panner.setPosition(wx, wy, wz)
+    }
+    panner.connect(this.out)
+    return panner
+  }
+
+  /**
+   * Play a spatial hit sound at world position (wx, wy, wz).
+   * Used for remote player impacts — volume and pan based on distance/angle.
+   */
+  playRemoteHit(wx: number, wy: number, wz: number, power = 0.7): void {
+    if (this._muted) return
+    const ac = this.ac
+    const out = this._spatialOut(wx, wy, wz)
+    const len = Math.floor(ac.sampleRate * 0.055)
+    const buf = ac.createBuffer(1, len, ac.sampleRate)
+    const d = buf.getChannelData(0)
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) * 0.7
+    const src = ac.createBufferSource()
+    src.buffer = buf
+    const filt = ac.createBiquadFilter()
+    filt.type = 'bandpass'
+    filt.frequency.value = 600 + power * 400
+    filt.Q.value = 0.6
+    const gain = ac.createGain()
+    gain.gain.setValueAtTime(0.28 + power * 0.35, ac.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.08)
+    src.connect(filt)
+    filt.connect(gain)
+    gain.connect(out)
+    this._pitch(src, 0.1)
+    src.start()
+  }
+
+  /**
+   * Play a spatial cast whoosh at world position.
+   */
+  playRemoteCast(wx: number, wy: number, wz: number, element = 'none'): void {
+    if (this._muted) return
+    const ac = this.ac
+    const out = this._spatialOut(wx, wy, wz)
+    const osc = ac.createOscillator()
+    const gain = ac.createGain()
+    const baseFreq = element === 'fire' ? 180 : element === 'ice' ? 320 : element === 'lightning' ? 480 : 240
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(baseFreq, ac.currentTime)
+    osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.6, ac.currentTime + 0.15)
+    gain.gain.setValueAtTime(0.18, ac.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.25)
     osc.connect(gain)
     gain.connect(out)
     osc.start()
-    osc.stop(ac.currentTime + 0.2)
+    osc.stop(ac.currentTime + 0.28)
   }
+
+  // ─── Low-HP heartbeat ────────────────────────────────────────────────────
+
+  /**
+   * Procedural heartbeat — two short low-frequency pulses (lub-dub).
+   * Call at ~0.5-0.8 Hz when player HP is critically low.
+   */
+  playHeartbeat(intensity = 1.0): void {
+    if (this._muted) return
+    const ac = this.ac
+    const out = this.out
+
+    const playPulse = (delayMs: number, freq: number, gainPeak: number): void => {
+      const t = ac.currentTime + delayMs / 1000
+      const osc = ac.createOscillator()
+      const gain = ac.createGain()
+      osc.type = 'sine'
+      osc.frequency.value = freq
+      gain.gain.setValueAtTime(0, t)
+      gain.gain.linearRampToValueAtTime(gainPeak * intensity, t + 0.028)
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.12)
+      osc.connect(gain)
+      gain.connect(out)
+      osc.start(t)
+      osc.stop(t + 0.14)
+    }
+
+    // lub: lower frequency, louder
+    playPulse(0, 55, 0.32)
+    // dub: slightly higher frequency, softer — like a real heartbeat
+    playPulse(200, 48, 0.22)
+  }
+
+  // ─── Arena ambient ───────────────────────────────────────────────────────
+
+  private _ambientSource: AudioBufferSourceNode | null = null
+  private _ambientGain: GainNode | null = null
+
+  /**
+   * Start a subtle arena ambient loop: low hum + gentle crowd murmur.
+   * Call once when entering a match. Fades in over 2 seconds.
+   */
+  startArenaAmbient(): void {
+    if (this._muted || this._ambientSource) return
+    const ac = this.ac
+    const out = this.out
+
+    // Create ~4 second looping buffer of procedural noise
+    const sampleRate = ac.sampleRate
+    const len = sampleRate * 4
+    const buf = ac.createBuffer(2, len, sampleRate)
+
+    // Left and right channels with slightly different noise for width
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch)
+      let prev = 0
+      for (let i = 0; i < len; i++) {
+        // Brown noise via integration of white noise — low rumble
+        const white = Math.random() * 2 - 1
+        prev = (prev + 0.02 * white) / 1.02
+        // Mix: 70% brown + 5% white for presence
+        d[i] = prev * 0.7 + white * 0.05
+      }
+    }
+
+    const src = ac.createBufferSource()
+    src.buffer = buf
+    src.loop = true
+
+    // Bandpass to keep only 80-400 Hz range (arena rumble)
+    const bandpass = ac.createBiquadFilter()
+    bandpass.type = 'bandpass'
+    bandpass.frequency.value = 160
+    bandpass.Q.value = 0.4
+
+    const gain = ac.createGain()
+    gain.gain.setValueAtTime(0, ac.currentTime)
+    gain.gain.linearRampToValueAtTime(0.08, ac.currentTime + 2.0) // fade in 2s
+
+    src.connect(bandpass)
+    bandpass.connect(gain)
+    gain.connect(out)
+    src.start()
+
+    this._ambientSource = src
+    this._ambientGain = gain
+  }
+
+  /**
+   * Stop the arena ambient loop. Fades out over 1 second.
+   */
+  stopArenaAmbient(): void {
+    const src = this._ambientSource
+    const gain = this._ambientGain
+    if (!src || !gain) return
+    const ac = this.ctx
+    if (!ac) return
+    gain.gain.linearRampToValueAtTime(0, ac.currentTime + 1.0)
+    src.stop(ac.currentTime + 1.1)
+    this._ambientSource = null
+    this._ambientGain = null
+  }
+
+  // ─── Element-specific impact sounds ────────────────────────────────────────
+
+  /**
+   * Play an element-flavored impact sound for ability hits.
+   * Called when a projectile or ability resolves on a target.
+   */
+  playElementImpact(element: string, power = 0.7): void {
+    if (this._muted) return
+    const ac = this.ac
+    const out = this.out
+
+    switch (element) {
+      case 'fire': {
+        // Crackling whoosh — sine sweep + noise
+        const osc = ac.createOscillator()
+        const g = ac.createGain()
+        osc.type = 'sawtooth'
+        osc.frequency.setValueAtTime(180 * power, ac.currentTime)
+        osc.frequency.exponentialRampToValueAtTime(60, ac.currentTime + 0.15)
+        g.gain.setValueAtTime(0.22 * power, ac.currentTime)
+        g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.22)
+        osc.connect(g); g.connect(out)
+        osc.start(); osc.stop(ac.currentTime + 0.25)
+        break
+      }
+      case 'ice': {
+        // Crystalline tinkle — high-freq triangle ring
+        const osc = ac.createOscillator()
+        const g = ac.createGain()
+        osc.type = 'triangle'
+        osc.frequency.setValueAtTime(1400 + Math.random() * 200, ac.currentTime)
+        osc.frequency.exponentialRampToValueAtTime(900, ac.currentTime + 0.18)
+        g.gain.setValueAtTime(0.18 * power, ac.currentTime)
+        g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.28)
+        osc.connect(g); g.connect(out)
+        osc.start(); osc.stop(ac.currentTime + 0.3)
+        break
+      }
+      case 'lightning': {
+        // Sharp electric zap — short noise burst high-passed
+        const len = Math.floor(ac.sampleRate * 0.04)
+        const buf = ac.createBuffer(1, len, ac.sampleRate)
+        const d = buf.getChannelData(0)
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (len * 0.3))
+        const srcN = ac.createBufferSource()
+        srcN.buffer = buf
+        const hp = ac.createBiquadFilter()
+        hp.type = 'highpass'; hp.frequency.value = 2800
+        const g = ac.createGain()
+        g.gain.setValueAtTime(0.35 * power, ac.currentTime)
+        g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.06)
+        srcN.connect(hp); hp.connect(g); g.connect(out)
+        this._pitch(srcN, 0.12)
+        srcN.start()
+        break
+      }
+      case 'dark': {
+        // Deep void thud — low sine with sub-bass
+        const osc = ac.createOscillator()
+        const g = ac.createGain()
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(55 * power, ac.currentTime)
+        osc.frequency.exponentialRampToValueAtTime(28, ac.currentTime + 0.2)
+        g.gain.setValueAtTime(0.3 * power, ac.currentTime)
+        g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.3)
+        osc.connect(g); g.connect(out)
+        osc.start(); osc.stop(ac.currentTime + 0.35)
+        break
+      }
+      case 'nature': {
+        // Organic rustle — mid-freq noise with slight pitch
+        const len = Math.floor(ac.sampleRate * 0.08)
+        const buf = ac.createBuffer(1, len, ac.sampleRate)
+        const d = buf.getChannelData(0)
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) * 0.6
+        const srcN = ac.createBufferSource()
+        srcN.buffer = buf
+        const bp = ac.createBiquadFilter()
+        bp.type = 'bandpass'; bp.frequency.value = 600; bp.Q.value = 1.2
+        const g = ac.createGain()
+        g.gain.setValueAtTime(0.25 * power, ac.currentTime)
+        g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.12)
+        srcN.connect(bp); bp.connect(g); g.connect(out)
+        this._pitch(srcN, 0.1)
+        srcN.start()
+        break
+      }
+      default:
+        // Physical/neutral — reuse playHit
+        this.playHit(power)
+    }
+  }
+
 }

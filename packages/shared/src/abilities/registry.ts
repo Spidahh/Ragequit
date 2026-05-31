@@ -29,7 +29,7 @@ export const ABILITY_M1_WHIRLWIND: AbilityDef = {
       kind: 'channel',
       durationSec: 1.0,
       tickEverySec: 1.0 / 3,
-      perTick: { at: 'onTick', kind: 'damage', amount: 7, radius: 4 },
+      perTick: { at: 'onTick', kind: 'damage', amount: 11, radius: 4 },
       breakOnMove: false,
     },
     {
@@ -42,8 +42,8 @@ export const ABILITY_M1_WHIRLWIND: AbilityDef = {
     },
   ],
   description:
-    'Spin for 1.0s. Three 4m cleave ticks for 7 damage each. Self Slow 20% while spinning.',
-  miniMalus: 'Committed channel; movement is reduced during the spin.',
+    'Sustained spin that cleaves all nearby enemies repeatedly. Movement is reduced while channeling.',
+  miniMalus: 'Committed channel — you cannot freely reposition while spinning.',
 }
 
 export const ABILITY_M2_GAP_CLOSER: AbilityDef = {
@@ -72,8 +72,8 @@ export const ABILITY_M2_GAP_CLOSER: AbilityDef = {
       slowFraction: 0.5,
     },
   ],
-  description: '6m engage dash. Landing hit deals 18 damage in 1.5m and applies Slow 50% for 3.0s.',
-  miniMalus: 'Linear engage; collision stops the dash and contact is parryable.',
+  description: 'Engage dash that closes distance rapidly. The landing impact hits nearby enemies and Slows them.',
+  miniMalus: 'Linear path — collision stops the dash. The landing blow is parryable.',
   canParry: true,
 }
 
@@ -94,8 +94,8 @@ export const ABILITY_M3_UPPERCUT: AbilityDef = {
     { at: 'onCast', kind: 'damage', amount: 16 },
     { at: 'onCast', kind: 'knockup', airborneSec: 0.5, knockbackDistance: 0.8 },
   ],
-  description: '16 damage. Launches the target Airborne 0.5s with a small 0.8m pop.',
-  miniMalus: '0.4s windup. Parryable.',
+  description: 'Rising strike that launches the target briefly Airborne. Strong combo starter.',
+  miniMalus: 'Requires a windup — opponents can interrupt or parry.',
   canParry: true,
   isKnockup: true,
 }
@@ -117,8 +117,8 @@ export const ABILITY_M4_BLEED_STRIKE: AbilityDef = {
     { at: 'onCast', kind: 'damage', amount: 10 },
     { at: 'onCast', kind: 'applyStatus', status: 'bleed', durationSec: 3, stacks: 1 },
   ],
-  description: '10 damage. Applies Bleed x1 for 3.0s.',
-  miniMalus: 'Bleed can be cleansed.',
+  description: 'Quick slash that leaves the target Bleeding over time.',
+  miniMalus: 'Bleed can be cleansed by the opponent.',
   canParry: true,
 }
 
@@ -140,8 +140,8 @@ export const ABILITY_M5_GUARD_BREAK: AbilityDef = {
     { at: 'onCast', kind: 'applyStatus', status: 'stun', durationSec: 1.5, stacks: 1 },
     { at: 'onCast', kind: 'knockup', airborneSec: 0.5, knockbackDistance: 1.2 },
   ],
-  description: '10 damage. Applies Stun 1.5s plus a short 0.5s pop.',
-  miniMalus: 'Very short 2.2m reach and fully parryable.',
+  description: 'Crushing blow that Stuns the target and briefly launches them Airborne. Hard CC setup.',
+  miniMalus: 'Very short reach and fully parryable.',
   canParry: true,
 }
 
@@ -163,9 +163,8 @@ export const ABILITY_M6_RENDING_DASH: AbilityDef = {
     { at: 'onLand', kind: 'damage', amount: 14, radius: 1.6 },
     { at: 'onLand', kind: 'applyStatus', status: 'bleed', durationSec: 4, stacks: 1, radius: 1.6 },
   ],
-  description:
-    '5m slash-through dash. Landing hit deals 14 damage in 1.6m and applies Bleed for 4.0s.',
-  miniMalus: 'Collision stops dash. Bleed can be cleansed.',
+  description: 'Slash-through dash that passes into melee range. The landing impact Bleeds nearby enemies.',
+  miniMalus: 'Collision stops the dash early. Bleed can be cleansed.',
   canParry: true,
 }
 
@@ -195,8 +194,8 @@ export const ABILITY_B1_PIERCING_SHOT: AbilityDef = {
       damage: 28,
     },
   ],
-  description: 'Fast line shot. 28 damage with 150 m/s projectile speed.',
-  miniMalus: 'Narrow shot; misses hard against lateral movement.',
+  description: 'Fast, straight shot with no arc. Maximum velocity and precision at long range.',
+  miniMalus: 'Narrow hitbox — misses hard against lateral movement.',
 }
 
 export const ABILITY_B2_VOLLEY: AbilityDef = {
@@ -211,7 +210,7 @@ export const ABILITY_B2_VOLLEY: AbilityDef = {
   windupSec: 0,
   range: 30,
   targeting: 'point',
-  comboRole: 'finisher',
+  comboRole: 'pressure',
   effects: [
     {
       at: 'onLand',
@@ -223,9 +222,8 @@ export const ABILITY_B2_VOLLEY: AbilityDef = {
       applyStatus: { status: 'slow', durationSec: 3.0, stacks: 1, slowFraction: 0.45 },
     },
   ],
-  description:
-    'Arcing arrow rain on a 3.5m point zone. Three waves deal 11 damage and Slow 45% for 3.0s.',
-  miniMalus: 'Telegraphed landing zone; targets can leave before waves land.',
+  description: 'Arcing arrow rain that creates a damage zone. Enemies caught inside are repeatedly Slowed.',
+  miniMalus: 'Landing zone is telegraphed — targets can walk out before waves hit.',
 }
 
 export const ABILITY_B3_PIN_SHOT: AbilityDef = {
@@ -237,7 +235,7 @@ export const ABILITY_B3_PIN_SHOT: AbilityDef = {
   costMana: 0,
   costStamina: 0,
   cooldownSec: 10,
-  windupSec: 0.8,
+  windupSec: 0.4,
   range: 25,
   targeting: 'forward',
   comboRole: 'starter',
@@ -251,8 +249,8 @@ export const ABILITY_B3_PIN_SHOT: AbilityDef = {
       onHitStatus: { status: 'root', durationSec: 2.8, stacks: 1 },
     },
   ],
-  description: 'Control arrow. 14 damage and Root 2.8s on hit.',
-  miniMalus: '0.8s windup. Requires clear aim and line of sight.',
+  description: 'Aimed arrow that Roots the target on hit. Strong setup for follow-up attacks.',
+  miniMalus: 'Short charge — requires clear aim and line of sight.',
 }
 
 export const ABILITY_B4_SNARE_TRAP: AbilityDef = {
@@ -282,9 +280,8 @@ export const ABILITY_B4_SNARE_TRAP: AbilityDef = {
       applyStatus: { status: 'root', durationSec: 3.0, stacks: 1 },
     },
   ],
-  description:
-    'Self zone trap, 1.5m radius. Arms after 2.0s. First trigger deals 10 damage and Root 3.0s.',
-  miniMalus: 'No effect before arm delay.',
+  description: 'Place a trap at your feet that arms after a short delay. First enemy to trigger it is damaged and Rooted.',
+  miniMalus: 'No effect before the arm delay — place it preemptively.',
 }
 
 export const ABILITY_B5_MARKSMAN_SHOT: AbilityDef = {
@@ -309,8 +306,8 @@ export const ABILITY_B5_MARKSMAN_SHOT: AbilityDef = {
       damage: 38,
     },
   ],
-  description: 'Precision shot. 38 damage at 500 m/s after a 1.0s windup.',
-  miniMalus: '1.0s exposed aim; damage can interrupt before release.',
+  description: 'Extreme-range precision shot. Highest single-target damage in the bow arsenal.',
+  miniMalus: 'Long aim window — you are exposed and can be interrupted before release.',
 }
 
 export const ABILITY_B6_DISENGAGE_SHOT: AbilityDef = {
@@ -336,8 +333,8 @@ export const ABILITY_B6_DISENGAGE_SHOT: AbilityDef = {
       damage: 12,
     },
   ],
-  description: '3m backward move and forward projectile for 12 damage.',
-  miniMalus: 'Low damage.',
+  description: 'Step backward while simultaneously firing a shot forward. Creates distance from the target.',
+  miniMalus: 'Low damage — primarily a repositioning tool.',
 }
 
 export const ABILITY_B7_BROADHEAD: AbilityDef = {
@@ -363,8 +360,8 @@ export const ABILITY_B7_BROADHEAD: AbilityDef = {
       onHitStatus: { status: 'bleed', durationSec: 4, stacks: 1 },
     },
   ],
-  description: 'Heavy arrow. 14 damage and Bleed for 4.0s on hit.',
-  miniMalus: 'Arc drop makes long shots require lead.',
+  description: 'Heavy arrow that Bleeds the target on hit. Good for sustained pressure.',
+  miniMalus: 'Arc drop — long shots require leading the target.',
 }
 
 export const ABILITY_B8_BLAST_ARROW: AbilityDef = {
@@ -389,11 +386,12 @@ export const ABILITY_B8_BLAST_ARROW: AbilityDef = {
       damage: 22,
       splashRadius: 3,
       element: 'fire',
+      knockbackDistance: 1.4,
       onHitStatus: { status: 'burn', durationSec: 3, stacks: 2 },
     },
   ],
-  description: 'Palombella explosive arrow. 22 splash damage in 3m and Burn x2 on impact.',
-  miniMalus: 'Slow heavy arc; distant targets can dodge the impact point.',
+  description: 'Explosive fire arrow that detonates on impact, blasting and Burning all targets in the area.',
+  miniMalus: 'Slow heavy arc — distant targets can dodge the impact point.',
 }
 
 // ============================================================================
@@ -422,11 +420,12 @@ export const ABILITY_F1_FIREBALL: AbilityDef = {
       damage: 24,
       splashRadius: 2.6,
       element: 'fire',
+      knockbackDistance: 1.8,
       onHitStatus: { status: 'burn', durationSec: 3, stacks: 1 },
     },
   ],
-  description: 'Arcing fire orb. 24 splash damage in 2.6m and Burn x1 on impact.',
-  miniMalus: 'Visible travel arc; lateral movement can dodge it.',
+  description: 'Arcing fire orb that explodes on impact, dealing AoE fire damage, applying Burn, and blasting targets away.',
+  miniMalus: 'Visible travel arc — lateral movement can dodge it.',
 }
 
 export const ABILITY_F2_FLAME_WALL: AbilityDef = {
@@ -441,7 +440,7 @@ export const ABILITY_F2_FLAME_WALL: AbilityDef = {
   windupSec: 0,
   range: 10,
   targeting: 'point',
-  comboRole: 'extender',
+  comboRole: 'pressure',
   effects: [
     {
       at: 'onLand',
@@ -455,8 +454,8 @@ export const ABILITY_F2_FLAME_WALL: AbilityDef = {
       applyStatus: { status: 'burn', durationSec: 3, stacks: 1 },
     },
   ],
-  description: 'Point wall, 7m wide for 3.5s. Ticks 6 damage and applies Burn x1.',
-  miniMalus: 'Visible wall. No instant burst on cast.',
+  description: 'Conjure a wide wall of fire at a target point. Enemies who cross it take damage and Burn.',
+  miniMalus: 'Wall is visible — no instant burst, enemies can choose to avoid it.',
 }
 
 export const ABILITY_F3_IGNITE: AbilityDef = {
@@ -471,11 +470,10 @@ export const ABILITY_F3_IGNITE: AbilityDef = {
   windupSec: 0,
   range: 12,
   targeting: 'forward',
-  comboRole: 'ray',
+  comboRole: 'pressure',
   effects: [{ at: 'onCast', kind: 'applyStatus', status: 'burn', durationSec: 3, stacks: 3 }],
-  description:
-    'Instant ray within 12m. Applies Burn x3 if the enemy is in the crosshair and line of sight.',
-  miniMalus: 'No direct damage. Requires clear line of sight.',
+  description: 'Instant cast that applies multiple Burn stacks to the target. Pure status tool with no direct damage.',
+  miniMalus: 'No direct damage — requires clear line of sight.',
 }
 
 export const ABILITY_F4_METEOR: AbilityDef = {
@@ -487,7 +485,7 @@ export const ABILITY_F4_METEOR: AbilityDef = {
   costMana: 40,
   costStamina: 0,
   cooldownSec: 18,
-  windupSec: 1.5,
+  windupSec: 1.0,
   range: 25,
   targeting: 'point',
   comboRole: 'finisher',
@@ -501,9 +499,11 @@ export const ABILITY_F4_METEOR: AbilityDef = {
       stacks: 1,
       radius: 3.5,
     },
+    { at: 'onLand', kind: 'knockup', airborneSec: 0.65, radius: 3.5, knockbackDistance: 2.8 },
   ],
-  description: 'Heavy palombella impact. 44 damage in 3.5m and Burn x1 after a visible windup.',
-  miniMalus: 'Long windup and visible impact point.',
+  description: 'Massive delayed impact that launches all nearby targets Airborne and applies Burn. Highest AoE damage in fire.',
+  miniMalus: 'Long windup and visible impact point — easily dodged if spotted.',
+  isKnockup: true,
 }
 
 export const ABILITY_F5_ERUPTION: AbilityDef = {
@@ -523,8 +523,8 @@ export const ABILITY_F5_ERUPTION: AbilityDef = {
     { at: 'onCast', kind: 'damage', amount: 8, radius: 2.4, element: 'fire' },
     { at: 'onCast', kind: 'knockup', airborneSec: 0.5, radius: 2.4, knockbackDistance: 1.0 },
   ],
-  description: 'Instant ray detonates under the aimed enemy. 8 damage in 2.4m and Airborne 0.5s.',
-  miniMalus: 'Low direct damage and short detonation range.',
+  description: 'Instant detonation under the aimed enemy. Launches nearby targets Airborne. Reliable fire combo starter.',
+  miniMalus: 'Short detonation range — needs to be close.',
   isKnockup: true,
 }
 
@@ -555,9 +555,8 @@ export const ABILITY_F6_FIRE_BLINK: AbilityDef = {
     },
     { at: 'onCast', kind: 'move', mode: 'teleport', distance: 7, cancelOnCollision: true },
   ],
-  description:
-    '7m teleport. Leaves a 1.5m fire zone at origin for 1.2s, 6 damage per tick and Burn x1.',
-  miniMalus: 'Blocked by occupied destination.',
+  description: 'Teleport forward, leaving a burning fire zone at your origin. Good for repositioning while pressuring.',
+  miniMalus: 'Blocked if destination is occupied.',
 }
 
 // ============================================================================
@@ -585,12 +584,12 @@ export const ABILITY_I1_FROST_BOLT: AbilityDef = {
       gravityMps2: 1.5,
       damage: 16,
       element: 'ice',
+      knockbackDistance: 0.6,
       onHitStatus: { status: 'chill', durationSec: 6, stacks: 1 },
     },
   ],
-  description:
-    'Fast frost projectile. 16 damage and Chill x1 (6.0s); repeated hits build toward Freeze.',
-  miniMalus: 'Lower direct damage than fire or bow finishers.',
+  description: 'Fast frost projectile that Chills on hit and pushes the target back. Repeated Chills build toward a full Freeze.',
+  miniMalus: 'Lower direct damage than fire or bow finishers — value is in CC buildup.',
 }
 
 export const ABILITY_I2_ICE_WALL: AbilityDef = {
@@ -605,7 +604,7 @@ export const ABILITY_I2_ICE_WALL: AbilityDef = {
   windupSec: 0,
   range: 8,
   targeting: 'point',
-  comboRole: 'extender',
+  comboRole: 'pressure',
   effects: [
     {
       at: 'onLand',
@@ -619,8 +618,8 @@ export const ABILITY_I2_ICE_WALL: AbilityDef = {
       applyStatus: { status: 'root', durationSec: 1.5, stacks: 1 },
     },
   ],
-  description: '6m ice strip for 4.5s. Repeatedly applies Root 1.5s to deny a lane.',
-  miniMalus: 'No damage.',
+  description: 'Creates an ice strip that repeatedly Roots any enemy who steps on it. Strong zone denial.',
+  miniMalus: 'No damage — purely crowd control.',
 }
 
 export const ABILITY_I3_BLIZZARD: AbilityDef = {
@@ -635,7 +634,7 @@ export const ABILITY_I3_BLIZZARD: AbilityDef = {
   windupSec: 0,
   range: 20,
   targeting: 'point',
-  comboRole: 'extender',
+  comboRole: 'pressure',
   effects: [
     {
       at: 'onLand',
@@ -648,8 +647,8 @@ export const ABILITY_I3_BLIZZARD: AbilityDef = {
       applyStatus: { status: 'slow', durationSec: 3.5, stacks: 1, slowFraction: 0.6 },
     },
   ],
-  description: 'Large 7m storm for 5.0s. Ticks 4 damage and applies Slow 60% for 3.5s.',
-  miniMalus: 'No hard lock; enemies can still shoot or dash out.',
+  description: 'Large slow-moving storm zone that repeatedly Slows enemies inside and deals periodic damage.',
+  miniMalus: 'No hard lock — enemies can dash out or still shoot while inside.',
 }
 
 export const ABILITY_I4_FREEZE_TARGET: AbilityDef = {
@@ -661,16 +660,16 @@ export const ABILITY_I4_FREEZE_TARGET: AbilityDef = {
   costMana: 35,
   costStamina: 0,
   cooldownSec: 16,
-  windupSec: 0.5,
+  windupSec: 0.4,
   range: 12,
   targeting: 'forward',
-  comboRole: 'ray',
+  comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 8, element: 'ice' },
     { at: 'onCast', kind: 'applyStatus', status: 'freeze', durationSec: 2.5, stacks: 1 },
   ],
-  description: 'Instant ray within 12m. 8 damage and Freeze 2.5s.',
-  miniMalus: '0.5s windup. Parryable. Requires clear line of sight.',
+  description: 'Quick cast that Freezes the target completely. Hard lockdown for follow-up attacks.',
+  miniMalus: 'Short windup — parryable and requires line of sight.',
   canParry: true,
 }
 
@@ -683,7 +682,7 @@ export const ABILITY_I5_FROST_PILLAR: AbilityDef = {
   costMana: 30,
   costStamina: 0,
   cooldownSec: 14,
-  windupSec: 1.0,
+  windupSec: 0.3,
   range: 10,
   targeting: 'forward',
   comboRole: 'starter',
@@ -691,8 +690,8 @@ export const ABILITY_I5_FROST_PILLAR: AbilityDef = {
     { at: 'onCast', kind: 'damage', amount: 12, element: 'ice' },
     { at: 'onCast', kind: 'knockup', airborneSec: 0.5, knockbackDistance: 0.6 },
   ],
-  description: 'Ray pillar within 10m. 12 damage and Airborne 0.5s with minimal shove.',
-  miniMalus: '1.0s windup gives enemies time to dodge or interrupt.',
+  description: 'Frost pillar that erupts under the target, launching them briefly Airborne. Ice combo starter.',
+  miniMalus: 'Erupts at a fixed point — sidestep before it lands and it misses.',
   isKnockup: true,
 }
 
@@ -712,7 +711,7 @@ export const ABILITY_L1_CHAIN_BOLT: AbilityDef = {
   windupSec: 0,
   range: 15,
   targeting: 'forward',
-  comboRole: 'ray',
+  comboRole: 'pressure',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 22, element: 'lightning' },
     {
@@ -724,9 +723,8 @@ export const ABILITY_L1_CHAIN_BOLT: AbilityDef = {
       excludePrimary: true,
     },
   ],
-  description:
-    'Instant ray within 15m. 22 damage to the aimed target and 10 damage arcs to nearby enemies.',
-  miniMalus: 'Arc requires nearby secondary targets.',
+  description: 'Instant cast that deals heavy damage to the primary target, then arcs electricity to nearby enemies.',
+  miniMalus: 'Chain damage requires a secondary target nearby.',
 }
 
 export const ABILITY_L2_THUNDER_CLAP: AbilityDef = {
@@ -745,9 +743,10 @@ export const ABILITY_L2_THUNDER_CLAP: AbilityDef = {
   effects: [
     { at: 'onCast', kind: 'damage', amount: 16, radius: 3.2, element: 'lightning' },
     { at: 'onCast', kind: 'applyStatus', status: 'stun', durationSec: 1.8, stacks: 1, radius: 3.2 },
+    { at: 'onCast', kind: 'knockup', airborneSec: 0.35, radius: 3.2, knockbackDistance: 2.5 },
   ],
-  description: 'Self shockwave in 3.2m. 16 damage and Stun 1.8s.',
-  miniMalus: 'Short range; whiffs if used before contact.',
+  description: 'Release a shockwave around you that Stuns nearby enemies and blasts them away. Devastating in close range.',
+  miniMalus: 'Short range — must be in melee contact to connect.',
 }
 
 export const ABILITY_L3_STORM_FIELD: AbilityDef = {
@@ -762,7 +761,7 @@ export const ABILITY_L3_STORM_FIELD: AbilityDef = {
   windupSec: 0,
   range: 20,
   targeting: 'point',
-  comboRole: 'extender',
+  comboRole: 'pressure',
   effects: [
     {
       at: 'onLand',
@@ -775,8 +774,8 @@ export const ABILITY_L3_STORM_FIELD: AbilityDef = {
       applyStatus: { status: 'slow', durationSec: 2.0, stacks: 1, slowFraction: 0.45 },
     },
   ],
-  description: '4.5m storm field for 3.2s. Ticks 4 damage and applies Slow 45% for 2.0s.',
-  miniMalus: 'Zone is visible.',
+  description: 'Create an electric storm zone that Slows enemies inside and deals periodic lightning damage.',
+  miniMalus: 'Zone is visible — enemies can choose to avoid it.',
 }
 
 export const ABILITY_L4_LIGHTNING_DASH: AbilityDef = {
@@ -796,8 +795,8 @@ export const ABILITY_L4_LIGHTNING_DASH: AbilityDef = {
     { at: 'onCast', kind: 'move', mode: 'teleport', distance: 5, cancelOnCollision: true },
     { at: 'onCast', kind: 'damage', amount: 15, radius: 1, element: 'lightning' },
   ],
-  description: '5m teleport. Exit AoE deals 15 damage in 1m radius.',
-  miniMalus: 'Damage only at destination.',
+  description: 'Instant teleport that deals AoE lightning damage at the destination. High-speed repositioning.',
+  miniMalus: 'Damage only at the destination — no area at origin.',
 }
 
 export const ABILITY_L5_ARC_LIFT: AbilityDef = {
@@ -817,7 +816,7 @@ export const ABILITY_L5_ARC_LIFT: AbilityDef = {
     { at: 'onCast', kind: 'damage', amount: 8, element: 'lightning' },
     { at: 'onCast', kind: 'knockup', airborneSec: 0.5, knockbackDistance: 1.4 },
   ],
-  description: 'Instant ray within 15m. 8 damage, Airborne 0.5s and backward jolt.',
+  description: 'Instant lightning ray that launches the target Airborne with a backward jolt. Lightning combo starter.',
   miniMalus: 'Requires line of sight.',
   isKnockup: true,
 }
@@ -848,9 +847,10 @@ export const ABILITY_D1_SHADOW_BOLT: AbilityDef = {
       damage: 18,
       element: 'dark',
       lifestealFraction: 0.25,
+      knockbackDistance: 0.8,
     },
   ],
-  description: 'Dark projectile. 18 damage and 25% lifesteal on hit.',
+  description: 'Dark projectile that steals life on hit. Sustain tool that works at range.',
   miniMalus: 'Projectile can be dodged or blocked by cover.',
 }
 
@@ -872,8 +872,8 @@ export const ABILITY_D2_CURSE_OF_WEAKNESS: AbilityDef = {
     { at: 'onCast', kind: 'applyStatus', status: 'blind', durationSec: 4.0, stacks: 1 },
     { at: 'onCast', kind: 'resourceDrain', resource: 'mana', amount: 18, gainFraction: 0.5 },
   ],
-  description: 'Ray hex within 15m. Curse 5.0s, Blind 4.0s and drains 18 Mana, refunding half.',
-  miniMalus: 'Short windup and line of sight required; parryable.',
+  description: 'Ray that Curses, Blinds, and drains Mana from the target. Refunds half the drained Mana to you.',
+  miniMalus: 'Windup required — parryable and needs line of sight.',
   canParry: true,
 }
 
@@ -889,7 +889,7 @@ export const ABILITY_D3_LIFE_DRAIN: AbilityDef = {
   windupSec: 0,
   range: 12,
   targeting: 'forward',
-  comboRole: 'drain',
+  comboRole: 'pressure',
   effects: [
     {
       at: 'onCast',
@@ -903,9 +903,8 @@ export const ABILITY_D3_LIFE_DRAIN: AbilityDef = {
     },
     { at: 'onCast', kind: 'resourceDrain', resource: 'stamina', amount: 20, gainFraction: 0.5 },
   ],
-  description:
-    'Drain beam. Drains 20 Stamina, then channels 4 ticks of 6 damage with 70% lifesteal.',
-  miniMalus: 'Movement or damage interrupts the beam.',
+  description: 'Channel a drain beam that first rips Stamina from the target, then leeches their HP back to you each tick.',
+  miniMalus: 'Movement or taking damage interrupts the beam immediately.',
 }
 
 export const ABILITY_D4_DARK_BARRIER: AbilityDef = {
@@ -930,8 +929,8 @@ export const ABILITY_D4_DARK_BARRIER: AbilityDef = {
       stacks: 38,
     },
   ],
-  description: 'Self barrier. Absorbs 38 damage for up to 5.0s.',
-  miniMalus: 'No damage, cleanse or movement.',
+  description: 'Instantly conjure a dark barrier that absorbs incoming damage. Pure defensive tool.',
+  miniMalus: 'No offensive component — no damage, cleanse, or mobility.',
 }
 
 export const ABILITY_D5_VOID_SPIKE: AbilityDef = {
@@ -952,7 +951,7 @@ export const ABILITY_D5_VOID_SPIKE: AbilityDef = {
     { at: 'onCast', kind: 'knockup', airborneSec: 0.5, knockbackDistance: 1.0 },
     { at: 'onCast', kind: 'resourceDrain', resource: 'mana', amount: 12, gainFraction: 0.5 },
   ],
-  description: 'Void ray within 10m. 14 damage, Airborne 0.5s and drains 12 Mana.',
+  description: 'Dark ray that launches the target Airborne and drains their Mana. Combo starter with resource pressure.',
   miniMalus: 'Short range and clear line of sight required.',
   isKnockup: true,
 }
@@ -985,7 +984,7 @@ export const ABILITY_N1_POISON_DART: AbilityDef = {
       onHitStatus: { status: 'poison', durationSec: 4, stacks: 1 },
     },
   ],
-  description: 'Fast dart. 8 damage and Poison for 4.0s on hit.',
+  description: 'Fast dart that Poisons the target on hit. Good for sustained pressure at range.',
   miniMalus: 'Poison damage is delayed and can be cleansed.',
 }
 
@@ -1001,7 +1000,7 @@ export const ABILITY_N2_THORN_FIELD: AbilityDef = {
   windupSec: 0,
   range: 12,
   targeting: 'point',
-  comboRole: 'extender',
+  comboRole: 'pressure',
   effects: [
     {
       at: 'onLand',
@@ -1014,8 +1013,8 @@ export const ABILITY_N2_THORN_FIELD: AbilityDef = {
       applyStatus: { status: 'slow', durationSec: 3.0, stacks: 1, slowFraction: 0.5 },
     },
   ],
-  description: '3.5m thorn zone for 5.0s. Ticks 4 damage and applies Slow 50% for 3.0s.',
-  miniMalus: 'Visible zone; no instant burst.',
+  description: 'Summon a thorn zone that Slows and deals periodic damage to enemies who stay inside.',
+  miniMalus: 'Visible zone — enemies can walk out to avoid it.',
 }
 
 export const ABILITY_N3_ENTANGLE: AbilityDef = {
@@ -1027,16 +1026,16 @@ export const ABILITY_N3_ENTANGLE: AbilityDef = {
   costMana: 25,
   costStamina: 0,
   cooldownSec: 13,
-  windupSec: 0.5,
+  windupSec: 0.3,
   range: 10,
   targeting: 'forward',
-  comboRole: 'ray',
+  comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 4, element: 'nature' },
     { at: 'onCast', kind: 'applyStatus', status: 'root', durationSec: 3.2, stacks: 1 },
   ],
-  description: 'Instant root ray within 10m. 4 damage and Root 3.2s.',
-  miniMalus: '0.5s windup. Requires clear line of sight.',
+  description: 'Quick cast that Roots the target in place. Hard CC for setting up combos.',
+  miniMalus: 'Short windup — needs clear line of sight.',
 }
 
 export const ABILITY_N4_HEALING_TOTEM: AbilityDef = {
@@ -1062,8 +1061,8 @@ export const ABILITY_N4_HEALING_TOTEM: AbilityDef = {
       breakOnMove: false,
     },
   ],
-  description: '5.0s channel. Heals 8 HP per tick.',
-  miniMalus: 'No burst heal.',
+  description: 'Channel nature energy to heal yourself over time. Best used safely between fights.',
+  miniMalus: 'No burst heal — requires multiple ticks to recover significant HP.',
 }
 
 export const ABILITY_N5_ROOT_UPTHROW: AbilityDef = {
@@ -1083,8 +1082,8 @@ export const ABILITY_N5_ROOT_UPTHROW: AbilityDef = {
     { at: 'onCast', kind: 'damage', amount: 8, element: 'nature' },
     { at: 'onCast', kind: 'knockup', airborneSec: 0.5, requiresGroundedTarget: true },
   ],
-  description: 'Grounded target ray. 8 damage and Airborne 0.5s.',
-  miniMalus: 'Fails against already airborne targets.',
+  description: 'Erupting vines that launch a grounded target Airborne. Fails if they are already in the air.',
+  miniMalus: 'Cannot be used on airborne targets — time it before a knockup, not after.',
   isKnockup: true,
 }
 
@@ -1115,8 +1114,8 @@ export const ABILITY_N6_VINE_DASH: AbilityDef = {
       applyStatus: { status: 'root', durationSec: 2.8, stacks: 1 },
     },
   ],
-  description: '5m dash. Leaves 2m zone for 2.5s that applies Root 2.8s on contact.',
-  miniMalus: 'Collision stops dash.',
+  description: 'Dash forward and leave a Root zone at your landing point. Traps enemies who follow you.',
+  miniMalus: 'Collision stops the dash early.',
 }
 
 // ============================================================================
@@ -1146,8 +1145,8 @@ export const ABILITY_U1_SELF_HEAL_POTION: AbilityDef = {
       breakOnMove: true,
     },
   ],
-  description: 'Self heal over 2.0s. Restores 40 HP total.',
-  miniMalus: 'Healing is delayed over time.',
+  description: 'Drink a healing potion that restores HP over time. Must stand still to benefit fully.',
+  miniMalus: 'Movement cancels the channel — cannot fight and heal simultaneously.',
 }
 
 export const ABILITY_U2_QUICK_DASH: AbilityDef = {
@@ -1173,8 +1172,8 @@ export const ABILITY_U2_QUICK_DASH: AbilityDef = {
       cancelOnCollision: true,
     },
   ],
-  description: '4m dash in movement direction.',
-  miniMalus: 'No invulnerability.',
+  description: 'Quick dash in your current movement direction. Universal repositioning tool.',
+  miniMalus: 'No invulnerability frames — you can still be hit mid-dash.',
 }
 
 export const ABILITY_U3_PING_MARK: AbilityDef = {
@@ -1189,14 +1188,14 @@ export const ABILITY_U3_PING_MARK: AbilityDef = {
   windupSec: 0,
   range: 30,
   targeting: 'forward',
-  comboRole: 'drain',
+  comboRole: 'pressure',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 6 },
     { at: 'onCast', kind: 'applyStatus', status: 'mark', durationSec: 5, stacks: 1 },
     { at: 'onCast', kind: 'resourceDrain', resource: 'stamina', amount: 12, gainFraction: 0 },
   ],
-  description: 'Utility ray within 30m. Marks for 5.0s, deals 6 damage and drains 12 Stamina.',
-  miniMalus: 'Low direct damage and clear line of sight required.',
+  description: 'Long-range ray that Marks the target and drains their Stamina, refunding nothing.',
+  miniMalus: 'Low direct damage — requires line of sight.',
 }
 
 export const ABILITY_U4_CLEANSE_SURGE: AbilityDef = {
@@ -1216,8 +1215,8 @@ export const ABILITY_U4_CLEANSE_SURGE: AbilityDef = {
     { at: 'onCast', kind: 'cleanse' },
     { at: 'onCast', kind: 'applyStatus', status: 'haste', durationSec: 2, stacks: 1 },
   ],
-  description: 'Full cleanse. Applies Haste 2.0s.',
-  miniMalus: 'No healing.',
+  description: 'Instantly cleanse all debuffs, then surge forward with Haste. Best used when CC breaks your momentum.',
+  miniMalus: 'No healing — purely removes debuffs and boosts movement.',
 }
 
 export const ABILITY_U5_BARRIER: AbilityDef = {
@@ -1234,8 +1233,8 @@ export const ABILITY_U5_BARRIER: AbilityDef = {
   targeting: 'self',
   comboRole: 'survival',
   effects: [{ at: 'onCast', kind: 'applyStatus', status: 'shield', durationSec: 8, stacks: 42 }],
-  description: 'Self shield. Absorbs 42 damage for up to 8.0s.',
-  miniMalus: 'No cleanse or heal.',
+  description: 'Instantly conjure a personal shield that absorbs incoming damage. Long-duration defensive cooldown.',
+  miniMalus: 'No cleanse or heal — only absorbs damage.',
 }
 
 export const ABILITY_U6_ENERGIZE: AbilityDef = {
@@ -1250,9 +1249,9 @@ export const ABILITY_U6_ENERGIZE: AbilityDef = {
   windupSec: 0,
   range: 0,
   targeting: 'self',
-  comboRole: 'resource',
+  comboRole: 'survival',
   effects: [{ at: 'onCast', kind: 'restoreStamina', amount: 35 }],
-  description: 'Restores 35 Stamina instantly.',
+  description: 'Instantly restore a large chunk of Stamina. Enables more dashes, parries, and melee abilities.',
   miniMalus: 'No Mana restore.',
 }
 
@@ -1272,8 +1271,8 @@ export const ABILITY_U7_PHASE_SHIFT: AbilityDef = {
   effects: [
     { at: 'onCast', kind: 'applyStatus', status: 'invulnerable', durationSec: 0.6, stacks: 1 },
   ],
-  description: 'Invulnerable 0.6s. Prevents damage and crowd control.',
-  miniMalus: 'Cannot attack or cast during phase.',
+  description: 'Brief invulnerability window — immune to all damage and crowd control. Use to dodge a critical hit.',
+  miniMalus: 'Cannot attack or cast during the phase — purely defensive.',
 }
 
 export const ABILITY_U8_SMOKE_SCREEN: AbilityDef = {
@@ -1288,7 +1287,7 @@ export const ABILITY_U8_SMOKE_SCREEN: AbilityDef = {
   windupSec: 0,
   range: 8,
   targeting: 'forward',
-  comboRole: 'extender',
+  comboRole: 'pressure',
   effects: [
     {
       at: 'onCast',
@@ -1299,8 +1298,8 @@ export const ABILITY_U8_SMOKE_SCREEN: AbilityDef = {
       applyStatus: { status: 'blind', durationSec: 3.0, stacks: 1 },
     },
   ],
-  description: 'Forward smoke zone, 3.5m radius for 3.5s. Repeatedly applies Blind 3.0s.',
-  miniMalus: 'No damage.',
+  description: 'Throw a smoke bomb that creates a zone repeatedly Blinding enemies inside. Strong area denial.',
+  miniMalus: 'No damage — purely crowd control.',
 }
 
 export const ABILITY_U_BRACE_RECOVERY: AbilityDef = {
@@ -1322,9 +1321,8 @@ export const ABILITY_U_BRACE_RECOVERY: AbilityDef = {
     { at: 'onCast', kind: 'heal', amount: 50 },
     { at: 'onCast', kind: 'applyStatus', status: 'shield', durationSec: 3, stacks: 20 },
   ],
-  description:
-    'Spend 40 Stamina to restore 50 HP and gain a 20 damage shield for 3.0s. If Fury is at 5, consumes it to heal 100 HP instead.',
-  miniMalus: 'High Stamina cost leaves you vulnerable to pressure.',
+  description: 'Tank exclusive. Spend Stamina to restore HP and gain a damage shield. At max Fury, consumes all stacks to heal for twice as much.',
+  miniMalus: 'High Stamina cost — using it leaves you vulnerable to melee pressure.',
 }
 
 export const ABILITY_U_HUNTERS_FLOW: AbilityDef = {
@@ -1346,9 +1344,8 @@ export const ABILITY_U_HUNTERS_FLOW: AbilityDef = {
     { at: 'onCast', kind: 'heal', amount: 35 },
     { at: 'onCast', kind: 'move', mode: 'dash', distance: 3, useMovementDirection: true },
   ],
-  description:
-    'Spend 20 Mana and 10 Stamina to restore 35 HP while performing a quick 3m dash in your movement direction. Gains +25 HP extra healing if Momentum is above 60.',
-  miniMalus: 'Dash has no invulnerability frames.',
+  description: 'Archer exclusive. Restore HP while performing a quick repositioning dash. At high Momentum, healing is amplified.',
+  miniMalus: 'Dash has no invulnerability frames — can be hit mid-dash.',
 }
 
 export const ABILITY_U_ARCANE_REBIND: AbilityDef = {
@@ -1362,14 +1359,13 @@ export const ABILITY_U_ARCANE_REBIND: AbilityDef = {
   costMana: 45,
   costStamina: 0,
   cooldownSec: 16,
-  windupSec: 0.5,
+  windupSec: 0.4,
   range: 0,
   targeting: 'self',
   comboRole: 'survival',
   effects: [{ at: 'onCast', kind: 'heal', amount: 60 }],
-  description:
-    'Spend 45 Mana to channel arcana for 0.5s, restoring 60 HP. If a Risonanza elemental window is active, consumes it to heal 110 HP instead.',
-  miniMalus: '0.5s windup leaves you vulnerable to interrupts.',
+  description: 'Mage exclusive. Channel arcane energy to restore HP. When elemental Resonance is active, the heal is nearly doubled.',
+  miniMalus: 'Windup required — vulnerable to interrupts during the cast.',
 }
 
 export const ABILITY_U_ADAPTIVE_MEND: AbilityDef = {
@@ -1388,9 +1384,8 @@ export const ABILITY_U_ADAPTIVE_MEND: AbilityDef = {
   targeting: 'self',
   comboRole: 'survival',
   effects: [{ at: 'onCast', kind: 'heal', amount: 30 }],
-  description:
-    'Spend 15 Mana and 15 Stamina to restore 30 HP. If Flow stacks are at 3, consumes them to heal 70 HP instead.',
-  miniMalus: 'Low base healing if not amplified by weapon swaps.',
+  description: 'Hybrid exclusive. Restore HP at dual resource cost. At full Flow stacks, the heal is dramatically amplified.',
+  miniMalus: 'Low base healing — requires Flow stacks from weapon swapping to be effective.',
 }
 
 // ============================================================================

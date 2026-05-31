@@ -9,6 +9,7 @@ import {
   MessageTypes,
   CLASS_IDS,
   TARGET_CLASS_DEFS,
+  CLASS_PRESET_BUILDS,
   classLoadoutFitsSlotGrammar,
   getAbilitySlotFamily,
   getClassSlotOrder,
@@ -27,57 +28,6 @@ const STORAGE_KEY = 'ragequit.loadout.v6'
 const CLASS_STORAGE_KEY = 'ragequit.loadout.classId'
 
 
-
-// Preset builds per class — full 8-slot class-aware builds.
-// Slot positions are packed by family regardless of wire-field name; the server
-// validates by family budget (not position). See 01_DESIGN/06_loadout_build.md for rationale.
-// Each preset includes the class Recovery utility.
-const CLASS_PRESET_BUILDS: Record<ClassId, string[]> = {
-  // Tank: 4 melee + 1 bow + 3 utility = 8
-  tank: [
-    'uppercut', // slot 0 — melee (Uppercut: knockup setup)
-    'gap_closer', // slot 1 — melee (Gap Closer: engage dash)
-    'guard_break', // slot 2 — melee (Guard Break: short-range setup)
-    'whirlwind', // slot 3 — melee (Whirlwind: physical spinning pressure)
-    'piercing_shot', // slot 4 — bow (Piercing Shot: physical cashout)
-    'brace_recovery', // slot 5 — utility (Recovery)
-    'barrier', // slot 6 — utility
-    'quick_dash', // slot 7 — utility
-  ],
-  // Arciere: 4 bow + 2 magicBase + 2 utility = 8
-  archer: [
-    'pin_shot', // slot 0 — bow (ranged setup)
-    'marksman_shot', // slot 1 — bow (precision cashout)
-    'disengage_shot', // slot 2 — bow (spacing response)
-    'volley', // slot 3 — bow (volley of arrows)
-    'frost_bolt', // slot 4 — magicBase (control projectile)
-    'fireball', // slot 5 — magicBase (splash projectile)
-    'hunters_flow', // slot 6 — utility (Recovery)
-    'quick_dash', // slot 7 — utility
-  ],
-  // Mago: 3 magicBase + 3 magicAdvanced + 2 utility = 8
-  mage: [
-    'fireball', // slot 0 — magicBase (Fire projectile pressure)
-    'frost_bolt', // slot 1 — magicBase (Ice pressure)
-    'chain_bolt', // slot 2 — magicBase (Lightning chain)
-    'eruption', // slot 3 — magicAdvanced (launch setup)
-    'meteor', // slot 4 — magicAdvanced (high-commit Fire cashout)
-    'frost_pillar', // slot 5 — magicAdvanced (Ice knockup)
-    'arcane_rebind', // slot 6 — utility (Recovery)
-    'phase_shift', // slot 7 — utility (timed survival counter)
-  ],
-  // Ibrido: 2 melee + 1 bow + 2 magicBase + 1 magicAdvanced + 2 utility = 8
-  hybrid: [
-    'uppercut', // slot 0 — melee (knockup setup)
-    'gap_closer', // slot 1 — melee (engage dash)
-    'marksman_shot', // slot 2 — bow (precision cashout)
-    'fireball', // slot 3 — magicBase (staff pressure)
-    'lightning_dash', // slot 4 — magicBase (staff movement)
-    'arc_lift', // slot 5 — magicAdvanced (launch cashout)
-    'adaptive_mend', // slot 6 — utility (Recovery)
-    'quick_dash', // slot 7 — utility
-  ],
-}
 
 // Default build used when no class is selected or no saved build exists.
 // Matches the Ibrido (hybrid) preset.
@@ -242,23 +192,17 @@ export function initLoadoutStation(
     return lsUtility
   }
 
+  // Slots 0-3 are on the E wheel, 4-7 on the Q wheel — for every class and
+  // every family, because the slot grammar order puts the E-wheel families
+  // first and the Q-wheel families last.
   function slotKeyLabel(idx: number): string {
-    const order = currentSlotOrder()
-    const family = order[idx] ?? 'utility'
-    if (family === 'utility') return `${actionLabel('wheelUtility')} WHEEL`
-    if (family === 'magicBase' || family === 'magicAdvanced') {
-      const spellIdx = order
-        .slice(0, idx + 1)
-        .filter((slot) => slot === 'magicBase' || slot === 'magicAdvanced').length
-      return spellIdx <= 5 ? actionLabel(`spell${spellIdx}` as Parameters<typeof actionLabel>[0]) : 'SPELL'
-    }
-    return `${actionLabel('wheelAbility')} WHEEL`
+    return idx < 4 ? `${actionLabel('wheelAbility')} WHEEL` : `${actionLabel('wheelUtility')} WHEEL`
   }
 
-  function slotRouteLabel(slot: TargetAbilitySlotFamily, idx: number): string {
-    if (slot === 'utility') return `${actionLabel('wheelUtility')} wheel · release primes`
-    if (slot === 'magicBase' || slot === 'magicAdvanced') return `direct key ${slotKeyLabel(idx)}`
-    return `${actionLabel('wheelAbility')} wheel · release primes`
+  function slotRouteLabel(_slot: TargetAbilitySlotFamily, idx: number): string {
+    return idx < 4
+      ? `${actionLabel('wheelAbility')} wheel · tieni premuto`
+      : `${actionLabel('wheelUtility')} wheel · tieni premuto`
   }
 
   function refreshSectionKeyLabels(): void {
@@ -371,7 +315,6 @@ export function initLoadoutStation(
       const card = document.createElement('button')
       card.type = 'button'
       const isActive = slots[activeIdx] === def.id
-      const quickStats = abilityQuickStats(def)
       const poolInputLabel = slotKeyLabel(activeIdx)
       const recTags = recommendationTags(def, activeIdx, slots)
       const nature = abilityNatureLabel(def)
@@ -380,36 +323,66 @@ export function initLoadoutStation(
       card.title = def.description
       card.setAttribute(
         'aria-label',
-        `${def.name}. ${nature}. ${def.element !== 'none' ? def.element : 'physical'}. ${formatCost(def)}. ${formatEffectTags(def).join(', ')}`,
+        `${def.name}. ${nature}. ${def.element !== 'none' ? def.element : 'fisico'}. ${formatCost(def)}. ${formatEffectTags(def).join(', ')}`,
       )
-      // Split effect tags: damage tags (with numbers) separate from status/control tags.
+      // Damage values for the footer stat bar
       const allTags = formatEffectTags(def)
       const damageTags = allTags.filter((t) => tagClass(t) === 'tag-damage')
-      const otherTags = allTags.filter((t) => tagClass(t) !== 'tag-damage').slice(0, 4)
 
-      // Cost chips: mana and stamina shown as separate colored badges.
-      const costChips: string[] = []
-      if (def.costMana > 0) costChips.push(`<span class="cost-chip cost-mp">${def.costMana}<span class="cc-unit">MP</span></span>`)
-      if (def.costStamina > 0) costChips.push(`<span class="cost-chip cost-sp">${def.costStamina}<span class="cc-unit">SP</span></span>`)
-      if (def.windupSec > 0) costChips.push(`<span class="cost-chip cost-windup">${def.windupSec}s</span>`)
-      costChips.push(`<span class="cost-chip cost-cd">${def.cooldownSec}s CD</span>`)
+      const badgeClass = typeBadgeClass(nature)
+      const elementLabel = def.element !== 'none' ? def.element : 'fisico'
 
-      card.innerHTML = [
-        `<span class="pool-visual"><span class="pool-icon-box">${abilityIconMarkup(def.id)}</span></span>`,
-        `<span class="pool-nature"><span class="pool-name">${escapeHtml(def.name)}</span><span class="pool-category">${escapeHtml(nature)}${recTags.length > 0 ? ` <span class="recommend-tag">${escapeHtml(recTags[0]!)}</span>` : ''}</span></span>`,
-        `<span class="pool-meta"><b>${poolInputLabel}</b> · ${def.element !== 'none' ? def.element.toUpperCase() : 'PHYSICAL'}</span>`,
-        `<span class="pool-summary">${formatDesc(def.description)}</span>`,
-        // Damage tags: prominent visual with numbers (e.g. "24 DMG", "0.5s AIRBORNE")
-        damageTags.length > 0
-          ? `<span class="pool-dmg-row">${damageTags.map((t) => `<span class="tag-dmg-pill">${escapeHtml(t)}</span>`).join('')}</span>`
-          : '',
-        // Status / control / move tags: smaller chips
-        otherTags.length > 0
-          ? `<span class="effect-tags">${otherTags.map((t) => `<span class="${tagClass(t)}">${escapeHtml(t)}</span>`).join('')}</span>`
-          : '',
-        // Resource cost row: separated and color-coded
-        `<span class="pool-cost-row">${costChips.join('')}</span>`,
-      ].join('')
+      // Estrai CC/status con durata per il footer (NON ripetuti nella descrizione)
+      const ccFooterItems: string[] = []
+      for (const e of def.effects) {
+        if (e.kind === 'applyStatus' && statusControlScore(e.status) >= 2) {
+          const stacks = (e.stacks ?? 1) > 1 ? ` x${e.stacks}` : ''
+          ccFooterItems.push(`<span class="pf-cc pf-cc-${e.status}">${e.status.toUpperCase()}${stacks} ${e.durationSec}s</span>`)
+        } else if (e.kind === 'knockup') {
+          ccFooterItems.push(`<span class="pf-cc pf-cc-airborne">AIRBORNE ${e.airborneSec}s</span>`)
+        } else if (e.kind === 'projectile' && e.onHitStatus && statusControlScore(e.onHitStatus.status) >= 2) {
+          ccFooterItems.push(`<span class="pf-cc pf-cc-${e.onHitStatus.status}">${e.onHitStatus.status.toUpperCase()} ${e.onHitStatus.durationSec}s</span>`)
+        } else if (e.kind === 'zone' && e.applyStatus && statusControlScore(e.applyStatus.status) >= 2) {
+          ccFooterItems.push(`<span class="pf-cc pf-cc-${e.applyStatus.status}">${e.applyStatus.status.toUpperCase()} ${e.applyStatus.durationSec}s</span>`)
+        }
+      }
+
+      // Footer: danno | CC con durata | portata | costo | cast | cooldown
+      const footerParts: string[] = []
+      for (const t of damageTags)
+        footerParts.push(`<span class="pf-dmg">${escapeHtml(t)}</span>`)
+      for (const cc of ccFooterItems.slice(0, 2))
+        footerParts.push(cc)
+      if (def.targeting !== 'self' && def.range > 0 && def.range < 50)
+        footerParts.push(`<span class="pf-stat"><span class="pf-val">${def.range}m</span><span class="pf-lbl">portata</span></span>`)
+      if (def.costMana > 0)
+        footerParts.push(`<span class="pf-stat pf-mana"><span class="pf-val">${def.costMana}</span><span class="pf-lbl">mana</span></span>`)
+      if (def.costStamina > 0)
+        footerParts.push(`<span class="pf-stat pf-stam"><span class="pf-val">${def.costStamina}</span><span class="pf-lbl">stamina</span></span>`)
+      if (def.windupSec > 0)
+        footerParts.push(`<span class="pf-stat pf-cast"><span class="pf-val">${def.windupSec}s</span><span class="pf-lbl">cast</span></span>`)
+      footerParts.push(`<span class="pf-stat pf-cd"><span class="pf-val">${def.cooldownSec}s</span><span class="pf-lbl">cooldown</span></span>`)
+
+      // Struttura: header (icon+name+badge) → sub (element·targeting·key) → descrizione → footer
+      card.innerHTML = `
+        <span class="pc-head">
+          <span class="pc-icon-sm">${abilityIconMarkup(def.id)}</span>
+          <span class="pc-headright">
+            <span class="pc-name">${escapeHtml(def.name)}${recTags.length > 0 ? ' <span class="pc-rec">★</span>' : ''}</span>
+            <span class="ptype-badge ptype-${badgeClass}">${escapeHtml(nature)}</span>
+          </span>
+        </span>
+        <span class="pc-sub">
+          <span class="pc-eldot el-dot-${def.element}"></span>
+          <span class="pc-elname">${elementLabel}</span>
+          <span class="pc-sep">·</span>
+          ${targetingLabel(def)}
+          <span class="pc-sep">·</span>
+          <span class="pc-key">TASTO ${poolInputLabel}</span>
+        </span>
+        <span class="pc-desc">${formatDesc(def.description)}</span>
+        <span class="pc-footer">${footerParts.join('')}</span>
+      `
       card.addEventListener('click', () => {
         if (buildLocked()) return
         slots[activeIdx] = def.id
@@ -427,8 +400,8 @@ export function initLoadoutStation(
       const empty = document.createElement('div')
       empty.className = 'pool-empty'
       empty.textContent = poolSearch
-        ? `No abilities match "${poolSearch}"`
-        : 'No abilities available for this slot.'
+        ? `Nessuna abilità corrisponde a "${poolSearch}"`
+        : 'Nessuna abilità disponibile per questo slot.'
       lsPool.appendChild(empty)
     }
   }
@@ -465,10 +438,10 @@ export function initLoadoutStation(
   // --- Class Vitals Console --------------------------------------------------
 
   const CLASS_MECHANIC_LABEL: Record<ClassId, string> = {
-    tank:   '🔥 FURY — ricevi colpi per accumulare stack, scatena la Surge per danno esplosivo',
-    archer: '⚡ MOMENTUM — muoviti per accelerare i cast e ridurre i CD delle magie',
-    mage:   '🌀 RISONANZA — lancia lo stesso elemento due volte in 2.5s per un bonus elementale',
-    hybrid: '💧 FLOW — cambia arma per accumulare stack e potenziare heal e danno',
+    tank: '🔥 FURY — subendo colpi accumuli 5 stack. Al massimo, il prossimo colpo melee esplode con danno bonus e lento.',
+    archer: '⚡ MOMENTUM — muovendoti carichi ritmo. Più momentum: arco più rapido e magie con recupero ridotto.',
+    mage: '🌀 RISONANZA — due spell dello stesso elemento entro 2.5s attivano una proc elementale potenziata.',
+    hybrid: '💧 FLOW — cambiare arma genera stack. Al pieno, la prossima cura o spell offensiva viene amplificata.',
   }
 
   function rebuildClassVitals(): void {
@@ -589,20 +562,11 @@ function formatCost(def: AbilityDef): string {
   if (def.costMana > 0 && def.costStamina > 0) return `${def.costMana}MP + ${def.costStamina}SP`
   if (def.costMana > 0) return `${def.costMana} MP`
   if (def.costStamina > 0) return `${def.costStamina} SP`
-  return 'FREE'
+  return 'GRATIS'
 }
-
-interface AbilityQuickStat {
-  key: string
-  label: string
-  value: number
-  className: string
-}
-
-
 
 function abilityHasControl(def: AbilityDef): boolean {
-  if (['starter', 'extender', 'counter'].includes(def.comboRole)) return true
+  if (['starter', 'counter'].includes(def.comboRole)) return true
   return def.effects.some((effect) => {
     if (effect.kind === 'knockup') return true
     if (effect.kind === 'applyStatus') return statusControlScore(effect.status) >= 2
@@ -626,29 +590,20 @@ function recommendationTags(
     .filter((def): def is AbilityDef => Boolean(def))
   const tags: string[] = []
   const hasStarter = otherDefs.some((def) => def.comboRole === 'starter' || abilityHasControl(def))
-  const hasFinisher = otherDefs.some(
-    (def) => def.comboRole === 'finisher' || def.comboRole === 'ray',
-  )
+  const hasFinisher = otherDefs.some((def) => def.comboRole === 'finisher')
   const hasReset = otherDefs.some((def) =>
     ['survival', 'counter', 'mobility'].includes(def.comboRole),
   )
   const hasPointPreview = otherDefs.some((def) => def.targeting === 'point')
-  const hasInstantHit = otherDefs.some(
-    (def) => def.targeting === 'forward' || def.comboRole === 'ray',
-  )
+  const hasInstantHit = otherDefs.some((def) => def.targeting === 'forward')
 
   if (!hasStarter && (candidate.comboRole === 'starter' || abilityHasControl(candidate)))
-    tags.push('OPENER')
-  if (!hasFinisher && (candidate.comboRole === 'finisher' || candidate.comboRole === 'ray'))
-    tags.push('CASHOUT')
+    tags.push('APERTURA')
+  if (!hasFinisher && candidate.comboRole === 'finisher') tags.push('CHIUSURA')
   if (!hasReset && ['survival', 'counter', 'mobility'].includes(candidate.comboRole))
     tags.push('RESET')
-  if (
-    hasPointPreview &&
-    !hasInstantHit &&
-    (candidate.targeting === 'forward' || candidate.comboRole === 'ray')
-  )
-    tags.push('FOLLOWUP')
+  if (hasPointPreview && !hasInstantHit && candidate.targeting === 'forward')
+    tags.push('FOLLOW-UP')
   return Array.from(new Set(tags)).slice(0, 2)
 }
 
@@ -674,59 +629,15 @@ function abilityNatureLabel(def: AbilityDef): string {
     kinds.has('restoreStamina') ||
     statuses.some((status) => status === 'shield')
   )
-    return 'RECOVERY'
-  if (def.comboRole === 'mobility' || kinds.has('move')) return hasControl ? 'MOVE + CONTROL' : 'MOBILITY'
-  if (def.comboRole === 'drain' || kinds.has('resourceDrain') || kinds.has('lifesteal'))
-    return 'DRAIN'
-  if (hasControl) return kinds.has('zone') ? 'AREA CONTROL' : 'CONTROL'
-  if (kinds.has('zone')) return 'ZONE'
-  if (kinds.has('projectile')) return hasDot ? 'PROJECTILE + STATUS' : 'PROJECTILE'
-  if (hasDot) return 'STATUS DOT'
-  if (kinds.has('damage')) return 'DAMAGE'
+    return 'RECUPERO'
+  if (def.comboRole === 'mobility' || kinds.has('move')) return hasControl ? 'MOBILITA + CONTROLLO' : 'MOBILITA'
+  if (kinds.has('resourceDrain') || kinds.has('lifesteal')) return 'DRENAGGIO'
+  if (hasControl) return kinds.has('zone') ? 'CONTROLLO AREA' : 'CONTROLLO'
+  if (kinds.has('zone')) return 'ZONA'
+  if (kinds.has('projectile')) return hasDot ? 'PROIETTILE + STATO' : 'PROIETTILE'
+  if (hasDot) return 'STATO / DOT'
+  if (kinds.has('damage')) return 'DANNO'
   return 'UTILITY'
-}
-
-function abilityQuickStats(def: AbilityDef): AbilityQuickStat[] {
-  let damage = 0
-  let control = 0
-  let mobility = 0
-  let sustain = 0
-
-  for (const e of def.effects) {
-    if (e.kind === 'damage') damage += e.amount >= 30 ? 3 : e.amount >= 15 ? 2 : 1
-    else if (e.kind === 'projectile') damage += e.damage >= 30 ? 3 : e.damage >= 15 ? 2 : 1
-    else if (e.kind === 'zone') {
-      damage += e.damagePerTick && e.damagePerTick > 0 ? 2 : 0
-      if (e.applyStatus) control += statusControlScore(e.applyStatus.status)
-    } else if (e.kind === 'channel') {
-      if (e.perTick.kind === 'damage') damage += 3
-      if (e.perTick.kind === 'heal') sustain += 3
-      if (e.perTick.kind === 'applyStatus') control += statusControlScore(e.perTick.status)
-    } else if (e.kind === 'applyStatus') {
-      const selfOnly = def.targeting === 'self' && !(e.radius && e.radius > 0)
-      if (!selfOnly) control += statusControlScore(e.status)
-      sustain += ['shield', 'haste'].includes(e.status) ? 2 : 0
-    } else if (e.kind === 'knockup') {
-      control += e.airborneSec >= 0.8 ? 3 : 2
-    } else if (e.kind === 'move') {
-      mobility += e.distance >= 6 ? 3 : 2
-    } else if (
-      e.kind === 'heal' ||
-      e.kind === 'cleanse' ||
-      e.kind === 'restoreStamina' ||
-      e.kind === 'lifesteal' ||
-      e.kind === 'resourceDrain'
-    ) {
-      sustain += 2
-    }
-  }
-
-  return [
-    { key: 'damage', label: 'Damage', value: clampStat(damage), className: 'stat-damage' },
-    { key: 'control', label: 'Control', value: clampStat(control), className: 'stat-control' },
-    { key: 'mobility', label: 'Mobility', value: clampStat(mobility), className: 'stat-move' },
-    { key: 'sustain', label: 'Utility', value: clampStat(sustain), className: 'stat-resource' },
-  ]
 }
 
 function statusControlScore(status: string): number {
@@ -736,39 +647,39 @@ function statusControlScore(status: string): number {
   return 1
 }
 
-function clampStat(value: number): number {
-  return Math.max(0, Math.min(5, value))
-}
-
 function formatEffectTags(def: AbilityDef): string[] {
   const tags = new Set<string>()
+
+  // Targeting type (first — always shown)
   for (const tag of targetingTags(def)) tags.add(tag)
-  if (def.windupSec > 0) tags.add(`${def.windupSec}s WINDUP`)
+
+  // Windup is now shown in the cost row — skip here to avoid duplication.
+
   for (const e of def.effects) {
     if (e.kind === 'damage') {
       tags.add(e.radius && e.radius > 0 ? `${e.amount} AOE DMG` : `${e.amount} DMG`)
     } else if (e.kind === 'projectile') {
-      tags.add(`${e.damage} PROJECTILE DMG`)
-      if (e.splashRadius && e.splashRadius > 0) tags.add(`${e.splashRadius}m SPLASH`)
+      tags.add(`${e.damage} DMG`)
+      // Skip splash radius (too technical); on-hit status is useful
       if (e.onHitStatus)
         tags.add(statusTag(e.onHitStatus.status, e.onHitStatus.durationSec, e.onHitStatus.stacks))
     } else if (e.kind === 'applyStatus') {
       tags.add(statusTag(e.status, e.durationSec, e.stacks))
     } else if (e.kind === 'knockup') {
-      tags.add(`${e.airborneSec}s AIRBORNE`)
-      if (e.knockbackDistance && e.knockbackDistance > 0)
-        tags.add(`${e.knockbackDistance}m KNOCKBACK`)
+      tags.add('AIRBORNE')
+      // Skip raw distance in metres
     } else if (e.kind === 'heal') {
-      tags.add(e.overSec && e.overSec > 0 ? `${e.amount} HEAL / ${e.overSec}s` : `${e.amount} HEAL`)
+      tags.add(e.overSec && e.overSec > 0 ? `${e.amount} HEAL` : `${e.amount} HEAL`)
     } else if (e.kind === 'zone') {
-      tags.add(`${e.durationSec}s ZONE`)
-      if (e.damagePerTick) tags.add(`${e.damagePerTick}/TICK`)
+      // Mostra danno/tick se presente, altrimenti la durata della zona — non il generico "ZONE"
+      if ((e.damagePerTick ?? 0) > 0) tags.add(`${e.damagePerTick}/TICK`)
+      else if (e.durationSec > 0) tags.add(`${e.durationSec}s ZONA`)
       if (e.applyStatus)
         tags.add(statusTag(e.applyStatus.status, e.applyStatus.durationSec, e.applyStatus.stacks))
     } else if (e.kind === 'move') {
-      tags.add(`${e.distance}m ${e.mode.toUpperCase()}`)
+      tags.add(e.mode.toUpperCase())
     } else if (e.kind === 'channel') {
-      tags.add(`${e.durationSec}s CHANNEL`)
+      tags.add('CHANNEL')
       if (e.perTick.kind === 'damage') tags.add(`${e.perTick.amount}/TICK`)
       if (e.perTick.kind === 'heal') tags.add(`${e.perTick.amount}/TICK HEAL`)
       if (e.perTick.kind === 'applyStatus')
@@ -779,11 +690,10 @@ function formatEffectTags(def: AbilityDef): string[] {
       tags.add(`+${e.amount} STAMINA`)
     } else if (e.kind === 'lifesteal') {
       tags.add(`${Math.round(e.fraction * 100)}% LIFESTEAL`)
-    } else if (e.kind === 'resourceDrain') {
-      tags.add(`-${e.amount} ${e.resource.toUpperCase()}`)
     }
   }
-  return Array.from(tags).slice(0, 6)
+
+  return Array.from(tags).slice(0, 5)
 }
 
 function targetingTags(def: AbilityDef): string[] {
@@ -854,12 +764,37 @@ function tagClass(tag: string): string {
   return ''
 }
 
+/** Maps ability nature label to CSS modifier class for the type badge. */
+function typeBadgeClass(nature: string): string {
+  if (nature.includes('RECUPERO')) return 'recupero'
+  if (nature.includes('MOBILITA') && nature.includes('CONTROLLO')) return 'mob-cc'
+  if (nature.includes('MOBILITA')) return 'mobilita'
+  if (nature.includes('CONTROLLO AREA')) return 'cc-area'
+  if (nature.includes('CONTROLLO')) return 'controllo'
+  if (nature.includes('DRENAGGIO')) return 'drenaggio'
+  if (nature.includes('ZONA')) return 'zona'
+  if (nature.includes('PROIETTILE')) return 'proiettile'
+  if (nature.includes('STATO')) return 'stato'
+  if (nature.includes('DANNO')) return 'danno'
+  return 'utility'
+}
+
+/** Short targeting label with symbol. */
+function targetingLabel(def: AbilityDef): string {
+  if (def.targeting === 'self') return '◉ SELF'
+  if (def.targeting === 'point') return '⊕ PUNTO'
+  if (def.effects.some((e) => e.kind === 'projectile')) return '▷ PROJECTILE'
+  if (def.targeting === 'forward') return '▶ DIRETTO'
+  return '◎ TARGET'
+}
+
+
 function slotPoolTitle(slot: TargetAbilitySlotFamily, _idx: number): string {
-  if (slot === 'melee') return 'Melee Ability'
-  if (slot === 'bow') return 'Bow Ability'
-  if (slot === 'magicBase') return 'Magic Base'
-  if (slot === 'magicAdvanced') return 'Magic Advanced'
-  return 'Utility Slot'
+  if (slot === 'melee') return 'Abilita Spada'
+  if (slot === 'bow') return 'Abilita Arco'
+  if (slot === 'magicBase') return 'Magia Base'
+  if (slot === 'magicAdvanced') return 'Magia Avanzata'
+  return 'Slot Utility'
 }
 
 export const __loadoutStationSmoke = {

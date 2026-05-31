@@ -10,8 +10,8 @@ Every class has 8 total slots. Slot legality is fixed by class:
 | ------- | ----- | --- | ---------- | -------------- | ------- |
 | Tank    | 4     | 1   | 0          | 0              | 3       |
 | Arciere | 0     | 4   | 2          | 0              | 2       |
-| Mago    | 0     | 0   | 3          | 2              | 3       |
-| Ibrido  | 1     | 1   | 2          | 2              | 2       |
+| Mago    | 0     | 0   | 3          | 3              | 2       |
+| Ibrido  | 2     | 1   | 2          | 1              | 2       |
 
 Class weapon access must follow this grammar:
 
@@ -33,24 +33,21 @@ Every preset build includes exactly one class Recovery:
 | Mago    | Arcane Rebind  |
 | Ibrido  | Adaptive Mend  |
 
-## Wheels And Direct Input
+## Wheels
 
-Wheel behavior is fixed:
+Every ability has a direct key on the hotbar (default `1`-`8`, rebindable). The two wheels are a radial **alternative**: 4 sectors each, E = slots 1-4, Q = slots 5-8, sharing the same bind as the direct key.
 
-- Hold `E` for the weapon ability wheel, select, release to prime, `LMB` to fire or confirm.
-- Hold `Q` for the utility wheel, select, release to prime, `LMB` to fire or confirm.
-- Number keys `1-5` cast equipped magic slots. No class may expose more than five
-  `magicBase` + `magicAdvanced` slots.
+- Hold `E`, select sector, release to prime, `LMB` to fire or confirm.
+- Hold `Q`, select sector, release to prime, `LMB` to fire or confirm.
 
-The `E` wheel is for weapon abilities only (`melee`/`bow`). The `Q` wheel is for
-utility/recovery only. Magic slots are direct keys:
+Per-class assignment (4 slots per wheel, all 8 covered):
 
-| Class   | Weapon Wheel `E` abilities | Spell keys `1-5` | Utility Wheel `Q` |
-| ------- | -------------------------- | ---------------- | ----------------- |
-| Tank    | 5                          | 0                | 3                 |
-| Arciere | 4                          | 2                | 2                 |
-| Mago    | 0                          | 5                | 3                 |
-| Ibrido  | 2                          | 4                | 2                 |
+| Class   | E Wheel (4)                       | Q Wheel (4)                                    |
+| ------- | --------------------------------- | ---------------------------------------------- |
+| Tank    | 4 melee                           | 1 bow + 3 utility                              |
+| Arciere | 4 bow                             | 2 magicBase + 2 utility                        |
+| Mago    | 3 magicBase + 1 magicAdvanced     | 2 magicAdvanced + 2 utility                    |
+| Ibrido  | 2 melee + 1 bow + 1 magicBase     | 1 magicBase + 1 magicAdvanced + 2 utility      |
 
 ## Loadout Forge UI Contract
 
@@ -58,6 +55,7 @@ The Forge must show the whole build at once:
 
 - class selector with allowed weapons and family budgets visible;
 - slot columns grouped by family, not duplicate class/weapon rows;
+- E wheel lane and Q wheel lane labeled per class (each shows 4 slots);
 - search always visible;
 - filters `SMART`, `CONTROL`, `PROJECTILE`, `RECOVERY`, `ZONE`, `MOBILITY`, `ALL`;
 - key hints, recovery coverage, and vitals visible;
@@ -65,7 +63,7 @@ The Forge must show the whole build at once:
 - no `#ls-magic` fallback panel;
 - ability chips using the live `tagClass()` outputs only: `tag-role`, `tag-targeting`, `tag-control`, `tag-damage`, `tag-status`, `tag-move`, `tag-resource`.
 
-The UI must make slot legality obvious before the player reads descriptions. Forbidden families are not shown as selectable dead space.
+The UI must make slot legality obvious before the player reads descriptions. Forbidden families are not shown as selectable dead space. Each slot shows which wheel it ends up on (E or Q) as a visual hint.
 
 ## Preset Builds
 
@@ -106,20 +104,20 @@ Preset builds are teaching builds, not ranked recommendations.
 | Magic Base     | Dark Barrier  |
 | Magic Advanced | Eruption      |
 | Magic Advanced | Meteor        |
+| Magic Advanced | Frost Pillar  |
 | Utility        | Arcane Rebind |
 | Utility        | Phase Shift   |
-| Utility        | Smoke Screen  |
 
 ### Ibrido
 
 | Slot family    | Pick           |
 | -------------- | -------------- |
 | Melee          | Uppercut       |
+| Melee          | Gap Closer     |
 | Bow            | Marksman Shot  |
 | Magic Base     | Fireball       |
 | Magic Base     | Lightning Dash |
 | Magic Advanced | Arc Lift       |
-| Magic Advanced | Meteor         |
 | Utility        | Adaptive Mend  |
 | Utility        | Quick Dash     |
 

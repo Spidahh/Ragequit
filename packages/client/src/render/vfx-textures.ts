@@ -8,9 +8,6 @@ export class VfxTextures {
   static dark: THREE.Texture
   static nature: THREE.Texture
   static shield: THREE.Texture
-  static smoke: THREE.Texture
-  static muzzle: THREE.Texture
-  static blood: THREE.Texture
 
   // Aliases for general VFX pools
   static get glow(): THREE.Texture {
@@ -22,6 +19,10 @@ export class VfxTextures {
   static get spark(): THREE.Texture {
     return this.lightning
   }
+  // smoke/muzzle/blood alias -> fire (unused in gameplay, kept for type safety)
+  static get smoke(): THREE.Texture { return this.fire }
+  static get muzzle(): THREE.Texture { return this.fire }
+  static get blood(): THREE.Texture { return this.fire }
 
   private static loader = new THREE.TextureLoader()
   private static initialized = false
@@ -29,16 +30,13 @@ export class VfxTextures {
   static init(): void {
     if (this.initialized) return
 
-    this.fire = this.load('vfx_fire.png')
-    this.slash = this.load('vfx_slash.png')
-    this.ice = this.load('vfx_ice.png')
+    this.fire      = this.load('vfx_fire.png')
+    this.slash     = this.load('vfx_slash.png')
+    this.ice       = this.load('vfx_ice.png')
     this.lightning = this.load('vfx_lightning.png')
-    this.dark = this.load('vfx_dark.png')
-    this.nature = this.load('vfx_nature.png')
-    this.shield = this.load('vfx_shield.png')
-    this.smoke = this.load('vfx_smoke.png')
-    this.muzzle = this.load('vfx_muzzle.png')
-    this.blood = this.load('vfx_blood.png')
+    this.dark      = this.load('vfx_dark.png')
+    this.nature    = this.load('vfx_nature.png')
+    this.shield    = this.load('vfx_shield.png')
 
     this.initialized = true
   }
@@ -49,6 +47,10 @@ export class VfxTextures {
     tex.wrapT = THREE.ClampToEdgeWrapping
     tex.minFilter = THREE.LinearFilter
     tex.magFilter = THREE.LinearFilter
+    // White-on-transparent RGBA textures -- used as alpha masks, not color data
+    tex.colorSpace = THREE.NoColorSpace
+    tex.premultiplyAlpha = false
+    tex.needsUpdate = true
     return tex
   }
 }

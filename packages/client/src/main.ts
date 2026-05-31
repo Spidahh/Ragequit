@@ -11,6 +11,7 @@ import {
   CAPSULE_HEIGHT_M,
   MessageTypes,
   PROJECTILE_MUZZLE_Y_OFFSET_M,
+  TARGET_CLASS_DEFS,
   getMap,
   TICK_MS,
   TICK_RATE_HZ,
@@ -46,6 +47,10 @@ import {
 } from '@ragequit/shared'
 import { Client, type Room } from 'colyseus.js'
 import * as THREE from 'three'
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 
 import { SoundEngine } from './audio/sound-engine.js'
 import { type DeathcamData, type ScoreboardData } from './endgame.js'
@@ -110,6 +115,54 @@ import {
 import { DeathBurst } from './vfx/death-burst.js'
 import { ImpactPool, type ImpactProfile } from './vfx/impact-pool.js'
 import { buildArena } from './world/arena.js'
+import {
+  type ComboState,
+  updateComboOnHit,
+  resetCombo,
+  classifyHit,
+  causeToImpactProfile,
+  victimShakeIntensity,
+  COMBO_RESET_MS,
+} from './game/combat-feedback.js'
+import {
+  rawCauseId,
+  isAirPunishCause,
+  hitstopAttacker,
+  hitstopVictim,
+  elementToImpactColor,
+  HITSTOP_ATTACKER,
+  HITSTOP_VICTIM,
+} from './game/hitstop.js'
+import {
+  type MatchStats,
+  emptyMatchStats,
+  recordKill,
+  recordHit,
+  recordDamageTaken,
+  recordParry,
+  recordComboProc,
+  recordKnockupAttempt,
+  recordKnockupConversion,
+  recordAbilityCast,
+  computeEloDelta,
+} from './game/stats-tracker.js'
+import {
+  type SchemaPlayer,
+  createSchemaAccessors,
+} from './game/schema-helpers.js'
+import {
+  disposeObject3D,
+  markBloom,
+  applyDirectionalShake as _applyDirectionalShake,
+  computeImpactKick,
+} from './game/visual-helpers.js'
+import {
+  showLoadingScreen,
+  hideLoadingScreen,
+  preloadMatchAssets,
+  preloadOtherClassesBackground,
+} from './preloader.js'
+import { matchSM } from './game/match-state-machine.js'
 
 // -----------------------------------------------------------------------
 // DOM refs
@@ -119,6 +172,10 @@ const app = document.getElementById('app')
 if (!app) throw new Error('#app element missing in index.html')
 void ensureIconSprite()
 
+const dbgPanel = document.getElementById('debug')!
+/** True only while the debug overlay (backtick key) is actually visible. Used
+ *  to skip ~4 per-frame DOM writes to hidden debug fields in production. */
+const isDebugVisible = (): boolean => !dbgPanel.classList.contains('hidden')
 const dbgStatus = document.getElementById('dbg-status')!
 const dbgTick = document.getElementById('dbg-tick')!
 const dbgPlayers = document.getElementById('dbg-players')!
@@ -167,6 +224,9 @@ const bowChargeFill = document.querySelector<HTMLElement>('#bow-charge .fill')!
 const popupsLayer = document.getElementById('popups')!
 const respawnOverlay = document.getElementById('respawn')!
 const respawnSec = document.getElementById('respawn-sec')!
+const rsDmgDealtEl = document.getElementById('rs-dmg-dealt-val')
+const rsHitsEl = document.getElementById('rs-hits-val')
+const rsKillsEl = document.getElementById('rs-kills-val')
 const castBar = document.getElementById('cast-bar')!
 const castBarFill = document.querySelector<HTMLElement>('#cast-bar .fill')!
 const castBarLabel = document.querySelector<HTMLElement>('#cast-bar .label')!
@@ -334,6 +394,8 @@ renderer.domElement.tabIndex = 0
 renderer.domElement.style.outline = 'none'
 app.appendChild(renderer.domElement)
 
+
+
 // Nameplate container — absolutely positioned over the canvas for HP bars /
 // name labels above remote players. Updated each render frame via 3D projection.
 const nameplateContainer = document.createElement('div')
@@ -348,6 +410,30 @@ scene.background = new THREE.Color(0x0d1520)
 scene.fog = new THREE.FogExp2(0x0d1520, 0.015)
 
 const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 400)
+
+// -----------------------------------------------------------------------
+// Post-processing: selective bloom on emissive elements
+// Layer 0 = normal objects, Layer 1 = bloom-eligible emissive objects
+// -----------------------------------------------------------------------
+const BLOOM_LAYER = new THREE.Layers()
+BLOOM_LAYER.set(1)
+
+const bloomComposer = new EffectComposer(renderer)
+bloomComposer.renderToScreen = false
+const bloomRenderPass = new RenderPass(scene, camera)
+bloomComposer.addPass(bloomRenderPass)
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  0.45,   // strength — subtle, not blown out
+  0.55,   // radius
+  0.75,   // threshold — only bright emissive gets bloomed
+)
+bloomComposer.addPass(bloomPass)
+// Final composer: full scene render output
+const finalComposer = new EffectComposer(renderer)
+const finalRenderPass = new RenderPass(scene, camera)
+finalComposer.addPass(finalRenderPass)
+finalComposer.addPass(new OutputPass())
 
 // Sky-dome hemisphere: neutral/cool so jumping never washes the screen yellow.
 scene.add(new THREE.HemisphereLight(0xc4d8ff, 0x182238, 1.2))
@@ -374,6 +460,7 @@ scene.add(rim)
 const bounce = new THREE.PointLight(0x80a8ff, 0.06, 16, 2)
 bounce.position.set(0, 0.5, 0)
 scene.add(bounce)
+// markBloom imported from ./game/visual-helpers.js
 // Player follow-light — soft blue-white halo around the self character,
 // giving ground and nearby objects contact-shadow depth.
 const playerLight = new THREE.PointLight(0xaaccff, 0.45, 8, 2)
@@ -385,9 +472,22 @@ const selfEmissive = initSelfEmissive({
 })
 
 const toonGradient = makeToonGradient()
+// Black material used during bloom selective render pass
+const _blackMat = new THREE.MeshBasicMaterial({ color: 0x000000 })
+// Cache of non-bloom meshes + their materials — built on demand, invalidated
+// when scene objects are added/removed (which is infrequent).
+let _bloomDirty = true
+let _nonBloomEntries: Array<{ mesh: THREE.Mesh; mat: THREE.Material | THREE.Material[] }> = []
+/** Call after adding/removing major scene objects to invalidate the bloom cache. */
+function invalidateBloomCache(): void { _bloomDirty = true }
 
 const firstPersonViewModel = new THREE.Group()
 camera.add(firstPersonViewModel)
+// Subtle key light for first-person weapon — gives shape/depth without clipping.
+// Positioned top-left of camera so shadow falls naturally on the grip.
+const fpvKeyLight = new THREE.PointLight(0xd8e8ff, 1.4, 3, 1)
+fpvKeyLight.position.set(-0.4, 0.6, -0.5)
+camera.add(fpvKeyLight)
 const firstPersonParryShield = makeParryShieldVisual(0.42)
 firstPersonParryShield.position.set(0, -0.03, -0.8)
 firstPersonParryShield.userData['parryShield'] = firstPersonParryShield
@@ -444,14 +544,28 @@ function rebuildFirstPersonViewModel(weapon: Weapon): void {
             nameLower.includes('orb') ||
             nameLower.includes('element')
 
-          child.material = new THREE.MeshBasicMaterial({
-            color: isGlowing ? new THREE.Color(0x00d0ff) : color,
-            map: hasMap ? src.map : null,
-            transparent: src?.transparent ?? false,
-            opacity: src?.opacity ?? 1.0,
-            depthTest: false, // first person weapon shouldn't clip into walls
-            depthWrite: false,
-          })
+          // MeshStandardMaterial responds to the fpvKeyLight for depth/shape.
+          // depthTest: false prevents wall clipping in first-person view.
+          if (isGlowing) {
+            child.material = new THREE.MeshBasicMaterial({
+              color: new THREE.Color(0x00d0ff),
+              transparent: true,
+              opacity: src?.opacity ?? 1.0,
+              depthTest: false,
+              depthWrite: false,
+            })
+          } else {
+            child.material = new THREE.MeshStandardMaterial({
+              color,
+              map: hasMap ? src.map : null,
+              roughness: 0.55,
+              metalness: 0.3,
+              transparent: src?.transparent ?? false,
+              opacity: src?.opacity ?? 1.0,
+              depthTest: false,
+              depthWrite: false,
+            })
+          }
         }
       })
 
@@ -511,37 +625,20 @@ function spawnImpact(pos: THREE.Vector3, color: number, profile: ImpactProfile =
   impactVfx.spawn(pos, color, profile)
 }
 
-/** Map element → world-space impact tint. */
-function elementToImpactColor(element: string | undefined, cause: string): number {
-  // Combo reactions get distinctive colours regardless of element.
-  if (cause === 'combo:steam') return 0x88eeff // cyan steam burst
-  if (cause === 'combo:combustion') return 0xff8822 // orange-fire explosion
-  if (cause === 'combo:festering') return 0xaaff44 // sickly green DoT
-  if (cause === 'combo:entrapment') return 0x60bb40 // darker nature green
-  // Element-mapped colours for projectile / zone hits.
-  switch (element) {
-    case 'fire':
-      return 0xff6622
-    case 'ice':
-      return 0x88ddff
-    case 'lightning':
-      return 0xffee44
-    case 'dark':
-      return 0xaa55ff
-    case 'nature':
-      return 0x77ee55
-    default:
-      return 0xd0d8ff // neutral pale-blue
-  }
-}
+// elementToImpactColor imported from ./game/hitstop.js
 
 const impactVfx = new ImpactPool()
 scene.add(impactVfx.mesh)
 scene.add(impactVfx.ringMesh)
 scene.add(impactVfx.accentMesh)
+// Mark VFX meshes as bloom-eligible
+impactVfx.mesh.layers.enable(1)
+impactVfx.ringMesh.layers.enable(1)
+impactVfx.accentMesh.layers.enable(1)
 
 const deathBurstVfx = new DeathBurst()
 scene.add(deathBurstVfx.mesh)
+deathBurstVfx.mesh.layers.enable(1) // bloom
 
 const zoneVfx = initZoneVisuals({ scene })
 const projectileVfx = initProjectileVisuals({
@@ -761,25 +858,10 @@ let selfRollingUntilMs = 0
 // Directional screen shake — offset the camera toward/away from attacker.
 // attackerWorldPos: world-space position of whoever dealt damage. Use null
 // for a random-direction fallback (e.g. death from zone damage).
+// applyDirectionalShake: wraps _applyDirectionalShake from visual-helpers.js
+// Kept here because it closes over the module-level shakeOffset/shakeDecay vars.
 function applyDirectionalShake(attackerWorldPos: THREE.Vector3 | null, intensity = 1): void {
-  const selfPos = self?.sim.pos
-  if (selfPos && attackerWorldPos) {
-    // Push camera away from attacker (recoil feel).
-    const dir = new THREE.Vector3(
-      selfPos.x - attackerWorldPos.x,
-      0,
-      selfPos.z - attackerWorldPos.z,
-    ).normalize()
-    shakeOffset.set(dir.x * 0.28 * intensity, 0.1 * intensity, dir.z * 0.28 * intensity)
-  } else {
-    const angle = Math.random() * Math.PI * 2
-    shakeOffset.set(
-      Math.cos(angle) * 0.22 * intensity,
-      0.08 * intensity,
-      Math.sin(angle) * 0.22 * intensity,
-    )
-  }
-  shakeDecay = shakeOffset.length()
+  shakeDecay = _applyDirectionalShake(shakeOffset, self?.sim.pos ?? null, attackerWorldPos, intensity)
 }
 
 // Live round phase start tick — set when MatchPhase 'live' arrives.
@@ -796,6 +878,16 @@ let selfArcExpiresAt = 0
 let selfLastWeapon = ''
 let room: Room | null = null
 let activeRoomMode = 'duel_arena'
+// Schema accessors — exported for use by sub-modules via createSchemaAccessors(getRoom)
+// The functions below (getSchemaPlayers, etc.) are wrappers kept in main.ts for
+// backward compat; the typed versions live in game/schema-helpers.ts.
+const _schemaAccessors = createSchemaAccessors(() => room)
+// Asset preload -- kicked off when we join a room (background, parallel to loadout).
+// When 'live' phase starts, we wait for this promise before engaging gameplay.
+let _matchPreloadPromise: Promise<void> | null = null
+// Reconnect state — tracks if we should attempt a single automatic reconnect
+let _reconnectAttempted = false
+let _reconnectTimer: ReturnType<typeof setTimeout> | null = null
 export function getRoomMode(): string {
   return activeRoomMode
 }
@@ -803,43 +895,9 @@ let connectSeq = 0
 let ping = 0
 let matchStartMs = 0
 
-// Cumulative match stats
-interface MatchStats {
-  kills: number
-  yourHits: number
-  damageDealt: number
-  damageTaken: number
-  knockups: number
-  parries: number
-  comboProcs: number
-  knockupAttempts: number
-  knockupConversions: number
-  abilitiesUsed: Record<string, number>
-}
-let selfStats: MatchStats = {
-  kills: 0,
-  yourHits: 0,
-  damageDealt: 0,
-  damageTaken: 0,
-  knockups: 0,
-  parries: 0,
-  comboProcs: 0,
-  knockupAttempts: 0,
-  knockupConversions: 0,
-  abilitiesUsed: {},
-}
-let opponentStats: MatchStats = {
-  kills: 0,
-  yourHits: 0,
-  damageDealt: 0,
-  damageTaken: 0,
-  knockups: 0,
-  parries: 0,
-  comboProcs: 0,
-  knockupAttempts: 0,
-  knockupConversions: 0,
-  abilitiesUsed: {},
-}
+// MatchStats interface imported from ./game/stats-tracker.js
+let selfStats: MatchStats = emptyMatchStats()
+let opponentStats: MatchStats = emptyMatchStats()
 
 let lastHitDetails = {
   killer: '',
@@ -860,13 +918,31 @@ function isMatchPhase(value: unknown): value is ServerMatchPhaseMessage['phase']
 
 function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
   currentMatchPhase = msg.phase
+  // Keep matchSM in sync with the Colyseus phase
+  matchSM.transition(msg.phase as import('./game/match-state-machine.js').MatchState)
   menu.onMatchPhase(msg, selfId)
   if (msg.phase === 'live') {
     livePhaseStartTick = getSchemaTick()
     roundTimer.textContent = ''
     requestAnimationFrame(() => draggableHud.refreshBounds())
-    if (canEngageGameplaySurface()) {
-      engageCanvasInput()
+    // Wait for asset preload before engaging gameplay.
+    // If preload is already done this resolves immediately.
+    const engage = (): void => {
+      hideLoadingScreen()
+      if (canEngageGameplaySurface()) {
+        engageCanvasInput()
+        showTutorialIfFirstTime()
+        soundEngine.startArenaAmbient()
+      }
+    }
+    if (_matchPreloadPromise) {
+      showLoadingScreen('Entrando in arena...')
+      _matchPreloadPromise.then(engage).catch((err: unknown) => {
+        console.error('[preloader] preload failed, engaging anyway:', err)
+        engage()
+      })
+    } else {
+      engage()
     }
   } else {
     livePhaseStartTick = -1
@@ -875,30 +951,8 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
   }
   if (msg.phase === 'lobby' || msg.phase === 'countdown') {
     lastMatchEloDeltas = {}
-    selfStats = {
-      kills: 0,
-      yourHits: 0,
-      damageDealt: 0,
-      damageTaken: 0,
-      knockups: 0,
-      parries: 0,
-      comboProcs: 0,
-      knockupAttempts: 0,
-      knockupConversions: 0,
-      abilitiesUsed: {},
-    }
-    opponentStats = {
-      kills: 0,
-      yourHits: 0,
-      damageDealt: 0,
-      damageTaken: 0,
-      knockups: 0,
-      parries: 0,
-      comboProcs: 0,
-      knockupAttempts: 0,
-      knockupConversions: 0,
-      abilitiesUsed: {},
-    }
+    selfStats = emptyMatchStats()
+    opponentStats = emptyMatchStats()
     lastHitDetails = { killer: '', ability: '', element: '', damage: 0 }
     matchStartMs = performance.now()
   }
@@ -927,25 +981,35 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
     const oppClassId = otherSchema?.classId || 'hybrid'
     const oppBuild = `${oppClassId.toUpperCase()} · ${otherSchema?.activeWeapon?.toUpperCase() || 'SWORD'}`
 
-    // Determine winner based on score or kills
-    const isWin = selfStats.kills >= opponentStats.kills
-    // Use real server-computed ELO delta when available (from matchEnd score msg);
-    // fall back to K-factor estimate if the server didn't send deltas.
+    // Determine winner using server ELO deltas (authoritative) or round wins,
+    // falling back to kill count only when neither is available.
     const selfEloDelta = lastMatchEloDeltas[selfId]
-    const eloDelta = selfEloDelta !== undefined ? selfEloDelta : isWin ? 25 : -18
-    const eloBefore = ELO_STARTING
+    const oppEloDelta = otherId ? lastMatchEloDeltas[otherId] : undefined
+    const isWin = selfEloDelta !== undefined
+      ? selfEloDelta > 0
+      : oppEloDelta !== undefined
+        ? oppEloDelta < 0
+        : selfStats.kills > opponentStats.kills
+
+    const eloBefore = ELO_STARTING // real per-player ELO from Supabase — TODO when auth is complete
+    const eloDelta = selfEloDelta !== undefined
+      ? selfEloDelta
+      : computeEloDelta(eloBefore, ELO_STARTING, isWin)
 
     const arenaName = getSchemaMapId()
     const matchMs = performance.now() - matchStartMs
+    const mode = getRoomMode()
 
     const scoreboardData: ScoreboardData = {
       arena: arenaName.toUpperCase(),
       matchMs: matchMs > 0 ? matchMs : 120000,
       rounds:
-        getRoomMode() === 'training'
-          ? 'PRACTICE'
-          : `${selfStats.kills}-${opponentStats.kills} rounds`,
-      league: getRoomMode() === 'training' ? 'NO RANKED ELO' : 'Gold III',
+        mode === 'training'
+          ? 'PRATICA'
+          : mode === '1v1' || mode === 'duel_arena' || mode === 'blockout'
+            ? `${selfStats.kills} - ${opponentStats.kills} round`
+            : `${selfStats.kills} - ${opponentStats.kills} kill`,
+      league: mode === 'training' ? 'NO ELO' : 'RANKED',
       winner: isWin
         ? {
             name: selfName,
@@ -1013,44 +1077,18 @@ let hitStopUntilMs = 0
 // Victim-side hit-stop — receiving a hit triggers a brief visual freeze for self.
 let victimHitStopUntilMs = 0
 
-// Hit-stop durations by damage source category (milliseconds).
-// Keys are RAW cause ids (without 'ability:' prefix). The helper below strips
-// the prefix so both 'sword_m1' and 'ability:uppercut' resolve correctly.
-const HITSTOP_ATTACKER: Record<string, number> = {
-  sword_m1: 80, uppercut: 80, whirlwind: 70, gap_closer: 65,
-  bleed_strike: 65, guard_break: 65, rending_dash: 60,
-  bow: 45, staff: 45,
-}
-const HITSTOP_VICTIM: Record<string, number> = {
-  sword_m1: 55, uppercut: 55, whirlwind: 50, gap_closer: 50,
-  bleed_strike: 50, guard_break: 50, rending_dash: 45,
-  bow: 35, staff: 35,
-}
+// hitstop functions/constants imported from ./game/hitstop.js
 
-// Strip the 'ability:' prefix so both raw ids and engine-prefixed ids resolve.
-function rawCauseId(cause: string): string {
-  return cause.startsWith('ability:') ? cause.slice(8) : cause
-}
-function isAirPunishCause(cause: string): boolean {
-  return cause.includes(':air_punish')
-}
-function hitstopAttacker(cause: string): number {
-  if (isAirPunishCause(cause)) return 100
-  const raw = rawCauseId(cause)
-  return HITSTOP_ATTACKER[raw] ?? (cause.startsWith('zone:') || cause.startsWith('combo:') ? 20 : 50)
-}
-function hitstopVictim(cause: string): number {
-  if (isAirPunishCause(cause)) return 75
-  const raw = rawCauseId(cause)
-  return HITSTOP_VICTIM[raw] ?? (cause.startsWith('zone:') || cause.startsWith('combo:') ? 25 : 40)
-}
-
-// Client-side combo tracking for the attacker (independent of server combo state).
-// Counts consecutive hits landed; resets after COMBO_RESET_MS idle or on death.
+// Client-side combo tracking — uses ComboState from game/combat-feedback.ts
+const _comboState: ComboState = { count: 0, lastHitMs: 0 }
+// Legacy aliases for code that still uses these directly (gradually migrating)
 let localComboCount = 0
 let lastHitAsAttackerMs = 0
-const COMBO_RESET_MS = 2500
 
+// Kill confirm crosshair flash timestamp
+let _killConfirmUntilMs = 0
+// Low-HP audio heartbeat — tracks last beat time
+let _lastHeartbeatMs = 0
 // Directional screen shake — camera displacement decays each frame toward zero.
 // Magnitude and direction are set by applyDirectionalShake(); decay is per-frame.
 const shakeOffset = new THREE.Vector3()
@@ -1568,7 +1606,7 @@ const gameInput = initGameInput(inp, {
   mouseSensitivity,
   radialWheels,
   pitchLimits: { up: PITCH_UP_LIMIT, down: PITCH_DOWN_LIMIT },
-  weaponIds: WEAPON_IDS,
+  getCurrentClassId,
   hint,
   pingHud,
   settingsOverlay,
@@ -1590,7 +1628,7 @@ const gameInput = initGameInput(inp, {
   openPauseMenu: () => openPauseMenu(),
   closePauseMenu: (lock) => closePauseMenu(lock),
   cancelPlacementPreview: () => castDispatcher.cancelPlacementPreview(),
-  activateAbilitySlot: (idx, fromWheel) => castDispatcher.activateAbilitySlot(idx, fromWheel),
+  onActivateSlot: (idx: number) => castDispatcher.activateAbilitySlot(idx, false),
   onClear: () => clearCombatInputEdges(),
 })
 const { engageCanvasInput, requestArenaPointerLock, sampleInput } = gameInput
@@ -1638,6 +1676,14 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
     soundEngine.muted = false
     setStatus('connected', '#9be39b')
     trackMatchJoined(mode)
+    _reconnectAttempted = false
+    if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null }
+
+    // Kick off asset preload in background while the player configures loadout.
+    const selfClass = loadoutStation.getClassId() || 'hybrid'
+    _matchPreloadPromise = preloadMatchAssets(selfClass).then(() => {
+      preloadOtherClassesBackground(selfClass)
+    })
     console.info(
       `[ragequit-client] connected ${SERVER_URL} room=${joinedRoom.roomId} session=${joinedRoom.sessionId} mode=${mode}`,
     )
@@ -1764,8 +1810,31 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
       menu.onScore(msg, selfId, otherId)
     })
 
-    joinedRoom.onLeave(() => {
+    joinedRoom.onLeave((code?: number) => {
       if (room && room !== joinedRoom) return
+      // code 4000 = intentional kick/leave; anything else = unexpected drop
+      const intentional = code === 4000 || code === 1000
+      if (!intentional && !_reconnectAttempted && matchSM.isLive) {
+        // Single automatic reconnect attempt after 2 s
+        _reconnectAttempted = true
+        setStatus('connecting', '#e4c05a')
+        serverToast.textContent = 'Connessione persa. Riconnessione...'
+        serverToast.classList.remove('hidden')
+        if (_reconnectTimer) clearTimeout(_reconnectTimer)
+        _reconnectTimer = setTimeout(async () => {
+          serverToast.classList.add('hidden')
+          try {
+            await connect(activeRoomMode, false)
+            _reconnectAttempted = false
+          } catch {
+            _reconnectAttempted = false
+            setStatus('disconnected', '#e87070')
+            returnToMainMenu({ leaveRoom: false, statusText: 'disconnected' })
+          }
+        }, 2000)
+        return
+      }
+      _reconnectAttempted = false
       setStatus('disconnected', '#e87070')
       returnToMainMenu({ leaveRoom: false, statusText: 'disconnected' })
     })
@@ -1786,6 +1855,14 @@ function pushPersistedLoadout(): void {
 function onHit(msg: ServerHitMessage): void {
   const amISelf = msg.victimId === self?.sessionId
   const amIAttacker = msg.attackerId === self?.sessionId
+  // Spatial audio for remote player impacts (not self-hits — those have their own sounds)
+  if (!amISelf && !amIAttacker) {
+    const attackerPos = remotePlayerSystem.getPlayerWorldPos?.(msg.attackerId)
+    if (attackerPos) {
+      const power = Math.min(1, (msg.damage ?? 20) / 60)
+      soundEngine.playRemoteHit(attackerPos.x, attackerPos.y, attackerPos.z, power)
+    }
+  }
   const now = performance.now()
   const isAirPunish = isAirPunishCause(msg.cause)
   // Normalise power 0–1 against typical hit ceiling (~40 damage = full power).
@@ -1886,6 +1963,10 @@ function onHit(msg: ServerHitMessage): void {
     } else {
       // ── Normal hit 1 ──
       soundEngine.playHitByType(msg.cause, power)
+      // Play element-specific impact sound for ability hits
+      if (msg.cause.startsWith('ability:') || msg.cause.startsWith('zone:') || msg.cause.startsWith('combo:')) {
+        soundEngine.playElementImpact(msg.element ?? 'none', Math.min(1, power * 0.8))
+      }
       hitStopUntilMs = now + hitstopAttacker(msg.cause)
       applyDirectionalShake(getPlayerWorldPos(msg.victimId), 0.3)
     }
@@ -1897,12 +1978,8 @@ function onHit(msg: ServerHitMessage): void {
     victimHitStopUntilMs = now + hitstopVictim(msg.cause)
     selfHitReactUntilMs = now + 650
     // Victim camera shake — melee hits harder, felt directly on screen.
-    const raw = rawCauseId(msg.cause)
-    const isMeleeHit = ['sword_m1','uppercut','whirlwind','gap_closer','bleed_strike','guard_break','rending_dash'].includes(raw)
-    const victimShakeIntensity = isMeleeHit
-      ? Math.min(1.4, msg.damage / 20)
-      : Math.min(0.9, msg.damage / 30)
-    applyDirectionalShake(getPlayerWorldPos(msg.attackerId), victimShakeIntensity)
+    const _victimShakeI = victimShakeIntensity(msg.cause, msg.damage)
+    applyDirectionalShake(getPlayerWorldPos(msg.attackerId), _victimShakeI)
   }
 
   // --- Observer: world-space impact sound (attenuated) ---
@@ -2048,7 +2125,10 @@ function onDeath(msg: ServerDeathMessage): void {
   const deathPos = getPlayerWorldPos(msg.victimId)
   if (deathPos) deathBurstVfx.spawn(deathPos, isSelfKill && !isSelfDied)
 
-  if (isSelfKill && !isSelfDied) trackKill(msg.cause ?? 'unknown')
+  if (isSelfKill && !isSelfDied) {
+    trackKill(msg.cause ?? 'unknown')
+    _killConfirmUntilMs = performance.now() + 200
+  }
   if (isSelfDied) {
     trackDeath(msg.cause ?? 'unknown')
     lastKillerName = killerName
@@ -2123,15 +2203,7 @@ function onWeaponSwapped(msg: ServerWeaponSwappedMessage): void {
 
 // --- Event handlers --------------------------------------------------------
 
-function disposeObject3D(obj: THREE.Object3D): void {
-  obj.traverse((child) => {
-    if (child instanceof THREE.Mesh) {
-      child.geometry.dispose()
-      if (Array.isArray(child.material)) child.material.forEach((m) => m.dispose())
-      else (child.material as THREE.Material).dispose()
-    }
-  })
-}
+// disposeObject3D imported from ./game/visual-helpers.js
 
 function clearSelfVisuals(): void {
   if (selfMesh) {
@@ -2139,6 +2211,7 @@ function clearSelfVisuals(): void {
     scene.remove(selfMesh)
     disposeObject3D(selfMesh)
     selfMesh = null
+    invalidateBloomCache()
   }
   if (selfArc) {
     scene.remove(selfArc)
@@ -2206,8 +2279,71 @@ function clearLocalMatchState(): void {
   clearSelfVisuals()
 }
 
+
+// -----------------------------------------------------------------------
+// Tutorial HUD — shown once per player on first match entry
+// -----------------------------------------------------------------------
+
+function showTutorialIfFirstTime(): void {
+  if (localStorage.getItem('ragequit.tutorial.done') === 'true') return
+  localStorage.setItem('ragequit.tutorial.done', 'true')
+
+  const TIPS = [
+    { delay: 500,  dur: 4500, text: 'WASD per muoverti — SPAZIO per saltare' },
+    { delay: 5500, dur: 4000, text: 'LMB = attacco base — RMB = parata / ricarica' },
+    { delay: 10000, dur: 4500, text: 'E / Q aprono le ruote abilità — 1-8 cast diretto' },
+    { delay: 15000, dur: 4000, text: 'TAB cambia arma — ESC pausa' },
+  ]
+
+  const overlay = document.createElement('div')
+  overlay.id = 'tutorial-overlay'
+  overlay.style.cssText = [
+    'position:fixed',
+    'bottom:120px',
+    'left:50%',
+    'transform:translateX(-50%)',
+    'pointer-events:none',
+    'z-index:500',
+    'display:flex',
+    'flex-direction:column',
+    'align-items:center',
+    'gap:8px',
+  ].join(';')
+  document.body.appendChild(overlay)
+
+  for (const tip of TIPS) {
+    setTimeout(() => {
+      const el = document.createElement('div')
+      el.style.cssText = [
+        'background:rgba(5,8,18,0.88)',
+        'border:1px solid rgba(212,160,74,0.35)',
+        'border-radius:4px',
+        'padding:7px 18px',
+        'font:600 12px/1.3 Rajdhani,ui-monospace,monospace',
+        'color:#d4c0a0',
+        'letter-spacing:.06em',
+        'text-transform:uppercase',
+        'opacity:0',
+        'transition:opacity .35s',
+      ].join(';')
+      el.textContent = tip.text
+      overlay.appendChild(el)
+      requestAnimationFrame(() => { el.style.opacity = '1' })
+      setTimeout(() => {
+        el.style.opacity = '0'
+        setTimeout(() => el.remove(), 400)
+      }, tip.dur - 400)
+    }, tip.delay)
+  }
+
+  // Remove overlay after all tips
+  setTimeout(() => overlay.remove(), 20500)
+}
 function returnToMainMenu(opts: { leaveRoom: boolean; statusText?: string }): void {
+  soundEngine.stopArenaAmbient()
   connectSeq++
+  _reconnectAttempted = false
+  if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null }
   const leavingRoom = room
   if (leavingRoom)
     trackMatchLeft(
@@ -2259,9 +2395,7 @@ function returnToTrainingScoreboard(): void {
   const oppClassId = otherSchema?.classId || 'hybrid'
   const oppBuild = `${oppClassId.toUpperCase()} · ${otherSchema?.activeWeapon?.toUpperCase() || 'SWORD'}`
 
-  const isWin = selfStats.kills >= opponentStats.kills
-  const eloDelta = 0
-  const eloBefore = ELO_STARTING
+  const isWin = selfStats.kills > opponentStats.kills
 
   const arenaName = getSchemaMapId()
   const matchMs = performance.now() - matchStartMs
@@ -2269,8 +2403,10 @@ function returnToTrainingScoreboard(): void {
   const scoreboardData: ScoreboardData = {
     arena: arenaName.toUpperCase(),
     matchMs: matchMs > 0 ? matchMs : 120000,
-    rounds: 'PRACTICE',
-    league: 'NO RANKED ELO',
+    rounds: 'PRATICA',
+    league: 'NO ELO',
+    eloBefore: ELO_STARTING,
+    eloDelta: 0,
     winner: isWin
       ? {
           name: selfName,
@@ -2317,8 +2453,6 @@ function returnToTrainingScoreboard(): void {
           comboProcs: selfStats.comboProcs,
           abilitiesUsed: selfStats.abilitiesUsed,
         },
-    eloBefore,
-    eloDelta,
   }
 
   menu.showScoreboard(selfId, scoreboardData)
@@ -2363,6 +2497,7 @@ function initSelfIfNeeded(): void {
   }
   selfMesh = makeCharacter(0x3a8fde, toonGradient) // self = blue (standard: I am blue)
   scene.add(selfMesh)
+  invalidateBloomCache()
   loadCharacterGlb(selfMesh, 0x3a8fde, toonGradient, p.classId)
   selfArc = makeSwingArcMesh()
   scene.add(selfArc)
@@ -2373,55 +2508,7 @@ function initSelfIfNeeded(): void {
 // State reading
 // -----------------------------------------------------------------------
 
-interface SchemaPlayer {
-  id: string
-  name: string
-  team: string
-  transform: { x: number; y: number; z: number; yaw: number; pitch: number }
-  vx: number
-  vy: number
-  vz: number
-  onGround: boolean
-  hp: number
-  mana: number
-  stamina: number
-  activeWeapon: string
-  alive: boolean
-  airborneUntilTick: number
-  respawnAtTick: number
-  comboIndex: number
-  swingEndsAtTick: number
-  lastSwingStartTick: number
-  invulnUntilTick: number
-  casting: boolean
-  castAbilityId: string
-  castEndsAtTick: number
-  lastProcessedInputSeq: number
-  bowChargeStartTick: number
-  parrying: boolean
-  parryIsHold: boolean
-  parryTapEndsAtTick: number
-  statuses: ReadonlyArray<{
-    kind: string
-    stacks: number
-    remainingSec: number
-    slowFractionOverride: number
-  }>
-  abilityCooldowns: Map<string, number>
-  loadout: ReadonlyArray<string>
-  classId: string
-  furyStacks: number
-  furyNextMeleeIsSurge: boolean
-  momentum: number
-  risonanzaElement: string
-  risonanzaArmedUntilTick: number
-  flowStacks: number
-  flowPendingBonus: boolean
-  gcdReadyAtTick: number
-  momentumTicks: number
-  jumpHoldTicksLeft: number
-  coyoteTicksLeft: number
-}
+// SchemaPlayer interface imported from ./game/schema-helpers.js
 
 function getSchemaPlayers(): Map<string, SchemaPlayer> | null {
   if (!room?.state) return null
@@ -2471,7 +2558,7 @@ function sendAbilityCast(abilityId: string, tick: number): void {
   // Remember the target for resolution VFX (shown when windup completes).
   lastCastTargetPoint = msg.targetPoint ?? null
 
-  selfStats.abilitiesUsed[abilityId] = (selfStats.abilitiesUsed[abilityId] ?? 0) + 1
+  recordAbilityCast(selfStats, abilityId)
   if (['uppercut', 'eruption', 'arc_lift', 'frost_pillar'].includes(abilityId)) {
     selfStats.knockupAttempts++
   }
@@ -2672,19 +2759,50 @@ let lastFrame = performance.now()
 let frameCount = 0
 let fpsAccum = 0
 
+let _renderErrorCount = 0
+const _MAX_RENDER_ERRORS = 5
+
 function render(now: number): void {
+  // Always schedule next frame first so a mid-frame error never kills the loop.
+  requestAnimationFrame(render)
+  try {
+    _renderInner(now)
+  } catch (err) {
+    _renderErrorCount++
+    console.error(`[render] frame error #${_renderErrorCount}:`, err)
+    if (_renderErrorCount >= _MAX_RENDER_ERRORS) {
+      console.error('[render] too many errors -- suspending render loop')
+      serverToast.textContent = 'Errore grafico. Ricaricare la pagina.'
+      serverToast.classList.remove('hidden')
+    }
+  }
+}
+
+function _renderInner(now: number): void {
   const dt = (now - lastFrame) / 1000
   lastFrame = now
   frameCount += 1
   fpsAccum += dt
   if (fpsAccum >= 0.5) {
-    dbgFps.textContent = (frameCount / fpsAccum).toFixed(0)
+    if (isDebugVisible()) dbgFps.textContent = (frameCount / fpsAccum).toFixed(0)
     fpsAccum = 0
     frameCount = 0
   }
 
+  // Skip 3D render entirely while the menu/loadout overlay is visible. The
+  // canvas is CSS-hidden there (visibility:hidden), so the only effect of
+  // rendering would be wasted GPU work (full scene + double bloom pass) behind
+  // an invisible surface — the old "arena spinning behind the menu" cost. We
+  // skip even when a room is connected (matchmaking/loadout), since nothing on
+  // screen comes from the 3D canvas until the match actually starts.
+  const inMenu =
+    document.body.classList.contains('main-menu-active') ||
+    document.body.classList.contains('loadout-active')
+  if (inMenu) return
+
   // Swap map geometry when the server schema reports a different mapId.
   loadMapGeometry(getSchemaMapId())
+  invalidateBloomCache() // map may have changed scene geometry
   placementPreview.update(now)
 
   // Hit-stop flag — particle animation and camera lerp are frozen during it.
@@ -2695,6 +2813,15 @@ function render(now: number): void {
   renderer.toneMappingExposure += (targetExposure - renderer.toneMappingExposure) * 0.28
 
   animateArena(now, dt, inHitStop)
+  // Update 3D audio listener position every frame
+  if (self) {
+    soundEngine.updateListener(
+      camera.position.x,
+      camera.position.y,
+      camera.position.z,
+      camera.rotation.y,
+    )
+  }
 
   const selfSchema = getSelfSchemaPlayer()
   const tickNow = getSchemaTick()
@@ -2897,11 +3024,18 @@ function render(now: number): void {
 
     // --- Directional shake — apply current offset to camera, then decay. ---
     if (shakeDecay > 0.001) {
-      camera.position.add(shakeOffset)
-      const decayed = Math.max(0, shakeDecay - SHAKE_DECAY_RATE * dt)
-      const scale = shakeDecay > 0 ? decayed / shakeDecay : 0
-      shakeOffset.multiplyScalar(scale)
-      shakeDecay = decayed
+      // Exponential decay — feels snappier than linear, especially for big hits
+      const decay = Math.exp(-SHAKE_DECAY_RATE * dt)
+      shakeOffset.multiplyScalar(decay)
+      shakeDecay *= decay
+      // Add micro-oscillation on top for organic feel
+      const microAmp = shakeDecay * 0.18
+      const mOff = new THREE.Vector3(
+        (Math.random() - 0.5) * microAmp,
+        (Math.random() - 0.5) * microAmp * 0.5,
+        (Math.random() - 0.5) * microAmp,
+      )
+      camera.position.add(shakeOffset).add(mOff)
     } else {
       shakeDecay = 0
       shakeOffset.set(0, 0, 0)
@@ -2917,6 +3051,17 @@ function render(now: number): void {
 
     // Weapon-specific crosshair — drives CSS via data attribute.
     crosshairEl.dataset['weapon'] = wSchema
+    // Dynamic crosshair: expand when moving, contract when still
+    // Check movement via WASD keys (moveX/moveZ are local to simStep)
+    const selfMoving = self !== null && (
+      inp.keys.has('KeyW') || inp.keys.has('KeyS') ||
+      inp.keys.has('KeyA') || inp.keys.has('KeyD') ||
+      inp.keys.has('ArrowUp') || inp.keys.has('ArrowDown') ||
+      inp.keys.has('ArrowLeft') || inp.keys.has('ArrowRight')
+    )
+    crosshairEl.dataset['moving'] = selfMoving ? 'true' : 'false'
+    if (now < _killConfirmUntilMs) crosshairEl.classList.add('kill-confirm')
+    else crosshairEl.classList.remove('kill-confirm')
     // Primed crosshair accent — subtle gold ring when an ability is ready to fire on LMB.
     const primedIdx = castDispatcher.getPrimedSlotIdx()
     if (primedIdx !== null) crosshairEl.setAttribute('data-primed', 'true')
@@ -2937,19 +3082,6 @@ function render(now: number): void {
         selfArc.visible = false
       }
     }
-  } else if (
-    document.body.classList.contains('main-menu-active') ||
-    document.body.classList.contains('loadout-active')
-  ) {
-    // Before a room exists there is no player camera to frame the menu canvas.
-    // Keep the arena readable instead of leaving the camera at ground origin.
-    const orbit = now * 0.00008
-    camera.position.set(Math.cos(orbit) * 38, 17, Math.sin(orbit) * 38)
-    camera.lookAt(0, 2.4, 0)
-    if (camera.fov !== 72) {
-      camera.fov = 72
-      camera.updateProjectionMatrix()
-    }
   }
 
   remotePlayerSystem.renderFrame(now, camera, renderer.domElement)
@@ -2960,11 +3092,12 @@ function render(now: number): void {
   impactVfx.update(now)
   deathBurstVfx.update(now)
 
-  // HUD + debug.
-  dbgTick.textContent = String(tickNow)
-  const players = getSchemaPlayers()
-  dbgPlayers.textContent = String(players?.size ?? 0)
-  dbgPing.textContent = ping > 0 ? ping.toFixed(0) : '-'
+  // HUD + debug. Skip the debug-field DOM writes unless the overlay is open.
+  if (isDebugVisible()) {
+    dbgTick.textContent = String(tickNow)
+    dbgPlayers.textContent = String(getSchemaPlayers()?.size ?? 0)
+    dbgPing.textContent = ping > 0 ? ping.toFixed(0) : '-'
+  }
   // Persistent ping HUD (always-visible coloured indicator)
   if (ping > 0) {
     pingValEl.textContent = ping.toFixed(0)
@@ -3008,6 +3141,24 @@ function render(now: number): void {
     },
   })
 
+  // Low-HP audio heartbeat — plays at ~0.65 Hz when critically low
+  if (self && currentMatchPhase === 'live') {
+    const selfSch = getSelfSchemaPlayer()
+    if (selfSch && selfSch.alive) {
+      const classId = (selfSch.classId || 'hybrid') as ClassId
+      const hpMax = TARGET_CLASS_DEFS[classId]?.resourceMaxima?.hp ?? 200
+      const hpFrac = Math.max(0, selfSch.hp / hpMax)
+      if (hpFrac < 0.25) {
+        // Heartbeat interval: 1200ms at full danger, speeds up as HP drops
+        const intervalMs = 600 + hpFrac * 2400
+        if (now - _lastHeartbeatMs > intervalMs) {
+          _lastHeartbeatMs = now
+          soundEngine.playHeartbeat(1 - hpFrac * 3.5)
+        }
+      }
+    }
+  }
+
   zoneVfx.animateFrame(now)
 
   selfEmissive.update(now, tickNow, selfSchema ?? null, selfDamageBlinkUntilMs)
@@ -3031,6 +3182,12 @@ function render(now: number): void {
     yourParries: selfStats.parries,
     timeToNextMs: 5000,
   }
+  // Update respawn stats strip while dead
+  if (selfSchema && !selfSchema.alive) {
+    if (rsDmgDealtEl) rsDmgDealtEl.textContent = String(selfStats.damageDealt)
+    if (rsHitsEl) rsHitsEl.textContent = String(selfStats.yourHits)
+    if (rsKillsEl) rsKillsEl.textContent = `${selfStats.kills}-${opponentStats.kills}`
+  }
 
   selfHud.update({
     selfSchema,
@@ -3053,16 +3210,43 @@ function render(now: number): void {
     deathcamData,
   })
 
-  renderer.render(scene, camera)
-  // Update draw call counter every frame (shown in debug panel, ` key).
-  dbgDraws.textContent = String(renderer.info.render.calls)
-  requestAnimationFrame(render)
+  // Two-pass bloom: 1) render emissive-only for bloom, 2) full final scene
+  // Bloom is skipped during hit-stop to save GPU during freeze frames.
+  if (!inHitStop) {
+    // Rebuild cached non-bloom mesh list when scene changes
+    if (_bloomDirty) {
+      _nonBloomEntries = []
+      const bloomLayers = new THREE.Layers()
+      bloomLayers.set(1)
+      scene.traverse((obj) => {
+        const m = obj as THREE.Mesh
+        if (!m.isMesh) return
+        if (!m.layers.test(bloomLayers)) {
+          _nonBloomEntries.push({ mesh: m, mat: m.material })
+        }
+      })
+      _bloomDirty = false
+    }
+    // Swap non-bloom meshes to black material
+    for (const e of _nonBloomEntries) e.mesh.material = _blackMat
+    bloomComposer.render()
+    // Restore materials
+    for (const e of _nonBloomEntries) e.mesh.material = e.mat
+    finalComposer.render()
+  } else {
+    renderer.render(scene, camera)
+  }
+  // Update draw call counter (shown in debug panel, ` key) — only when open.
+  if (isDebugVisible()) dbgDraws.textContent = String(renderer.info.render.calls)
+  _renderErrorCount = 0 // reset error counter on successful frame
 }
 
 addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight
   camera.updateProjectionMatrix()
   renderer.setSize(window.innerWidth, window.innerHeight)
+  bloomComposer.setSize(window.innerWidth, window.innerHeight)
+  finalComposer.setSize(window.innerWidth, window.innerHeight)
   draggableHud.refreshBounds()
 })
 

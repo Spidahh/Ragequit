@@ -89,10 +89,11 @@ export function initSelfEmissive({
       tB = Math.max(tB, blinkStrength * 0.95)
     }
     const LERP = 0.12
+    const hasFlash = tR > 0 || tG > 0 || tB > 0
     mat.emissive.r += (tR - mat.emissive.r) * LERP
     mat.emissive.g += (tG - mat.emissive.g) * LERP
     mat.emissive.b += (tB - mat.emissive.b) * LERP
-    mat.emissiveIntensity = 0.7
+    mat.emissiveIntensity = hasFlash ? 0.7 : 0
     // Propagate to all GLB mesh materials so the whole character flashes
     const glbMats = selfMesh.userData['glbMaterials'] as THREE.MeshToonMaterial[] | undefined
     if (glbMats) {
@@ -101,7 +102,7 @@ export function initSelfEmissive({
         m.emissive.r += (tR - m.emissive.r) * LERP
         m.emissive.g += (tG - m.emissive.g) * LERP
         m.emissive.b += (tB - m.emissive.b) * LERP
-        m.emissiveIntensity = 0.7
+        m.emissiveIntensity = hasFlash ? 0.7 : 0
       }
     }
 

@@ -8,14 +8,31 @@ export type KeybindAction =
   | 'wheelUtility'
   | 'wheelAbility'
   | 'openLoadout'
-  | 'spell1'
-  | 'spell2'
-  | 'spell3'
-  | 'spell4'
-  | 'spell5'
-  | 'spell6'
   | 'sensDown'
   | 'sensUp'
+  // Direct ability binds — one per hotbar slot (8 total). Slots 0-3 are also on
+  // the E wheel, slots 4-7 on the Q wheel; the wheels are an alternative way to
+  // fire the same ability. Every ability has its own key on the hotbar.
+  | 'slot1'
+  | 'slot2'
+  | 'slot3'
+  | 'slot4'
+  | 'slot5'
+  | 'slot6'
+  | 'slot7'
+  | 'slot8'
+
+// The 8 direct ability-slot bind actions, in hotbar order.
+export const SLOT_ACTIONS = [
+  'slot1',
+  'slot2',
+  'slot3',
+  'slot4',
+  'slot5',
+  'slot6',
+  'slot7',
+  'slot8',
+] as const satisfies readonly KeybindAction[]
 
 export interface KeybindDef {
   action: KeybindAction
@@ -36,14 +53,16 @@ export const DEFAULT_KEYBINDS: Record<KeybindAction, KeybindDef> = {
   wheelUtility: { action: 'wheelUtility', label: 'Utility wheel', code: 'KeyQ' },
   wheelAbility: { action: 'wheelAbility', label: 'Ability wheel', code: 'KeyE' },
   openLoadout: { action: 'openLoadout', label: 'Loadout', code: 'KeyL' },
-  spell1: { action: 'spell1', label: 'Spell 1', code: 'Digit1' },
-  spell2: { action: 'spell2', label: 'Spell 2', code: 'Digit2' },
-  spell3: { action: 'spell3', label: 'Spell 3', code: 'Digit3' },
-  spell4: { action: 'spell4', label: 'Spell 4', code: 'Digit4' },
-  spell5: { action: 'spell5', label: 'Spell 5', code: 'Digit5' },
-  spell6: { action: 'spell6', label: 'Spell 6', code: 'Digit6' },
   sensDown: { action: 'sensDown', label: 'Sensitivity down', code: 'BracketLeft' },
   sensUp: { action: 'sensUp', label: 'Sensitivity up', code: 'BracketRight' },
+  slot1: { action: 'slot1', label: 'Ability 1', code: 'Digit1' },
+  slot2: { action: 'slot2', label: 'Ability 2', code: 'Digit2' },
+  slot3: { action: 'slot3', label: 'Ability 3', code: 'Digit3' },
+  slot4: { action: 'slot4', label: 'Ability 4', code: 'Digit4' },
+  slot5: { action: 'slot5', label: 'Ability 5', code: 'Digit5' },
+  slot6: { action: 'slot6', label: 'Ability 6', code: 'Digit6' },
+  slot7: { action: 'slot7', label: 'Ability 7', code: 'Digit7' },
+  slot8: { action: 'slot8', label: 'Ability 8', code: 'Digit8' },
 }
 
 export const keybinds: Record<KeybindAction, KeybindDef> = loadKeybinds()

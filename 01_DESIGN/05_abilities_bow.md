@@ -22,7 +22,7 @@ Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abil
 
 - **Effect**: Arrow pierces up to 3 targets in a 20 m line
 - **Damage**: 25 first target · 15 second · 10 third
-- **Windup**: 0.5 s draw
+- **Windup**: 0.25 s draw
 - **Cost**: 0
 - **Cooldown**: 6 s
 - **Range**: 20 m straight line
@@ -42,11 +42,11 @@ Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abil
 
 - **Effect**: Hit launches target airborne for 0.5 s
 - **Damage**: 15
-- **Charge**: 0.8 s required (shot won't fire below charge threshold)
+- **Charge**: 0.4 s required (shot won't fire below charge threshold)
 - **Cost**: 0
 - **Cooldown**: 10 s
 - **Range**: 25 m
-- **Mini-malus**: 0.8 s charge is interruptible by damage
+- **Mini-malus**: 0.4 s charge is interruptible by damage
 
 ### B4 · Snare Trap
 
@@ -66,7 +66,7 @@ Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abil
 - **Cost**: 20 mana
 - **Cooldown**: 15 s
 - **Range**: 100 m; projectile collides with terrain
-- **Mini-malus**: 1.0 s windup is interruptible by any damage taken; laser-sight reveals angle to target
+- **Mini-malus**: Signature big-swing cast (one of only two casts above 0.5 s); 1.0 s windup is interruptible by any damage taken and the laser-sight reveals the angle to the target
 
 ### B6 · Disengage Shot
 

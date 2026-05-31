@@ -7,6 +7,8 @@
 
 import * as THREE from 'three'
 
+import { makeToonGradient } from './render/factories.js'
+
 export const CAPSULE_HEIGHT_M = 2.0
 export const CAPSULE_RADIUS_M = 0.4
 
@@ -36,30 +38,12 @@ interface CharGroupUserData extends Record<string, unknown> {
   element: ElementId
   head: HeadId
   weaponGroup: THREE.Group
+  shieldGroup?: THREE.Group
 }
 
-const TOON_RAMP: THREE.DataTexture = (() => {
-  const steps = 2
-  const rgba = new Uint8Array(steps * 4)
-
-  // Shadow band: moody slate dark shade
-  rgba[0] = 80
-  rgba[1] = 80
-  rgba[2] = 96
-  rgba[3] = 255
-
-  // Lit band: full illumination highlights
-  rgba[4] = 255
-  rgba[5] = 255
-  rgba[6] = 255
-  rgba[7] = 255
-
-  const t = new THREE.DataTexture(rgba, steps, 1, THREE.RGBAFormat)
-  t.minFilter = THREE.NearestFilter
-  t.magFilter = THREE.NearestFilter
-  t.needsUpdate = true
-  return t
-})()
+// Shared toon gradient for procedural silhouette materials.
+// Identical to factories.ts:makeToonGradient() — single source, no duplication.
+const TOON_RAMP: THREE.DataTexture = makeToonGradient()
 
 /**
  * Build the character anchor group.
@@ -114,6 +98,12 @@ export function makeCharacter(teamColor: number, opts: CharacterOpts = {}): THRE
   weaponGroup.rotation.set(0.25, 0, -0.18)
   ud.weaponGroup = weaponGroup
   g.add(weaponGroup)
+
+  // Shield attach point.
+  const shieldGroup = new THREE.Group()
+  shieldGroup.position.set(-0.4, -0.22, 0.08)
+  ud.shieldGroup = shieldGroup
+  g.add(shieldGroup)
 
   return g
 }

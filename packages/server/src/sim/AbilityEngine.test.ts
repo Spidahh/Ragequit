@@ -492,8 +492,8 @@ describe('AbilityEngine — Fireball (auto-swap to staff + projectile)', () => {
   })
 })
 
-describe('AbilityEngine — finisher air punish', () => {
-  it('adds the air-punish multiplier when a finisher hits an airborne target', () => {
+describe('AbilityEngine — finisher deals flat damage (no air bonus)', () => {
+  it('does not multiply finisher damage against an airborne target', () => {
     const r = makeRoom()
     r.target.airborneUntilTick = r.state.tick + 200
 
@@ -503,7 +503,8 @@ describe('AbilityEngine — finisher air punish', () => {
     r.state.tick += Math.round(ABILITY_DEFS.meteor!.windupSec * 60) + 1
     r.engine.tickWindups()
 
-    expect(r.pendingDamage.find((d) => d.cause === 'ability:meteor')?.amount).toBeCloseTo(55)
+    // Meteor base damage is 44; knockup is just displacement, no damage multiplier.
+    expect(r.pendingDamage.find((d) => d.cause === 'ability:meteor')?.amount).toBeCloseTo(44)
   })
 })
 

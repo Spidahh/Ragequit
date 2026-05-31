@@ -15,7 +15,7 @@ Questo documento tiene insieme il quadro operativo del client mentre il progetto
 
 ## 2. Flussi Da Tenere Verificati
 
-| Flusso                                                     | Superfici coinvolte                          | Stato verifica locale 2026-05-22        |
+| Flusso                                                     | Superfici coinvolte                          | Stato verifica 2026-05-22 (flussi confermati; nuovi sistemi vedi sez. 4)        |
 | ---------------------------------------------------------- | -------------------------------------------- | --------------------------------------- |
 | Boot -> Main menu                                          | `index.html`, `main.ts`, `menu.ts`           | verificato                              |
 | Main -> Settings -> Back                                   | `menu.ts`, settings DOM                      | verificato                              |
@@ -27,8 +27,8 @@ Questo documento tiene insieme il quadro operativo del client mentre il progetto
 | Live -> pointer lock                                       | input, canvas focus                          | verificato in Chrome locale             |
 | Live -> Tab weapon swap                                    | input, server sync, weapon strip             | verificato in Training                  |
 | Live -> hold/release `E` ability wheel                     | input, radial wheel, primed flow             | verificato in Training                  |
-| Live -> hold/release `Q` utility wheel                     | input, radial wheel, utility slots           | verificato in Training                  |
-| Live -> numbered spell slot -> `RMB` cancel / `LMB` confirm | cast dispatcher, placement preview, cd strip | verificato con `Flame Wall` in Training |
+| Live -> hold/release `Q` wheel (4 settori classe)          | input, radial wheel, Q slots                 | verificato in Training                  |
+| Live -> seleziona slot da wheel -> `LMB` fire / placement  | cast dispatcher, placement preview, cd strip | verificato con `Flame Wall` in Training |
 
 ## 3. Problemi Attuali Classificati
 
@@ -60,5 +60,31 @@ Ogni fix deve dichiarare:
 - `pnpm --filter @ragequit/client build`
 - `pnpm lint`
 - browser smoke menu, Training, Play 1v1, FFA, pointer lock, pause, return lobby
-- browser smoke `LMB`, `RMB`, `Tab`, `E`, `Q`, slot `1`-`5` e placement preview per l'area toccata
+- browser smoke `LMB`, `RMB`, `Tab`, `E`, `Q`, slot `1`-`8` e placement preview per l'area toccata
 - screenshot desktop di main menu, Loadout Forge e live HUD quando il pass tocca UI o grafica
+
+---
+
+## 4. Nuovi Sistemi (2026-06-01)
+
+| Sistema | File | Cosa verifica |
+|---|---|---|
+| Loading screen | `src/preloader.ts` | Appare prima del match, scompare quando render parte |
+| Match FSM | `src/game/match-state-machine.ts` | `matchSM.state` deve corrispondere a `currentMatchPhase` |
+| Bloom layer | `main.ts` (EffectComposer) | Layer 1 su sigil, border, zone VFX, torce, cast ring, impact pool |
+| LOD | `render/remote-players.ts` | >40m: mesh invisibile, >20m: no shadow |
+| Audio listener | `main.ts` (in _renderInner) | `soundEngine.updateListener()` chiamato ogni frame |
+| Heartbeat | `main.ts` | Suona sotto HP 25%, accelera con danger |
+| Dynamic crosshair | `main.ts` + CSS | `data-moving="true"` su WASD, `.kill-confirm` 200ms al kill |
+| Torce arena | `world/arena.ts` | 4 PointLight + Torch_Metal.gltf ai pilastri alternati con flicker |
+| Sky dome | `world/arena.ts` | ShaderMaterial visibile da qualsiasi angolo camera |
+| Reconnect | `main.ts` (onLeave) | 1 retry su code !== 4000/1000 durante fase live |
+| Tutorial | `main.ts` (engage()) | Solo alla prima partita, localStorage `ragequit.tutorial.done` |
+
+## 5. Invarianti da Non Rompere
+
+- `matchSM.transition()` va chiamato in `applyMatchPhase()` — non in altri punti.
+- `hideLoadingScreen()` va chiamato solo dopo che il preload e completato.
+- Il bloom pass NON deve girare durante hit-stop (ottimizzazione: si usa `renderer.render` invece).
+- Le texture VFX devono restare RGBA bianco-su-trasparente — non modificarle con librerie che aggiungono background.
+- I GLB dei personaggi NON vanno rigenerati — producono file enormi per le texture embedded.

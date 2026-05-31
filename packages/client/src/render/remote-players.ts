@@ -60,6 +60,9 @@ interface RemoteState {
   hpFill: HTMLDivElement
   /** Status icon row above the HP bar — CC badges with remaining-sec timers. */
   statusRow: HTMLDivElement
+  /** "✈ AIR" tag shown above the nameplate while the target is airborne — the
+   *  signature knock-up punish window cue for the attacker. */
+  airTag: HTMLDivElement
   /** Cached badge elements by status kind for in-place text updates. */
   statusBadges: Map<string, HTMLSpanElement>
   /** Last serialized status kinds+sec to detect changes that require badge rebuild. */
@@ -94,6 +97,8 @@ interface RemoteState {
   landUntilMs: number
   /** Timestamp until which the Roll animation should play (triggered by dash cast). */
   rollUntilMs: number
+  /** Timestamp until which the animation mixer should be frozen (hitstop). */
+  hitStopUntilMs: number
 }
 
 export interface RemotePlayersOptions {
@@ -125,6 +130,8 @@ export interface RemotePlayersController {
   getWorldPos: (sid: string) => THREE.Vector3 | null
   setDamageBlink: (sid: string, untilMs: number) => void
   triggerRoll: (sid: string, untilMs: number) => void
+  setHitStop: (sid: string, untilMs: number) => void
+  getPlayerWorldPos: (sid: string) => { x: number; y: number; z: number } | null
 }
 
 // CC status display config: order defines priority (highest first).
@@ -237,7 +244,9 @@ export function initRemotePlayers({
     const nameplate = document.createElement('div')
     nameplate.style.cssText = [
       'position:absolute',
-      'transform:translate(-50%,-100%)',
+      'top:0',
+      'left:0',
+      'will-change:transform',
       'text-align:center',
       'pointer-events:none',
       'padding:3px 7px 4px',
@@ -290,6 +299,23 @@ export function initRemotePlayers({
       'justify-content:center',
       'flex-wrap:wrap',
     ].join(';')
+    // "✈ AIR" punish-window tag — hidden by default, shown while airborne.
+    const airTag = document.createElement('div')
+    airTag.textContent = '✈ AIR'
+    airTag.style.cssText = [
+      'display:none',
+      'align-self:center',
+      'font:800 10px/1 ui-monospace,monospace',
+      'color:#9fdcff',
+      'text-shadow:0 0 8px #4ab8ff,0 0 2px #000',
+      'background:rgba(10,30,55,0.7)',
+      'border:1px solid #4ab8ff99',
+      'border-radius:3px',
+      'padding:1px 5px',
+      'margin-bottom:3px',
+      'letter-spacing:0.08em',
+    ].join(';')
+    nameplate.appendChild(airTag)
     nameplate.appendChild(nameLabel)
     nameplate.appendChild(statusRow)
     nameplate.appendChild(barRow)
@@ -304,6 +330,7 @@ export function initRemotePlayers({
       nameplate,
       hpFill,
       statusRow,
+      airTag,
       statusBadges: new Map(),
       lastStatusKey: '',
       statuses: [],
@@ -327,6 +354,7 @@ export function initRemotePlayers({
       jumpUntilMs: 0,
       landUntilMs: 0,
       rollUntilMs: 0,
+      hitStopUntilMs: 0,
     }
   }
 
@@ -440,7 +468,7 @@ export function initRemotePlayers({
         r.nameplate.style.display = 'none'
         if (r.deathStartedAt > 0 && now - r.deathStartedAt < 1200) {
           r.mesh.visible = true
-          tickCharacterMixer(r.mesh, animDt)
+          tickCharacterMixer(r.mesh, now < r.hitStopUntilMs ? 0 : animDt)
           setCharAnimState(r.mesh, {
             moving: false,
             activeWeapon: r.activeWeapon,
@@ -451,7 +479,47 @@ export function initRemotePlayers({
         }
         return
       }
-      r.mesh.visible = true
+      // ── LOD: distance-based level of detail ─────────────────────────────
+      const camPos = camera.position
+      const rDist = Math.hypot(
+        r.mesh.position.x - camPos.x,
+        r.mesh.position.z - camPos.z,
+      )
+      // > 40m: hide model entirely (just nameplate remains), skip animation
+      if (rDist > 40) {
+        r.mesh.visible = false
+        r.arc.visible = false
+        r.castRing.visible = false
+        // Still update nameplate projection for very far players
+      } else {
+        r.mesh.visible = true
+        // > 20m: disable shadows for performance
+        r.mesh.traverse((child) => {
+          if ((child as THREE.Mesh).isMesh) {
+            child.castShadow = rDist < 20
+          }
+        })
+      }
+      if (rDist > 40) {
+        // Skip full frame update for very distant players
+        const snaps = r.snapshots
+        if (snaps.length > 0) {
+          const last = snaps[snaps.length - 1]!
+          r.mesh.position.set(last.x, last.y, last.z)
+        }
+        // Still update nameplate
+        const npWorld = new THREE.Vector3(r.mesh.position.x, r.mesh.position.y + capsuleHeightM + 0.4, r.mesh.position.z)
+        npWorld.project(camera)
+        if (npWorld.z <= 1) {
+          const sx = (npWorld.x * 0.5 + 0.5) * domElement.clientWidth
+          const sy = (-npWorld.y * 0.5 + 0.5) * domElement.clientHeight
+          r.nameplate.style.transform = `translate3d(${sx.toFixed(1)}px,${sy.toFixed(1)}px,0) translate(-50%,-100%)`
+          r.nameplate.style.display = ''
+        } else {
+          r.nameplate.style.display = 'none'
+        }
+        return
+      }
       const snaps = r.snapshots
       if (snaps.length === 0) return
       let a = snaps[0]!
@@ -482,7 +550,7 @@ export function initRemotePlayers({
       const remoteSpeed = animDt > 0 ? Math.sqrt(distSq) / animDt : 0
       r.prevX = x
       r.prevZ = z
-      tickCharacterMixer(r.mesh, animDt)
+      tickCharacterMixer(r.mesh, now < r.hitStopUntilMs ? 0 : animDt)
       setCharAnimState(r.mesh, {
         moving,
         speed: remoteSpeed,
@@ -521,8 +589,8 @@ export function initRemotePlayers({
       if (npWorld.z <= 1) {
         const sx = (npWorld.x * 0.5 + 0.5) * domElement.clientWidth
         const sy = (-npWorld.y * 0.5 + 0.5) * domElement.clientHeight
-        r.nameplate.style.left = `${sx}px`
-        r.nameplate.style.top = `${sy}px`
+        // Use transform instead of left/top to avoid layout reflow (compositor-only)
+        r.nameplate.style.transform = `translate3d(${sx.toFixed(1)}px,${sy.toFixed(1)}px,0) translate(-50%,-100%)`
         r.nameplate.style.display = ''
         const pct = Math.max(0, Math.min(1, r.hp / r.hpMax))
         r.hpFill.style.width = `${pct * 100}%`
@@ -540,6 +608,12 @@ export function initRemotePlayers({
         }
         // Update CC status badges above the HP bar.
         updateStatusRow(r, r.statuses)
+        // Signature knock-up window cue: flash "✈ AIR" while target is airborne.
+        if (r.airTag.style.display === 'none') {
+          if (r.airborne && r.alive) r.airTag.style.display = 'block'
+        } else if (!r.airborne || !r.alive) {
+          r.airTag.style.display = 'none'
+        }
       } else {
         r.nameplate.style.display = 'none'
       }
@@ -586,10 +660,11 @@ export function initRemotePlayers({
         remoteDamageBlinkUntil.delete(sid)
       }
       const LERP = 0.16
+      const hasFlash = tR > 0 || tG > 0 || tB > 0
       mat.emissive.r += (tR - mat.emissive.r) * LERP
       mat.emissive.g += (tG - mat.emissive.g) * LERP
       mat.emissive.b += (tB - mat.emissive.b) * LERP
-      mat.emissiveIntensity = 0.7
+      mat.emissiveIntensity = hasFlash ? 0.7 : 0
       // Propagate emissive to all GLB mesh materials so the full character flashes
       const glbMats = r.mesh.userData['glbMaterials'] as THREE.MeshToonMaterial[] | undefined
       if (glbMats) {
@@ -598,7 +673,7 @@ export function initRemotePlayers({
           m.emissive.r += (tR - m.emissive.r) * LERP
           m.emissive.g += (tG - m.emissive.g) * LERP
           m.emissive.b += (tB - m.emissive.b) * LERP
-          m.emissiveIntensity = 0.7
+          m.emissiveIntensity = hasFlash ? 0.7 : 0
         }
       }
     })
@@ -616,12 +691,13 @@ export function initRemotePlayers({
   }
 
   function setDamageBlink(sid: string, untilMs: number): void {
-    // Blink now lasts 220 ms (up from 160) for a more satisfying flash.
-    const blinkEnd = Math.max(untilMs, performance.now() + 220)
+    const BLINK_DURATION_MS = 220
+    const HIT_REACT_DURATION_MS = 700
+    const blinkEnd = Math.max(untilMs, performance.now() + BLINK_DURATION_MS)
     remoteDamageBlinkUntil.set(sid, blinkEnd)
-    // Hit-react animation lasts 700 ms — visible stagger on the remote character.
+    // Hit-react animation is independent of blink: always 700 ms from now.
     const r = remotePlayers.get(sid)
-    if (r) r.hitReactUntilMs = blinkEnd - 220 + 700
+    if (r) r.hitReactUntilMs = performance.now() + HIT_REACT_DURATION_MS
   }
 
   function triggerRoll(sid: string, untilMs: number): void {
@@ -629,13 +705,24 @@ export function initRemotePlayers({
     if (r) r.rollUntilMs = untilMs
   }
 
+  function setHitStop(sid: string, untilMs: number): void {
+    const r = remotePlayers.get(sid)
+    if (r) r.hitStopUntilMs = untilMs
+  }
+
   return {
     updateFromSchema,
     renderFrame,
+    getPlayerWorldPos: (id: string): { x: number; y: number; z: number } | null => {
+      const r = remotePlayers.get(id)
+      if (!r) return null
+      return { x: r.mesh.position.x, y: r.mesh.position.y, z: r.mesh.position.z }
+    },
     renderEmissives,
     clear,
     getWorldPos,
     setDamageBlink,
     triggerRoll,
+    setHitStop,
   }
 }

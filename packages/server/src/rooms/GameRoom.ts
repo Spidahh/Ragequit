@@ -92,6 +92,7 @@ import {
   type ServerDeathMessage,
   type ServerKillStreakMessage,
   type ServerHitMessage,
+  type ServerNoteMessage,
   type ServerParryEventMessage,
   type ServerProjectileExpiredMessage,
   type ServerProjectileSpawnedMessage,
@@ -100,6 +101,7 @@ import {
   type Weapon,
   ClassId,
   CLASS_IDS,
+  CLASS_PRESET_BUILDS,
   isAbilityLegalForClass,
   getAbilitySlotFamily,
   inferClassFromLoadout,
@@ -115,7 +117,6 @@ import {
 } from '../db/supabase.js'
 import {
   AbilityEngine,
-  AIR_PUNISH_DAMAGE_MULT,
   BotController,
   ClassMechanicRuntime,
   FLOW_DAMAGE_BONUS_FRAC,
@@ -230,19 +231,12 @@ interface ProjectileMeta {
   chainRadius?: number
   chainDamage?: number
   chainChance?: number
+  // Normalized horizontal travel direction (xz), used for push-on-hit.
+  velDirX: number
+  velDirZ: number
+  knockbackDistance?: number
 }
 
-interface WeaponInfusion {
-  element: string
-  speedMult?: number
-  splashRadius?: number
-  lifestealFraction?: number
-  onHitStatus?: { kind: StatusKind; durationSec: number; stacks: number; slowFraction?: number }
-  chainTargets?: number
-  chainRadius?: number
-  chainDamage?: number
-  chainChance?: number
-}
 
 export class GameRoom extends Room<GameState> {
   override maxClients = Number(process.env['MAX_CLIENTS'] ?? 2)
@@ -297,19 +291,8 @@ export class GameRoom extends Room<GameState> {
   // (zoneTickAccs / zoneApplyAccs removed — zone scheduling uses z.nextTickAtTick on schema)
 
   // Kill streak tracking. Key = sessionId, value = consecutive kill count.
-  // Resets to 0 when the player dies. Applies an outgoing damage multiplier:
-  //   1 kill  → +0%   (just a streak counter, no bonus yet)
-  //   2 kills → +10%
-  //   3 kills → +20%
-  //   4+ kills→ +30%  (capped to discourage snowballing)
+  // Used only for UI display — no damage bonus applied (violates design rules).
   private readonly killStreaks = new Map<string, number>()
-
-  private streakDamageBonus(streak: number): number {
-    if (streak <= 1) return 0
-    if (streak === 2) return 0.1
-    if (streak === 3) return 0.2
-    return 0.3
-  }
 
   private static readonly MAX_INPUTS_PER_TICK = 4
   private static readonly MAX_SWING_QUEUE = 8
@@ -531,15 +514,30 @@ export class GameRoom extends Room<GameState> {
     if (this.state.players.has(botId)) return
     const player = new Player()
     player.id = botId
-    player.name = BOT_NAMES[Number(botId.replace('bot-', '')) % BOT_NAMES.length] ?? 'Bot'
+    
+    const botNum = Number(botId.replace('bot-', ''))
+    player.name = BOT_NAMES[botNum % BOT_NAMES.length] ?? 'Bot'
     player.team = ''
+    
     const spawnIndex = this.state.players.size % this.activeMap.spawns.length
     const spawn = this.activeMap.spawns[spawnIndex]!
     player.transform.x = spawn.x
     player.transform.y = spawn.y
     player.transform.z = spawn.z
     player.invulnUntilTick = this.state.tick + SPAWN_INVULN_TICKS
-    for (const id of DEFAULT_LOADOUT) player.loadout.push(id)
+    
+    // Dynamically assign bot class based on bot index
+    const classId = CLASS_IDS[botNum % CLASS_IDS.length] ?? 'hybrid'
+    player.classId = classId
+    
+    const presetLoadout = CLASS_PRESET_BUILDS[classId]
+    for (const id of presetLoadout) {
+      player.loadout.push(id)
+    }
+    
+    // Set active weapon to the first weapon permitted by the class
+    player.activeWeapon = TARGET_CLASS_DEFS[classId].weapons[0] ?? 'sword'
+
     this.state.players.set(botId, player)
     this.sim.set(botId, makePlayerSimState(spawn))
     this.inputQueues.set(botId, [])
@@ -604,14 +602,15 @@ export class GameRoom extends Room<GameState> {
         },
       },
       () => this.state.tick,
-      // Use the canonical default loadout so the bot AI uses the same
-      // ability set as the bot's player schema (prevents stale hardcoded list
-      // in BotController from diverging when DEFAULT_LOADOUT changes).
-      DEFAULT_LOADOUT,
+      // Pass the specific preset loadout for this class so the bot
+      // AI matches the player schema perfectly.
+      presetLoadout,
       this.difficulty,
     )
     this.bots.set(botId, bot)
-    console.info(`[GameRoom ${this.roomId}] spawned bot ${botId} at spawn ${spawnIndex}`)
+    console.info(
+      `[GameRoom ${this.roomId}] spawned bot ${botId} (class: ${classId}, activeWeapon: ${player.activeWeapon}) at spawn ${spawnIndex}`
+    )
   }
 
   override async onJoin(
@@ -657,16 +656,25 @@ export class GameRoom extends Room<GameState> {
     }
     let resolvedClassId = inferClassFromLoadout(resolvedLoadout)
     if (!resolvedClassId) {
+      // Saved loadout cannot be classified — reset to hybrid default and notify.
       resolvedLoadout = DEFAULT_LOADOUT
       resolvedClassId = 'hybrid'
+      this.send(client, MessageTypes.ServerNote, {
+        kind: 'info',
+        text: 'Il tuo loadout salvato non era compatibile con nessuna classe — ripristinato al preset Ibrido.',
+      } satisfies ServerNoteMessage)
     }
     for (const id of resolvedLoadout) player.loadout.push(id)
     {
       player.classId = resolvedClassId
-      const maxima = TARGET_CLASS_DEFS[resolvedClassId].resourceMaxima
+      const classDef = TARGET_CLASS_DEFS[resolvedClassId]
+      const maxima = classDef.resourceMaxima
       player.hp = maxima.hp
       player.mana = maxima.mana
       player.stamina = maxima.stamina
+      // Set the class's primary weapon — schema defaults to 'sword' which would
+      // give Mage a sword and Archer a sword instead of staff/bow.
+      player.activeWeapon = classDef.weapons[0]
     }
     this.state.players.set(client.sessionId, player)
     this.sim.set(client.sessionId, makePlayerSimState(spawn))
@@ -864,6 +872,7 @@ export class GameRoom extends Room<GameState> {
     let inputsThisTick = 0
     let effective: SimInput | null = null
     let lastProcessedSeq = lastSeq
+    let lastM2: boolean | undefined = undefined
     while (queue.length > 0 && inputsThisTick < GameRoom.MAX_INPUTS_PER_TICK) {
       const msg = queue.shift()!
       if (msg.seq <= lastSeq) continue
@@ -889,6 +898,15 @@ export class GameRoom extends Room<GameState> {
       effective = input
       lastProcessedSeq = msg.seq
       inputsThisTick += 1
+      if (msg.m2 !== undefined) lastM2 = !!msg.m2
+    }
+
+    // Parry edge detection for bots (and any client that sends m2 on the input message).
+    // Human players send ParryPress/ParryRelease as separate messages; bots piggyback on m2.
+    if (!dead && lastM2 !== undefined) {
+      const atTick = this.state.tick
+      if (lastM2 && !player.parrying) this.handleParryPress(sid, { atTick })
+      else if (!lastM2 && player.parrying) this.handleParryRelease(sid, { atTick })
     }
 
     if (inputsThisTick === 0) {
@@ -1054,8 +1072,11 @@ export class GameRoom extends Room<GameState> {
       const origin = { x: swing.originX, y: swing.originY, z: swing.originZ }
       let landed = false
 
+      const swingAttacker = this.state.players.get(swing.attackerId)
       for (const [vid, victim] of this.state.players) {
         if (vid === swing.attackerId) continue
+        // No friendly fire in team modes.
+        if (swingAttacker?.team && victim.team && swingAttacker.team === victim.team) continue
         if (!victim.alive) continue
         if (now < victim.invulnUntilTick) continue
         const victimPos = this.lookupHistory(vid, rewindTargetTick) ?? {
@@ -1073,6 +1094,27 @@ export class GameRoom extends Room<GameState> {
             canParry: true,
             element: '',
           })
+          // Horizontal stagger push — gives the hit physical weight.
+          // Skip when victim is parrying (they hold their ground).
+          if (!victim.parrying) {
+            const pvx = victim.transform.x - origin.x
+            const pvz = victim.transform.z - origin.z
+            const pd = Math.hypot(pvx, pvz) || 0.001
+            const pushDist = swing.comboIndex >= 2 ? 0.7 : 0.45
+            const resolved = this.resolveAbilityDisplacement(
+              victim,
+              (pvx / pd) * pushDist,
+              (pvz / pd) * pushDist,
+              true,
+            )
+            victim.transform.x = resolved.x
+            victim.transform.z = resolved.z
+            const simVictim = this.sim.get(vid)
+            if (simVictim) {
+              simVictim.pos.x = resolved.x
+              simVictim.pos.z = resolved.z
+            }
+          }
           landed = true
           break
         }
@@ -1096,6 +1138,8 @@ export class GameRoom extends Room<GameState> {
       const attacker = this.state.players.get(d.attackerId)
       const victim = this.state.players.get(d.victimId)
       if (!victim || !victim.alive) continue
+      // No friendly fire in team modes.
+      if (attacker?.team && victim.team && attacker.team === victim.team) continue
       if (now < victim.invulnUntilTick) continue
       // Phase Shift invulnerability: skip all damage while the status is active.
       if (this.statuses.hasStatus(victim, 'invulnerable')) continue
@@ -1107,12 +1151,6 @@ export class GameRoom extends Room<GameState> {
       // Curse of Weakness: attacker's outgoing damage is reduced.
       if (attacker && this.statuses.hasStatus(attacker, 'curse')) {
         applied = Math.round(applied * CURSE_OUTGOING_DAMAGE_MULT)
-      }
-      // Kill streak damage bonus — attacker gets +10/20/30% at 2/3/4+ kills.
-      const attackerStreak = this.killStreaks.get(d.attackerId) ?? 0
-      const streakBonus = this.streakDamageBonus(attackerStreak)
-      if (streakBonus > 0) {
-        applied = Math.round(applied * (1 + streakBonus))
       }
       // Class mechanic damage modifiers.
       if (attacker) {
@@ -1219,6 +1257,16 @@ export class GameRoom extends Room<GameState> {
       }
       this.broadcast(MessageTypes.Hit, hitMsg)
 
+      if (!didParry && applied > 0) {
+        const pushDistance = this.spellImpactPushDistance(d.cause)
+        if (pushDistance > 0) {
+          const attacker = this.state.players.get(d.attackerId)
+          if (attacker) {
+            this.applyHorizontalImpactPush(attacker, victim, pushDistance)
+          }
+        }
+      }
+
       if (victim.hp <= 0) {
         victim.alive = false
         victim.respawnAtTick = now + RESPAWN_TICKS
@@ -1238,18 +1286,17 @@ export class GameRoom extends Room<GameState> {
         // Reset match start for the next round so TTK is always per-life.
         this.matchStartTick = now
 
-        // --- Kill streak update ------------------------------------------
+        // --- Kill streak update (display only — no damage bonus) ----------
         // Victim's streak resets to 0.
         const prevVictimStreak = this.killStreaks.get(d.victimId) ?? 0
         this.killStreaks.set(d.victimId, 0)
         if (prevVictimStreak > 0) {
-          const brokenMsg: ServerKillStreakMessage = {
+          this.broadcast(MessageTypes.KillStreak, {
             playerId: d.victimId,
             streak: 0,
             damageBonus: 0,
             atTick: now,
-          }
-          this.broadcast(MessageTypes.KillStreak, brokenMsg)
+          } satisfies ServerKillStreakMessage)
         }
 
         // Killer's streak increases (only if killed by another player, not self).
@@ -1257,17 +1304,12 @@ export class GameRoom extends Room<GameState> {
           const prev = this.killStreaks.get(d.attackerId) ?? 0
           const next = prev + 1
           this.killStreaks.set(d.attackerId, next)
-          const bonus = this.streakDamageBonus(next)
-          const streakMsg: ServerKillStreakMessage = {
+          this.broadcast(MessageTypes.KillStreak, {
             playerId: d.attackerId,
             streak: next,
-            damageBonus: bonus,
+            damageBonus: 0, // no damage bonus — display only
             atTick: now,
-          }
-          this.broadcast(MessageTypes.KillStreak, streakMsg)
-          console.info(
-            `[GameRoom ${this.roomId}] STREAK ${d.attackerId} streak=${next} bonus=+${Math.round(bonus * 100)}%`,
-          )
+          } satisfies ServerKillStreakMessage)
         }
         // -----------------------------------------------------------------
 
@@ -1378,6 +1420,9 @@ export class GameRoom extends Room<GameState> {
     player.respawnAtTick = 0
     player.invulnUntilTick = now + SPAWN_INVULN_TICKS
     player.airborneUntilTick = 0
+    // Restore the class's primary weapon on respawn — prevents Mage/Archer from
+    // coming back with a sword if they died while holding a different weapon.
+    player.activeWeapon = TARGET_CLASS_DEFS[classId]?.weapons[0] ?? player.activeWeapon
     player.casting = false
     player.castAbilityId = ''
     player.castEndsAtTick = 0
@@ -1476,6 +1521,14 @@ export class GameRoom extends Room<GameState> {
     const player = this.state.players.get(sid)
     if (!player || !player.alive) return
     if (!isValidWeaponId(msg.weapon)) return
+
+    const classId = player.classId as ClassId
+    const classDef = TARGET_CLASS_DEFS[classId]
+    if (!classDef || !(classDef.weapons as readonly Weapon[]).includes(msg.weapon)) {
+      this.sendAbilityFailed(sid, 'swap', 'wrong_weapon')
+      return
+    }
+
     if (player.activeWeapon === msg.weapon) return
 
     player.activeWeapon = msg.weapon
@@ -1563,9 +1616,8 @@ export class GameRoom extends Room<GameState> {
     // Momentum >= 60 reduces the full-charge time for Archer.
     const effectiveChargeFullSec = this.mechanics.getBowChargeTimeSec(BOW_CHARGE_FULL_SEC, player)
     const ratio = Math.max(0.15, bowChargeRatio(chargeSec, 0, effectiveChargeFullSec))
-    const infusion = this.weaponInfusionFor(player, 'bow')
     const damage = bowLerp(BOW_DAMAGE_MIN, BOW_DAMAGE_FULL, ratio)
-    const speed = bowLerp(BOW_SPEED_MIN_MPS, BOW_SPEED_FULL_MPS, ratio) * (infusion.speedMult ?? 1)
+    const speed  = bowLerp(BOW_SPEED_MIN_MPS, BOW_SPEED_FULL_MPS, ratio)
 
     const dir = directionFromYawPitch(msg.yaw, msg.pitch)
     const origin = computeProjectileOrigin(player, dir)
@@ -1580,7 +1632,6 @@ export class GameRoom extends Room<GameState> {
       damage,
       lifetimeTicks: BOW_LIFETIME_TICKS,
       spawnedAtTick: this.state.tick,
-      ...infusion,
     })
   }
 
@@ -1623,12 +1674,10 @@ export class GameRoom extends Room<GameState> {
 
     const dir = directionFromYawPitch(msg.yaw, msg.pitch)
     const origin = computeProjectileOrigin(player, dir)
-    const infusion = this.weaponInfusionFor(player, 'staff')
-    const speed = STAFF_M1_SPEED_MPS * (infusion.speedMult ?? 1)
     const vel = {
-      x: dir.x * speed,
-      y: dir.y * speed,
-      z: dir.z * speed,
+      x: dir.x * STAFF_M1_SPEED_MPS,
+      y: dir.y * STAFF_M1_SPEED_MPS,
+      z: dir.z * STAFF_M1_SPEED_MPS,
     }
     this.spawnProjectile({
       ownerId: sid,
@@ -1639,18 +1688,9 @@ export class GameRoom extends Room<GameState> {
       damage: STAFF_M1_DAMAGE,
       lifetimeTicks: STAFF_LIFETIME_TICKS,
       spawnedAtTick: now,
-      ...infusion,
     })
   }
 
-  // TODO: implement weapon infusion.
-  // This function should derive the elemental infusion for bow/staff projectiles
-  // from the player's loadout or class (e.g. a passive ability that grants
-  // fire arrows, chain-lightning bolts, or lifesteal on hit).
-  // Until implemented all ranged projectiles are non-elemental with no modifiers.
-  private weaponInfusionFor(_player: Player, _weapon: 'bow' | 'staff'): WeaponInfusion {
-    return { element: 'none' }
-  }
 
   private handleParryPress(sid: string, _msg: ClientParryPressMessage): void {
     const player = this.state.players.get(sid)
@@ -1787,6 +1827,7 @@ export class GameRoom extends Room<GameState> {
     element?: string
     splashRadius?: number
     lifestealFraction?: number
+    knockbackDistance?: number
     onHitStatus?: { kind: StatusKind; durationSec: number; stacks: number; slowFraction?: number }
     chainTargets?: number
     chainRadius?: number
@@ -1821,6 +1862,7 @@ export class GameRoom extends Room<GameState> {
       vel: { x: params.vel.x, y: params.vel.y, z: params.vel.z },
       gravity: params.gravity,
     })
+    const spd2D = Math.hypot(params.vel.x, params.vel.z) || 0.001
     this.projectileMeta.set(pid, {
       ownerId: params.ownerId,
       abilityId: params.abilityId,
@@ -1835,6 +1877,9 @@ export class GameRoom extends Room<GameState> {
       chainRadius: params.chainRadius,
       chainDamage: params.chainDamage,
       chainChance: params.chainChance,
+      velDirX: params.vel.x / spd2D,
+      velDirZ: params.vel.z / spd2D,
+      knockbackDistance: params.knockbackDistance,
     })
 
     const spawnedMsg: ServerProjectileSpawnedMessage = {
@@ -2027,28 +2072,78 @@ export class GameRoom extends Room<GameState> {
     for (const victimId of victimIds) {
       const victim = this.state.players.get(victimId)
       if (!victim) continue
-      const airPunish = meta.comboRole === 'finisher' && this.state.tick < victim.airborneUntilTick
       this.damageQueue.push({
         attackerId: meta.ownerId,
         victimId,
-        damage: airPunish ? meta.damage * AIR_PUNISH_DAMAGE_MULT : meta.damage,
+        damage: meta.damage,
         knockup: false,
-        cause: airPunish ? `${baseCause}:air_punish` : baseCause,
+        cause: baseCause,
         canParry: meta.splashRadius <= 0,
         element: meta.element,
         lifestealFraction: meta.lifestealFraction,
         onDamageStatus: meta.onHitStatus,
       })
+
+      // Horizontal push for direct bow/staff hits — no splash, no ability override.
+      // Ability projectiles manage their own knockback through AbilityEngine.
+      if (!meta.abilityId && meta.splashRadius <= 0 && !victim.parrying) {
+        const pushDist = meta.kind === 'arrow' ? 0.5 : 0.4
+        const resolved = this.resolveAbilityDisplacement(
+          victim,
+          meta.velDirX * pushDist,
+          meta.velDirZ * pushDist,
+          true,
+        )
+        victim.transform.x = resolved.x
+        victim.transform.z = resolved.z
+        const simVictim = this.sim.get(victimId)
+        if (simVictim) {
+          simVictim.pos.x = resolved.x
+          simVictim.pos.z = resolved.z
+        }
+      }
+
+      // Ability projectile knockback — applies horizontal push defined per-ability in the registry.
+      if (meta.abilityId && meta.knockbackDistance && meta.knockbackDistance > 0 && !victim.parrying) {
+        let pushX: number
+        let pushZ: number
+        if (meta.splashRadius > 0) {
+          // Splash: push radially away from impact point.
+          const dx = victim.transform.x - hitPos.x
+          const dz = victim.transform.z - hitPos.z
+          const len = Math.hypot(dx, dz)
+          if (len > 0.001) {
+            pushX = (dx / len) * meta.knockbackDistance
+            pushZ = (dz / len) * meta.knockbackDistance
+          } else {
+            pushX = meta.velDirX * meta.knockbackDistance
+            pushZ = meta.velDirZ * meta.knockbackDistance
+          }
+        } else {
+          // Direct hit: push along projectile travel direction.
+          pushX = meta.velDirX * meta.knockbackDistance
+          pushZ = meta.velDirZ * meta.knockbackDistance
+        }
+        const resolved = this.resolveAbilityDisplacement(victim, pushX, pushZ, true)
+        victim.transform.x = resolved.x
+        victim.transform.z = resolved.z
+        const simVictim = this.sim.get(victimId)
+        if (simVictim) {
+          simVictim.pos.x = resolved.x
+          simVictim.pos.z = resolved.z
+        }
+      }
     }
 
-    // chainChance is currently unset on all abilities (defaults to 1 = always chain).
-    // Math.random() is kept for future probabilistic infusion support but is
-    // effectively Math.random() <= 1 (always true) with the current registry data.
+    // chainChance: 1 = always chain (all current abilities), 0 = never.
+    // AGENTS.md mandates zero RNG — probabilistic values < 1 are not supported.
+    // If a future infusion needs a probability < 1, replace this with a
+    // deterministic tick-based gate (e.g. every N hits), not Math.random().
     const chainChance = meta.chainChance ?? 1
     const shouldChain =
       (meta.chainTargets ?? 0) > 0 &&
       (meta.chainDamage ?? 0) > 0 &&
-      (chainChance >= 1 || Math.random() <= chainChance)
+      chainChance >= 1
     if (shouldChain) {
       const chained = this.findChainVictims(
         meta.ownerId,
@@ -2198,6 +2293,10 @@ export class GameRoom extends Room<GameState> {
     player.hp = maxima.hp
     player.mana = maxima.mana
     player.stamina = maxima.stamina
+    player.activeWeapon = TARGET_CLASS_DEFS[classId].weapons[0] ?? player.activeWeapon
+    player.weaponSwapEndTick = 0
+    player.bowChargeStartTick = 0
+    player.staffNextFireTick = 0
 
     // Commit abilities
     while (player.loadout.length > 0) player.loadout.pop()
@@ -2342,6 +2441,7 @@ export class GameRoom extends Room<GameState> {
     })
     const elementStr = req.element ?? 'none'
     p.element = elementStr
+    const reqSpd2D = Math.hypot(req.vel.x, req.vel.z) || 0.001
     this.projectileMeta.set(pid, {
       ownerId: req.ownerId,
       abilityId: req.abilityId,
@@ -2352,7 +2452,29 @@ export class GameRoom extends Room<GameState> {
       splashRadius: req.splashRadius ?? 0,
       lifestealFraction: req.lifestealFraction,
       onHitStatus: req.onHitStatus,
+      velDirX: req.vel.x / reqSpd2D,
+      velDirZ: req.vel.z / reqSpd2D,
     })
+    if (req.kind === 'bolt' && req.abilityId) {
+      const caster = this.state.players.get(req.ownerId)
+      if (caster?.alive) {
+        const recoilDistance =
+          (req.splashRadius ?? 0) > 0 ? 0.22 : req.damage >= 20 ? 0.18 : 0.12
+        const resolved = this.resolveAbilityDisplacement(
+          caster,
+          -(req.vel.x / reqSpd2D) * recoilDistance,
+          -(req.vel.z / reqSpd2D) * recoilDistance,
+          true,
+        )
+        caster.transform.x = resolved.x
+        caster.transform.z = resolved.z
+        const simCaster = this.sim.get(req.ownerId)
+        if (simCaster) {
+          simCaster.pos.x = resolved.x
+          simCaster.pos.z = resolved.z
+        }
+      }
+    }
     const spawnedMsg: ServerProjectileSpawnedMessage = {
       id: pid,
       ownerId: req.ownerId,
@@ -2556,6 +2678,47 @@ export class GameRoom extends Room<GameState> {
     return true
   }
 
+  private spellImpactPushDistance(cause: string): number {
+    const rawCause = cause.startsWith('ability:') ? cause.slice(8) : cause
+    if (rawCause.startsWith('zone:')) return 0.16
+    if (rawCause.startsWith('dot:') || rawCause.startsWith('status:')) return 0.1
+    const def = ABILITY_DEFS[rawCause]
+    if (!def) return 0
+    const family = getAbilitySlotFamily(rawCause)
+    if (family !== 'magicBase' && family !== 'magicAdvanced') return 0
+    if (def.effects.some((effect) => effect.kind === 'knockup')) return 0
+    if (def.effects.some((effect) => effect.kind === 'projectile')) {
+      return def.effects.some((effect) => effect.kind === 'projectile' && (effect.splashRadius ?? 0) > 0)
+        ? 0.34
+        : 0.26
+    }
+    if (def.effects.some((effect) => effect.kind === 'channel')) return 0.12
+    return 0.22
+  }
+
+  private applyHorizontalImpactPush(attacker: Player, victim: Player, distance: number): void {
+    if (distance <= 0) return
+    let dx = victim.transform.x - attacker.transform.x
+    let dz = victim.transform.z - attacker.transform.z
+    const len = Math.hypot(dx, dz)
+    if (len <= 0.001) {
+      const dir = directionFromYawPitch(attacker.transform.yaw, 0)
+      dx = dir.x
+      dz = dir.z
+    } else {
+      dx /= len
+      dz /= len
+    }
+    const resolved = this.resolveAbilityDisplacement(victim, dx * distance, dz * distance, true)
+    victim.transform.x = resolved.x
+    victim.transform.z = resolved.z
+    const simVictim = this.sim.get(victim.id)
+    if (simVictim) {
+      simVictim.pos.x = resolved.x
+      simVictim.pos.z = resolved.z
+    }
+  }
+
   // Engine-driven knockup.
   private applyKnockupToPlayer(
     player: Player,
@@ -2682,8 +2845,8 @@ const BOT_NAMES = ['Shadow', 'Ember', 'Frost', 'Storm', 'Void', 'Blaze', 'Riven'
 
 // Default loadout applied at onJoin (and to bots). Matches the client's
 // DEFAULT_SLOTS in loadout-station.ts (Ibrido preset build).
-// Slot positions packed: melee×2, bow×1, magicBase×2, magicAdvanced×1, utility×2.
-// Matches Ibrido (hybrid) preset. Server validates by family budget, not position.
+// Slots: melee×2, bow×1, magicBase×2, magicAdvanced×1, utility×2 = 8.
+// Server validates by family budget, not position.
 const DEFAULT_LOADOUT: readonly string[] = Object.freeze([
   'uppercut', // melee
   'gap_closer', // melee

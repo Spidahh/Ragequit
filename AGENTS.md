@@ -6,17 +6,72 @@ assunzioni precedenti come autorita.
 ## Fatti Stabiliti
 
 - Server gia online su Fly.io: app `ragequit-server`, regione `ams`, porta 8080.
-- Supabase gia configurato come Fly secrets: `SUPABASE_URL`,
-  `SUPABASE_SERVICE_ROLE_KEY`.
+- Supabase gia configurato come Fly secrets: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
 - Client destinato a Cloudflare Pages; output statico in `apps/web/`.
-- Asset esistenti:
+- Unico CSS UI vivo: `packages/client/public/game-ui.css`.
+- **Asset sorgente** in `E:\GIOCHI\ASSET_GRAFICA` (cartella FUORI dal repo — prendere
+  SEMPRE i nuovi asset grafici da qui, poi copiarli in `packages/client/public/`):
+  - `PARTICELLE/kenney_particle-pack/` — particelle bianco-su-trasparente per i VFX.
+  - `PERSONAGGI/` — modelli personaggio (corpo/outfit/capelli).
+  - `icone/sprite_XXXX.png` — 104 sprite icone abilita.
+  - `menu/` — logo + immagini classe.
+  - `mappe/` — **arene e moduli per costruire le mappe** (usare questi per le arene):
+    - `gladiators_arena.glb` — coliseo ovale ~50×57m (shell visivo dell'arena, gia in uso).
+    - `KayKit_DungeonRemastered_1.1_FREE/` — barili, casse, banner, barriere, pilastri.
+    - `Fantasy Props MegaKit[Standard]/` — torce, lanterne, props ambientazione.
+    - `modular_village_collection/` + `Free 3D Modular Game Assets/` — moduli (muri,
+      pavimenti, rampe, recinzioni) per comporre arene modulari.
+- Arena: la vecchia arena procedurale "blockout" (cubi blu piatti) e stata ELIMINATA.
+  L'arena visiva e ora il coliseo `gladiators_arena.glb` caricato come shell permanente
+  in `world/arena.ts` (sempre visibile per ogni mappa); le AABB di collisione per-mappa
+  restano in `shared/sim/map.ts` e sono renderizzate come blocchi di pietra (cover).
+- Texture VFX (`public/vfx/*.png`): devono essere RGBA bianco-su-trasparente per il
+  sistema additivo tintato via `instanceColor`. Mai sfondo scuro o colorato.
+- Armi caricate come `.glb` da `public/weapons/kaykit/` (sword_D, bow, staff, shield_A).
+  I file `.gltf` legacy in `public/weapons/` esistono ma non sono usati dal loader attivo.
+- Personaggi: caricati come `.gltf` + `.bin` da `public/characters/`. NON usare `.glb`
+  per i personaggi: le texture embedded producono file 15-40 MB ciascuno.
+- Post-processing bloom: Three.js layer 1 = bloom-eligible. Layer 0 = default.
+  Non aggiungere mesh al layer 1 a meno che non siano emissive/glowing.
+- LOD remote players: oltre 40m modello nascosto (solo nameplate), oltre 20m shadow off.
+- Audio spaziale: usare `SoundEngine.playRemoteHit()` / `playRemoteCast()` per i suoni
+  dei giocatori remoti. `updateListener()` va chiamato ogni frame con la posizione camera.
+- Match state machine: `src/game/match-state-machine.ts` (singleton `matchSM`) e la
+  fonte autorevole per la fase corrente lato client. Sincronizzata in `applyMatchPhase()`.
+- Loading screen: `src/preloader.ts` gestisce il preload degli asset prima dell'arena.
+  Chiamare `preloadMatchAssets(classId)` quando si entra in una room.
+- Asset esistenti chiave:
   - `packages/client/public/ui/ragequit-logo-full.png`
   - `packages/client/public/ui/ragequit-logo-small.png`
   - `packages/client/public/ui/sfondo.png`
   - `packages/client/public/icons-sprite.svg`
-- Unico CSS UI vivo: `packages/client/public/game-ui.css`.
-- Non ricreare layer CSS separati.
-- `#bg-canvas` deve renderizzare una scena arena 3D, non nero/vuoto.
+  - `packages/client/public/arena/gladiators_arena.glb`
+  - `packages/client/public/characters/UAL1_Standard.glb` (animazioni — non rimuovere)
+  - `packages/client/public/arena/props/Torch_Metal.gltf` + `.bin`
+  - `packages/client/public/arena/props/Lantern_Wall.gltf` + `.bin`
+  - `packages/client/public/arena/props/barrel_large.gltf`, `barrel_small.gltf`, `box_large.gltf`
+  - `packages/client/public/arena/props/banner_patternA_red.gltf`
+
+## Regola di Semplicità
+
+Prima di proporre o implementare qualsiasi meccanica, fix o funzionalita, verificare:
+
+1. Non complica altri sistemi gia esistenti del gioco.
+2. Non appesantisce il motore (no calcoli extra per casi rari o edge case improbabili).
+3. Non aggiunge complessita percepibile al giocatore durante la partita.
+
+Se una soluzione tocca piu di 2 sistemi separati, cercare prima un'alternativa piu semplice.
+Non aggiungere bonus condizionali lato server (es. +X% danno se Y) a meno che non sia strettamente necessario per il bilanciamento — complicano il motore e rendono il gioco meno leggibile.
+
+## Filosofia di Sviluppo Connesso
+
+Qualsiasi intervento su una singola parte del codice deve essere progettato e implementato pensando a **tutti i sistemi collegati** (la "Rete di Sistemi"). Non agire mai con fretta o con fix isolati. Prima di modificare qualsiasi elemento, verifica e allinea l'intera catena di dipendenze visive, fisiche e logiche:
+1. **Visuale & Telecamera (FPV/TPV)**: Quando si modifica un'arma o un accessorio, assicurarsi che l'allineamento, il grip e le animazioni funzionino perfettamente sia in prima persona (First-Person View / ViewModels) sia in terza persona (Third-Person View / Character Skeleton), evitando clipping, torsioni innaturali o disallineamenti del mirino.
+2. **Replicazione & Stato Multiplayer**: Ogni stato visivo locale (es. parata attiva, scudo sul fianco, swap dell'arma) deve essere perfettamente sincronizzato con lo stato autoritativo del server e replicato correttamente sulle schermate degli altri giocatori (bystanders) senza lag o anomalie di posizionamento.
+3. **Fisica del Server & Feedback Client**: I vettori di impatto delle abilità e i segmenti di collisione (hitbox) lato server devono corrispondere al pixel con il feedback visivo sul client (es. la traiettoria del fendente della spada, il crosshair delle armi a distanza, e le direzioni delle spinte fisiche).
+4. **Coerenza tra UI, Audio & VFX**: Nuovi stati o azioni di gioco (come il combat, il parry, lo swap, o l'uso di abilità) devono avere riscontri audio (SFX puliti), VFX fluidi (senza contorni neri o difetti di alpha) e aggiornamenti dell'HUD (tasti, risorse, cooldown) immediati e ottimizzati per evitare micro-stutters nel game loop.
+
+Se una modifica rompe o ignora anche solo uno dei sistemi collegati, la soluzione è incompleta e va rifiutata.
 
 ## Gameplay Non Negoziabile
 
@@ -34,6 +89,10 @@ assunzioni precedenti come autorita.
 - Output abilita deterministico. Zero RNG.
 - Sangue fisico rosso `#FF3344`.
 - TTK reale desiderato: 20-30s con difesa attiva.
+- Nessun bonus danno condizionale in aria: il knockup e una meccanica di spostamento
+  e pressione aim, non apre moltiplicatori di danno lato server.
+- Cast veloci: windup default 0.0-0.2s. Sopra 0.5s solo se il ritardo e il mini-malus
+  dichiarato dell'abilita. Mai rallentare un cast "per farlo sembrare potente".
 - Le meccaniche classe server-side (`ClassMechanicRuntime`) sono attive:
   Fury, Momentum, Risonanza e Flow devono restare cablate a `GameRoom` e ai
   campi replicati di `Player`.
@@ -51,11 +110,30 @@ assunzioni precedenti come autorita.
 - Il Forge non usa `#ls-magic`.
 - Il Forge usa solo classi, slot family e Recovery.
 - Allowed Weapons e Spell budgets sono evidenziati visivamente nella console della Loadout Station (⚔️ SWORD, 🏹 BOW, 🔮 STAFF con stato active/disabled e badge di budget per ogni family).
+- Contratto slot classi vivo:
+  - Tank: `4 melee`, `1 bow`, `3 utility`
+  - Arciere: `4 bow`, `2 magicBase`, `2 utility`
+  - Mago: `3 magicBase`, `3 magicAdvanced`, `2 utility`
+  - Ibrido: `2 melee`, `1 bow`, `2 magicBase`, `1 magicAdvanced`, `2 utility`
+- Ogni abilita (tutte e 8) ha un tasto diretto sulla hotbar (default `1`-`8`,
+  rimappabili in Impostazioni). Le 2 wheel (4 settori ciascuna) sono un modo
+  radiale ALTERNATIVO per richiamare le stesse abilita: hold E/Q, seleziona,
+  rilascia. Stesso bind condiviso tra tasto diretto e settore wheel.
+- Split wheel come funzione pura dell'ordine slot: `E` = slot 0-3 (primi 4),
+  `Q` = slot 4-7 (ultimi 4). La grammatica classi garantisce che i primi 4 slot
+  siano le famiglie E e gli ultimi 4 le famiglie Q. Assegnazione per classe:
+  - Tank: `E` = 4 melee | `Q` = 1 bow + 3 utility
+  - Arciere: `E` = 4 bow | `Q` = 2 magicBase + 2 utility
+  - Mago: `E` = 3 magicBase + 1 magicAdvanced | `Q` = 2 magicAdvanced + 2 utility
+  - Ibrido: `E` = 2 melee + 1 bow + 1 magicBase | `Q` = 1 magicBase + 1 magicAdvanced + 2 utility
 
 ## UI / Visual
 
 - Menu, Loadout, Pause, Settings e HUD devono sembrare UI di gioco, non pagine
   HTML.
+- I bottoni mode-tile del menu iniziale (1v1, FFA, Training) usano
+  `packages/client/public/ui/frame_but.png` come cornice grafica viva.
+  Il forge-tile (Loadout) non usa cornice per ora.
 - Menu e Loadout Forge non devono mostrare il canvas arena live dietro:
   nascondono il canvas con `body.main-menu-active` / `body.loadout-active` e
   usano background statico da asset UI.
@@ -81,9 +159,9 @@ assunzioni precedenti come autorita.
   insieme. Le stats/vitals della classe non sono il centro della schermata e non
   devono rubare spazio al cambio build.
 - La scelta classe nella Loadout Forge deve essere visivamente evidente sopra
-  al build, non una riga piatta di tab. Ogni lane deve dichiarare dove finisce
-  in game: Sword/Bow su `E` wheel, spell su tasti `1`-`5`, Utility/Recovery su
-  `Q` wheel.
+  al build, non una riga piatta di tab. Ogni lane deve dichiarare su quale wheel
+  (`E` o `Q`) e in quale settore finisce in game, secondo il contratto wheel 4+4
+  per classe.
 - Le card abilita del Loadout Forge mostrano direttamente descrizione, input,
   elemento, costo, cooldown e tag; non nascondere queste informazioni in un
   dettaglio separato o in una micro-riga.
@@ -107,20 +185,32 @@ assunzioni precedenti come autorita.
 - La Loadout Forge non ha pannello dettagli separato e non salva toggle
   cast-mode: il cast e deterministico dal targeting dell'abilita (`point`
   apre placement, gli altri targeting sono diretti).
-- Mapping runtime wheel: `E` wheel contiene solo abilita weapon (`melee`/`bow`),
-  `Q` wheel contiene solo `utility`, le spell `magicBase`/`magicAdvanced` sono
-  sui tasti diretti `1`-`5` calcolati dal loadout corrente.
-- Non reintrodurre mappe slot fisse per le spell: i tasti `1`-`5` devono
-  selezionare la N-esima magia viva nel loadout corrente, non indici hardcoded.
-- Le classi non possono esporre piu di 5 slot magia totali
-  (`magicBase` + `magicAdvanced`), perche le magie vive hanno solo tasti
-  diretti `1`-`5`. Il Mago usa 3 Magic Base, 2 Magic Advanced, 3 Utility. Il Tank usa 4 Melee, 1 Bow, 3 Utility. L'Arciere usa 4 Bow, 2 Magic Base, 2 Utility. L'Ibrido usa 1 Melee, 1 Bow, 2 Magic Base, 2 Magic Advanced, 2 Utility.
+- Mapping runtime wheel: tutte le 8 abilita di classe sono distribuite su 2 wheel
+  da 4 settori ciascuna (E = slot 0-3, Q = slot 4-7). Ogni abilita ha anche un
+  tasto diretto (default `1`-`8`): tasto diretto e settore wheel condividono lo
+  stesso bind.
+- La hotbar in-game mostra tutti e 8 gli slot con il tasto diretto (default
+  `1`-`8`, rimappabile). Le abilita restano richiamabili anche dalla wheel E/Q.
+- Non reintrodurre la distinzione
+  E=weapon / Q=utility: le wheel sono assegnate per famiglia-classe, non per ruolo
+  generico.
 - Classi consentite nella UI: solo Tank, Arciere, Mago, Ibrido.
 - Conservare nel progetto solo asset runtime e contratti presenti approvati.
 - Le icone abilita vive sono PNG in `packages/client/public/ability-icons/`
   con nome file uguale all'ability id (`<ability_id>.png`). Il colore
   identifica il tipo/elemento: fire, ice, lightning, dark, nature, melee/bow
   fisico e utility.
+- Le armi runtime vive usano gli asset KayKit in
+  `packages/client/public/weapons/kaykit/` come `.glb` (`sword_D.glb`, `bow.glb`,
+  `staff.glb`, `shield_A.glb`) con grip/scala corretti per personaggio e vista first-person.
+- Le card abilita del Forge hanno copy a sinistra e icona grande a destra; il
+  danno ha una riga dedicata separata da costi/cooldown.
+- Hotbar in-game: bordo rosso `melee`, verde `bow`, blu `staff/magic`, oro
+  `utility`.
+- Le texture VFX (`public/vfx/*.png`) devono essere RGBA bianco-su-trasparente.
+  `colorSpace = NoColorSpace`, `premultiplyAlpha = false`. MAI sfondo scuro o colorato.
+  Il sistema usa `instanceColor` tinting additivo — il colore white e il canale alpha
+  determinano forma e intensita. I file sono Kenney Particle Pack CC0.
 - Se l'utente dice che un layout/stile fa schifo, va trattato come feedback
   vincolante: aggiornare subito UI e memoria, poi verificare.
 - Quando l'utente ordina di eliminare una cosa, eliminarla dal gioco e dai
@@ -139,7 +229,8 @@ assunzioni precedenti come autorita.
   - Nature: `#39FF14`
 - Barre risorse: rettangolari, leggibili, draggable/resizable.
 - Weapon strip: slot leggibili stile 60x60, nessun overlap con hotbar.
-- Niente nuovi layer CSS. Correggi `game-ui.css`.
+- Quando rifai o aggiorni una regola CSS, cancella quella vecchia nello stesso
+  commit — nessun duplicato, nessun override inutile.
 - Preferisci rimozione e consolidamento invece di aggiungere pannelli.
 - Animazioni UI preferite: `transform` e `opacity`.
 - `.hidden` deve vincere su regole ID come `#settings-overlay { display: grid }`:
@@ -154,47 +245,32 @@ assunzioni precedenti come autorita.
 - Se tocchi input, leggi `02_TECH/05_input_contract.md` e verifica in browser.
 - Bow/staff/spell devono allinearsi al crosshair.
 - Combat server-authoritative: non fidarti del client.
-- Layout tastiera consolidato senza bloat: WASD, Space, Tab per swap, LMB/RMB, Cifre 1-5 per magie, Q/E per le ruote. I tasti diretti Z, X, F, V, R, G non sono più bindabili e sono disattivati.
-- La validazione del weapon swap lock `player.weaponSwapEndTick` è autoritativa sul server per tutti gli input di attacco base, parata e incantesimi.
+- I colpi melee devono dare feedback anche a chi attacca:
+  kick/hit-stop visivo locale all'impatto; non solo sul bersaglio.
 
-## File Autoritativi
+## Dimensione File / Code Split
 
-- `packages/shared/src/abilities/registry.ts`: numeri e comportamento abilita.
-- `packages/server/src/sim/AbilityEngine.ts`: effect chain server.
-- `packages/server/src/rooms/GameRoom.ts`: Colyseus room.
-- `packages/client/index.html`: DOM client.
-- `packages/client/src/main.ts`: bootstrap client.
-- `packages/client/src/loadout-station.ts`: Loadout Forge runtime.
-- `packages/client/public/game-ui.css`: stile UI.
-- `02_TECH/10_deploy_status.md`: deploy e asset.
-- `memory/project_ragequit.md`: memoria corta dei fatti vivi.
+**Soglia**: un file sorgente TypeScript non deve superare **~500 righe** come target; oltre **800 righe** è obbligatorio splitlarlo.
 
-## Read Before Editing
+**Regola derivata dall'esperienza su `main.ts`**: quando `main.ts` è diventato
+troppo grande, è stato spezzato in moduli separati per responsabilità:
+- logica arena → `world/arena.ts`
+- caricamento personaggi → `render/character-loader.ts`, `character-animation.ts`, `character-weapons.ts`
+- HUD separati → `hud/cd-strip.ts`, `hud/self-hud.ts`, `hud/combat-feed.ts`, `hud/hit-feedback.ts`, ecc.
+- input → `input/game-input.ts`, `input/cast-dispatcher.ts`, `input/radial-wheels.ts`
+- fasi partita → `game/match-state-machine.ts`
+- effetti visivi → `game/visual-helpers.ts`, `game/combat-feedback.ts`, `game/hitstop.ts`
+- scene setup → `game/scene-builder.ts`
+- asset preload → `preloader.ts`
 
-- `02_TECH/10_deploy_status.md`
-- `GAME_SYSTEM_MODEL.md`
-- `README.md`
-- `ROADMAP.md`
-- `01_DESIGN/README.md`
-- `02_TECH/README.md`
-- `02_TECH/05_input_contract.md` se tocchi input.
-- `02_TECH/06_visual_performance_contract.md` se tocchi visual, HUD o VFX.
+**Pattern da seguire quando un file supera la soglia:**
+1. Identificare le responsabilità distinte nel file.
+2. Creare un nuovo file nella sottocartella appropriata (es. `game/`, `hud/`, `render/`).
+3. Spostare la responsabilità nel nuovo file con export named.
+4. Aggiornare le importazioni nel file originale.
+5. Aggiornare `02_TECH/00_architecture_overview.md` con il nuovo file nella tabella "Main Code Surfaces".
 
-## Verifica
-
-Per client/UI/combat:
-
-- `pnpm --filter @ragequit/client test`
-- `pnpm --filter @ragequit/client build`
-- `pnpm lint`
-
-Se tocchi codice TypeScript client:
-
-- `pnpm --filter @ragequit/client typecheck`
-
-## Documentazione
-
-- I documenti devono descrivere stato vivo o regole chiuse.
-- Non aggiungere piani astratti.
-- Non lasciare scoperte solo in chat: aggiorna `AGENTS.md` e
-  `memory/project_ragequit.md`.
+**File attualmente grandi da monitorare:**
+- `packages/client/src/main.ts` — ~3245 righe (da continuare a sfoltire)
+- `packages/server/src/rooms/GameRoom.ts` — ~2882 righe (candidato al prossimo split)
+- `packages/server/src/sim/AbilityEngine.ts` — ~1063 righe (borderline)

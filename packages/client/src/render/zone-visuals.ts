@@ -85,6 +85,8 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
       edge.position.x += Math.sin(msg.yaw) * 0.23
       edge.position.z += Math.cos(msg.yaw) * 0.23
 
+      mesh.layers.enable(1)  // bloom
+      edge.layers.enable(1)
       scene.add(mesh)
       scene.add(edge)
       zoneVisuals.set(msg.id, { mesh, extra: edge, element: msg.element })
@@ -132,6 +134,7 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
       })
       const floorMesh = new THREE.Mesh(floorGeo, floorMat)
       floorMesh.position.set(msg.pos.x, msg.pos.y + 0.018, msg.pos.z)
+      floorMesh.layers.enable(1)  // bloom
       scene.add(floorMesh)
 
       // Accent inner ring
@@ -147,6 +150,7 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
       })
       const accentMesh = new THREE.Mesh(accentGeo, accentMat)
       accentMesh.position.set(msg.pos.x, msg.pos.y + 0.055, msg.pos.z)
+      accentMesh.layers.enable(1)  // bloom
       scene.add(accentMesh)
 
       zoneVisuals.set(msg.id, { mesh, extra: floorMesh, accent: accentMesh, element: msg.element })

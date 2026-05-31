@@ -55,12 +55,7 @@ export function makeSwingArcMesh(): THREE.Mesh {
 export function makeProjectileMesh(_kind: 'arrow'): THREE.Mesh {
   const geo = new THREE.CylinderGeometry(0.025, 0.065, 1.1, 6)
   geo.rotateX(Math.PI / 2)
-  const mat = new THREE.MeshStandardMaterial({
-    color: 0xffa030,
-    emissive: 0xff8000,
-    emissiveIntensity: 0.65,
-    roughness: 0.4,
-    metalness: 0.0,
-  })
+  // MeshBasicMaterial per proiettili — più economico, nessuna luce dinamica necessaria.
+  const mat = new THREE.MeshBasicMaterial({ color: 0xffa030 })
   return new THREE.Mesh(geo, mat)
 }

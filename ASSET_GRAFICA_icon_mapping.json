@@ -1,0 +1,272 @@
+{
+  "_note": "Mapping automatico sprite_XXXX.png -> ability_id basato su similarita HSV. Solo CONFIRMED e sicuro da usare.",
+  "_source": "E:\\GIOCHI\\ASSET_GRAFICA\\icone\\sprite_XXXX.png",
+  "_dest": "packages/client/public/ability-icons/<ability_id>.png",
+  "mapping": {
+    "blast_arrow": {
+      "sprite": 42,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "broadhead": {
+      "sprite": 3,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "disengage_shot": {
+      "sprite": 65,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "marksman_shot": {
+      "sprite": 5,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "piercing_shot": {
+      "sprite": 43,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "pin_shot": {
+      "sprite": 24,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "snare_trap": {
+      "sprite": 22,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "volley": {
+      "sprite": 64,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "arc_lift": {
+      "sprite": 15,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "blizzard": {
+      "sprite": 70,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "curse_of_weakness": {
+      "sprite": 36,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "eruption": {
+      "sprite": 19,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "flame_wall": {
+      "sprite": 32,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "freeze_target": {
+      "sprite": 39,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "frost_pillar": {
+      "sprite": 88,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "healing_totem": {
+      "sprite": 75,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "ice_wall": {
+      "sprite": 34,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "life_drain": {
+      "sprite": 8,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "meteor": {
+      "sprite": 7,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "root_upthrow": {
+      "sprite": 96,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "storm_field": {
+      "sprite": 72,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "thorn_field": {
+      "sprite": 79,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "void_spike": {
+      "sprite": 0,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "chain_bolt": {
+      "sprite": 89,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "dark_barrier": {
+      "sprite": 37,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "entangle": {
+      "sprite": 92,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "fire_blink": {
+      "sprite": 53,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "fireball": {
+      "sprite": 52,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "frost_bolt": {
+      "sprite": 23,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "ignite": {
+      "sprite": 6,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "lightning_dash": {
+      "sprite": 77,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "poison_dart": {
+      "sprite": 60,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "shadow_bolt": {
+      "sprite": 35,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "thunder_clap": {
+      "sprite": 85,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "vine_dash": {
+      "sprite": 76,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "bleed_strike": {
+      "sprite": 28,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "gap_closer": {
+      "sprite": 63,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "guard_break": {
+      "sprite": 62,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "rending_dash": {
+      "sprite": 41,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "uppercut": {
+      "sprite": 98,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "whirlwind": {
+      "sprite": 44,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "adaptive_mend": {
+      "sprite": 51,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "arcane_rebind": {
+      "sprite": 18,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "barrier": {
+      "sprite": 66,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "brace_recovery": {
+      "sprite": 78,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "cleanse_surge": {
+      "sprite": 83,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "energize": {
+      "sprite": 84,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "self_heal": {
+      "sprite": 97,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "hunters_flow": {
+      "sprite": 49,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "ping_mark": {
+      "sprite": 82,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "phase_shift": {
+      "sprite": 48,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "quick_dash": {
+      "sprite": 26,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    },
+    "smoke_screen": {
+      "sprite": 55,
+      "diff": 0.0,
+      "quality": "CONFIRMED"
+    }
+  }
+}

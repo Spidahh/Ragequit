@@ -1,9 +1,9 @@
-import { ABILITY_DEFS, getAbilitySlotFamily, getClassSlotOrder } from '@ragequit/shared'
+import { ABILITY_DEFS } from '@ragequit/shared'
 import type { ClassId } from '@ragequit/shared'
 
 import { abilityIcon } from '../icons.js'
 
-import { actionLabel } from './keybinds.js'
+import { actionCode, codeToLabel, SLOT_ACTIONS } from './keybinds.js'
 
 interface WheelSector {
   angleDeg: number
@@ -59,7 +59,6 @@ export function initRadialWheels({
   onPrimeSlot,
   utilityWheelEl,
   getCooldownSec,
-  getClassId,
 }: RadialWheelControllerOptions): RadialWheelController {
   const utilityWheel: RadialWheel = { el: utilityWheelEl, sectors: utilitySectors, kind: 'utility' }
   const abilityWheel: RadialWheel = { el: abilityWheelEl, sectors: abilitySectors, kind: 'ability' }
@@ -71,67 +70,24 @@ export function initRadialWheels({
   let activeKey: string | null = null
   let selectedDir: string | null = null
 
-  function wheelSlotIndices(wheel: RadialWheel, _loadout: readonly string[]): number[] {
-    const classId = getClassId()
-    const order = getClassSlotOrder(classId)
-
-    if (wheel.kind === 'utility') {
-      // Q-wheel: utility slots only
-      const indices: number[] = []
-      for (let idx = 0; idx < order.length; idx++) {
-        if (order[idx] === 'utility') indices.push(idx)
-      }
-      return indices.slice(0, wheel.sectors.length)
-    }
-
-    // E-wheel: melee + bow if the class has any; otherwise magicAdvanced.
-    // When total weapon slots exceed the 4 sectors, BOW takes priority over
-    // the last melee slot so ranged access is always available.
-    const hasMeleeBow = order.some((f) => f === 'melee' || f === 'bow')
-    const allIndices: number[] = []
-    for (let idx = 0; idx < order.length; idx++) {
-      const family = order[idx]!
-      const matches = hasMeleeBow
-        ? family === 'melee' || family === 'bow'
-        : family === 'magicAdvanced'
-      if (matches) allIndices.push(idx)
-    }
-    if (allIndices.length <= wheel.sectors.length) return allIndices
-    // More weapon slots than sectors: keep all bow slots, fill remaining with melee.
-    const bowIndices = allIndices.filter((i) => order[i] === 'bow' || order[i] === 'magicAdvanced')
-    const meleeIndices = allIndices.filter((i) => order[i] === 'melee')
-    const remaining = wheel.sectors.length - bowIndices.length
-    return [...meleeIndices.slice(0, Math.max(0, remaining)), ...bowIndices]
+  function wheelSlotIndices(wheel: RadialWheel): number[] {
+    // E (ability) wheel = first 4 slots, Q (utility) wheel = last 4 slots.
+    // The class slot grammar order guarantees the first four slots are the
+    // E-wheel families and the last four are the Q-wheel families for every
+    // class, so the split is a pure function of the slot index.
+    return wheel.kind === 'ability' ? [0, 1, 2, 3] : [4, 5, 6, 7]
   }
 
-  function sectorSlotIdx(wheel: RadialWheel, sector: WheelSector, loadout: readonly string[]): number {
+  function sectorSlotIdx(wheel: RadialWheel, sector: WheelSector): number {
     const position = wheel.sectors.indexOf(sector)
-    return wheelSlotIndices(wheel, loadout)[position] ?? -1
+    return wheelSlotIndices(wheel)[position] ?? -1
   }
 
-  function slotBindLabel(slotIdx: number, loadout: readonly string[]): string {
-    const id = loadout[slotIdx]
-    if (!id) return ''
-    const family = getAbilitySlotFamily(id)
-    if (family === 'utility') return `${actionLabel('wheelUtility')}`
-    // magicAdvanced slots on mage's E-wheel show E key label.
-    // magicBase and magicAdvanced on direct keys show spell number.
-    if (family === 'magicAdvanced') {
-      const classId = getClassId()
-      const hasMeleeBow = getClassSlotOrder(classId).some((f) => f === 'melee' || f === 'bow')
-      if (!hasMeleeBow) return `${actionLabel('wheelAbility')}`
-    }
-    if (family === 'magicBase' || family === 'magicAdvanced') {
-      let spellIdx = 0
-      for (let idx = 0; idx <= slotIdx; idx++) {
-        const other = loadout[idx]
-        if (!other) continue
-        const otherFamily = getAbilitySlotFamily(other)
-        if (otherFamily === 'magicBase' || otherFamily === 'magicAdvanced') spellIdx++
-      }
-      return spellIdx > 0 && spellIdx <= 6 ? actionLabel(`spell${spellIdx}` as Parameters<typeof actionLabel>[0]) : ''
-    }
-    return `${actionLabel('wheelAbility')}`
+  function slotBindLabel(slotIdx: number): string {
+    // Each slot shows its direct key (default 1-8): the wheel sector and the
+    // hotbar share the same bind, so the player can fire it either way.
+    const action = SLOT_ACTIONS[slotIdx]
+    return action ? codeToLabel(actionCode(action)) : ''
   }
 
   function refresh(wheel: RadialWheel): void {
@@ -140,7 +96,7 @@ export function initRadialWheels({
       const dir = slotEl.dataset['dir']!
       const sector = wheel.sectors.find((s) => s.dir === dir)
       if (!sector) continue
-      const idx = sectorSlotIdx(wheel, sector, loadout)
+      const idx = sectorSlotIdx(wheel, sector)
       const id = loadout[idx] ?? ''
       const def = id ? ABILITY_DEFS[id] : null
       const nameEl = slotEl.querySelector<HTMLElement>('.r-name')!
@@ -152,7 +108,7 @@ export function initRadialWheels({
         iconEl.replaceChildren(abilityIcon(id, 25))
         nameEl.textContent = def.name
         nameEl.classList.remove('r-empty')
-        keyEl.textContent = slotBindLabel(idx, loadout)
+        keyEl.textContent = slotBindLabel(idx)
 
         // Cooldown badge — shows remaining seconds; hidden when ready.
         const cdSec = getCooldownSec ? getCooldownSec(id) : 0
@@ -171,7 +127,7 @@ export function initRadialWheels({
         iconEl.replaceChildren()
         nameEl.textContent = 'empty'
         nameEl.classList.add('r-empty')
-        keyEl.textContent = slotBindLabel(idx, loadout)
+        keyEl.textContent = slotBindLabel(idx)
         if (cdEl) {
           cdEl.textContent = ''
           cdEl.classList.remove('r-cd-active')
@@ -213,7 +169,7 @@ export function initRadialWheels({
     if (primeSelection && selectedDir) {
       const sector = wheel.sectors.find((s) => s.dir === selectedDir)
       if (sector) {
-        const idx = sectorSlotIdx(wheel, sector, getLoadout())
+        const idx = sectorSlotIdx(wheel, sector)
         if (idx >= 0) onPrimeSlot(idx)
       }
     }

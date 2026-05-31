@@ -22,10 +22,10 @@ describe('keybind settings', () => {
     expect(actionLabel('wheelUtility')).toBe('E')
   })
 
-  it('feeds spell labels from remappable bindings', () => {
-    setKeybind('spell1', 'KeyY')
+  it('feeds labels from remappable bindings', () => {
+    setKeybind('jump', 'KeyY')
 
-    expect(actionCode('spell1')).toBe('KeyY')
-    expect(actionLabel('spell1')).toBe('Y')
+    expect(actionCode('jump')).toBe('KeyY')
+    expect(actionLabel('jump')).toBe('Y')
   })
 })

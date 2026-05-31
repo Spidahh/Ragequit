@@ -1,8 +1,8 @@
-import { ABILITY_DEFS, getAbilitySlotFamily, TICK_RATE_HZ, getClassSlotOrder } from '@ragequit/shared'
-import type { ClassId, TargetAbilitySlotFamily } from '@ragequit/shared'
+import { ABILITY_DEFS, getAbilitySlotFamily, TICK_RATE_HZ } from '@ragequit/shared'
+import type { ClassId } from '@ragequit/shared'
 
 import { abilityIconMarkup } from '../icons.js'
-import { actionLabel } from '../input/keybinds.js'
+import { actionCode, codeToLabel, onKeybindsChanged, SLOT_ACTIONS } from '../input/keybinds.js'
 
 export const ELEMENT_COLOR: Record<string, string> = {
   fire: '#ff6a2a',
@@ -43,84 +43,24 @@ interface HotbarSlotMeta {
   pipClass: string
 }
 
-export function getSlotDirectionalLabel(
-  slotIdx: number,
-  classId: ClassId,
-  family: TargetAbilitySlotFamily,
-): string {
-  const order = getClassSlotOrder(classId)
-  if (family === 'melee' || family === 'bow') {
-    const weaponIndices: number[] = []
-    for (let i = 0; i < order.length; i++) {
-      if (order[i] === 'melee' || order[i] === 'bow') {
-        weaponIndices.push(i)
-      }
-    }
-    const pos = weaponIndices.indexOf(slotIdx)
-    if (pos === 0) return 'E🡑'
-    if (pos === 1) return 'E🡒'
-    if (pos === 2) return 'E🡓'
-    if (pos === 3) return 'E🡐'
-  }
-  if (family === 'utility') {
-    const utilityIndices: number[] = []
-    for (let i = 0; i < order.length; i++) {
-      if (order[i] === 'utility') {
-        utilityIndices.push(i)
-      }
-    }
-    const pos = utilityIndices.indexOf(slotIdx)
-    if (pos === 0) return 'Q🡑'
-    if (pos === 1) return 'Q🡒'
-    if (pos === 2) return 'Q🡓'
-    if (pos === 3) return 'Q🡐'
-  }
-  return ''
+// Every hotbar slot has its own direct key (default 1-8, rebindable). Slots 0-3
+// are also reachable on the E wheel and 4-7 on the Q wheel, but the printed bind
+// on the hotbar is the direct key — every ability has a key.
+export function getSlotKeyLabel(slotIdx: number): string {
+  if (slotIdx < 0 || slotIdx >= SLOT_ACTIONS.length) return ''
+  return codeToLabel(actionCode(SLOT_ACTIONS[slotIdx]!))
 }
 
-function spellLabel(loadout: ReadonlyArray<string>, slotIdx: number): string {
-  let spellIdx = 0
-  for (let idx = 0; idx <= slotIdx; idx++) {
-    const id = loadout[idx]
-    if (!id) continue
-    const family = getAbilitySlotFamily(id)
-    if (family === 'magicBase' || family === 'magicAdvanced') spellIdx++
-  }
-  return spellIdx > 0 && spellIdx <= 6
-    ? actionLabel(`spell${spellIdx}` as Parameters<typeof actionLabel>[0])
-    : ''
-}
-
-function slotMeta(
-  loadout: ReadonlyArray<string>,
-  slotIdx: number,
-  classId: ClassId,
-): HotbarSlotMeta | null {
+function slotMeta(loadout: ReadonlyArray<string>, slotIdx: number): HotbarSlotMeta | null {
   const id = loadout[slotIdx]
   if (!id) return null
   const family = getAbilitySlotFamily(id)
-  if (family === 'utility') {
-    const label = getSlotDirectionalLabel(slotIdx, classId, 'utility')
-    return { kind: 'utility', label, pipClass: 'utility-pip pip-utility' }
-  }
-  if (family === 'magicBase') {
-    const label = spellLabel(loadout, slotIdx)
-    if (!label) return null
-    return { kind: 'spell', label, pipClass: 'spell-pip pip-magic' }
-  }
-  if (family === 'magicAdvanced') {
-    const label = spellLabel(loadout, slotIdx)
-    if (!label) return null
-    return { kind: 'spell', label, pipClass: 'spell-pip pip-magic-adv' }
-  }
-  if (family === 'melee') {
-    const label = getSlotDirectionalLabel(slotIdx, classId, 'melee')
-    return { kind: 'weapon', label, pipClass: 'ability-pip pip-sword' }
-  }
-  if (family === 'bow') {
-    const label = getSlotDirectionalLabel(slotIdx, classId, 'bow')
-    return { kind: 'weapon', label, pipClass: 'ability-pip pip-bow' }
-  }
+  const label = getSlotKeyLabel(slotIdx)
+  if (family === 'utility') return { kind: 'utility', label, pipClass: 'utility-pip pip-utility' }
+  if (family === 'magicBase') return { kind: 'spell', label, pipClass: 'spell-pip pip-magic' }
+  if (family === 'magicAdvanced') return { kind: 'spell', label, pipClass: 'spell-pip pip-magic-adv' }
+  if (family === 'melee') return { kind: 'weapon', label, pipClass: 'ability-pip pip-sword' }
+  if (family === 'bow') return { kind: 'weapon', label, pipClass: 'ability-pip pip-bow' }
   return null
 }
 
@@ -131,14 +71,12 @@ export function initCooldownStrip(
   const pipEls = new Map<string, HTMLElement>()
   let loadoutRef: ReadonlyArray<string> = []
   let loadoutSig = ''
-  let activeClassId: ClassId = 'hybrid'
 
   function signature(loadout: ReadonlyArray<string>): string {
     return Array.from(loadout).join('|')
   }
 
-  function rebuild(loadout: ReadonlyArray<string>, classId: ClassId): void {
-    activeClassId = classId
+  function rebuild(loadout: ReadonlyArray<string>, _classId: ClassId): void {
     loadoutRef = Array.from(loadout)
     loadoutSig = signature(loadoutRef)
     root.replaceChildren()
@@ -166,7 +104,7 @@ export function initCooldownStrip(
       const id = loadout[slotIdx] ?? ''
       if (!id) continue
       const def = ABILITY_DEFS[id]
-      const meta = slotMeta(loadout, slotIdx, activeClassId)
+      const meta = slotMeta(loadout, slotIdx)
       if (!meta) continue
       const elemColor = ELEMENT_COLOR[def?.element ?? 'none'] ?? ELEMENT_COLOR['none']!
       const hasMana = (def?.costMana ?? 0) > 0
@@ -257,7 +195,7 @@ export function initCooldownStrip(
       const id = loadoutRef[slotIdx] ?? ''
       const pip = pipEls.get(id)
       if (!pip) continue
-      const meta = slotMeta(loadoutRef, slotIdx, activeClassId)
+      const meta = slotMeta(loadoutRef, slotIdx)
       if (!meta) continue
       const readyTick = (abilityCooldowns?.get?.(id) ?? 0) as number
       const arcEl = pip.querySelector<SVGCircleElement>('.cd-arc-fill')
@@ -291,6 +229,15 @@ export function initCooldownStrip(
       pip.classList.toggle('placing', id === placementAbilityId)
     }
   }
+
+  // Keep hotbar key labels in sync when the player rebinds an ability key.
+  onKeybindsChanged(() => {
+    for (const [, pip] of pipEls) {
+      const slotIdx = Number(pip.dataset['slotIdx'] ?? '-1')
+      const labelEl = pip.querySelector<HTMLElement>('.label')
+      if (labelEl && slotIdx >= 0) labelEl.textContent = getSlotKeyLabel(slotIdx)
+    }
+  })
 
   // Start empty; rebuild() is called by self-hud when the real loadout arrives.
   rebuild([], 'hybrid')

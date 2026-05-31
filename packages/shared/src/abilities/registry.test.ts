@@ -53,15 +53,11 @@ describe('ability registry', () => {
   it('every ability declares a valid combo role and the library covers every role family', () => {
     const validRoles: AbilityComboRole[] = [
       'starter',
-      'extender',
       'finisher',
-      'ray',
       'pressure',
       'survival',
       'counter',
       'mobility',
-      'drain',
-      'resource',
     ]
     const seen = new Set<AbilityComboRole>()
     for (const def of Object.values(ABILITY_DEFS) as AbilityDef[]) {
@@ -71,13 +67,18 @@ describe('ability registry', () => {
     for (const role of validRoles) expect(seen.has(role), role).toBe(true)
   })
 
-  it('ray role abilities are direct forward line-of-sight tools, not projectiles or point zones', () => {
-    for (const def of Object.values(ABILITY_DEFS) as AbilityDef[]) {
-      if (def.comboRole !== 'ray') continue
-      expect(def.targeting, def.id).toBe('forward')
+  it('instant line-of-sight spells stay forward direct hits, not projectiles or point zones', () => {
+    // These were the legacy "ray" abilities. After the 6-role consolidation the
+    // instant line-of-sight delivery is a property (forward + no projectile/zone),
+    // not a comboRole. The delivery contract must still hold.
+    const instantLosSpells = ['ignite', 'chain_bolt', 'freeze_target', 'entangle']
+    for (const id of instantLosSpells) {
+      const def = getAbilityDef(id)
+      expect(def, id).toBeDefined()
+      expect(def!.targeting, id).toBe('forward')
       expect(
-        def.effects.some((e) => e.kind === 'projectile' || e.kind === 'zone'),
-        def.id,
+        def!.effects.some((e) => e.kind === 'projectile' || e.kind === 'zone'),
+        id,
       ).toBe(false)
     }
   })

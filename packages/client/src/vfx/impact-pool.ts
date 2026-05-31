@@ -27,7 +27,7 @@ export class ImpactPool {
   private readonly sphereColors: THREE.InstancedBufferAttribute
   private readonly ringColors: THREE.InstancedBufferAttribute
   private readonly accentColors: THREE.InstancedBufferAttribute
-  private readonly hiddenMat = new THREE.Matrix4().makeScale(0, 0, 0)
+  private readonly hiddenMat = new THREE.Matrix4().makeTranslation(0, -9999, 0)
   private readonly impacts: ImpactFx[] = []
   private nextSlot = 0
 
@@ -39,7 +39,10 @@ export class ImpactPool {
     const sphereGeo = new THREE.SphereGeometry(0.15, 8, 6)
     const sphereMat = new THREE.MeshBasicMaterial({
       map: VfxTextures.glow,
+      alphaMap: VfxTextures.glow,
       transparent: true,
+      alphaTest: 0.03,
+      premultipliedAlpha: true,
       blending: THREE.AdditiveBlending, // glowing additive burst
       depthWrite: false,
     })
@@ -54,7 +57,10 @@ export class ImpactPool {
 
     const ringMat = new THREE.MeshBasicMaterial({
       map: VfxTextures.ring,
+      alphaMap: VfxTextures.ring,
       transparent: true,
+      alphaTest: 0.03,
+      premultipliedAlpha: true,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
       side: THREE.DoubleSide,
@@ -68,7 +74,10 @@ export class ImpactPool {
     const accentGeo = new THREE.OctahedronGeometry(0.24, 0)
     const accentMat = new THREE.MeshBasicMaterial({
       map: VfxTextures.spark,
+      alphaMap: VfxTextures.spark,
       transparent: true,
+      alphaTest: 0.03,
+      premultipliedAlpha: true,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     })

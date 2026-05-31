@@ -48,16 +48,13 @@ interface AbilityDef {
   range: number
   targeting: 'self' | 'forward' | 'target' | 'point'
   comboRole:
+    // Standard 6-role taxonomy. See 01_DESIGN/05_abilities_philosophy.md.
     | 'starter'
-    | 'extender'
     | 'finisher'
-    | 'ray'
     | 'pressure'
     | 'survival'
     | 'counter'
     | 'mobility'
-    | 'drain'
-    | 'resource'
   effects: readonly EffectSpec[]
   description: string
   miniMalus: string
@@ -98,18 +95,25 @@ Current primitives:
 
 `comboRole` is mandatory and design-authored. Do not infer it from effects in new ability data. There is no separate `isStarter` flag: starter filtering, tags, and tests read `comboRole` directly.
 
-| Role       | Contract                                                                              |
-| ---------- | ------------------------------------------------------------------------------------- |
-| `starter`  | Applies real control: launch, root, freeze, stun, blind, or meaningful slow           |
-| `extender` | Keeps enemies inside a started combo through zones, repeated control, or space denial |
-| `finisher` | Rewards setup with high-value damage or precision payoff                              |
-| `ray`      | Instant forward line-of-sight hit; no projectile or point zone                        |
-| `pressure` | Sustained poke, DoT, bleed, poison, chill, or lifesteal pressure                      |
-| `survival` | Heal, shield, sustain, or recovery                                                    |
-| `counter`  | Cleanse, phase, disengage, anti-melee, or interrupt answer                            |
-| `mobility` | Repositioning tool that changes engage/disengage geometry                             |
-| `drain`    | Attacks enemy Mana/Stamina or converts enemy tempo into your resources                |
-| `resource` | Resource restore utility                                                              |
+Standard 6-role taxonomy (design target):
+
+| Role       | Contract                                                                                       |
+| ---------- | ---------------------------------------------------------------------------------------------- |
+| `starter`  | Applies real control: launch, root, freeze, stun, blind, or meaningful slow                    |
+| `finisher` | Rewards setup with high-value damage or precision payoff (no airborne multiplier)              |
+| `pressure` | Damage/debuff that is not an opener: poke, DoT, zone, space denial, or resource drain           |
+| `survival` | Heal, shield, sustain, or resource restore                                                      |
+| `counter`  | Cleanse, phase, disengage, anti-melee, or interrupt answer                                      |
+| `mobility` | Repositioning tool that changes engage/disengage geometry                                       |
+
+Legacy roles were removed from the type. For reference, they mapped as:
+
+| Removed role | Now expressed as                                                        |
+| ------------ | ----------------------------------------------------------------------- |
+| `extender`   | `pressure` (zone/space-denial is pressure)                              |
+| `drain`      | `pressure` (resource attrition is pressure)                            |
+| `resource`   | `survival` (restoring own resources is sustain)                        |
+| `ray`        | a real role + instant-LOS delivery (`windupSec: 0`, `targeting: 'forward'`) |
 
 ## Runtime Guarantees
 
@@ -122,7 +126,7 @@ Current primitives:
 - Point-target abilities use `ClientCastMessage.targetPoint`; the client may preview range, but the server clamps the final point to the ability range.
 - "Ray" abilities are implemented with `targeting: 'forward'` plus direct `damage`, `applyStatus`, `knockup`, or `resourceDrain` effects. The server picks the aimed line-of-sight enemy within range, so these are instant but still require crosshair discipline.
 - HP drain must stay as `damage` + `lifesteal`; `resourceDrain` is only for Mana/Stamina so shields, parry, invulnerability, damage events, and death credit are not bypassed.
-- Finisher air punish is authoritative on the server: `comboRole: 'finisher'` damage is multiplied by 1.25 when the victim is still in the airborne window. Projectile finishers carry `abilityId` and `comboRole` in server projectile metadata so the same rule applies on impact.
+- `comboRole: 'finisher'` carries no damage multiplier on the server. Finisher abilities deal their flat base damage regardless of the victim's airborne state. There is no airborne window multiplier. Knockup creates aim pressure and lower evasion options — the reward is positional, not a server-side bonus.
 
 ## Validation Coverage
 

@@ -15,10 +15,10 @@ Four classes. Same total slot count (8). Different slot distribution, different 
 
 | Classe  | Melee | Bow | Magic Base | Magic Adv | Utility | Weapon M1 access       |
 | ------- | ----- | --- | ---------- | --------- | ------- | ---------------------- |
-| Tank    | 3     | 2   | 0          | 0         | 3       | Sword + Bow (no Staff) |
-| Arciere | 0     | 3   | 3          | 0         | 2       | Bow + Staff            |
-| Mago    | 0     | 0   | 3          | 2         | 3       | Staff only             |
-| Ibrido  | 1     | 1   | 2          | 2         | 2       | Sword + Bow + Staff    |
+| Tank    | 4     | 1   | 0          | 0         | 3       | Sword + Bow (no Staff) |
+| Arciere | 0     | 4   | 2          | 0         | 2       | Bow + Staff            |
+| Mago    | 0     | 0   | 3          | 3         | 2       | Staff only             |
+| Ibrido  | 2     | 1   | 2          | 1         | 2       | Sword + Bow + Staff    |
 
 ## Resource pools per class
 
@@ -48,7 +48,7 @@ Dark lifesteal and Nature healing remain magic sustain lanes only when a legal c
 
 Each class is strong in their zone. Getting OUT of your optimal zone is a skill test:
 
-- **Tank vs Mage**: Tank must close distance through roots/knockup. Mage must maintain range. If Mage lets Tank in to <2m, windup spells gain +0.4s cast time — only Ray/Instant work reliably at that range.
+- **Tank vs Mage**: Tank must close distance through roots/knockup. Mage must maintain range. At <2m the Mage is not penalized with extra cast time (proximity casting is removed); the pressure comes purely from the Tank denying space and forcing the Mage to reposition or burst.
 - **Tank vs Arciere**: Arciere kites with range. Tank must read Arciere movement to cut off angles.
 - **Mago vs Arciere**: Both ranged. Mago has higher burst via combos. Arciere has more consistent damage and better sustained mobility.
 - **Ibrido vs any**: No class advantage. Wins by reading and adapting the matchup mid-fight.

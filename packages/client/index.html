@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="it">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,6 +9,17 @@
     <link rel="stylesheet" href="/game-ui.css" />
   </head>
   <body class="main-menu-active">
+    <!-- Loading screen — shown during asset preload before entering arena -->
+    <div id="loading-screen" class="hidden">
+      <div class="loading-inner">
+        <div class="loading-logo">RAGEQUIT</div>
+        <div class="loading-label" id="loading-label">Caricamento arena...</div>
+        <div class="loading-bar-track">
+          <div class="loading-bar-fill" id="loading-bar-fill"></div>
+        </div>
+        <div class="loading-sub" id="loading-sub"></div>
+      </div>
+    </div>
     <div id="app"></div>
     <div id="crosshair"></div>
     <div id="shoot-flash"></div>
@@ -145,6 +156,13 @@
         <h2>KO</h2>
         <p>Respawn in <span id="respawn-sec">5.0</span>s</p>
         <p id="respawn-killer"></p>
+        <div id="respawn-stats" class="respawn-stats">
+          <span class="rs-item" id="rs-dmg-dealt">DMG <b id="rs-dmg-dealt-val">0</b></span>
+          <span class="rs-sep">·</span>
+          <span class="rs-item" id="rs-hits">COLPI <b id="rs-hits-val">0</b></span>
+          <span class="rs-sep">·</span>
+          <span class="rs-item" id="rs-kills">ROUND <b id="rs-kills-val">0-0</b></span>
+        </div>
         <div class="tips" id="respawn-tip"></div>
       </div>
     </div>
@@ -198,16 +216,16 @@
 
     <div id="pause-menu" class="hidden">
       <div class="pause-panel">
-        <div class="pause-eyebrow">Match Menu</div>
-        <h2>Paused</h2>
+        <div class="pause-eyebrow">Menu Partita</div>
+        <h2>In Pausa</h2>
         <div class="pause-actions">
-          <button class="pause-btn primary" id="pause-resume">Resume</button>
-          <button class="pause-btn" id="pause-loadout">Loadout</button>
-          <button class="pause-btn" id="pause-settings">Settings</button>
-          <button class="pause-btn danger" id="pause-lobby">Return to Lobby</button>
+          <button class="pause-btn primary" id="pause-resume">Riprendi</button>
+          <button class="pause-btn" id="pause-loadout">Build</button>
+          <button class="pause-btn" id="pause-settings">Impostazioni</button>
+          <button class="pause-btn danger" id="pause-lobby">Torna alla Lobby</button>
         </div>
         <div class="pause-note">
-          The match keeps running online. Resume returns mouse control to the arena.
+          La partita continua online. Riprendi restituisce subito mouse e input all'arena.
         </div>
         <div class="pause-controls">
           <div>
@@ -216,20 +234,20 @@
               ><span data-keybind-label="moveLeft">A</span
               ><span data-keybind-label="moveBack">S</span
               ><span data-keybind-label="moveRight">D</span></b
-            ><span>Move</span>
+            ><span>Muovi</span>
           </div>
-          <div><b data-keybind-label="jump">Space</b><span>Jump</span></div>
-          <div><b>LMB</b><span>Weapon fire</span></div>
-          <div><b>RMB</b><span>Parry</span></div>
-          <div><b data-keybind-label="swapWeapon">Tab</b><span>Swap weapon</span></div>
+          <div><b data-keybind-label="jump">Space</b><span>Salto</span></div>
+          <div><b>LMB</b><span>Fuoco arma</span></div>
+          <div><b>RMB</b><span>Parata</span></div>
+          <div><b data-keybind-label="swapWeapon">Tab</b><span>Cambia arma</span></div>
           <div>
             <b
               ><span data-keybind-label="wheelAbility">E</span> /
               <span data-keybind-label="wheelUtility">Q</span> hold</b
-            ><span>Wheels</span>
+            ><span>Ruote</span>
           </div>
-          <div><b data-keybind-label="wheelUtility">Q</b><span>Utility wheel</span></div>
-          <div><b data-keybind-label="openLoadout">L</b><span>Loadout</span></div>
+          <div><b data-keybind-label="wheelUtility">Q</b><span>Ruota utility</span></div>
+          <div><b data-keybind-label="openLoadout">L</b><span>Loadout Forge</span></div>
         </div>
       </div>
     </div>
@@ -248,7 +266,7 @@
         <div class="mm-modes-row">
           <button class="mode-tile mode-tile--pvp" id="menu-play">
             <span class="mode-tile-glow"></span>
-            <span class="mode-tile-tag">RANKED</span>
+            <span class="mode-tile-tag">CLASSIFICATA</span>
             <span class="mode-tile-icon">⚔</span>
             <span class="mode-tile-name">Gioca 1v1</span>
             <span class="mode-tile-sub">Duello · 3 round per vincere</span>
@@ -256,7 +274,7 @@
 
           <button class="mode-tile mode-tile--ffa" id="menu-ffa">
             <span class="mode-tile-glow"></span>
-            <span class="mode-tile-tag mode-tile-tag--red">CHAOS</span>
+            <span class="mode-tile-tag mode-tile-tag--red">CAOS</span>
             <span class="mode-tile-icon">💀</span>
             <span class="mode-tile-name">Multiplayer FFA</span>
             <span class="mode-tile-sub">Fino a 8 giocatori · tutti contro tutti</span>
@@ -297,7 +315,7 @@
           <span class="forge-tile-text">
             <span class="forge-tile-name">Loadout Forge</span>
             <span class="forge-tile-sub"
-              >costruisci la classe · scegli gli incantesimi · personalizza il build</span
+              >costruisci la classe · scegli le abilità · personalizza la build</span
             >
           </span>
           <span class="forge-tile-arrow">›</span>
@@ -316,7 +334,7 @@
                   class="pc-name-input"
                   value=""
                   maxlength="16"
-                  placeholder="Nome…"
+                  placeholder="Nome giocatore…"
                   spellcheck="false"
                   autocomplete="off"
                 />
@@ -372,7 +390,7 @@
         </div>
         <!-- Server connection status -->
         <div id="menu-server-status" class="status-disconnected">
-          <span class="server-status-dot">●</span>disconnected
+          <span class="server-status-dot">●</span>offline
         </div>
       </div>
     </div>
@@ -382,16 +400,16 @@
       <h2>IMPOSTAZIONI</h2>
       <div class="settings-panel">
         <div class="setting-row">
-          <span class="setting-label">Graphics Quality</span>
+          <span class="setting-label">Qualità Grafica</span>
           <div class="quality-btns">
-            <button class="quality-btn" data-quality="low">LOW</button>
-            <button class="quality-btn active" data-quality="med">MEDIUM</button>
-            <button class="quality-btn" data-quality="high">HIGH</button>
+            <button class="quality-btn" data-quality="low">BASSA</button>
+            <button class="quality-btn active" data-quality="med">MEDIA</button>
+            <button class="quality-btn" data-quality="high">ALTA</button>
           </div>
         </div>
 
         <div class="setting-row">
-          <span class="setting-label">Field of View</span>
+          <span class="setting-label">Campo Visivo</span>
           <div class="setting-control">
             <input type="range" id="setting-fov" min="60" max="120" step="1" value="90" />
             <span class="setting-value" id="setting-fov-val">90°</span>
@@ -399,7 +417,7 @@
         </div>
 
         <div class="setting-row">
-          <span class="setting-label">Mouse Sensitivity</span>
+          <span class="setting-label">Sensibilità Mouse</span>
           <div class="setting-control">
             <input type="range" id="setting-sens" min="4" max="80" step="1" value="22" />
             <span class="setting-value" id="setting-sens-val">0.0022</span>
@@ -415,51 +433,60 @@
         </div>
 
         <div class="setting-row controls-row">
-          <span class="setting-label">Controls</span>
+          <span class="setting-label">Comandi</span>
           <div class="controls-grid">
             <div class="keybind-row">
-              <button class="keybind-btn" data-keybind-action="moveForward"></button> Move forward
+              <button class="keybind-btn" data-keybind-action="moveForward"></button> Avanti
             </div>
             <div class="keybind-row">
-              <button class="keybind-btn" data-keybind-action="moveBack"></button> Move back
+              <button class="keybind-btn" data-keybind-action="moveBack"></button> Indietro
             </div>
             <div class="keybind-row">
-              <button class="keybind-btn" data-keybind-action="moveLeft"></button> Move left
+              <button class="keybind-btn" data-keybind-action="moveLeft"></button> Sinistra
             </div>
             <div class="keybind-row">
-              <button class="keybind-btn" data-keybind-action="moveRight"></button> Move right
+              <button class="keybind-btn" data-keybind-action="moveRight"></button> Destra
             </div>
             <div class="keybind-row">
-              <button class="keybind-btn" data-keybind-action="jump"></button> Jump
+              <button class="keybind-btn" data-keybind-action="jump"></button> Salto
             </div>
-            <div><span class="key">LMB</span> Attack</div>
-            <div><span class="key">RMB</span> Parry</div>
+            <div><span class="key">LMB</span> Attacco</div>
+            <div><span class="key">RMB</span> Parata</div>
             <div class="keybind-row">
-              <button class="keybind-btn" data-keybind-action="swapWeapon"></button> Cycle weapon
-            </div>
-            <div class="keybind-row">
-              <button class="keybind-btn" data-keybind-action="spell1"></button> Spell 1
+              <button class="keybind-btn" data-keybind-action="swapWeapon"></button> Cicla arma
             </div>
             <div class="keybind-row">
-              <button class="keybind-btn" data-keybind-action="spell2"></button> Spell 2
+              <button class="keybind-btn" data-keybind-action="wheelAbility"></button> Ruota E (armi/magie)
             </div>
             <div class="keybind-row">
-              <button class="keybind-btn" data-keybind-action="spell3"></button> Spell 3
+              <button class="keybind-btn" data-keybind-action="wheelUtility"></button> Ruota Q (utility/magie)
             </div>
             <div class="keybind-row">
-              <button class="keybind-btn" data-keybind-action="spell4"></button> Spell 4
+              <button class="keybind-btn" data-keybind-action="slot1"></button> Abilità 1 (E ↑)
             </div>
             <div class="keybind-row">
-              <button class="keybind-btn" data-keybind-action="spell5"></button> Spell 5
+              <button class="keybind-btn" data-keybind-action="slot2"></button> Abilità 2 (E →)
             </div>
             <div class="keybind-row">
-              <button class="keybind-btn" data-keybind-action="wheelUtility"></button> Utility wheel
+              <button class="keybind-btn" data-keybind-action="slot3"></button> Abilità 3 (E ↓)
             </div>
             <div class="keybind-row">
-              <button class="keybind-btn" data-keybind-action="wheelAbility"></button> Ability wheel
+              <button class="keybind-btn" data-keybind-action="slot4"></button> Abilità 4 (E ←)
             </div>
             <div class="keybind-row">
-              <button class="keybind-btn" data-keybind-action="openLoadout"></button> Loadout
+              <button class="keybind-btn" data-keybind-action="slot5"></button> Abilità 5 (Q ↑)
+            </div>
+            <div class="keybind-row">
+              <button class="keybind-btn" data-keybind-action="slot6"></button> Abilità 6 (Q →)
+            </div>
+            <div class="keybind-row">
+              <button class="keybind-btn" data-keybind-action="slot7"></button> Abilità 7 (Q ↓)
+            </div>
+            <div class="keybind-row">
+              <button class="keybind-btn" data-keybind-action="slot8"></button> Abilità 8 (Q ←)
+            </div>
+            <div class="keybind-row">
+              <button class="keybind-btn" data-keybind-action="openLoadout"></button> Loadout Forge
             </div>
             <div class="keybind-row">
               <button class="keybind-btn" data-keybind-action="sensDown"></button> Sens -
@@ -467,11 +494,11 @@
             <div class="keybind-row">
               <button class="keybind-btn" data-keybind-action="sensUp"></button> Sens +
             </div>
-            <button id="settings-keybind-reset" type="button">RESET KEYBINDS</button>
+            <button id="settings-keybind-reset" type="button">RESET COMANDI</button>
           </div>
         </div>
       </div>
-      <button id="settings-back-btn">BACK</button>
+      <button id="settings-back-btn">INDIETRO</button>
     </div>
 
     <div id="loadout-station" class="hidden">
@@ -481,7 +508,7 @@
         <div id="ls-title-block">
           <img class="rq-shell-logo" src="/ui/ragequit-logo-small.png" alt="RAGEQUIT" />
           <h1>LOADOUT <span>FORGE</span></h1>
-          <p class="subtitle">Seleziona classe · Forgia il build</p>
+          <p class="subtitle">Seleziona classe · Forgia la build</p>
         </div>
 
         <div id="ls-class-selector" aria-label="Seleziona classe">
@@ -541,7 +568,7 @@
           <div class="ls-section">
             <div class="ls-section-label">
               <span>2 · Build Combat</span>
-              <span class="ls-key" id="ls-ability-wheel-key">E WHEEL · 1-5 SPELL</span>
+              <span class="ls-key" id="ls-ability-wheel-key">E HOLD</span>
             </div>
             <div class="slot-list" id="ls-melee"></div>
             <div class="slot-list" id="ls-bow"></div>
@@ -567,13 +594,13 @@
             <div id="ls-filter-bar">
               <input id="ls-search" type="text" placeholder="Cerca abilità…" autocomplete="off" spellcheck="false" />
               <div class="filter-group" aria-label="Build filters">
-                <button class="filter-btn smart" data-filter="recommended">SMART</button>
-                <button class="filter-btn" data-filter="control">CONTROL</button>
-                <button class="filter-btn" data-filter="projectile">PROJECTILE</button>
-                <button class="filter-btn" data-filter="recovery">RECOVERY</button>
-                <button class="filter-btn" data-filter="zone">ZONE</button>
-                <button class="filter-btn" data-filter="mobility">MOBILITY</button>
-                <button class="filter-btn" data-filter="all">ALL</button>
+                <button class="filter-btn smart" data-filter="recommended">★ CONSIGLIATI</button>
+                <button class="filter-btn" data-filter="control">CONTROLLO</button>
+                <button class="filter-btn" data-filter="projectile">PROIETTILI</button>
+                <button class="filter-btn" data-filter="recovery">RECUPERO</button>
+                <button class="filter-btn" data-filter="zone">ZONA</button>
+                <button class="filter-btn" data-filter="mobility">MOBILITÀ</button>
+                <button class="filter-btn" data-filter="all">TUTTE</button>
               </div>
             </div>
             <div class="pool-grid" id="ls-pool"></div>
@@ -584,9 +611,9 @@
 
       <!-- ── FOOTER ── -->
       <div class="station-buttons">
-        <button class="btn secondary" id="ls-back">← BACK</button>
-        <button class="btn" id="ls-default">RESET DEFAULT</button>
-        <button class="btn primary" id="ls-confirm">CONFIRM &amp; ENTER MATCH</button>
+        <button class="btn secondary" id="ls-back">← INDIETRO</button>
+        <button class="btn" id="ls-default">RESET BASE</button>
+        <button class="btn primary" id="ls-confirm">CONFERMA ED ENTRA</button>
       </div>
 
     </div><!-- /loadout-station -->

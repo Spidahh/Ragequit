@@ -10,9 +10,8 @@ status: current
 
 # Melee Abilities
 
-Melee abilities live in class-legal Melee slots and are cast via the E wheel or
-a direct class-legal bind. Casting a melee ability uses sword grammar; see
-`01_controls.md`.
+Melee abilities live in class-legal Melee slots and are cast via the E wheel.
+Casting a melee ability uses sword grammar; see `01_controls.md`.
 
 Live tuning is currently in the Combo Combat 2.0 pass. `packages/shared/src/abilities/registry.ts` is the authoritative source for exact damage, CC duration, stamina cost, cooldown, cast data, and tooltip text. Numeric bullets below are design snapshots for role/readability review, not a second runtime registry.
 

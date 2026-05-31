@@ -154,9 +154,12 @@ function makeProjectileObject(
 
     const mat = new THREE.MeshBasicMaterial({
       map: texture,
+      alphaMap: texture,
       color: elemColor,
       transparent: true,
       opacity: 0.98,
+      alphaTest: 0.03,
+      premultipliedAlpha: true,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
       side: THREE.DoubleSide,

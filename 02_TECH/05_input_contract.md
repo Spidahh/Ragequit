@@ -26,7 +26,7 @@ combat.
 
 - Ability and utility wheels are selectors, not launchers.
 - Holding the wheel key opens the wheel; moving the mouse changes the highlighted sector; releasing the key primes the selected slot; LMB fires the primed ability.
-- Number keys `1`-`5` cast class-legal spell slots immediately. `Q` and `E` wheels select and prime utility/ability sectors; LMB confirms the primed action.
+- Every hotbar slot has a direct key (default `1`-`8`, rebindable) that fires it immediately. The `E` and `Q` wheels (4 sectors each, E = slots 1-4, Q = slots 5-8) are an alternative radial input: release primes the selected slot, LMB fires it. Direct key and wheel sector share the same bind.
 - Removed direct binds `Z`, `X`, `F`, `V`, `R`, and `G` are not gameplay input surfaces.
 
 ## Regression Checks
@@ -37,4 +37,4 @@ Before changing input, camera, loadout confirm, pause resume, or match phase:
 - Confirm loadout.
 - Verify the page is `LIVE`, the active element is `CANVAS`, and pointer lock is requested during the confirm click or a later canvas click.
 - Verify `Tab` swaps weapon without browser focus traversal.
-- Verify `WASD`, `Space`, LMB, RMB, ability wheel, and utility wheel still respond after swapping Sword, Bow, and Staff.
+- Verify `WASD`, `Space`, LMB, RMB, E wheel and Q wheel still respond after swapping Sword, Bow, and Staff.

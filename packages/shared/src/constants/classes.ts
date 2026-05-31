@@ -28,6 +28,13 @@ export interface ClassSlotGrammar {
   utility: number
 }
 
+export interface ClassVisualDefinition {
+  base: string
+  outfit: string
+  hair: string
+  accessories: readonly string[]
+}
+
 export interface ClassTargetDefinition {
   id: ClassId
   label: string
@@ -35,6 +42,7 @@ export interface ClassTargetDefinition {
   slots: ClassSlotGrammar
   weapons: readonly WeaponId[]
   recoveryId: 'brace_recovery' | 'hunters_flow' | 'arcane_rebind' | 'adaptive_mend'
+  visuals: ClassVisualDefinition
 }
 
 export const TARGET_CLASS_DEFS = {
@@ -45,6 +53,12 @@ export const TARGET_CLASS_DEFS = {
     slots: { melee: 4, bow: 1, magicBase: 0, magicAdvanced: 0, utility: 3 },
     weapons: ['sword', 'bow'],
     recoveryId: 'brace_recovery',
+    visuals: {
+      base: 'Superhero_Male_FullBody',
+      outfit: 'Male_Ranger',
+      hair: 'Hair_Buzzed',
+      accessories: ['Male_Ranger_Head_Hood', 'Male_Ranger_Acc_Pauldron'],
+    },
   },
   archer: {
     id: 'archer',
@@ -53,26 +67,93 @@ export const TARGET_CLASS_DEFS = {
     slots: { melee: 0, bow: 4, magicBase: 2, magicAdvanced: 0, utility: 2 },
     weapons: ['bow', 'staff'],
     recoveryId: 'hunters_flow',
+    visuals: {
+      base: 'Superhero_Female_FullBody',
+      outfit: 'Female_Ranger',
+      hair: 'Hair_Buns',
+      accessories: ['Female_Ranger_Head_Hood'],
+    },
   },
   mage: {
     id: 'mage',
     label: 'Mago',
     resourceMaxima: { hp: 150, mana: 160, stamina: 80 },
-    // 3 base + 3 advanced + 2 utility = 8
     slots: { melee: 0, bow: 0, magicBase: 3, magicAdvanced: 3, utility: 2 },
     weapons: ['staff'],
     recoveryId: 'arcane_rebind',
+    visuals: {
+      base: 'Superhero_Male_FullBody',
+      outfit: 'Male_Peasant',
+      hair: 'Hair_Long',
+      accessories: ['Hair_Beard'],
+    },
   },
   hybrid: {
     id: 'hybrid',
     label: 'Ibrido',
     resourceMaxima: { hp: 200, mana: 100, stamina: 100 },
-    // 2 melee + 1 bow + 2 base + 1 advanced + 2 utility = 8
     slots: { melee: 2, bow: 1, magicBase: 2, magicAdvanced: 1, utility: 2 },
     weapons: ['sword', 'bow', 'staff'],
     recoveryId: 'adaptive_mend',
+    visuals: {
+      base: 'Superhero_Female_FullBody',
+      outfit: 'Female_Peasant',
+      hair: 'Hair_SimpleParted',
+      accessories: [],
+    },
   },
 } as const satisfies Readonly<Record<ClassId, ClassTargetDefinition>>
+
+// Preset builds per class — full 8-slot class-aware builds.
+// Slot positions are packed by family regardless of wire-field name; the server
+// validates by family budget (not position). See 01_DESIGN/06_loadout_build.md for rationale.
+// Each preset includes the class Recovery utility.
+export const CLASS_PRESET_BUILDS: Record<ClassId, readonly string[]> = {
+  // Tank: 4 melee + 1 bow + 3 utility = 8
+  tank: Object.freeze([
+    'uppercut', // slot 0 — melee (Uppercut: knockup setup)
+    'gap_closer', // slot 1 — melee (Gap Closer: engage dash)
+    'guard_break', // slot 2 — melee (Guard Break: short-range setup)
+    'whirlwind', // slot 3 — melee (Whirlwind: physical spinning pressure)
+    'piercing_shot', // slot 4 — bow (Piercing Shot: physical cashout)
+    'brace_recovery', // slot 5 — utility (Recovery)
+    'barrier', // slot 6 — utility
+    'quick_dash', // slot 7 — utility
+  ]),
+  // Arciere: 4 bow + 2 magicBase + 2 utility = 8
+  archer: Object.freeze([
+    'pin_shot', // slot 0 — bow (ranged setup)
+    'marksman_shot', // slot 1 — bow (precision cashout)
+    'disengage_shot', // slot 2 — bow (spacing response)
+    'volley', // slot 3 — bow (volley of arrows)
+    'frost_bolt', // slot 4 — magicBase (control projectile)
+    'fireball', // slot 5 — magicBase (splash projectile)
+    'hunters_flow', // slot 6 — utility (Recovery)
+    'quick_dash', // slot 7 — utility
+  ]),
+  // Mago: 3 magicBase + 3 magicAdvanced + 2 utility = 8
+  mage: Object.freeze([
+    'fireball', // slot 0 — magicBase (Fire projectile pressure)
+    'frost_bolt', // slot 1 — magicBase (Ice pressure)
+    'chain_bolt', // slot 2 — magicBase (Lightning chain)
+    'eruption', // slot 3 — magicAdvanced (launch setup)
+    'meteor', // slot 4 — magicAdvanced (high-commit Fire cashout)
+    'frost_pillar', // slot 5 — magicAdvanced (Ice knockup)
+    'arcane_rebind', // slot 6 — utility (Recovery)
+    'phase_shift', // slot 7 — utility (timed survival counter)
+  ]),
+  // Ibrido: 2 melee + 1 bow + 2 magicBase + 1 magicAdvanced + 2 utility = 8
+  hybrid: Object.freeze([
+    'uppercut', // slot 0 — melee (knockup setup)
+    'gap_closer', // slot 1 — melee (engage dash)
+    'marksman_shot', // slot 2 — bow (precision cashout)
+    'fireball', // slot 3 — magicBase (staff pressure)
+    'lightning_dash', // slot 4 — magicBase (staff movement)
+    'arc_lift', // slot 5 — magicAdvanced (launch cashout)
+    'adaptive_mend', // slot 6 — utility (Recovery)
+    'quick_dash', // slot 7 — utility
+  ]),
+}
 
 export const TARGET_LOADOUT_SLOT_COUNT = 8 as const
 

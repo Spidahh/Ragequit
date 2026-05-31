@@ -66,6 +66,7 @@ export interface ProjectileSpawnRequest {
   splashRadius?: number
   lifestealFraction?: number
   element?: string
+  knockbackDistance?: number
   onHitStatus?: { kind: StatusKind; durationSec: number; stacks: number; slowFraction?: number }
 }
 
@@ -143,7 +144,6 @@ interface PendingCast {
 
 const GCD_TICKS = Math.round(GCD_SEC * TICK_RATE_HZ)
 const KNOCKUP_IMMUNITY_TICKS = Math.round(KNOCKUP_IMMUNITY_AFTER_LAND_SEC * TICK_RATE_HZ)
-export const AIR_PUNISH_DAMAGE_MULT = 1.25
 
 function getPlayerMaxima(player: Player): { hp: number; mana: number; stamina: number } {
   const classId = (player.classId || 'hybrid') as ClassId
@@ -465,17 +465,16 @@ export class AbilityEngine {
       if (!victimId) return 0
       const victim = this.host.state.players.get(victimId)
       if (!victim?.alive) return 0
-      const finalAmount = this.damageWithAirPunish(def, victim, amount)
       this.host.pendingDamage.push({
         attackerId: sid,
         victimId,
-        amount: finalAmount,
+        amount,
         element: element ?? '',
         cause: `ability:${def.id}`,
         canParry: !!def.canParry,
         lifestealFraction: lifestealFraction > 0 ? lifestealFraction : undefined,
       })
-      return finalAmount
+      return amount
     }
 
     const primaryVictimId = e.excludePrimary
@@ -490,25 +489,18 @@ export class AbilityEngine {
       const dy = victim.transform.y + PLAYER_CAPSULE_HEIGHT_M / 2 - center.y
       const dist = Math.hypot(dx, dz, dy)
       if (dist > radius) return
-      const finalAmount = this.damageWithAirPunish(def, victim, amount)
       this.host.pendingDamage.push({
         attackerId: sid,
         victimId: vid,
-        amount: finalAmount,
+        amount,
         element: element ?? '',
         cause: `ability:${def.id}`,
         canParry: !!def.canParry,
         lifestealFraction: lifestealFraction > 0 ? lifestealFraction : undefined,
       })
-      totalDealt += finalAmount
+      totalDealt += amount
     })
     return totalDealt
-  }
-
-  private damageWithAirPunish(def: AbilityDef, victim: Player, amount: number): number {
-    if (def.comboRole !== 'finisher') return amount
-    if (this.host.state.tick >= victim.airborneUntilTick) return amount
-    return amount * AIR_PUNISH_DAMAGE_MULT
   }
 
   private effectStatus(sid: string, def: AbilityDef, e: StatusEffect, target: CastTarget): void {
@@ -715,6 +707,7 @@ export class AbilityEngine {
       splashRadius: e.splashRadius,
       lifestealFraction: lifestealFraction > 0 ? lifestealFraction : undefined,
       element,
+      knockbackDistance: e.knockbackDistance,
       onHitStatus: e.onHitStatus
         ? {
             kind: e.onHitStatus.status,

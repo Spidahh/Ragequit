@@ -36,17 +36,18 @@ export type TargetingMode = 'self' | 'forward' | 'target' | 'point'
 // Design role used by the loadout UI and balance tests. This is not inferred
 // from effects because two abilities can share primitives but serve different
 // combat jobs.
+//
+// Standard 6-role taxonomy — see 01_DESIGN/05_abilities_philosophy.md.
+// Legacy roles were consolidated: extender/drain -> pressure, resource ->
+// survival, and ray was deleted (instant line-of-sight is a delivery property,
+// expressed via windupSec:0 + targeting:'forward', not a combat role).
 export type AbilityComboRole =
   | 'starter'
-  | 'extender'
   | 'finisher'
-  | 'ray'
   | 'pressure'
   | 'survival'
   | 'counter'
   | 'mobility'
-  | 'drain'
-  | 'resource'
 
 // Air casts are legal by default for the arena-FPS target. Set this only when
 // an ability truly requires the caster to stand on a support surface.
@@ -136,6 +137,8 @@ export interface ProjectileEffect extends EffectBase {
   splashRadius?: number // 0 = pinpoint
   element?: ElementId
   lifestealFraction?: number
+  // Horizontal push in metres applied to victims on impact (radial for splash, along travel dir for direct).
+  knockbackDistance?: number
   // Optional secondary effects baked into the projectile (e.g. Burn on hit).
   onHitStatus?: { status: StatusKind; durationSec: number; stacks?: number; slowFraction?: number }
 }
@@ -237,7 +240,8 @@ export interface AbilityDef {
   range: number
   // How the engine selects what the effects apply to.
   targeting: TargetingMode
-  // Combat role in the combo system: opener, extender, finisher, ray, etc.
+  // Combat role in the combo system: starter, finisher, pressure, survival,
+  // counter, mobility.
   comboRole: AbilityComboRole
   // The actual effects, evaluated in array order at the configured phase.
   effects: readonly EffectSpec[]

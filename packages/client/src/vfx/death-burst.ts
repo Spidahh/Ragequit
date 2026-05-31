@@ -23,7 +23,9 @@ interface Burst {
 export class DeathBurst {
   readonly mesh: THREE.InstancedMesh
 
-  private readonly hiddenMat = new THREE.Matrix4().makeScale(0, 0, 0)
+  // Translate far below ground instead of scale(0) — degenerate zero-scale matrices
+  // can produce one-pixel rasterization artifacts on some GPU drivers.
+  private readonly hiddenMat = new THREE.Matrix4().makeTranslation(0, -9999, 0)
   private readonly bursts: Burst[] = []
   private nextBurstIdx = 0
   // Pre-allocated temporaries to avoid per-frame Matrix4/Vector3/Quaternion allocation.

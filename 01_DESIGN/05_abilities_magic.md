@@ -51,8 +51,8 @@ Each element covers the same core roles so every element-specialist build has th
 ### F4 · Meteor
 
 - **Effect**: 3 m AoE lands after 1.0 s delay; 40 damage
-- **Cast**: 1.5 s · **Cost**: 40 mana · **CD**: 18 s · **Range**: 25 m
-- **Mini-malus**: Telegraph circle visible on ground during the 1.0 s delay
+- **Cast**: 1.0 s · **Cost**: 40 mana · **CD**: 18 s · **Range**: 25 m
+- **Mini-malus**: Signature big-swing cast (one of only two casts above 0.5 s); telegraph circle visible on ground during the 1.0 s impact delay
 
 ### F5 · Eruption [KNOCKUP]
 
@@ -90,14 +90,14 @@ Each element covers the same core roles so every element-specialist build has th
 ### I4 · Freeze Target
 
 - **Effect**: Full freeze for 1.2 s + 8 damage
-- **Cast**: 0.5 s · **Cost**: 35 mana · **CD**: 16 s · **Range**: 12 m
+- **Cast**: 0.4 s · **Cost**: 35 mana · **CD**: 16 s · **Range**: 12 m
 - **Mini-malus**: Parriable on the cast hit — a ready opponent blocks it
 
 ### I5 · Frost Pillar [KNOCKUP]
 
 - **Effect**: Ice spike under target for 12 damage + 0.5 s airborne, tuned for clean follow-up aim
-- **Cast**: 1.0 s windup · **Cost**: 30 mana · **CD**: 14 s · **Range**: 10 m
-- **Mini-malus**: 1 s windup is the slowest knockup in the game
+- **Cast**: 0.3 s windup · **Cost**: 30 mana · **CD**: 14 s · **Range**: 10 m
+- **Mini-malus**: Pillar erupts at a fixed point — sidestep before it lands and it misses
 
 ## Lightning — multi-target + short CDs
 
@@ -183,7 +183,7 @@ Each element covers the same core roles so every element-specialist build has th
 ### N3 · Entangle
 
 - **Effect**: 1.5 s root + 5 damage
-- **Cast**: 0.5 s · **Cost**: 25 mana · **CD**: 13 s · **Range**: 10 m
+- **Cast**: 0.3 s · **Cost**: 25 mana · **CD**: 13 s · **Range**: 10 m
 - **Mini-malus**: Short range + cast telegraph
 
 ### N4 · Healing Totem

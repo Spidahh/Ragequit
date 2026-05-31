@@ -48,6 +48,29 @@ telemetry-dumps/
 tools/asset-pipeline/tmp/
 tools/asset-pipeline/out/
 
+# Auto-generated GLB files from gltf-pipeline conversion.
+# Character models: keep as .gltf + .bin (GLB embeds textures = 15-40 MB each).
+# Props: same issue (Banner_1.glb ~21 MB, Barrel.glb ~14 MB).
+# Weapons GLBs are kept (35-40 KB each, no embedded textures issue).
+# DELETE these from disk: packages/client/public/characters/*.glb (except UAL1_Standard.glb)
+# DELETE these from disk: packages/client/public/arena/props/Banner_1.glb, Barrel.glb, Crate_Wooden.glb
+packages/client/public/characters/Female_Peasant.glb
+packages/client/public/characters/Female_Ranger.glb
+packages/client/public/characters/Female_Ranger_Head_Hood.glb
+packages/client/public/characters/Hair_Buns.glb
+packages/client/public/characters/Hair_Buzzed.glb
+packages/client/public/characters/Hair_Long.glb
+packages/client/public/characters/Hair_SimpleParted.glb
+packages/client/public/characters/Male_Peasant.glb
+packages/client/public/characters/Male_Ranger.glb
+packages/client/public/characters/Male_Ranger_Acc_Pauldron.glb
+packages/client/public/characters/Male_Ranger_Head_Hood.glb
+packages/client/public/characters/Superhero_Female_FullBody.glb
+packages/client/public/characters/Superhero_Male_FullBody.glb
+packages/client/public/arena/props/Banner_1.glb
+packages/client/public/arena/props/Barrel.glb
+packages/client/public/arena/props/Crate_Wooden.glb
+
 # Local playground
 scratch/
 sandbox/
@@ -63,3 +86,4 @@ _tmp_*
 # Smoke / scratch scripts dropped in package roots during local verification
 .smoke.mjs
 .smoke.*.mjs
+.aider*

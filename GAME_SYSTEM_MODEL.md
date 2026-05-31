@@ -33,6 +33,20 @@ Questo documento descrive lo stato vivo.
 - Non esistono layer CSS separati per override UI.
 - Il Loadout Forge non usa piu `#ls-magic`; usa `#ls-magic-base` e
   `#ls-magic-advanced`.
+- Nameplate posizionate con `transform: translate3d()` (compositor thread).
+- Loading screen con barra di progresso: `#loading-screen` in index.html.
+- Dynamic crosshair: `data-moving="true"` quando WASD attivo, `.kill-confirm` al kill.
+
+## Sistemi Client Aggiuntivi
+
+- `src/preloader.ts` — preload asset prima dell'arena (personaggio + armi).
+- `src/game/match-state-machine.ts` — FSM per le fasi partita (singleton `matchSM`).
+- Post-processing: `EffectComposer` + `UnrealBloomPass` (layer 1 = bloom).
+- LOD remote players: >40m nascosto, >20m shadow off.
+- Audio spaziale: `PannerNode` HRTF per suoni remoti.
+- Battito cardiaco procedurale sotto HP 25%.
+- Reconnect automatico: 1 retry dopo 2s su drop inaspettato.
+- Tutorial HUD: 4 tooltip sequenziali alla prima partita (localStorage).
 
 ## Deploy
 

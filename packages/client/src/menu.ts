@@ -329,18 +329,18 @@ export function initMenu(handlers: {
         sbOther.textContent = String(otherWins)
         if (selfWins >= MATCH_ROUNDS_TO_WIN) sbWinner.textContent = 'HAI VINTO'
         else if (otherWins >= MATCH_ROUNDS_TO_WIN) sbWinner.textContent = 'HAI PERSO'
-        else sbWinner.textContent = 'DRAW'
+        else sbWinner.textContent = 'PAREGGIO'
       } else if (msg.solo) {
         // FFA mode — live kill counter in the round HUD; no pips needed
         const solo = msg.solo
         const selfKills = solo[selfId] ?? 0
         const topKills = Math.max(0, ...Object.values(solo))
         const isLeading = selfKills === topKills && selfKills > 0
-        killCounter.textContent = `${selfKills} / ${FFA_KILLS_TO_WIN} kill${isLeading ? ' 👑 IN TESTA' : ` · top: ${topKills}`}`
+        killCounter.textContent = `${selfKills} / ${FFA_KILLS_TO_WIN} uccisioni${isLeading ? ' 👑 IN TESTA' : ` · top: ${topKills}`}`
         killCounter.classList.remove('hidden')
         pipsSelf.style.display = 'none'
         pipsOther.style.display = 'none'
-        sbSelf.textContent = `${selfKills} kills`
+        sbSelf.textContent = `${selfKills} uccisioni`
         sbOther.textContent = `top: ${topKills}`
         sbWinner.textContent =
           selfKills >= FFA_KILLS_TO_WIN
