@@ -1819,8 +1819,15 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
         return
       }
       _reconnectAttempted = false
-      setStatus('disconnected', '#e87070')
-      returnToMainMenu({ leaveRoom: false, statusText: 'disconnected' })
+      // Intentional leave (back to menu, normal match end) → neutral "offline".
+      // Only an unexpected drop deserves the alarming red "disconnected".
+      if (intentional) {
+        setStatus('offline', 'rgba(200,200,200,0.35)')
+        returnToMainMenu({ leaveRoom: false })
+      } else {
+        setStatus('disconnected', '#e87070')
+        returnToMainMenu({ leaveRoom: false, statusText: 'disconnected' })
+      }
     })
   } catch (err) {
     setStatus('offline', '#e87070')
