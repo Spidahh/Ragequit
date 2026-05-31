@@ -18,7 +18,9 @@ const _loader = new GLTFLoader()
 // ---------------------------------------------------------------------------
 
 const _weaponAssetPath: Record<'sword' | 'bow' | 'staff' | 'shield', string> = {
-  sword:  '/weapons/kaykit/sword_D.glb',  // GLB: single file, faster load
+  // sword_C (kaykit/sword.glb) is a slim, elegant blade (0.27 m wide) — the old
+  // sword_D was a chunky 0.71 m-wide slab that read as a low-quality club.
+  sword:  '/weapons/kaykit/sword.glb',
   bow:    '/weapons/kaykit/bow.glb',
   staff:  '/weapons/kaykit/staff.glb',
   shield: '/weapons/kaykit/shield_A.glb', // Physical shield model
@@ -38,22 +40,22 @@ interface WeaponGrip {
 
 const _weaponGripConfig: Record<string, Record<'sword' | 'bow' | 'staff', WeaponGrip>> = {
   tank: {
-    sword: { position: [0.025, -0.01, -0.02], rotation: [Math.PI / 2,  0.18, Math.PI / 2], scale: 0.44 },
+    sword: { position: [0.025, -0.01, -0.02], rotation: [Math.PI / 2, 0, 0], scale: 0.44 },
     bow:   { position: [0.01,  0.015, -0.03], rotation: [Math.PI / 2, -0.08, Math.PI / 2], scale: 0.50 },
     staff: { position: [0.015, -0.02, -0.01], rotation: [Math.PI / 2, -0.14, Math.PI / 2], scale: 0.46 }
   },
   mage: {
-    sword: { position: [0.02, -0.01, -0.02], rotation: [Math.PI / 2,  0.18, Math.PI / 2], scale: 0.42 },
+    sword: { position: [0.02, -0.01, -0.02], rotation: [Math.PI / 2, 0, 0], scale: 0.42 },
     bow:   { position: [0.01,  0.01, -0.03], rotation: [Math.PI / 2, -0.08, Math.PI / 2], scale: 0.48 },
     staff: { position: [0.015, -0.015, -0.01], rotation: [Math.PI / 2, -0.14, Math.PI / 2], scale: 0.46 }
   },
   archer: {
-    sword: { position: [0.015, -0.01, -0.015], rotation: [Math.PI / 2,  0.18, Math.PI / 2], scale: 0.38 },
+    sword: { position: [0.015, -0.01, -0.015], rotation: [Math.PI / 2, 0, 0], scale: 0.38 },
     bow:   { position: [0.008, 0.008, -0.025], rotation: [Math.PI / 2, -0.08, Math.PI / 2], scale: 0.44 },
     staff: { position: [0.01, -0.015, -0.01], rotation: [Math.PI / 2, -0.14, Math.PI / 2], scale: 0.42 }
   },
   hybrid: {
-    sword: { position: [0.016, -0.008, -0.015], rotation: [Math.PI / 2,  0.18, Math.PI / 2], scale: 0.39 },
+    sword: { position: [0.016, -0.008, -0.015], rotation: [Math.PI / 2, 0, 0], scale: 0.39 },
     bow:   { position: [0.008, 0.008, -0.025], rotation: [Math.PI / 2, -0.08, Math.PI / 2], scale: 0.44 },
     staff: { position: [0.01, -0.015, -0.01], rotation: [Math.PI / 2, -0.14, Math.PI / 2], scale: 0.42 }
   }

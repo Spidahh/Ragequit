@@ -58,6 +58,10 @@ export class BotController {
   ) {}
 
   step(): void {
+    // Dev/verification escape hatch: BOT_PASSIVE=1 makes bots stand idle so a
+    // tester can inspect the player/arena without being attacked. No effect in
+    // production (env var unset).
+    if (process.env['BOT_PASSIVE'] === '1') return
     const self = this.host.getSelf(this.botId)
     if (!self || !self.alive) return
     const enemy = this.host.getOpponent(this.botId)

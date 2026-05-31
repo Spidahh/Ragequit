@@ -579,11 +579,12 @@ function rebuildFirstPersonViewModel(weapon: Weapon): void {
         model.rotation.set(-0.25, -0.4, 0.1)
         model.scale.setScalar(0.55)
       } else if (weapon === 'bow') {
-        // bow.glb limbs run along its local X axis, so rotate -90° about Z to
-        // stand the bow upright (limbs vertical). Held left-of-centre, tilted
-        // slightly so the upper limb leans away — a natural archer's grip.
-        model.position.set(-0.28, -0.06, -0.62)
-        model.rotation.set(0.0, 0.18, -Math.PI / 2 + 0.16)
+        // bow.glb: limbs along local X, riser/arrow-shelf along local Z.
+        // Stand it upright (limbs vertical) with Z about -90°, then yaw about Y
+        // so the riser/arrow points FORWARD (into the screen, away from camera)
+        // instead of broadside. Held left-of-centre.
+        model.position.set(-0.26, -0.05, -0.6)
+        model.rotation.set(0.0, -Math.PI / 2 + 0.15, -Math.PI / 2 + 0.12)
         model.scale.setScalar(0.42)
       } else if (weapon === 'staff') {
         model.position.set(0.19, -0.25, -0.5)
