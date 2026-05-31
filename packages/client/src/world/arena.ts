@@ -48,6 +48,10 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
     (gltf) => {
       const model = gltf.scene
       model.position.y = 0 // GLB floor surface sits at local y=0 → matches GROUND_Y
+      // Collect outlines during traversal, attach AFTER — adding a child mesh
+      // mid-traverse would make three.js recurse into it (outline-of-outline →
+      // infinite recursion / stack overflow).
+      const outlines: Array<{ mesh: THREE.Mesh; outline: THREE.Mesh }> = []
       model.traverse((child) => {
         if (!(child instanceof THREE.Mesh)) return
         child.castShadow = true
@@ -63,9 +67,9 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
           emissive: isFlag ? new THREE.Color(0x3a1010) : new THREE.Color(0x000000),
           emissiveIntensity: isFlag ? 0.25 : 0.0,
         })
-        const outline = createOutlineMesh(child, 0.02, 0x050508)
-        child.add(outline)
+        outlines.push({ mesh: child, outline: createOutlineMesh(child, 0.02, 0x050508) })
       })
+      for (const { mesh, outline } of outlines) mesh.add(outline)
       arenaVisualGroup.add(model)
     },
     undefined,
@@ -303,6 +307,9 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
           model.rotation.set(...s.rot)
           model.scale.setScalar(s.scale)
 
+          // Collect outlines during traversal, attach AFTER — adding a child
+          // mesh mid-traverse causes infinite recursion (outline-of-outline).
+          const propOutlines: Array<{ mesh: THREE.Mesh; outline: THREE.Mesh }> = []
           model.traverse((child) => {
             if (child instanceof THREE.Mesh) {
               child.castShadow = true
@@ -317,10 +324,10 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
                 side: THREE.DoubleSide,
               })
 
-              const outline = createOutlineMesh(child, 0.016, 0x050508)
-              child.add(outline)
+              propOutlines.push({ mesh: child, outline: createOutlineMesh(child, 0.016, 0x050508) })
             }
           })
+          for (const { mesh, outline } of propOutlines) mesh.add(outline)
           arenaPropsGroup.add(model)
         },
         undefined,
