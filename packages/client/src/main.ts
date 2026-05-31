@@ -579,14 +579,15 @@ function rebuildFirstPersonViewModel(weapon: Weapon): void {
         model.rotation.set(-0.25, -0.4, 0.1)
         model.scale.setScalar(0.55)
       } else if (weapon === 'bow') {
-        // bow.glb: limbs along local X, riser along local Z. Yaw -90° about Y so
-        // the riser faces forward; roll (-90° - 0.24) stands the limbs UPRIGHT
-        // (the small extra roll cancels the model's natural lean so it doesn't
-        // tilt inward). Held low in the lower-left so it frames the view without
-        // covering the crosshair. Tuned live in-browser.
-        model.position.set(-0.24, -0.15, -0.53)
-        model.rotation.set(0, -Math.PI / 2, -Math.PI / 2 - 0.24)
-        model.scale.setScalar(0.35)
+        // bow.glb: limbs along local X, riser/arrow-shelf along local Z. Rotate
+        // (π/2, π/2, 0) so the limbs stand VERTICAL and the bow's broad FACE
+        // turns toward the camera with the arrow shelf pointing forward (toward
+        // the target) — the asset reads as a bow facing forward, not a thin
+        // edge-on sliver. Held low-left so it frames the view without covering
+        // the crosshair. Tuned live in-browser.
+        model.position.set(-0.26, -0.16, -0.6)
+        model.rotation.set(Math.PI / 2, Math.PI / 2, 0)
+        model.scale.setScalar(0.33)
       } else if (weapon === 'staff') {
         model.position.set(0.19, -0.25, -0.5)
         model.rotation.set(-0.15, -0.3, -0.05)
