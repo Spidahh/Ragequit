@@ -743,6 +743,7 @@ function clearCombatInputEdges(): void {
   inp.lmbPressEdge = false
   inp.lmbReleaseEdge = false
   inp.lmbDown = false
+  inp.rmbDown = false
   inp.rmbPressEdge = false
   inp.rmbReleaseEdge = false
   inp.weaponSwapRequest = null
@@ -2252,6 +2253,7 @@ function clearGameplayInputState(): void {
   inp.lmbPressEdge = false
   inp.lmbReleaseEdge = false
   inp.lmbDown = false
+  inp.rmbDown = false
   inp.rmbPressEdge = false
   inp.rmbReleaseEdge = false
   inp.weaponSwapRequest = null
@@ -2672,8 +2674,11 @@ function simStep(): void {
     pitch: inp.mousePitch,
     jump: input.jump,
     jumpHold: input.jumpHold,
-    m1: false,
-    m2: false,
+    m1: inp.lmbDown,
+    // m2 = RMB held. The server maintains the parry hold from this flag
+    // (GameRoom drainInput); it was hardcoded false, so every input tick
+    // released the parry instantly — hold-parries never worked.
+    m2: inp.rmbDown,
   }
   room.send(MessageTypes.Input, inMsg)
 

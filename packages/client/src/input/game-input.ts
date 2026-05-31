@@ -14,6 +14,7 @@ export interface GameInputState {
   lmbDown: boolean
   lmbPressEdge: boolean
   lmbReleaseEdge: boolean
+  rmbDown: boolean
   rmbPressEdge: boolean
   rmbReleaseEdge: boolean
   weaponSwapRequest: Weapon | null
@@ -34,6 +35,7 @@ export function makeGameInputState(): GameInputState {
     lmbDown: false,
     lmbPressEdge: false,
     lmbReleaseEdge: false,
+    rmbDown: false,
     rmbPressEdge: false,
     rmbReleaseEdge: false,
     weaponSwapRequest: null,
@@ -218,7 +220,8 @@ export function initGameInput(
       if (!state.lmbDown) state.lmbPressEdge = true
       state.lmbDown = true
     } else if (button === 2) {
-      state.rmbPressEdge = true
+      if (!state.rmbDown) state.rmbPressEdge = true
+      state.rmbDown = true
     }
   }
 
@@ -227,7 +230,8 @@ export function initGameInput(
       if (state.lmbDown) state.lmbReleaseEdge = true
       state.lmbDown = false
     } else if (button === 2) {
-      state.rmbReleaseEdge = true
+      if (state.rmbDown) state.rmbReleaseEdge = true
+      state.rmbDown = false
     }
   }
 
@@ -481,6 +485,8 @@ export function initGameInput(
     if (wasPointerLocked && !state.pointerLocked) {
       if (state.lmbDown) state.lmbReleaseEdge = true
       state.lmbDown = false
+      if (state.rmbDown) state.rmbReleaseEdge = true
+      state.rmbDown = false
       state.keys.clear()
       if (canEngageGameplaySurface() && getCurrentMatchPhase() === 'live') {
         openPauseMenu()
