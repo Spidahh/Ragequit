@@ -131,6 +131,7 @@ import {
   fetchWeaponGlb,
 } from './render/characters.js'
 import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
+import { createFpvBow } from './render/fpv-bow.js'
 import { createOutlineMesh } from './render/outlines.js'
 import { initPlacementPreview } from './render/placement-preview.js'
 import { initProjectileVisuals, type SchemaProjectile } from './render/projectile-visuals.js'
@@ -470,6 +471,10 @@ function invalidateBloomCache(): void { _bloomDirty = true }
 
 const firstPersonViewModel = new THREE.Group()
 camera.add(firstPersonViewModel)
+// Animated FPS bow viewmodel (arms + bow + real draw/fire/reload clips).
+// Used for the bow weapon; the static firstPersonViewModel is staff-only now.
+const fpvBow = createFpvBow()
+camera.add(fpvBow.root)
 // Subtle key light for first-person weapon — gives shape/depth without clipping.
 // Positioned top-left of camera so shadow falls naturally on the grip.
 const fpvKeyLight = new THREE.PointLight(0xd8e8ff, 1.4, 3, 1)
@@ -846,9 +851,8 @@ let selfJumpUntilMs = 0
 let selfLandUntilMs = 0
 let selfPrevOnGround = true
 
-// First-person bow draw/release animation state.
-let _prevBowCharge = 0
-let _bowReleaseUntilMs = 0
+// First-person bow: tracks charge-held state to fire the shoot animation on release.
+let _prevBowCharging = false
 
 // Roll animation — triggered on dash ability cast confirmation.
 let selfRollingUntilMs = 0
@@ -2994,8 +2998,11 @@ function _renderInner(now: number): void {
     camUp += (wUpTarget - camUp) * CAM_LERP
     camFovBase += (wFovTarget - camFovBase) * CAM_LERP
 
+    const isBowFpv = wSchema === 'bow'
     selfMesh.visible = !dead && !firstPersonWeapon
-    firstPersonViewModel.visible = !dead && firstPersonWeapon
+    fpvBow.setVisible(!dead && isBowFpv)
+    // The static first-person viewmodel is staff-only now (bow uses fpvBow).
+    firstPersonViewModel.visible = !dead && wSchema === 'staff'
     setParryShieldState(selfMesh, !dead && !!selfSchema?.parrying, !!selfSchema?.parryIsHold, now)
     setParryShieldState(
       firstPersonParryShield,
@@ -3003,31 +3010,18 @@ function _renderInner(now: number): void {
       !!selfSchema?.parryIsHold,
       now,
     )
-    if (firstPersonWeapon && firstPersonViewWeapon !== wSchema) rebuildFirstPersonViewModel(wSchema)
-    if (!firstPersonWeapon && firstPersonViewModel.visible) firstPersonViewModel.visible = false
+    if (wSchema === 'staff' && firstPersonViewWeapon !== wSchema) rebuildFirstPersonViewModel(wSchema)
 
-    // ── First-person bow draw / release animation ──────────────────────────
-    // bow.glb has no skeletal animation, so animate the whole view model:
-    //  • drawing (charge rising): pull the bow toward the face + add tension
-    //    tremor at full charge.
-    //  • release (charge snaps to 0): a quick forward recoil kick that settles.
-    if (wSchema === 'bow' && firstPersonViewModel.visible) {
-      if (_prevBowCharge > 0.25 && bowChargeRatio <= 0.001) _bowReleaseUntilMs = now + 200
-      _prevBowCharge = bowChargeRatio
-      const drawZ = bowChargeRatio * 0.11 // +Z = toward camera (drawn back)
-      const tremor = bowChargeRatio > 0.92 ? Math.sin(now * 0.06) * 0.004 : 0
-      let recoilZ = 0
-      let recoilPitch = 0
-      if (now < _bowReleaseUntilMs) {
-        const k = Math.sin((1 - (_bowReleaseUntilMs - now) / 200) * Math.PI) // 0→1→0
-        recoilZ = -k * 0.14 // snap forward
-        recoilPitch = k * 0.18
-      }
-      firstPersonViewModel.position.set(0, 0, drawZ + recoilZ + tremor)
-      firstPersonViewModel.rotation.x = recoilPitch
-    } else if (wSchema === 'staff') {
-      firstPersonViewModel.position.set(0, 0, 0)
-      firstPersonViewModel.rotation.x = 0
+    // ── Animated first-person bow ──────────────────────────────────────────
+    // Real arms+bow rig: drive its clips from gameplay state and fire the
+    // shoot→reload one-shot when a charged shot is released.
+    if (isBowFpv) {
+      const charging = self.bowChargeStartMs > 0 || (selfSchema?.bowChargeStartTick ?? 0) > 0
+      fpvBow.update(dt, { moving: selfSpeed > 0.3, speed: selfSpeed, charging })
+      if (_prevBowCharging && !charging) fpvBow.fire()
+      _prevBowCharging = charging
+    } else {
+      _prevBowCharging = false
     }
 
     if (firstPersonWeapon) {

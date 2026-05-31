@@ -1,0 +1,149 @@
+// ---------------------------------------------------------------------------
+// First-person animated bow viewmodel.
+//
+// Uses the dedicated animated_fps_bow.glb — a full FPS rig with arms, bow,
+// string and arrow plus 19 baked animations (idle / walk / run / aim / fire /
+// reload / jump …). This REPLACES the old static bow model + procedural draw
+// hacks: we just drive the real clips from gameplay state.
+//
+// Animation flow for a shot:
+//   IDLE ──charge──▶ AIM (0.17s) ──hold──▶ AIM_IDLE
+//   AIM_IDLE ──release──▶ FIRE (0.58s) ──▶ RELOAD (1.15s) ──▶ IDLE/AIM
+// ---------------------------------------------------------------------------
+import * as THREE from 'three'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+
+const BOW_GLB = '/weapons/animated_fps_bow.glb'
+
+// Viewmodel placement in camera space. Tuned live in-browser against the rig:
+// the bow sits lower-left, broad face toward the camera (not edge-on), arrow
+// pointing up toward the crosshair without covering it. The rig's geometry is
+// authored far from its origin (Sketchfab FBX nesting), so these values frame
+// the skinned arms+bow, not a centred mesh — re-tune via screenshots if the GLB
+// is ever replaced.
+const VM_POSITION = new THREE.Vector3(-0.06, -0.49, -0.6)
+const VM_ROTATION = new THREE.Euler(0, 0, 0.14)
+const VM_SCALE = 0.225
+
+export interface FpvBowState {
+  moving: boolean
+  speed: number
+  /** Bow drawn back (LMB held charging a shot). */
+  charging: boolean
+}
+
+export interface FpvBowController {
+  /** Parent this under the camera. */
+  root: THREE.Group
+  setVisible(v: boolean): void
+  /** Call every frame with dt (seconds) and current gameplay state. */
+  update(dt: number, state: FpvBowState): void
+  /** Trigger the fire → reload one-shot (call on arrow release). */
+  fire(): void
+  dispose(): void
+}
+
+type ClipName =
+  | 'Bow_IDLE' | 'Bow_WALK' | 'Bow_RUN' | 'Bow_AIM' | 'Bow_AIM_IDLE'
+  | 'Bow_FIRE' | 'Bow_RELOAD'
+
+export function createFpvBow(): FpvBowController {
+  const root = new THREE.Group()
+  root.position.copy(VM_POSITION)
+  root.rotation.copy(VM_ROTATION)
+  root.scale.setScalar(VM_SCALE)
+  root.visible = false
+
+  let mixer: THREE.AnimationMixer | null = null
+  const actions = new Map<ClipName, THREE.AnimationAction>()
+  let current: ClipName | null = null
+  // One-shot sequence state: 'fire' then 'reload' then null (state-driven again).
+  let oneShot: 'fire' | 'reload' | null = null
+
+  new GLTFLoader().load(
+    BOW_GLB,
+    (gltf) => {
+      const model = gltf.scene
+      // FPS viewmodel: render on top so the arms never clip into walls.
+      model.traverse((o) => {
+        if (!(o instanceof THREE.Mesh)) return
+        o.frustumCulled = false
+        o.castShadow = false
+        o.renderOrder = 999
+        const mats = Array.isArray(o.material) ? o.material : [o.material]
+        for (const m of mats) {
+          m.depthTest = false
+          m.depthWrite = false
+          m.transparent = false
+          ;(m as THREE.MeshStandardMaterial).side = THREE.FrontSide
+        }
+      })
+      root.add(model)
+
+      mixer = new THREE.AnimationMixer(model)
+      for (const clip of gltf.animations) {
+        const a = mixer.clipAction(clip)
+        actions.set(clip.name as ClipName, a)
+      }
+      mixer.addEventListener('finished', (e) => {
+        const finished = e.action
+        if (oneShot === 'fire' && finished === actions.get('Bow_FIRE')) {
+          oneShot = 'reload'
+          play('Bow_RELOAD', false, 0.05)
+        } else if (oneShot === 'reload' && finished === actions.get('Bow_RELOAD')) {
+          oneShot = null
+          current = null // hand control back to state-driven selection
+        }
+      })
+      play('Bow_IDLE', true, 0)
+    },
+    undefined,
+    (err) => console.error('[fpv-bow] load failed:', err),
+  )
+
+  function play(name: ClipName, loop: boolean, fadeSec: number): void {
+    const next = actions.get(name)
+    if (!next || current === name) return
+    const prev = current ? actions.get(current) : undefined
+    current = name
+    next.reset()
+    next.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, loop ? Infinity : 1)
+    next.clampWhenFinished = !loop
+    next.enabled = true
+    next.play()
+    if (prev && fadeSec > 0) prev.crossFadeTo(next, fadeSec, false)
+    else if (prev) prev.stop()
+  }
+
+  function update(dt: number, state: FpvBowState): void {
+    if (mixer) mixer.update(dt)
+    if (oneShot) return // FIRE/RELOAD one-shot owns the rig until it finishes
+
+    // Charging draws the bow back and holds (AIM_IDLE). The crossfade from idle
+    // animates the draw-up smoothly, so we don't need a separate AIM clip here.
+    let target: ClipName
+    if (state.charging) target = 'Bow_AIM_IDLE'
+    else if (state.moving && state.speed > 4.0) target = 'Bow_RUN'
+    else if (state.moving) target = 'Bow_WALK'
+    else target = 'Bow_IDLE'
+
+    play(target, true, target === 'Bow_AIM_IDLE' ? 0.1 : 0.16)
+  }
+
+  function fire(): void {
+    if (!actions.get('Bow_FIRE')) return
+    oneShot = 'fire'
+    play('Bow_FIRE', false, 0.03)
+  }
+
+  return {
+    root,
+    setVisible: (v) => { root.visible = v },
+    update,
+    fire,
+    dispose: () => {
+      mixer?.stopAllAction()
+      root.clear()
+    },
+  }
+}
