@@ -11,7 +11,8 @@ export interface ArenaObjects {
   animateArena: (now: number, dt: number, inHitStop: boolean) => void
 }
 
-const ARENA_RADIUS = 30 // Gameplay radius to keep player inside visually consistent boundaries
+// Sand floor radius — fits inside the coliseum inner ring (~22 m)
+const SAND_RADIUS = 20
 
 function makeBoxMesh(box: AABB, color: number, toonGradient: THREE.DataTexture): THREE.Mesh {
   const sx = box.maxX - box.minX
@@ -25,7 +26,7 @@ function makeBoxMesh(box: AABB, color: number, toonGradient: THREE.DataTexture):
   m.castShadow = true
   m.receiveShadow = true
 
-  // Create crisp outline border around map geometry blocks (thickness: 0.024)
+  // Outline border
   const outline = createOutlineMesh(m, 0.024, 0x050508)
   m.add(outline)
 
@@ -47,25 +48,31 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
     '/arena/gladiators_arena.glb',
     (gltf) => {
       const model = gltf.scene
-      model.position.y = 0 // GLB floor surface sits at local y=0 → matches GROUND_Y
+      // The GLB cylinder's inner floor is at local Y = -1.0.
+      // Lift by +1 so the arena floor aligns with GROUND_Y = 0, letting
+      // characters stand visually ON the coliseum surface.
+      model.position.y = 1.0
       // Collect outlines during traversal, attach AFTER — adding a child mesh
-      // mid-traverse would make three.js recurse into it (outline-of-outline →
-      // infinite recursion / stack overflow).
+      // mid-traverse causes infinite recursion (outline-of-outline).
       const outlines: Array<{ mesh: THREE.Mesh; outline: THREE.Mesh }> = []
       model.traverse((child) => {
         if (!(child instanceof THREE.Mesh)) return
         child.castShadow = true
         child.receiveShadow = true
-        const src = child.material as THREE.MeshStandardMaterial | undefined
-        const baseColor = src?.color?.clone() ?? new THREE.Color(0x8a7a5c)
-        const isFlag = child.name.toLowerCase().includes('flag')
+        const nodeName = child.name.toLowerCase()
+        const isFlag = nodeName.includes('flag')
+        // Apply explicit warm sandstone tones rather than the GLB material colour —
+        // the original material is olive-grey which reads green under the scene's
+        // cool hemisphere light. Warm sand/stone colours fight the blue tint.
+        const stoneColor = nodeName.includes('door') ? new THREE.Color(0x8a6a40)
+          : isFlag ? new THREE.Color(0x993322)
+          : new THREE.Color(0xc0a060) // main arena sandstone
         child.material = new THREE.MeshToonMaterial({
-          color: baseColor,
-          map: src?.map ?? null,
+          color: stoneColor,
           gradientMap: toonGradient,
           side: THREE.DoubleSide,
-          emissive: isFlag ? new THREE.Color(0x3a1010) : new THREE.Color(0x000000),
-          emissiveIntensity: isFlag ? 0.25 : 0.0,
+          emissive: isFlag ? new THREE.Color(0x330800) : new THREE.Color(0x000000),
+          emissiveIntensity: isFlag ? 0.3 : 0.0,
         })
         outlines.push({ mesh: child, outline: createOutlineMesh(child, 0.02, 0x050508) })
       })
@@ -137,7 +144,7 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
   const pos = new Float32Array(pCount * 3)
   for (let i = 0; i < pCount; i++) {
     const a = Math.random() * Math.PI * 2
-    const r = Math.random() * ARENA_RADIUS * 1.5
+    const r = Math.random() * SAND_RADIUS * 1.8
     pos[i * 3] = Math.cos(a) * r
     pos[i * 3 + 1] = Math.random() * 15 + 0.2
     pos[i * 3 + 2] = Math.sin(a) * r
@@ -166,14 +173,14 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
   groundFar.position.y = -0.12
   arenaVisualGroup.add(groundFar)
 
-  // Sandy fighting floor disc covering the play area (sits just above the GLB
-  // floor so the walkable surface always reads as warm tournament sand).
+  // Sand fighting floor — exactly at GROUND_Y=0 so characters stand on it.
+  // Radius 20 m fits inside the coliseum inner ring (~22 m).
   const sandFloor = new THREE.Mesh(
-    new THREE.CircleGeometry(ARENA_RADIUS, 48),
-    new THREE.MeshToonMaterial({ color: 0x6b5c40, gradientMap: toonGradient }),
+    new THREE.CircleGeometry(SAND_RADIUS, 48),
+    new THREE.MeshToonMaterial({ color: 0x8a7040, gradientMap: toonGradient }),
   )
   sandFloor.rotation.x = -Math.PI / 2
-  sandFloor.position.y = -0.02
+  sandFloor.position.y = 0.0
   sandFloor.receiveShadow = true
   arenaVisualGroup.add(sandFloor)
 
@@ -241,17 +248,18 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
 
     const spawns: PropSpawn[] = []
 
-    // 1. Mount banners around the inside face of the coliseum wall.
-    const BANNER_RING_R = 22
+    // 1. Mount banners on the inside face of the coliseum wall (~21 m ring).
+    //    Y=4.5 sits mid-wall after the +1 m GLB offset, clearly visible from the pit.
+    const BANNER_RING_R = 21
     for (let i = 0; i < 8; i++) {
       const a = (i / 8) * Math.PI * 2 + Math.PI / 8
       const x = Math.cos(a) * BANNER_RING_R
       const z = Math.sin(a) * BANNER_RING_R
       spawns.push({
         type: 'banner',
-        pos: [x, 7.0, z],
-        rot: [0, -a - Math.PI / 2, 0], // face towards the center of the arena
-        scale: 0.8,
+        pos: [x, 4.5, z],
+        rot: [0, -a - Math.PI / 2, 0], // face toward arena center
+        scale: 1.0,
       })
     }
 
@@ -355,12 +363,13 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
     // Shift entire visual arena (floor, walls, pillars, sigils, dust) to ground level
     arenaVisualGroup.position.y = map.groundY
 
-    // Spawn map cover blocks as carved sandstone — these are the tactical covers
-    // inside the coliseum. Warm stone tones (tall=light, low=dark) read as
-    // hand-placed arena masonry rather than the old flat blue prototype cubes.
+    // Spawn map cover blocks as carved stone columns/walls.
+    // Using fully saturated warm ochre/amber tones so they read as stone
+    // rather than grey-green under the scene's cool hemisphere light.
     for (const b of map.boxes) {
       const height = b.maxY - b.minY
-      const color = height > 2.5 ? 0x9c8a66 : height > 1.4 ? 0x7d6c4c : 0x615338
+      // Tall pillars: bright warm gold. Mid walls: amber. Low covers: dark sand.
+      const color = height > 2.5 ? 0xd4a040 : height > 1.4 ? 0xb07830 : 0x8a5c28
       const m = makeBoxMesh(b, color, toonGradient)
       scene.add(m)
       mapBoxMeshes.push(m)
