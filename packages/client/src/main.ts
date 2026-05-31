@@ -127,6 +127,7 @@ import {
   disposeCharacterMixer,
   makeParryShieldVisual,
   setParryShieldState,
+  applyParryArmPose,
   fetchWeaponGlb,
 } from './render/characters.js'
 import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
@@ -578,9 +579,12 @@ function rebuildFirstPersonViewModel(weapon: Weapon): void {
         model.rotation.set(-0.25, -0.4, 0.1)
         model.scale.setScalar(0.55)
       } else if (weapon === 'bow') {
-        model.position.set(0.16, -0.22, -0.5)
-        model.rotation.set(-0.1, -0.2, -0.2)
-        model.scale.setScalar(0.5)
+        // bow.glb limbs run along its local X axis, so rotate -90° about Z to
+        // stand the bow upright (limbs vertical). Held left-of-centre, tilted
+        // slightly so the upper limb leans away — a natural archer's grip.
+        model.position.set(-0.28, -0.06, -0.62)
+        model.rotation.set(0.0, 0.18, -Math.PI / 2 + 0.16)
+        model.scale.setScalar(0.42)
       } else if (weapon === 'staff') {
         model.position.set(0.19, -0.25, -0.5)
         model.rotation.set(-0.15, -0.3, -0.05)
@@ -837,6 +841,10 @@ let selfPrevDead = false
 let selfJumpUntilMs = 0
 let selfLandUntilMs = 0
 let selfPrevOnGround = true
+
+// First-person bow draw/release animation state.
+let _prevBowCharge = 0
+let _bowReleaseUntilMs = 0
 
 // Roll animation — triggered on dash ability cast confirmation.
 let selfRollingUntilMs = 0
@@ -2947,6 +2955,9 @@ function _renderInner(now: number): void {
       landing: !dead && now < selfLandUntilMs,
       rolling: !dead && now < selfRollingUntilMs,
     })
+    // Procedural shield-block arm raise (TPV sword users) — must run AFTER the
+    // mixer update inside tickCharacterMixer so it isn't overwritten this frame.
+    applyParryArmPose(selfMesh, !dead && !!selfSchema?.parrying, dt)
 
     // Follow-light tracks the player's torso level.
     playerLight.position.set(x, y + 0.5 + idleBob, z)
@@ -2986,6 +2997,30 @@ function _renderInner(now: number): void {
     )
     if (firstPersonWeapon && firstPersonViewWeapon !== wSchema) rebuildFirstPersonViewModel(wSchema)
     if (!firstPersonWeapon && firstPersonViewModel.visible) firstPersonViewModel.visible = false
+
+    // ── First-person bow draw / release animation ──────────────────────────
+    // bow.glb has no skeletal animation, so animate the whole view model:
+    //  • drawing (charge rising): pull the bow toward the face + add tension
+    //    tremor at full charge.
+    //  • release (charge snaps to 0): a quick forward recoil kick that settles.
+    if (wSchema === 'bow' && firstPersonViewModel.visible) {
+      if (_prevBowCharge > 0.25 && bowChargeRatio <= 0.001) _bowReleaseUntilMs = now + 200
+      _prevBowCharge = bowChargeRatio
+      const drawZ = bowChargeRatio * 0.11 // +Z = toward camera (drawn back)
+      const tremor = bowChargeRatio > 0.92 ? Math.sin(now * 0.06) * 0.004 : 0
+      let recoilZ = 0
+      let recoilPitch = 0
+      if (now < _bowReleaseUntilMs) {
+        const k = Math.sin((1 - (_bowReleaseUntilMs - now) / 200) * Math.PI) // 0→1→0
+        recoilZ = -k * 0.14 // snap forward
+        recoilPitch = k * 0.18
+      }
+      firstPersonViewModel.position.set(0, 0, drawZ + recoilZ + tremor)
+      firstPersonViewModel.rotation.x = recoilPitch
+    } else if (wSchema === 'staff') {
+      firstPersonViewModel.position.set(0, 0, 0)
+      firstPersonViewModel.rotation.x = 0
+    }
 
     if (firstPersonWeapon) {
       camera.position.set(x, y + camUp, z)

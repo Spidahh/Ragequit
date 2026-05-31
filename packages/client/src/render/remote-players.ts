@@ -10,6 +10,7 @@ import {
   setCharAnimState,
   disposeCharacterMixer,
   setParryShieldState,
+  applyParryArmPose,
 } from './characters.js'
 import { SWING_ARC_YAW_OFFSET, makeSwingArcMesh } from './factories.js'
 
@@ -570,6 +571,7 @@ export function initRemotePlayers({
         rolling: now < r.rollUntilMs,
       })
       setParryShieldState(r.mesh, r.parrying, false, now)
+      applyParryArmPose(r.mesh, r.parrying, animDt)
       let dyaw = b.yaw - a.yaw
       if (dyaw > Math.PI) dyaw -= 2 * Math.PI
       if (dyaw < -Math.PI) dyaw += 2 * Math.PI

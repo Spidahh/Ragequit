@@ -338,3 +338,35 @@ export function setParryShieldState(
     if (child.userData['parryShieldGlyph'])  mat.opacity = hold ? 0.58 + pulse * 0.20 : 0.90
   })
 }
+
+// Tuning constants for the procedural block pose (left arm raises the shield).
+// The skeleton has no dedicated block clip, so we additively rotate the left
+// arm bones AFTER the mixer writes the idle pose each frame.
+const PARRY_UPPERARM_Z = -1.15 // lift the upper arm up/across the chest
+const PARRY_UPPERARM_X = 0.55  // bring it forward, in front of the torso
+const PARRY_LOWERARM_Z = 1.35  // bend the elbow so the shield rises to face level
+
+/**
+ * Procedurally raise the left (shield) arm into a blocking stance while
+ * parrying, blending in/out smoothly. Call every frame AFTER tickCharacterMixer
+ * (the mixer overwrites bone rotations, so this must run last). `dt` is seconds.
+ */
+export function applyParryArmPose(charGroup: THREE.Group, parrying: boolean, dt: number): void {
+  const model = charGroup.userData['charModel'] as THREE.Object3D | undefined
+  if (!model) return
+  const prev = (charGroup.userData['parryArmBlend'] as number) ?? 0
+  const target = parrying ? 1 : 0
+  const blend = prev + (target - prev) * Math.min(1, dt * 14)
+  charGroup.userData['parryArmBlend'] = blend
+  if (blend < 0.01) return
+
+  const upper = findBone(model, 'upperarm_l') as THREE.Bone | null
+  const lower = findBone(model, 'lowerarm_l') as THREE.Bone | null
+  if (upper) {
+    upper.rotation.z += PARRY_UPPERARM_Z * blend
+    upper.rotation.x += PARRY_UPPERARM_X * blend
+  }
+  if (lower) {
+    lower.rotation.z += PARRY_LOWERARM_Z * blend
+  }
+}
