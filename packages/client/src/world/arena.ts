@@ -184,15 +184,16 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
   sandFloor.receiveShadow = true
   arenaVisualGroup.add(sandFloor)
 
-  // ── 9. Sky dome — gradient from dark zenith to slightly lighter horizon ──
-  const skyGeo = new THREE.SphereGeometry(180, 16, 8)
+  // ── 9. Sky dome — dramatic dusk gradient: deep night-blue zenith fading to a
+  //       warm amber horizon glow (as if torch-lit dusk sits behind the arena).
+  const skyGeo = new THREE.SphereGeometry(180, 24, 12)
   const skyMat = new THREE.ShaderMaterial({
     side: THREE.BackSide,
     uniforms: {
-      topColor:    { value: new THREE.Color(0x05080f) },
-      bottomColor: { value: new THREE.Color(0x0d1520) },
-      offset:      { value: 40 },
-      exponent:    { value: 0.55 },
+      topColor:    { value: new THREE.Color(0x10142e) }, // deep dusk blue (not black)
+      bottomColor: { value: new THREE.Color(0x5a3a2e) }, // warm amber dusk haze
+      offset:      { value: 30 },
+      exponent:    { value: 0.7 },
     },
     vertexShader: `
       varying vec3 vWorldPosition;

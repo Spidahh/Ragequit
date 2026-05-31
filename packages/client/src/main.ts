@@ -390,9 +390,11 @@ nameplateContainer.style.cssText =
 app.appendChild(nameplateContainer)
 
 const scene = new THREE.Scene()
-scene.background = new THREE.Color(0x0d1520)
-// Lighter near-fog so the arena feels enclosed; clears before edge of geometry.
-scene.fog = new THREE.FogExp2(0x0d1520, 0.015)
+// Background + fog match the sky dome's warm dusk horizon so the arena wall
+// tops blend into atmosphere rather than a hard black void. Lower density
+// keeps the coliseum walls (~25 m) clearly readable.
+scene.background = new THREE.Color(0x241e26)
+scene.fog = new THREE.FogExp2(0x2a2230, 0.011)
 
 const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 400)
 
@@ -440,10 +442,11 @@ scene.add(dir)
 const rim = new THREE.DirectionalLight(0x40c8ff, 0.55)
 rim.position.set(-12, 8, -14)
 scene.add(rim)
-// Ground bounce — subtle warm fill; intentionally low so it doesn't
-// create a visible orange haze when the camera is elevated (jumping).
-const bounce = new THREE.PointLight(0x80a8ff, 0.06, 16, 2)
-bounce.position.set(0, 0.5, 0)
+// Ground bounce — warm amber fill simulating light reflecting off the sand
+// floor. Kept low-radius and modest so it warms the lower body / nearby cover
+// without hazing the whole screen when the camera is elevated (jumping).
+const bounce = new THREE.PointLight(0xffb060, 0.14, 22, 2)
+bounce.position.set(0, 0.4, 0)
 scene.add(bounce)
 // Player follow-light — soft blue-white halo around the self character,
 // giving ground and nearby objects contact-shadow depth.

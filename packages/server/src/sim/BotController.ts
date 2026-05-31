@@ -41,6 +41,13 @@ export class BotController {
   private retreatUntilTick = -1000
   private dodgeDirTick = -1000
   private dodgeDir = 1
+  // Stuck detection — when the bot is told to approach but barely moves
+  // (blocked by a pillar/platform), it counts up and triggers a sidestep+jump.
+  private prevX = 0
+  private prevZ = 0
+  private stuckTicks = 0
+  private unstickUntilTick = -1000
+  private unstickDir = 1
 
   constructor(
     private readonly botId: string,
@@ -84,10 +91,18 @@ export class BotController {
     const perpX = (dz / len) * this.strafeDir   // rotate 90 degrees
     const perpZ = (-dx / len) * this.strafeDir
 
-    // ── Desired engagement range based on active weapon ───────────────────
-    let desiredRange = 1.4 // default melee
-    if (self.activeWeapon === 'bow')   desiredRange = 14.0
-    else if (self.activeWeapon === 'staff') desiredRange = 9.0
+    // ── Desired engagement range + hysteresis band based on active weapon ──
+    // For melee the band MUST keep the bot inside SWORD_M1_RANGE_M (1.8 m),
+    // otherwise the bot settles just out of sword reach and never connects.
+    let desiredRange = 1.1 // default melee — comfortably inside sword range
+    let closeBand = 0.4    // close when dist > desiredRange + closeBand (=1.5 m)
+    if (self.activeWeapon === 'bow') {
+      desiredRange = 14.0
+      closeBand = 0.8
+    } else if (self.activeWeapon === 'staff') {
+      desiredRange = 9.0
+      closeBand = 0.8
+    }
 
     // ── Retreat behavior when critically low HP ───────────────────────────
     const retreatThreshold = this.difficulty === 'master' ? 0.25 : 0.20
@@ -112,9 +127,9 @@ export class BotController {
     let mz = 0 // forward/back in yaw space (used for approach/retreat)
     if (isRetreating) {
       mz = 1 // run away from enemy
-    } else if (dist > desiredRange + 0.8) {
+    } else if (dist > desiredRange + closeBand) {
       mz = -1 // close in
-    } else if (dist < desiredRange - 0.8) {
+    } else if (dist < desiredRange - closeBand) {
       mz = 1 // back off
     }
 
@@ -138,8 +153,37 @@ export class BotController {
     // mz is already in bot-forward space; clamp combined magnitude to 1
     const rawMag = Math.hypot(inputX, mz)
     const scale = rawMag > 1 ? 1 / rawMag : 1
-    const mx = inputX * scale
-    const finalMz = mz * scale
+    let mx = inputX * scale
+    let finalMz = mz * scale
+
+    // ── Stuck detection + unstick ─────────────────────────────────────────
+    // If the bot is trying to close distance (mz<0, still far from the enemy)
+    // but its actual position barely changed since last tick, it is wedged
+    // against geometry (e.g. the central platform between duel spawns).
+    const movedSq = (self.transform.x - this.prevX) ** 2 + (self.transform.z - this.prevZ) ** 2
+    this.prevX = self.transform.x
+    this.prevZ = self.transform.z
+    const tryingToMove = mz < 0 && dist > desiredRange + closeBand
+    if (tryingToMove && movedSq < 0.0009) {
+      this.stuckTicks++
+    } else if (movedSq > 0.0025) {
+      this.stuckTicks = Math.max(0, this.stuckTicks - 2)
+    }
+    if (this.stuckTicks > 18 && tick >= this.unstickUntilTick) {
+      // Commit to a ~0.7 s lateral detour (pick the side, hop the obstacle).
+      this.unstickUntilTick = tick + Math.round(0.7 * TICK_RATE_HZ)
+      this.unstickDir = Math.random() < 0.5 ? 1 : -1
+      this.stuckTicks = 0
+    }
+    let unstickJump = false
+    if (tick < this.unstickUntilTick) {
+      // Strafe hard perpendicular and keep pushing forward; hop to clear ledges.
+      const sx = (dz / len) * this.unstickDir
+      const sz = (-dx / len) * this.unstickDir
+      mx = (sx * cosY + sz * -sinY) * 0.9
+      finalMz = -0.5 // still bias toward the enemy
+      unstickJump = (tick % Math.round(0.5 * TICK_RATE_HZ)) === 0
+    }
 
     // ── Jump occasionally in melee range ─────────────────────────────────
     let doJump = false
@@ -159,7 +203,7 @@ export class BotController {
       if (dist <= 4.0 && (enemy.swingEndsAtTick > tick || enemy.casting) && Math.random() < 0.82) doParry = true
     }
 
-    this.host.sendInput(this.botId, mx, finalMz, yaw, doJump, doParry)
+    this.host.sendInput(this.botId, mx, finalMz, yaw, doJump || unstickJump, doParry)
 
     // ── Sword swing ───────────────────────────────────────────────────────
     if (
