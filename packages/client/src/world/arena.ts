@@ -11,8 +11,9 @@ export interface ArenaObjects {
   animateArena: (now: number, dt: number, inHitStop: boolean) => void
 }
 
-// Sand floor radius — fits inside the coliseum inner ring (~22 m)
-const SAND_RADIUS = 20
+// Sand floor radius — extends past the coliseum wall base (~25 m) so there is
+// NO dark gap/moat between the fighting floor and the arena walls.
+const SAND_RADIUS = 27
 
 function makeBoxMesh(box: AABB, color: number, toonGradient: THREE.DataTexture): THREE.Mesh {
   const sx = box.maxX - box.minX
@@ -165,22 +166,25 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
   arenaVisualGroup.add(dust)
 
   // ── 8. Outer ground plane and atmospheric sky dome ──
+  // Warm dark dust tone (not near-black) so any sliver past the sand reads as
+  // distant ground rather than a void.
   const groundFar = new THREE.Mesh(
     new THREE.CircleGeometry(150, 32),
-    new THREE.MeshBasicMaterial({ color: 0x05060a }),
+    new THREE.MeshBasicMaterial({ color: 0x2a2018 }),
   )
   groundFar.rotation.x = -Math.PI / 2
-  groundFar.position.y = -0.12
+  groundFar.position.y = -0.08
   arenaVisualGroup.add(groundFar)
 
-  // Sand fighting floor — exactly at GROUND_Y=0 so characters stand on it.
-  // Radius 20 m fits inside the coliseum inner ring (~22 m).
+  // Sand fighting floor — sits a hair below GROUND_Y so character feet (≈y=0)
+  // always render cleanly ON TOP of it instead of clipping through. Radius 27 m
+  // reaches the coliseum wall base so there is no dark moat around the pit.
   const sandFloor = new THREE.Mesh(
-    new THREE.CircleGeometry(SAND_RADIUS, 48),
+    new THREE.CircleGeometry(SAND_RADIUS, 64),
     new THREE.MeshToonMaterial({ color: 0x8a7040, gradientMap: toonGradient }),
   )
   sandFloor.rotation.x = -Math.PI / 2
-  sandFloor.position.y = 0.0
+  sandFloor.position.y = -0.04
   sandFloor.receiveShadow = true
   arenaVisualGroup.add(sandFloor)
 

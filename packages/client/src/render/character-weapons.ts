@@ -283,38 +283,23 @@ export function updateShieldAttachment(charGroup: THREE.Group): void {
 
   const classId = (charGroup.userData['loadedClassId'] as string || 'hybrid').toLowerCase()
   const leftHand = findBone(model, 'LeftHand')
-  const hips = findBone(model, 'Hips') ?? findBone(model, 'root')
+  if (!leftHand) return
 
-  if (isParrying && leftHand) {
-    // Attach to left hand in blocking position
-    if (sg.parent !== leftHand) {
-      leftHand.add(sg)
-    }
-    // Parry block stance grip:
-    if (classId === 'tank') {
-      sg.position.set(-0.02, 0.04, 0.02)
-      sg.rotation.set(Math.PI / 2, 0.28, -Math.PI / 2)
-      sg.scale.setScalar(0.44) // slightly larger shield for tank!
-    } else {
-      sg.position.set(-0.015, 0.035, 0.015)
-      sg.rotation.set(Math.PI / 2, 0.28, -Math.PI / 2)
-      sg.scale.setScalar(0.38) // slightly smaller/lighter shield for hybrid!
-    }
-  } else if (hips) {
-    // Attach to hip/spine in sheathed position
-    if (sg.parent !== hips) {
-      hips.add(sg)
-    }
-    // sheathed on hip grip:
-    if (classId === 'tank') {
-      sg.position.set(-0.20, -0.06, 0.05) // pushed out slightly for tank ranger armor
-      sg.rotation.set(-0.1, Math.PI / 2 + 0.2, Math.PI / 2 - 0.2)
-      sg.scale.setScalar(0.42)
-    } else {
-      sg.position.set(-0.14, -0.04, 0.04) // closer to body for slim female hybrid
-      sg.rotation.set(-0.1, Math.PI / 2 + 0.2, Math.PI / 2 - 0.2)
-      sg.scale.setScalar(0.38)
-    }
+  // The physical shield is ALWAYS carried in the off-hand (left hand) while a
+  // sword is equipped — a true sword-and-board look. On parry it swings up into
+  // a forward blocking stance; otherwise it rests along the forearm.
+  if (sg.parent !== leftHand) leftHand.add(sg)
+  const scale = classId === 'tank' ? 0.54 : 0.46
+  sg.scale.setScalar(scale)
+
+  if (isParrying) {
+    // Blocking stance — shield face turned forward, raised in front of the body.
+    sg.position.set(-0.02, 0.04, 0.04)
+    sg.rotation.set(Math.PI / 2, 0.28, -Math.PI / 2)
+  } else {
+    // Resting stance — shield held on the forearm, angled slightly outward.
+    sg.position.set(-0.03, 0.02, 0.0)
+    sg.rotation.set(Math.PI / 2, -0.35, -Math.PI / 2)
   }
 }
 

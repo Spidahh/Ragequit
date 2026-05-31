@@ -313,12 +313,19 @@ export function setParryShieldState(
   now: number,
 ): void {
   charGroup.userData['isParrying'] = active
+  // Raise/lower the physical shield_A model (sword wielders only — handled inside).
   updateShieldAttachment(charGroup)
+
+  // The translucent magic barrier is ONLY for casters (staff/bow). Sword
+  // wielders block with the physical shield model, so suppress the barrier for
+  // them — otherwise both appear and the physical shield is hidden behind it.
+  const activeWeapon = (charGroup.userData['activeWeaponProp'] as string) ?? 'sword'
+  const usesPhysicalShield = activeWeapon === 'sword'
 
   const shield = charGroup.userData['parryShield'] as THREE.Group | undefined
   if (!shield) return
-  shield.visible = active
-  if (!active) return
+  shield.visible = active && !usesPhysicalShield
+  if (!active || usesPhysicalShield) return
 
   const pulse = hold ? 0.5 + 0.5 * Math.sin(now * 0.008) : 1
   shield.scale.setScalar(hold ? 1 + pulse * 0.04 : 1.04)
