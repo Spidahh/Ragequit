@@ -11,9 +11,10 @@ export interface ArenaObjects {
   animateArena: (now: number, dt: number, inHitStop: boolean) => void
 }
 
-// Sand floor radius — extends past the coliseum wall base (~25 m) so there is
-// NO dark gap/moat between the fighting floor and the arena walls.
-const SAND_RADIUS = 27
+// Sand floor radius — fills the gladiator PIT, bounded by the coliseum's inner
+// barrier wall at radius ~16.7 m. Must NOT exceed it, or the flat sand plane
+// pokes through the sloped spectator seating and appears "halfway up the arena".
+const SAND_RADIUS = 16.5
 
 function makeBoxMesh(box: AABB, color: number, toonGradient: THREE.DataTexture): THREE.Mesh {
   const sx = box.maxX - box.minX
@@ -49,10 +50,11 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
     '/arena/gladiators_arena.glb',
     (gltf) => {
       const model = gltf.scene
-      // The GLB cylinder's inner floor is at local Y = -1.0.
-      // Lift by +1 so the arena floor aligns with GROUND_Y = 0, letting
-      // characters stand visually ON the coliseum surface.
-      model.position.y = 1.0
+      // The coliseum's inner barrier wall (the gladiator-pit rim) bottoms out at
+      // local Y ≈ 0, so NO offset is needed: the pit floor sits at GROUND_Y = 0
+      // where the sand disc and the characters' feet are. (A previous +1 lift
+      // pushed the whole structure 1 m up, leaving the sand floating mid-arena.)
+      model.position.y = 0
       // Collect outlines during traversal, attach AFTER — adding a child mesh
       // mid-traverse causes infinite recursion (outline-of-outline).
       const outlines: Array<{ mesh: THREE.Mesh; outline: THREE.Mesh }> = []
