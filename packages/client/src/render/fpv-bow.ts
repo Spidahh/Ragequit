@@ -73,16 +73,16 @@ export function createFpvBow(): FpvBowController {
     BOW_GLB,
     (gltf) => {
       const model = gltf.scene
-      // FPS viewmodel: render on top so the arms never clip into walls.
+      // Rendered in the dedicated viewmodel pass (separate scene + fresh depth
+      // buffer), so it gets correct internal depth sorting and lighting — no
+      // depthTest/renderOrder hacks needed. Just keep it always drawn (no frustum
+      // cull / shadows) and single-sided.
       model.traverse((o) => {
         if (!(o instanceof THREE.Mesh)) return
         o.frustumCulled = false
         o.castShadow = false
-        o.renderOrder = 999
         const mats = Array.isArray(o.material) ? o.material : [o.material]
         for (const m of mats) {
-          m.depthTest = false
-          m.depthWrite = false
           m.transparent = false
           ;(m as THREE.MeshStandardMaterial).side = THREE.FrontSide
         }

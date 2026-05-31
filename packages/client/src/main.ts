@@ -400,6 +400,24 @@ scene.fog = new THREE.FogExp2(0x2a2230, 0.011)
 
 const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 400)
 
+// First-person weapon "viewmodel" pass. The arms+weapon live in their OWN scene
+// rendered after the world with a fresh depth buffer (see render loop), so the
+// weapon never clips into walls and its on-screen size is driven by this camera's
+// FOV — independent of the world camera's dynamic FOV (sprint/charge pulse). The
+// viewmodel camera stays at the origin/identity forever; viewmodels are parented
+// to it so they stay locked to the screen wherever the player looks. Standard FPS
+// technique — see https://discourse.threejs.org/t/rendering-a-gun-on-another-layer/80805
+const viewmodelScene = new THREE.Scene()
+const VIEWMODEL_FOV = 58
+const viewmodelCamera = new THREE.PerspectiveCamera(
+  VIEWMODEL_FOV, window.innerWidth / window.innerHeight, 0.01, 10,
+)
+viewmodelScene.add(viewmodelCamera)
+// The viewmodel scene has its own lights (the world's lights live in `scene`).
+// Hemisphere fill matches the world's ambient so the weapon isn't dark; the
+// per-weapon key light (fpvKeyLight) is added to viewmodelCamera below.
+viewmodelScene.add(new THREE.HemisphereLight(0xc4d8ff, 0x182238, 1.2))
+
 // -----------------------------------------------------------------------
 // Post-processing: selective bloom on emissive elements
 // Layer 0 = normal objects, Layer 1 = bloom-eligible emissive objects
@@ -469,21 +487,25 @@ let _nonBloomEntries: Array<{ mesh: THREE.Mesh; mat: THREE.Material | THREE.Mate
 /** Call after adding/removing major scene objects to invalidate the bloom cache. */
 function invalidateBloomCache(): void { _bloomDirty = true }
 
+// First-person viewmodels are parented to the dedicated viewmodelCamera (not the
+// world camera) so they render in the separate viewmodel pass with their own
+// depth buffer and FOV. Visibility toggles in the render loop reference these
+// objects directly, so they keep working regardless of parent.
 const firstPersonViewModel = new THREE.Group()
-camera.add(firstPersonViewModel)
+viewmodelCamera.add(firstPersonViewModel)
 // Animated FPS bow viewmodel (arms + bow + real draw/fire/reload clips).
 // Used for the bow weapon; the static firstPersonViewModel is staff-only now.
 const fpvBow = createFpvBow()
-camera.add(fpvBow.root)
+viewmodelCamera.add(fpvBow.root)
 // Subtle key light for first-person weapon — gives shape/depth without clipping.
 // Positioned top-left of camera so shadow falls naturally on the grip.
 const fpvKeyLight = new THREE.PointLight(0xd8e8ff, 1.4, 3, 1)
 fpvKeyLight.position.set(-0.4, 0.6, -0.5)
-camera.add(fpvKeyLight)
+viewmodelCamera.add(fpvKeyLight)
 const firstPersonParryShield = makeParryShieldVisual(0.42)
 firstPersonParryShield.position.set(0, -0.03, -0.8)
 firstPersonParryShield.userData['parryShield'] = firstPersonParryShield
-camera.add(firstPersonParryShield)
+viewmodelCamera.add(firstPersonParryShield)
 scene.add(camera)
 let firstPersonViewWeapon: Weapon | null = null
 
@@ -521,10 +543,12 @@ function rebuildFirstPersonViewModel(weapon: Weapon): void {
       firstPersonViewModel.position.set(0, 0, 0)
       firstPersonViewModel.rotation.set(0, 0, 0)
 
-      // Use overlay-safe materials so first-person weapons never clip into arena walls.
+      // Rendered in the dedicated viewmodel pass (separate scene + fresh depth
+      // buffer), so no depthTest/renderOrder hacks are needed — just keep the
+      // meshes always drawn (the 58° viewmodel camera is tighter than the world's).
       model.traverse((child) => {
         if (child instanceof THREE.Mesh) {
-          child.renderOrder = 999 // render on top of environment
+          child.frustumCulled = false
           const src = child.material as THREE.MeshStandardMaterial | THREE.MeshToonMaterial | undefined
           const hasMap = !!(src && 'map' in src && src.map && !(src.map instanceof Function))
           const color = src?.color?.clone() ?? new THREE.Color(0xffffff)
@@ -537,14 +561,11 @@ function rebuildFirstPersonViewModel(weapon: Weapon): void {
             nameLower.includes('element')
 
           // MeshStandardMaterial responds to the fpvKeyLight for depth/shape.
-          // depthTest: false prevents wall clipping in first-person view.
           if (isGlowing) {
             child.material = new THREE.MeshBasicMaterial({
               color: new THREE.Color(0x00d0ff),
               transparent: true,
               opacity: src?.opacity ?? 1.0,
-              depthTest: false,
-              depthWrite: false,
             })
           } else {
             child.material = new THREE.MeshStandardMaterial({
@@ -554,8 +575,6 @@ function rebuildFirstPersonViewModel(weapon: Weapon): void {
               metalness: 0.3,
               transparent: src?.transparent ?? false,
               opacity: src?.opacity ?? 1.0,
-              depthTest: false,
-              depthWrite: false,
             })
           }
         }
@@ -566,11 +585,7 @@ function rebuildFirstPersonViewModel(weapon: Weapon): void {
       model.traverse((child) => {
         if (child instanceof THREE.Mesh && !child.name.endsWith('_outline')) {
           const outline = createOutlineMesh(child, 0.016, 0x0a0a0f)
-          outline.renderOrder = 999
-          if (outline.material instanceof THREE.Material) {
-            outline.material.depthTest = false
-            outline.material.depthWrite = false
-          }
+          outline.frustumCulled = false
           outlines.push(outline)
         }
       })
@@ -594,9 +609,10 @@ function rebuildFirstPersonViewModel(weapon: Weapon): void {
         model.rotation.set(Math.PI / 2, Math.PI / 2, 0)
         model.scale.setScalar(0.33)
       } else if (weapon === 'staff') {
-        model.position.set(0.19, -0.25, -0.5)
-        model.rotation.set(-0.15, -0.3, -0.05)
-        model.scale.setScalar(0.52)
+        // Held diagonally in the lower-right; tuned for the 58° viewmodel camera.
+        model.position.set(0.13, -0.24, -0.5)
+        model.rotation.set(-0.18, -0.42, 0.12)
+        model.scale.setScalar(0.3)
       }
 
       firstPersonViewModel.add(model)
@@ -3267,8 +3283,16 @@ function _renderInner(now: number): void {
     for (const e of _nonBloomEntries) e.mesh.material = e.mat
     finalComposer.render()
   } else {
+    // Composers leave renderer.autoClear=false; force a clean world clear here.
+    renderer.autoClear = true
     renderer.render(scene, camera)
   }
+  // First-person viewmodel pass: the world (colour + depth) is already on screen.
+  // Clear ONLY the depth buffer and draw the weapon on top in its own scene, so it
+  // never clips into walls. autoClear=false keeps the world colour we just drew.
+  renderer.autoClear = false
+  renderer.clearDepth()
+  renderer.render(viewmodelScene, viewmodelCamera)
   // Update draw call counter (shown in debug panel, ` key) — only when open.
   if (isDebugVisible()) dbgDraws.textContent = String(renderer.info.render.calls)
   _renderErrorCount = 0 // reset error counter on successful frame
@@ -3277,6 +3301,8 @@ function _renderInner(now: number): void {
 addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight
   camera.updateProjectionMatrix()
+  viewmodelCamera.aspect = window.innerWidth / window.innerHeight
+  viewmodelCamera.updateProjectionMatrix()
   renderer.setSize(window.innerWidth, window.innerHeight)
   bloomComposer.setSize(window.innerWidth, window.innerHeight)
   finalComposer.setSize(window.innerWidth, window.innerHeight)
