@@ -48,12 +48,39 @@ import {
 import { Client, type Room } from 'colyseus.js'
 import * as THREE from 'three'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 
 import { SoundEngine } from './audio/sound-engine.js'
 import { type DeathcamData, type ScoreboardData } from './endgame.js'
+import {
+  type ComboState,
+  victimShakeIntensity,
+  COMBO_RESET_MS,
+} from './game/combat-feedback.js'
+import {
+  rawCauseId,
+  isAirPunishCause,
+  hitstopAttacker,
+  hitstopVictim,
+  elementToImpactColor,
+} from './game/hitstop.js'
+import { matchSM } from './game/match-state-machine.js'
+import {
+  type SchemaPlayer,
+  createSchemaAccessors,
+} from './game/schema-helpers.js'
+import {
+  type MatchStats,
+  emptyMatchStats,
+  recordAbilityCast,
+  computeEloDelta,
+} from './game/stats-tracker.js'
+import {
+  disposeObject3D,
+  applyDirectionalShake as _applyDirectionalShake,
+} from './game/visual-helpers.js'
 import { initAbilityFailHud } from './hud/ability-fail-hud.js'
 import { initCooldownStrip, ELEMENT_COLOR } from './hud/cd-strip.js'
 import { createCombatFeedHud } from './hud/combat-feed.js'
@@ -84,6 +111,12 @@ import {
   signInWithGoogle,
   isSupabaseConfigured,
 } from './net/supabase-auth.js'
+import {
+  showLoadingScreen,
+  hideLoadingScreen,
+  preloadMatchAssets,
+  preloadOtherClassesBackground,
+} from './preloader.js'
 import { updateRankBadge } from './rank-system.js'
 import {
   makeCharacter,
@@ -115,54 +148,6 @@ import {
 import { DeathBurst } from './vfx/death-burst.js'
 import { ImpactPool, type ImpactProfile } from './vfx/impact-pool.js'
 import { buildArena } from './world/arena.js'
-import {
-  type ComboState,
-  updateComboOnHit,
-  resetCombo,
-  classifyHit,
-  causeToImpactProfile,
-  victimShakeIntensity,
-  COMBO_RESET_MS,
-} from './game/combat-feedback.js'
-import {
-  rawCauseId,
-  isAirPunishCause,
-  hitstopAttacker,
-  hitstopVictim,
-  elementToImpactColor,
-  HITSTOP_ATTACKER,
-  HITSTOP_VICTIM,
-} from './game/hitstop.js'
-import {
-  type MatchStats,
-  emptyMatchStats,
-  recordKill,
-  recordHit,
-  recordDamageTaken,
-  recordParry,
-  recordComboProc,
-  recordKnockupAttempt,
-  recordKnockupConversion,
-  recordAbilityCast,
-  computeEloDelta,
-} from './game/stats-tracker.js'
-import {
-  type SchemaPlayer,
-  createSchemaAccessors,
-} from './game/schema-helpers.js'
-import {
-  disposeObject3D,
-  markBloom,
-  applyDirectionalShake as _applyDirectionalShake,
-  computeImpactKick,
-} from './game/visual-helpers.js'
-import {
-  showLoadingScreen,
-  hideLoadingScreen,
-  preloadMatchAssets,
-  preloadOtherClassesBackground,
-} from './preloader.js'
-import { matchSM } from './game/match-state-machine.js'
 
 // -----------------------------------------------------------------------
 // DOM refs
@@ -460,12 +445,10 @@ scene.add(rim)
 const bounce = new THREE.PointLight(0x80a8ff, 0.06, 16, 2)
 bounce.position.set(0, 0.5, 0)
 scene.add(bounce)
-// markBloom imported from ./game/visual-helpers.js
 // Player follow-light — soft blue-white halo around the self character,
 // giving ground and nearby objects contact-shadow depth.
 const playerLight = new THREE.PointLight(0xaaccff, 0.45, 8, 2)
 scene.add(playerLight)
-
 const selfEmissive = initSelfEmissive({
   getSelfMesh: () => selfMesh,
   playerLight,
