@@ -350,6 +350,13 @@ export class GameRoom extends Room<GameState> {
       this.botSpawnAtMatchStart = Math.max(1, this.botSpawnAtMatchStart)
     }
 
+    // In FFA / 5v5, cap bots so at least 1 human slot stays open.
+    // Bots all spawn at onCreate() before any human connects; without this cap
+    // the room can fill entirely with bots if BOTS >= maxClients.
+    if (resolvedMode === 'ffa' || resolvedMode === '5v5') {
+      this.botSpawnAtMatchStart = Math.min(this.botSpawnAtMatchStart, this.maxClients - 1)
+    }
+
     this.onMessage<ClientInputMessage>(MessageTypes.Input, (client, message) => {
       if (!this.gateRate(client, 'input')) return
       const queue = this.inputQueues.get(client.sessionId)
@@ -2532,6 +2539,7 @@ export class GameRoom extends Room<GameState> {
       yaw: req.yaw,
       durationSec: req.durationSec,
       atTick: this.state.tick,
+      armDelaySec: req.armDelaySec ?? 0,
     }
     this.broadcast(MessageTypes.ZoneSpawned, msg)
     return zid

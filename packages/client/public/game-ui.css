@@ -5546,3 +5546,18 @@ button.locked {
 }
 .respawn-stats b { color: #d4c080; font-weight: 900; }
 .rs-sep { opacity: 0.3; }
+
+/* ── Weapon-specific crosshair ─────────────────────────────────────────────
+   Sword = third-person melee: crosshair is a larger soft ring (less precise)
+   Bow / Staff = first-person precision: standard sharp dot+ring
+   ─────────────────────────────────────────────────────────────────────── */
+#crosshair[data-weapon="sword"] {
+  width: 38px;
+  height: 38px;
+  border-color: rgba(232,236,246,0.30);
+  opacity: 0.55;
+}
+#crosshair[data-weapon="sword"]::before,
+#crosshair[data-weapon="sword"]::after {
+  display: none; /* no crosshairs lines in TPV melee — ring only */
+}

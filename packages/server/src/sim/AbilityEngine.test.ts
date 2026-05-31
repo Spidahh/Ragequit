@@ -103,6 +103,7 @@ function makeRoom(hostOverrides: Partial<Pick<EngineHost, 'hasLineOfSight'>> = {
         width: req.width,
         durationSec: req.durationSec,
         damagePerTick: req.damagePerTick,
+        armDelaySec: req.armDelaySec ?? 0,
       })
       return 'z1'
     },
@@ -255,7 +256,7 @@ describe('AbilityEngine — Whirlwind (channel)', () => {
     expect(r.target.statuses.some((s) => s.kind === 'slow')).toBe(false)
   })
 
-  it('fires 3 ticks of 7 dmg over 1 s against target inside 4 m', () => {
+  it('fires 3 ticks of 11 dmg over 1 s against target inside 4 m', () => {
     const r = makeRoom()
     r.engine.tryCast('A', 'whirlwind', { yaw: 0, pitch: 0 })
     // Drive 1 s of ticks (60 frames). Each frame advance state.tick + tickWindups.
@@ -264,11 +265,12 @@ describe('AbilityEngine — Whirlwind (channel)', () => {
       r.state.tick += 1
       r.engine.tickWindups()
     }
+    // Registry: amount: 11 per tick (3 ticks = 33 total). Test expects 2-3 ticks in 1 s window.
     for (const d of r.pendingDamage) {
-      if (d.victimId === 'B' && d.amount === 7) total += d.amount
+      if (d.victimId === 'B' && d.amount === 11) total += d.amount
     }
-    expect(total).toBeGreaterThanOrEqual(12) // 2-3 ticks
-    expect(total).toBeLessThanOrEqual(21)
+    expect(total).toBeGreaterThanOrEqual(22) // 2 ticks minimum
+    expect(total).toBeLessThanOrEqual(33)    // 3 ticks maximum
   })
 })
 
@@ -652,6 +654,15 @@ describe('AbilityEngine — zone placement', () => {
     expect(r.zones[0]!.abilityId).toBe('snare_trap')
     expect(r.zones[0]!.pos.x).toBeCloseTo(r.caster.transform.x)
     expect(r.zones[0]!.pos.z).toBeCloseTo(r.caster.transform.z)
+  })
+
+  it('snare_trap carries armDelaySec in the spawn request for client arm-state feedback', () => {
+    const r = makeRoom()
+    r.engine.tryCast('A', 'snare_trap', { yaw: 0, pitch: 0 })
+    // The ZoneSpawnRequest should carry armDelaySec so GameRoom can populate
+    // armedAtTick and so the ServerZoneSpawnedMessage can tell clients when the
+    // zone becomes active. The snare_trap registry definition sets armDelaySec: 2.
+    expect(r.zones[0]!.armDelaySec).toBe(2)
   })
 })
 

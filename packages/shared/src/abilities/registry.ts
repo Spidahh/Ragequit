@@ -152,19 +152,22 @@ export const ABILITY_M6_RENDING_DASH: AbilityDef = {
   element: 'none',
   weapon: 'sword',
   costMana: 0,
-  costStamina: 35,
-  cooldownSec: 10,
+  costStamina: 28,  // cheaper than Gap Closer's burst model; trade-off is DoT vs instant
+  cooldownSec: 8,   // was 10 — now competitive but with different payoff profile
   windupSec: 0,
   range: 5,
   targeting: 'forward',
   comboRole: 'mobility',
   effects: [
     { at: 'onCast', kind: 'move', mode: 'dash', distance: 5, cancelOnCollision: true },
-    { at: 'onLand', kind: 'damage', amount: 14, radius: 1.6 },
-    { at: 'onLand', kind: 'applyStatus', status: 'bleed', durationSec: 4, stacks: 1, radius: 1.6 },
+    { at: 'onLand', kind: 'damage', amount: 12, radius: 2.0 },  // wider radius than Gap Closer (1.5m)
+    // Long bleed: 5s × 6 dmg/s = 30 DoT on top of 12 immediate = 42 total.
+    // Gap Closer: 18 burst + 50% slow. Rending Dash: 42 over 5s, wider AoE.
+    // Identity: bleed+DoT option vs Gap Closer's burst+CC option.
+    { at: 'onLand', kind: 'applyStatus', status: 'bleed', durationSec: 5, stacks: 1, radius: 2.0 },
   ],
-  description: 'Slash-through dash that passes into melee range. The landing impact Bleeds nearby enemies.',
-  miniMalus: 'Collision stops the dash early. Bleed can be cleansed.',
+  description: 'Slashing dash with wide landing arc. The impact applies a long Bleed — 42 total damage over 5 s versus Gap Closer\'s burst CC. Different tools for different fights.',
+  miniMalus: 'Damage is delayed via Bleed — vulnerable to cleanse. Collision stops the dash.',
   canParry: true,
 }
 

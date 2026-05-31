@@ -6,7 +6,7 @@ import { createOutlineMesh } from '../render/outlines.js'
 
 // The ArenaObjects interface returned by buildArena for main.ts.
 export interface ArenaObjects {
-  loadMapGeometry: (mapId: string) => void
+  loadMapGeometry: (mapId: string) => boolean
   getActiveMapId: () => string
   animateArena: (now: number, dt: number, inHitStop: boolean) => void
 }
@@ -280,9 +280,11 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
       }
     }
 
-    // Load and instantiate GLTFs
-    spawns.forEach((s) => {
-      const filenameMap: Record<string, string> = {
+    // Load and instantiate GLTFs.
+    // spawnMapId is captured once per spawnDecorativeProps call; if the map
+    // changes while a GLTF is still loading we discard the stale model.
+    const spawnMapId = mapId
+    const filenameMap: Record<string, string> = {
       crate: 'Crate_Wooden',
       barrel: 'Barrel',
       banner: 'banner_patternA_red',
@@ -290,8 +292,8 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
       barrel_small: 'barrel_small',
       box_large: 'box_large',
     }
-    const filename = filenameMap[s.type] ?? 'Crate_Wooden'
-    const spawnMapId = mapId
+    spawns.forEach((s) => {
+      const filename = filenameMap[s.type] ?? 'Crate_Wooden'
       gltfLoader.load(
         `/arena/props/${filename}.gltf`,
         (gltf) => {
@@ -329,8 +331,8 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
     })
   }
 
-  function loadMapGeometry(mapId: string): void {
-    if (mapId === activeMapId) return
+  function loadMapGeometry(mapId: string): boolean {
+    if (mapId === activeMapId) return false
     activeMapId = mapId
     
     // Clean up inactive box meshes
@@ -359,6 +361,7 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
 
     // Spawn decorative props for tournament look
     spawnDecorativeProps(mapId)
+    return true
   }
 
   // Load blockout map by default

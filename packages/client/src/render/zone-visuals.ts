@@ -8,6 +8,10 @@ interface ZoneVisual {
   extra?: THREE.Mesh
   accent?: THREE.Mesh
   element: string
+  /** ms timestamp when the zone was spawned on the client */
+  spawnedAtMs: number
+  /** seconds before the zone becomes active; 0 = immediately armed */
+  armDelaySec: number
 }
 
 export interface ZoneVisualsOptions {
@@ -89,7 +93,10 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
       edge.layers.enable(1)
       scene.add(mesh)
       scene.add(edge)
-      zoneVisuals.set(msg.id, { mesh, extra: edge, element: msg.element })
+      zoneVisuals.set(msg.id, {
+        mesh, extra: edge, element: msg.element,
+        spawnedAtMs: performance.now(), armDelaySec: msg.armDelaySec,
+      })
       return
     } else {
       // Cylinder AoE zones (Blizzard, Storm Field, Thorn Field, etc.)
@@ -153,7 +160,10 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
       accentMesh.layers.enable(1)  // bloom
       scene.add(accentMesh)
 
-      zoneVisuals.set(msg.id, { mesh, extra: floorMesh, accent: accentMesh, element: msg.element })
+      zoneVisuals.set(msg.id, {
+        mesh, extra: floorMesh, accent: accentMesh, element: msg.element,
+        spawnedAtMs: performance.now(), armDelaySec: msg.armDelaySec,
+      })
       return
     }
   }
@@ -202,20 +212,27 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
       const freq = isFireOrLightning ? 0.007 : 0.0035
       const pulse = 0.5 + 0.5 * Math.sin(now * freq)
 
+      // Dim the zone while it is still arming — visually signals "not yet active".
+      // A slow dim-flash provides feedback without being confusing.
+      const armedAtMs = vis.spawnedAtMs + vis.armDelaySec * 1000
+      const isArmed = vis.armDelaySec === 0 || now >= armedAtMs
+      // Unarmed: slow strobe at half opacity; Armed: full animated opacity.
+      const opacityScale = isArmed ? 1.0 : 0.3 + 0.25 * Math.sin(now * 0.003)
+
       const mat = vis.mesh.material as THREE.MeshBasicMaterial
-      if ('opacity' in mat) mat.opacity = 0.18 + pulse * 0.18
+      if ('opacity' in mat) mat.opacity = (0.18 + pulse * 0.18) * opacityScale
       vis.mesh.rotation.y += isFireOrLightning ? 0.008 : 0.004
 
       if (vis.extra) {
         const eMat = vis.extra.material as THREE.MeshBasicMaterial
-        if ('opacity' in eMat) eMat.opacity = 0.52 + pulse * 0.28
+        if ('opacity' in eMat) eMat.opacity = (0.52 + pulse * 0.28) * opacityScale
 
         // Keep the floor decal moving without changing the gameplay radius.
         vis.extra.rotation.y += vis.element === 'dark' ? -0.006 : 0.004
       }
       if (vis.accent) {
         const aMat = vis.accent.material as THREE.MeshBasicMaterial
-        if ('opacity' in aMat) aMat.opacity = 0.18 + pulse * 0.2
+        if ('opacity' in aMat) aMat.opacity = (0.18 + pulse * 0.2) * opacityScale
         vis.accent.rotation.y += vis.element === 'dark' ? -0.012 : 0.008
         if (vis.element === 'ice') vis.accent.scale.setScalar(1.0 + pulse * 0.04)
         else if (vis.element === 'nature')

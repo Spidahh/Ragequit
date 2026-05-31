@@ -1006,9 +1006,7 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
       rounds:
         mode === 'training'
           ? 'PRATICA'
-          : mode === '1v1' || mode === 'duel_arena' || mode === 'blockout'
-            ? `${selfStats.kills} - ${opponentStats.kills} round`
-            : `${selfStats.kills} - ${opponentStats.kills} kill`,
+          : `${selfStats.kills} - ${opponentStats.kills} kill`,
       league: mode === 'training' ? 'NO ELO' : 'RANKED',
       winner: isWin
         ? {
@@ -2263,6 +2261,8 @@ function clearGameplayInputState(): void {
 function clearLocalMatchState(): void {
   soundEngine.muted = true
   currentMatchPhase = 'lobby'
+  // Sync the FSM — keeps matchSM.isLive() consistent for reconnect guard
+  matchSM.transition('lobby')
   livePhaseStartTick = -1
   ping = 0
   localComboCount = 0
@@ -2271,6 +2271,8 @@ function clearLocalMatchState(): void {
   victimHitStopUntilMs = 0
   shakeOffset.set(0, 0, 0)
   shakeDecay = 0
+  // Kill timestamps reset so the previous match's streak doesn't bleed into the next.
+  recentKillTimes.length = 0
   clearGameplayInputState()
   clearGameplayUi()
   projectileVfx.clear()
@@ -2801,8 +2803,9 @@ function _renderInner(now: number): void {
   if (inMenu) return
 
   // Swap map geometry when the server schema reports a different mapId.
-  loadMapGeometry(getSchemaMapId())
-  invalidateBloomCache() // map may have changed scene geometry
+  // loadMapGeometry returns true only when the map actually changed so we
+  // avoid the full scene traversal (bloom cache rebuild) every frame.
+  if (loadMapGeometry(getSchemaMapId())) invalidateBloomCache()
   placementPreview.update(now)
 
   // Hit-stop flag — particle animation and camera lerp are frozen during it.

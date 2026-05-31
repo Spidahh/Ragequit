@@ -189,6 +189,9 @@ export interface ServerZoneSpawnedMessage {
   yaw: number
   durationSec: number
   atTick: number
+  /** Seconds until the zone becomes active (0 = immediately armed). Lets the
+   *  client show a dim "unarmed" state before the trap can trigger. */
+  armDelaySec: number
 }
 
 export interface ServerZoneExpiredMessage {
