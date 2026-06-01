@@ -29,15 +29,16 @@ and a single live CSS visual system.
 
 ```text
 ragequit/
-├── AGENTS.md
+├── AGENTS.md              # agent/contributor playbook (source of truth)
 ├── GAME_SYSTEM_MODEL.md
 ├── ROADMAP.md
 ├── SETUP.md
-├── 01_DESIGN/
-├── 02_TECH/
+├── 01_DESIGN/             # design docs
+├── 02_TECH/              # technical docs (incl. 08_project_governance.md)
+├── tools/                # check-file-budget.mjs, asset pipeline
 ├── packages/
-│   ├── shared/
-│   ├── client/
-│   └── server/
-└── apps/web/
+│   ├── shared/            # constants, abilities registry, sim helpers, balance
+│   ├── client/            # Three.js client (build → packages/client/dist)
+│   └── server/            # Colyseus authoritative server (Docker → :8080)
+└── supabase/              # auth / stats backend
 ```
