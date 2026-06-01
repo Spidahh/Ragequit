@@ -25,7 +25,7 @@ const _weaponAssetPath: Record<'sword' | 'bow' | 'staff' | 'shield', string> = {
   sword: '/weapons/kaykit/sword.glb',
   bow: '/weapons/kaykit/bow.glb',
   staff: '/weapons/kaykit/staff.glb',
-  shield: '/weapons/kaykit/shield_A.glb', // Physical shield model
+  shield: '/weapons/knight_shield.glb', // Knight heater shield (from the Knight Medieval Pack)
 }
 
 // ---------------------------------------------------------------------------
@@ -329,17 +329,21 @@ export function updateShieldAttachment(charGroup: THREE.Group): void {
   // sword is equipped — a true sword-and-board look. On parry it swings up into
   // a forward blocking stance; otherwise it rests along the forearm.
   if (sg.parent !== leftHand) leftHand.add(sg)
-  const scale = classId === 'tank' ? 0.54 : 0.46
+  const scale = classId === 'tank' ? 0.4 : 0.34
   sg.scale.setScalar(scale)
 
+  // The knight heater shield is modelled upright (long axis +Y, broad face ±Z),
+  // so it needs NO X-tip — the previous Math.PI/2 X laid it flat. The arm pose
+  // (applyParryArmPose) raises it into the block; the shield's own rotation just
+  // angles the broad face outward/forward.
   if (isParrying) {
-    // Blocking stance — shield face turned forward, raised in front of the body.
-    sg.position.set(-0.02, 0.04, 0.04)
-    sg.rotation.set(Math.PI / 2, 0.28, -Math.PI / 2)
+    // Blocking stance — face turned forward, raised in front of the body.
+    sg.position.set(-0.02, 0.05, 0.05)
+    sg.rotation.set(0, 0.35, 0)
   } else {
-    // Resting stance — shield held on the forearm, angled slightly outward.
+    // Resting stance — carried on the forearm, broad face angled outward.
     sg.position.set(-0.03, 0.02, 0.0)
-    sg.rotation.set(Math.PI / 2, -0.35, -Math.PI / 2)
+    sg.rotation.set(0, -0.2, 0.05)
   }
 }
 
