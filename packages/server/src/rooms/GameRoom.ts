@@ -134,6 +134,7 @@ import {
   hasLineOfSight,
   spellImpactPushDistance,
 } from '../sim/combat-geometry.js'
+import { resolveProjectileHit } from '../sim/projectile-collision.js'
 import {
   trackMatchStarted,
   trackMatchEnded,
@@ -1941,67 +1942,21 @@ export class GameRoom extends Room<GameState> {
       stepProjectile(state, dt)
       const to = { x: state.pos.x, y: state.pos.y, z: state.pos.z }
 
-      // Resolve collisions: nearest t across players, boxes, ground.
-      let bestT: number | null = null
-      let bestKind: 'victim' | 'terrain' | null = null
-      let bestVictim: string | null = null
-
-      // Players.
-      for (const [vid, player] of this.state.players) {
-        if (vid === meta.ownerId) continue
-        if (!player.alive) continue
-        if (now < player.invulnUntilTick) continue
-        // transform.y is the capsule CENTRE; segmentVsCapsule expects the FOOT.
-        // Subtract half-height to convert: foot = centre - H/2.
-        const capsule: CapsuleTarget = {
-          id: vid,
-          pos: {
-            x: player.transform.x,
-            y: player.transform.y - PLAYER_CAPSULE_HEIGHT_M / 2,
-            z: player.transform.z,
-          },
-          radius: PLAYER_CAPSULE_RADIUS_M,
-          height: PLAYER_CAPSULE_HEIGHT_M,
-        }
-        const t = segmentVsCapsule(prev, to, capsule)
-        if (t !== null && (bestT === null || t < bestT)) {
-          bestT = t
-          bestKind = 'victim'
-          bestVictim = vid
-        }
-      }
-
-      // Static boxes.
-      for (const box of this.activeMap.boxes) {
-        const t = segmentVsAabb(prev, to, box)
-        if (t !== null && (bestT === null || t < bestT)) {
-          bestT = t
-          bestKind = 'terrain'
-          bestVictim = null
-        }
-      }
-
-      // Ground.
-      const tGround = segmentVsGround(prev, to, TERRAIN_GROUND_Y)
-      if (tGround !== null && (bestT === null || tGround < bestT)) {
-        bestT = tGround
-        bestKind = 'terrain'
-        bestVictim = null
-      }
-
-      if (bestT !== null && bestKind !== null) {
+      // Resolve nearest collision (pure helper) and react to it.
+      const hit = resolveProjectileHit(prev, to, this.state.players, this.activeMap.boxes, meta.ownerId, now)
+      if (hit) {
         const hitPos = {
-          x: prev.x + (to.x - prev.x) * bestT,
-          y: prev.y + (to.y - prev.y) * bestT,
-          z: prev.z + (to.z - prev.z) * bestT,
+          x: prev.x + (to.x - prev.x) * hit.t,
+          y: prev.y + (to.y - prev.y) * hit.t,
+          z: prev.z + (to.z - prev.z) * hit.t,
         }
         // Snap schema pos to the impact point before removal for client VFX.
         schema.x = hitPos.x
         schema.y = hitPos.y
         schema.z = hitPos.z
 
-        if (bestKind === 'victim' && bestVictim) {
-          this.applyProjectileImpact(meta, hitPos, bestVictim)
+        if (hit.kind === 'victim' && hit.victim) {
+          this.applyProjectileImpact(meta, hitPos, hit.victim)
           toRemove.push({ id: pid, reason: 'victim', pos: hitPos })
         } else {
           if (meta.splashRadius > 0) this.applyProjectileImpact(meta, hitPos, null)
