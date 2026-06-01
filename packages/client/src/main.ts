@@ -64,6 +64,7 @@ import {
 } from './game/hitstop.js'
 import { matchSM } from './game/match-state-machine.js'
 import { createSchemaAccessors } from './game/schema-helpers.js'
+import { buildScoreboardData } from './game/scoreboard-data.js'
 import {
   type MatchStats,
   emptyMatchStats,
@@ -901,64 +902,20 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
     const eloDelta =
       selfEloDelta !== undefined ? selfEloDelta : computeEloDelta(eloBefore, ELO_STARTING, isWin)
 
-    const arenaName = getSchemaMapId()
-    const matchMs = performance.now() - matchStartMs
-    const mode = getRoomMode()
-
-    const scoreboardData: ScoreboardData = {
-      arena: arenaName.toUpperCase(),
-      matchMs: matchMs > 0 ? matchMs : 120000,
-      rounds: mode === 'training' ? 'PRATICA' : `${selfStats.kills} - ${opponentStats.kills} kill`,
-      league: mode === 'training' ? 'NO ELO' : 'RANKED',
-      winner: isWin
-        ? {
-            name: selfName,
-            build: selfBuild,
-            kills: selfStats.kills,
-            damageDealt: selfStats.damageDealt,
-            damageTaken: selfStats.damageTaken,
-            knockups: `${selfStats.knockupConversions} / ${selfStats.knockupAttempts}`,
-            parries: selfStats.parries,
-            comboProcs: selfStats.comboProcs,
-            abilitiesUsed: selfStats.abilitiesUsed,
-          }
-        : {
-            name: opponentName,
-            build: oppBuild,
-            kills: opponentStats.kills,
-            damageDealt: opponentStats.damageDealt,
-            damageTaken: opponentStats.damageTaken,
-            knockups: `${opponentStats.knockupConversions} / ${opponentStats.knockupAttempts}`,
-            parries: opponentStats.parries,
-            comboProcs: opponentStats.comboProcs,
-            abilitiesUsed: opponentStats.abilitiesUsed,
-          },
-      loser: isWin
-        ? {
-            name: opponentName,
-            build: oppBuild,
-            kills: opponentStats.kills,
-            damageDealt: opponentStats.damageDealt,
-            damageTaken: opponentStats.damageTaken,
-            knockups: `${opponentStats.knockupConversions} / ${opponentStats.knockupAttempts}`,
-            parries: opponentStats.parries,
-            comboProcs: opponentStats.comboProcs,
-            abilitiesUsed: opponentStats.abilitiesUsed,
-          }
-        : {
-            name: selfName,
-            build: selfBuild,
-            kills: selfStats.kills,
-            damageDealt: selfStats.damageDealt,
-            damageTaken: selfStats.damageTaken,
-            knockups: `${selfStats.knockupConversions} / ${selfStats.knockupAttempts}`,
-            parries: selfStats.parries,
-            comboProcs: selfStats.comboProcs,
-            abilitiesUsed: selfStats.abilitiesUsed,
-          },
+    const scoreboardData = buildScoreboardData({
+      selfName,
+      opponentName,
+      selfBuild,
+      oppBuild,
+      selfStats,
+      opponentStats,
+      isWin,
+      arena: getSchemaMapId(),
+      matchMs: performance.now() - matchStartMs,
+      mode: getRoomMode(),
       eloBefore,
-      eloDelta: getRoomMode() === 'training' ? 0 : eloDelta,
-    }
+      eloDelta,
+    })
 
     menu.showScoreboard(selfId, scoreboardData)
   }
