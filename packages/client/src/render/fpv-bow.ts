@@ -139,19 +139,16 @@ export function createFpvBow(): FpvBowController {
     else if (prev) prev.stop()
   }
 
-  function update(dt: number, state: FpvBowState): void {
+  function update(dt: number, _state: FpvBowState): void {
     if (mixer) mixer.update(dt)
     if (oneShot) return // FIRE/RELOAD one-shot owns the rig until it finishes
 
-    // Charging draws the bow back and holds (AIM_IDLE). The crossfade from idle
-    // animates the draw-up smoothly, so we don't need a separate AIM clip here.
-    let target: ClipName
-    if (state.charging) target = 'Bow_AIM_IDLE'
-    else if (state.moving && state.speed > 4.0) target = 'Bow_RUN'
-    else if (state.moving) target = 'Bow_WALK'
-    else target = 'Bow_IDLE'
-
-    play(target, true, target === 'Bow_AIM_IDLE' ? 0.1 : 0.16)
+    // FPS archer: always hold the broad-faced "ready" pose (AIM_IDLE) — the rig's
+    // relaxed IDLE/WALK/RUN clips hold the bow edge-on (a crooked sliver in first
+    // person), so we never use them on the viewmodel. Charging deepens the same
+    // pose into a full draw via the FIRE one-shot. This removes the dependency on
+    // the fragile edge-on→broad-face correction for the resting bow.
+    play('Bow_AIM_IDLE', true, 0.12)
   }
 
   function fire(): void {
