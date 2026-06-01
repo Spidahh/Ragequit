@@ -129,6 +129,12 @@ import {
   type ZoneSpawnRequest,
 } from '../sim/index.js'
 import {
+  pointInsideWall,
+  isCapsuleBlocked2D,
+  hasLineOfSight,
+  spellImpactPushDistance,
+} from '../sim/combat-geometry.js'
+import {
   trackMatchStarted,
   trackMatchEnded,
   trackPlayerConnected,
@@ -447,7 +453,7 @@ export class GameRoom extends Room<GameState> {
         forceWeaponSwap: (sid, weapon) => this.forceWeaponSwap(sid, weapon),
         applyKnockup: (player, airborneSec, knockback) =>
           this.applyKnockupToPlayer(player, airborneSec, knockback),
-        hasLineOfSight: (from, to) => this.hasLineOfSight(from, to),
+        hasLineOfSight: (from, to) => hasLineOfSight(this.activeMap.boxes, from, to),
         resolveDisplacement: (player, dx, dz, cancelOnCollision) =>
           this.resolveAbilityDisplacement(player, dx, dz, cancelOnCollision),
         getAbilityCooldownMult: (sid) => {
@@ -1265,7 +1271,7 @@ export class GameRoom extends Room<GameState> {
       this.broadcast(MessageTypes.Hit, hitMsg)
 
       if (!didParry && applied > 0) {
-        const pushDistance = this.spellImpactPushDistance(d.cause)
+        const pushDistance = spellImpactPushDistance(d.cause)
         if (pushDistance > 0) {
           const attacker = this.state.players.get(d.attackerId)
           if (attacker) {
@@ -2573,7 +2579,7 @@ export class GameRoom extends Room<GameState> {
         const dz = player.transform.z - z.z
         const inside =
           z.shape === 'wall'
-            ? this.pointInsideWall(dx, dz, z.yaw, z.width)
+            ? pointInsideWall(dx, dz, z.yaw, z.width)
             : Math.hypot(dx, dz) <= z.radius
         if (!inside) return
         triggered = true
@@ -2611,14 +2617,6 @@ export class GameRoom extends Room<GameState> {
     }
   }
 
-  private pointInsideWall(dx: number, dz: number, yaw: number, width: number): boolean {
-    const c = Math.cos(yaw)
-    const s = Math.sin(yaw)
-    const along = dx * -s + dz * -c
-    const perp = dx * c + dz * -s
-    return Math.abs(perp) <= 0.6 && Math.abs(along) <= width / 2
-  }
-
   private resolveAbilityDisplacement(
     player: Player,
     dx: number,
@@ -2638,24 +2636,11 @@ export class GameRoom extends Room<GameState> {
       const t = i / steps
       const nx = startX + dx * t
       const nz = startZ + dz * t
-      if (this.isCapsuleBlocked2D(nx, player.transform.y, nz)) break
+      if (isCapsuleBlocked2D(this.activeMap.boxes, nx, player.transform.y, nz)) break
       lastX = nx
       lastZ = nz
     }
     return { x: lastX, z: lastZ }
-  }
-
-  private isCapsuleBlocked2D(x: number, y: number, z: number): boolean {
-    const r = PLAYER_CAPSULE_RADIUS_M
-    const minY = y - PLAYER_CAPSULE_HEIGHT_M / 2
-    const maxY = y + PLAYER_CAPSULE_HEIGHT_M / 2
-    for (const box of this.activeMap.boxes) {
-      if (maxY < box.minY || minY > box.maxY) continue
-      if (x + r >= box.minX && x - r <= box.maxX && z + r >= box.minZ && z - r <= box.maxZ) {
-        return true
-      }
-    }
-    return false
   }
 
   // Engine-driven atomic weapon swap.
@@ -2674,34 +2659,6 @@ export class GameRoom extends Room<GameState> {
       atTick: this.state.tick,
     }
     this.broadcast(MessageTypes.WeaponSwapped, msg)
-  }
-
-  private hasLineOfSight(
-    from: { x: number; y: number; z: number },
-    to: { x: number; y: number; z: number },
-  ): boolean {
-    for (const box of this.activeMap.boxes) {
-      if (segmentVsAabb(from, to, box) !== null) return false
-    }
-    return true
-  }
-
-  private spellImpactPushDistance(cause: string): number {
-    const rawCause = cause.startsWith('ability:') ? cause.slice(8) : cause
-    if (rawCause.startsWith('zone:')) return 0.16
-    if (rawCause.startsWith('dot:') || rawCause.startsWith('status:')) return 0.1
-    const def = ABILITY_DEFS[rawCause]
-    if (!def) return 0
-    const family = getAbilitySlotFamily(rawCause)
-    if (family !== 'magicBase' && family !== 'magicAdvanced') return 0
-    if (def.effects.some((effect) => effect.kind === 'knockup')) return 0
-    if (def.effects.some((effect) => effect.kind === 'projectile')) {
-      return def.effects.some((effect) => effect.kind === 'projectile' && (effect.splashRadius ?? 0) > 0)
-        ? 0.34
-        : 0.26
-    }
-    if (def.effects.some((effect) => effect.kind === 'channel')) return 0.12
-    return 0.22
   }
 
   private applyHorizontalImpactPush(attacker: Player, victim: Player, distance: number): void {
