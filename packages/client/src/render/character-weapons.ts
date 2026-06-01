@@ -329,17 +329,20 @@ export function updateShieldAttachment(charGroup: THREE.Group): void {
   // sword is equipped — a true sword-and-board look. On parry it swings up into
   // a forward blocking stance; otherwise it rests along the forearm.
   if (sg.parent !== leftHand) leftHand.add(sg)
-  const scale = classId === 'tank' ? 0.54 : 0.46
+  const scale = classId === 'tank' ? 0.72 : 0.6
   sg.scale.setScalar(scale)
 
+  // shield_A is modelled upright (long axis +Y, broad face ±Z), so it needs NO
+  // X-tip — the old Math.PI/2 X laid it flat. Stand it vertical on the forearm;
+  // angle the broad face outward at rest, turn it forward on parry.
   if (isParrying) {
-    // Blocking stance — shield face turned forward, raised in front of the body.
-    sg.position.set(-0.02, 0.04, 0.04)
-    sg.rotation.set(Math.PI / 2, 0.28, -Math.PI / 2)
+    // Blocking stance — face turned forward, raised in front of the body.
+    sg.position.set(-0.02, 0.05, 0.06)
+    sg.rotation.set(0, 0.4, 0)
   } else {
-    // Resting stance — shield held on the forearm, angled slightly outward.
-    sg.position.set(-0.03, 0.02, 0.0)
-    sg.rotation.set(Math.PI / 2, -0.35, -Math.PI / 2)
+    // Resting stance — carried vertically on the forearm, face angled outward.
+    sg.position.set(-0.03, 0.04, 0.0)
+    sg.rotation.set(0, -0.2, 0.05)
   }
 }
 
