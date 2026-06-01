@@ -63,6 +63,7 @@ import {
   elementToImpactColor,
 } from './game/hitstop.js'
 import { matchSM } from './game/match-state-machine.js'
+import { reconcilePrediction } from './game/prediction.js'
 import { createSchemaAccessors } from './game/schema-helpers.js'
 import { buildScoreboardData } from './game/scoreboard-data.js'
 import {
@@ -2235,19 +2236,6 @@ function reconcileSelf(): void {
   if (!p) return
 
   const ackSeq = p.lastProcessedInputSeq
-  if (ackSeq <= self.lastAckSeq) return
-
-  // Drop all inputs the server has already processed — only replay the ones
-  // that are still "in flight" (seq > ackSeq). Without this, every reconcile
-  // re-applies hundreds of stale inputs on top of the server position, causing
-  // the predicted position to diverge wildly (the teleport / desync bug).
-  let droppedInputs = 0
-  while (self.pending.length > 0 && self.pending[0]!.seq <= ackSeq) {
-    self.pending.shift()
-    droppedInputs++
-  }
-  void droppedInputs // used only for debug if needed
-
   const serverState: PlayerSimState = {
     pos: { x: p.transform.x, y: p.transform.y, z: p.transform.z },
     vel: { x: p.vx, y: p.vy, z: p.vz },
@@ -2257,18 +2245,15 @@ function reconcileSelf(): void {
     coyoteTicksLeft: p.coyoteTicksLeft ?? 0,
     momentumTicks: p.momentumTicks ?? 0,
   }
-
-  const predictedBefore = { x: self.sim.pos.x, y: self.sim.pos.y, z: self.sim.pos.z }
-  self.sim = serverState
-  // Replay only the unacknowledged in-flight inputs, each with the caps that
-  // were active at send time so root/slow/stun match the server's computation.
-  for (const e of self.pending)
-    simulatePlayer(self.sim, e.input, e.dt, getMap(getActiveMapId() || 'blockout'), e.caps)
-
-  const dx = self.sim.pos.x - predictedBefore.x
-  const dy = self.sim.pos.y - predictedBefore.y
-  const dz = self.sim.pos.z - predictedBefore.z
-  self.lastPredictionDelta = Math.hypot(dx, dy, dz)
+  // Replay each in-flight input with the caps active at send time so root/slow/
+  // stun match the server's computation.
+  const activeMap = getMap(getActiveMapId() || 'blockout')
+  const result = reconcilePrediction(self, serverState, ackSeq, (sim, input, dt, caps) =>
+    simulatePlayer(sim, input, dt, activeMap, caps),
+  )
+  if (!result) return
+  self.sim = result.sim
+  self.lastPredictionDelta = result.delta
   self.lastAckSeq = ackSeq
 }
 
