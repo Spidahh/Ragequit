@@ -30,8 +30,6 @@ import {
   PARRY_TAP_COOLDOWN_SEC,
   PARRY_TAP_COST_STAMINA,
   PARRY_TAP_WINDOW_SEC,
-  PLAYER_CAPSULE_HEIGHT_M,
-  PLAYER_CAPSULE_RADIUS_M,
   PROJECTILE_MUZZLE_Y_OFFSET_M,
   Player,
   Projectile,
@@ -55,7 +53,6 @@ import {
   SWORD_M1_HIT_FRACTION,
   SWORD_M1_COST_STAMINA,
   SWORD_M1_SWING_SEC,
-  TERRAIN_GROUND_Y,
   TICK_MS,
   TICK_RATE_HZ,
   UPPERCUT_AIRBORNE_SEC,
@@ -69,13 +66,9 @@ import {
   finishSwordCombo,
   isInSwordM1Cone,
   makePlayerSimState,
-  segmentVsAabb,
-  segmentVsCapsule,
-  segmentVsGround,
   simulatePlayer,
   stepProjectile,
   uppercutInitialVy,
-  type CapsuleTarget,
   type ClientCastMessage,
   type ClientChargeReleaseMessage,
   type ClientChargeStartMessage,
@@ -116,6 +109,13 @@ import {
   recordMatchResult,
 } from '../db/supabase.js'
 import {
+  pointInsideWall,
+  isCapsuleBlocked2D,
+  hasLineOfSight,
+  spellImpactPushDistance,
+  impactPushDirection,
+} from '../sim/combat-geometry.js'
+import {
   AbilityEngine,
   BotController,
   ClassMechanicRuntime,
@@ -129,20 +129,13 @@ import {
   type ZoneSpawnRequest,
 } from '../sim/index.js'
 import {
-  pointInsideWall,
-  isCapsuleBlocked2D,
-  hasLineOfSight,
-  spellImpactPushDistance,
-  impactPushDirection,
-} from '../sim/combat-geometry.js'
-import {
   resolveProjectileHit,
   findChainVictims,
   playersInRadius,
   projectileKnockbackVector,
 } from '../sim/projectile-collision.js'
-import { bestSpawnIndex } from '../sim/spawn-selection.js'
 import { regenResource } from '../sim/resource-regen.js'
+import { bestSpawnIndex } from '../sim/spawn-selection.js'
 import {
   trackMatchStarted,
   trackMatchEnded,

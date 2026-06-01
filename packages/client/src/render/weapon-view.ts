@@ -70,5 +70,5 @@ export const WEAPON_VIEW: Record<Weapon, WeaponViewConfig> = {
  * real weapon resolves.
  */
 export function getWeaponView(weapon: Weapon | string | null | undefined): WeaponViewConfig {
-  return (weapon != null && (WEAPON_VIEW as Record<string, WeaponViewConfig>)[weapon]) || WEAPON_VIEW.bow
+  return (weapon !== null && weapon !== undefined && (WEAPON_VIEW as Record<string, WeaponViewConfig>)[weapon]) || WEAPON_VIEW.bow
 }

@@ -7,6 +7,7 @@
 // functions that close over the room reference — safe to call from any module.
 
 import type { Room } from 'colyseus.js'
+
 import type { SchemaProjectile } from '../render/projectile-visuals.js'
 
 // ---------------------------------------------------------------------------

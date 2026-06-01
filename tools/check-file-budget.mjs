@@ -25,11 +25,11 @@ const HARD_LIMIT = 800
 // `registry.ts` is a pure DATA table (53 ability defs) — large by nature, exempt
 // from the "split" intent but still ratcheted so it can't balloon.
 const BUDGET = {
-  'packages/client/src/main.ts': 2900,
-  'packages/server/src/rooms/GameRoom.ts': 2717,
+  'packages/client/src/main.ts': 2886,
+  'packages/server/src/rooms/GameRoom.ts': 2710,
   'packages/shared/src/abilities/registry.ts': 1468,
   'packages/server/src/sim/AbilityEngine.ts': 1034,
-  'packages/client/src/audio/sound-engine.ts': 863,
+  'packages/client/src/audio/sound-engine.ts': 861,
 }
 
 const SCAN_DIRS = ['packages/client/src', 'packages/server/src', 'packages/shared/src']

@@ -551,18 +551,16 @@ export class SoundEngine {
     const osc = ac.createOscillator()
     const gain = ac.createGain()
     osc.type = 'sine'
-    osc.frequency.value =
-      element === 'fire'
-        ? 440
-        : element === 'ice'
-          ? 900
-          : element === 'lightning'
-            ? 1200
-            : element === 'dark'
-              ? 220
-              : element === 'nature'
-                ? 550
-                : 360
+    const freqByElement: Record<string, number> = {
+      fire: 440, ice: 900, lightning: 1200, dark: 220, nature: 550,
+    }
+    osc.frequency.value = freqByElement[element] ?? 360
+    gain.gain.setValueAtTime(0.18, ac.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.18)
+    osc.connect(gain)
+    gain.connect(out)
+    osc.start()
+    osc.stop(ac.currentTime + 0.2)
   }
 
   // ─── Spatial audio ───────────────────────────────────────────────────────

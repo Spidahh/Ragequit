@@ -10,7 +10,6 @@ import {
   CAPSULE_HALF_HEIGHT_M,
   CAPSULE_HEIGHT_M,
   MessageTypes,
-  PROJECTILE_MUZZLE_Y_OFFSET_M,
   TARGET_CLASS_DEFS,
   getMap,
   TICK_MS,
@@ -67,10 +66,7 @@ import {
   elementToImpactColor,
 } from './game/hitstop.js'
 import { matchSM } from './game/match-state-machine.js'
-import {
-  type SchemaPlayer,
-  createSchemaAccessors,
-} from './game/schema-helpers.js'
+import { createSchemaAccessors } from './game/schema-helpers.js'
 import {
   type MatchStats,
   emptyMatchStats,
@@ -97,19 +93,14 @@ import { actionLabel, onKeybindsChanged } from './input/keybinds.js'
 import { initRadialWheels } from './input/radial-wheels.js'
 import { initMouseSensitivity } from './input/sensitivity.js'
 import { initLoadoutStation } from './loadout-station.js'
+import { createAccountUi } from './menu/account-ui.js'
 import { initMenu } from './menu.js'
 import { sendLoadout } from './net/loadout-sync.js'
+import { createSchemaReaders } from './net/schema-readers.js'
 import {
   initSupabaseAuth,
   getAccessToken,
-  signIn,
-  signUp,
-  logOut,
   getCurrentUserEmail,
-  getCurrentUserId,
-  getPlayerStats,
-  signInWithGoogle,
-  isSupabaseConfigured,
 } from './net/supabase-auth.js'
 import {
   showLoadingScreen,
@@ -117,7 +108,6 @@ import {
   preloadMatchAssets,
   preloadOtherClassesBackground,
 } from './preloader.js'
-import { updateRankBadge } from './rank-system.js'
 import {
   makeCharacter,
   applyWeaponProp,
@@ -128,20 +118,16 @@ import {
   makeParryShieldVisual,
   setParryShieldState,
   applyParryArmPose,
-  fetchWeaponGlb,
 } from './render/characters.js'
 import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
 import { createFpvBow } from './render/fpv-bow.js'
 import { createFpvStaticViewmodel } from './render/fpv-static-viewmodel.js'
-import { getWeaponView } from './render/weapon-view.js'
-import { createSchemaReaders } from './net/schema-readers.js'
-import { createAccountUi } from './menu/account-ui.js'
-import { createOutlineMesh } from './render/outlines.js'
 import { initPlacementPreview } from './render/placement-preview.js'
 import { initProjectileVisuals, type SchemaProjectile } from './render/projectile-visuals.js'
 import { initRemotePlayers, type RemotePlayerSchema } from './render/remote-players.js'
 import { initSelfEmissive, STATUS_EMISSIVE } from './render/self-emissive.js'
 import { VfxTextures } from './render/vfx-textures.js'
+import { getWeaponView } from './render/weapon-view.js'
 import { initZoneVisuals, zoneColorForElement } from './render/zone-visuals.js'
 import {
   initTelemetry,

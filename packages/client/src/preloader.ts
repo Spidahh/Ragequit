@@ -8,16 +8,6 @@
 import { fetchCharacterData } from './render/character-loader.js'
 import { fetchWeaponGlb } from './render/character-weapons.js'
 
-// ---------------------------------------------------------------------------
-// DOM refs (elements are always present in index.html)
-// ---------------------------------------------------------------------------
-
-function getEl(id: string): HTMLElement {
-  const el = document.getElementById(id)
-  if (!el) throw new Error(`[preloader] #${id} missing in HTML`)
-  return el
-}
-
 let _screen: HTMLElement | null = null
 let _barFill: HTMLElement | null = null
 let _label: HTMLElement | null = null

@@ -1,11 +1,5 @@
 import { describe, expect, it, beforeEach } from 'vitest'
 
-import {
-  applyBalanceOverride,
-  DEFAULT_BALANCE,
-  RUNTIME_BALANCE,
-  validateBalance,
-} from './balance.js'
 import balanceJson from '../constants/balance.json'
 import {
   SWORD_M1_DAMAGE,
@@ -17,6 +11,13 @@ import {
   STAFF_M1_MANA_COST,
   STAFF_M1_CADENCE_SEC,
 } from '../constants/weapons.js'
+
+import {
+  applyBalanceOverride,
+  DEFAULT_BALANCE,
+  RUNTIME_BALANCE,
+  validateBalance,
+} from './balance.js'
 
 describe('balance config', () => {
   beforeEach(() => {

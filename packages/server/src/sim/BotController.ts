@@ -142,8 +142,8 @@ export class BotController {
     if (dist < 3) strafeMag = 0.75 // faster strafe in close quarters
     if (isRetreating) strafeMag = 0.8 // wide retreat arc
 
-    let finalStrafeX = dodgeActive ? dodgePerpX * strafeMag * 1.4 : perpX * strafeMag
-    let finalStrafeZ = dodgeActive ? dodgePerpZ * strafeMag * 1.4 : perpZ * strafeMag
+    const finalStrafeX = dodgeActive ? dodgePerpX * strafeMag * 1.4 : perpX * strafeMag
+    const finalStrafeZ = dodgeActive ? dodgePerpZ * strafeMag * 1.4 : perpZ * strafeMag
 
     // Convert strafe from world-space perpendicular to bot-relative input axes.
     // The bot faces yaw toward the enemy; input X=strafe, Z=forward.
@@ -232,7 +232,6 @@ export class BotController {
     const hasRanged = (allowedWeapons as readonly string[]).includes('bow') ||
                       (allowedWeapons as readonly string[]).includes('staff')
     const hasBow    = (allowedWeapons as readonly string[]).includes('bow')
-    const hasStaff  = (allowedWeapons as readonly string[]).includes('staff')
     const preferRangedDist = this.difficulty === 'master' ? 7 : 10
 
     if (hasRanged && dist > preferRangedDist && self.activeWeapon === 'sword') {

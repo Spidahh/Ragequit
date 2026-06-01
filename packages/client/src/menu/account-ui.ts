@@ -6,6 +6,7 @@
 // no gameplay coupling. Extracted from main.ts behind createAccountUi(deps).
 // ---------------------------------------------------------------------------
 import type { ClassId } from '@ragequit/shared'
+
 import {
   getCurrentUserEmail,
   getCurrentUserId,

@@ -10,8 +10,9 @@
 // previously module-level `firstPersonViewWeapon` state and the build/clear
 // functions behind a small controller.
 // ---------------------------------------------------------------------------
-import * as THREE from 'three'
 import type { Weapon } from '@ragequit/shared'
+import * as THREE from 'three'
+
 import { fetchWeaponGlb } from './characters.js'
 import { createOutlineMesh } from './outlines.js'
 

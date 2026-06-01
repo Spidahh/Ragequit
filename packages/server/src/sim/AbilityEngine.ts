@@ -49,8 +49,8 @@ import {
 } from '@ragequit/shared'
 
 import type { PendingDamageEntry, StatusRuntime } from './StatusRuntime.js'
-import { placePointForward, clampPointToRange } from './targeting-geometry.js'
 import { impactPushDirection } from './combat-geometry.js'
+import { placePointForward, clampPointToRange } from './targeting-geometry.js'
 
 // --- Host interface --------------------------------------------------------
 
