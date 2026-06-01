@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { resolveProjectileHit, type CollidablePlayer } from './projectile-collision.js'
+import { resolveProjectileHit, findChainVictims, type CollidablePlayer } from './projectile-collision.js'
 
 function player(x: number, y: number, z: number, over: Partial<CollidablePlayer> = {}): CollidablePlayer {
   return { transform: { x, y, z }, alive: true, invulnUntilTick: 0, ...over }
@@ -55,5 +55,35 @@ describe('resolveProjectileHit', () => {
     // Shot travels -x→+x; the player at x≈0 is hit before the one at x≈3.
     expect(hit?.kind).toBe('victim')
     expect(hit?.victim).toBe('near')
+  })
+})
+
+describe('findChainVictims', () => {
+  const origin = { x: 0, y: 0, z: 0 }
+  const players = new Map<string, CollidablePlayer>([
+    ['owner', player(0, 0, 0)],
+    ['a', player(1, 0, 0)], // dist 1
+    ['b', player(3, 0, 0)], // dist 3
+    ['c', player(20, 0, 0)], // out of radius
+    ['dead', player(0.5, 0, 0, { alive: false })],
+    ['invuln', player(0.5, 0, 0, { invulnUntilTick: 100 })],
+  ])
+
+  it('returns nearest-first within radius, capped at maxTargets', () => {
+    expect(findChainVictims(players, 0, 'owner', [], origin, 10, 2)).toEqual(['a', 'b'])
+  })
+
+  it('excludes owner, dead, invulnerable and the excluded list', () => {
+    const out = findChainVictims(players, 50, 'owner', ['a'], origin, 10, 5)
+    expect(out).not.toContain('owner')
+    expect(out).not.toContain('a')
+    expect(out).not.toContain('dead')
+    expect(out).not.toContain('invuln') // tick 50 < 100
+    expect(out).toEqual(['b'])
+  })
+
+  it('returns empty for non-positive radius or maxTargets', () => {
+    expect(findChainVictims(players, 0, 'owner', [], origin, 0, 5)).toEqual([])
+    expect(findChainVictims(players, 0, 'owner', [], origin, 10, 0)).toEqual([])
   })
 })

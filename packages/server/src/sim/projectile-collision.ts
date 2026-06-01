@@ -99,3 +99,34 @@ export function resolveProjectileHit(
   if (bestT === null || bestKind === null) return null
   return { t: bestT, kind: bestKind, victim: bestVictim }
 }
+
+/**
+ * Find up to `maxTargets` chain-jump victims within `radius` of `origin`, nearest
+ * first. Skips the owner, the already-excluded ids, dead and invulnerable players.
+ */
+export function findChainVictims(
+  players: Iterable<readonly [string, CollidablePlayer]>,
+  tick: number,
+  ownerId: string,
+  excluded: readonly string[],
+  origin: Vec3,
+  radius: number,
+  maxTargets: number,
+): string[] {
+  if (radius <= 0 || maxTargets <= 0) return []
+  const excludedSet = new Set(excluded)
+  excludedSet.add(ownerId)
+  const candidates: { id: string; dist2: number }[] = []
+  for (const [pid, player] of players) {
+    if (excludedSet.has(pid)) continue
+    if (!player.alive) continue
+    if (tick < player.invulnUntilTick) continue
+    const dx = player.transform.x - origin.x
+    const dy = player.transform.y - origin.y
+    const dz = player.transform.z - origin.z
+    const dist2 = dx * dx + dy * dy + dz * dz
+    if (dist2 <= radius * radius) candidates.push({ id: pid, dist2 })
+  }
+  candidates.sort((a, b) => a.dist2 - b.dist2)
+  return candidates.slice(0, maxTargets).map((c) => c.id)
+}

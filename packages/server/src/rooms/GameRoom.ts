@@ -134,7 +134,7 @@ import {
   hasLineOfSight,
   spellImpactPushDistance,
 } from '../sim/combat-geometry.js'
-import { resolveProjectileHit } from '../sim/projectile-collision.js'
+import { resolveProjectileHit, findChainVictims } from '../sim/projectile-collision.js'
 import {
   trackMatchStarted,
   trackMatchEnded,
@@ -2113,7 +2113,9 @@ export class GameRoom extends Room<GameState> {
       (meta.chainDamage ?? 0) > 0 &&
       chainChance >= 1
     if (shouldChain) {
-      const chained = this.findChainVictims(
+      const chained = findChainVictims(
+        this.state.players,
+        this.state.tick,
         meta.ownerId,
         victimIds,
         hitPos,
@@ -2136,30 +2138,6 @@ export class GameRoom extends Room<GameState> {
     }
   }
 
-  private findChainVictims(
-    ownerId: string,
-    excluded: readonly string[],
-    origin: { x: number; y: number; z: number },
-    radius: number,
-    maxTargets: number,
-  ): string[] {
-    if (radius <= 0 || maxTargets <= 0) return []
-    const excludedSet = new Set(excluded)
-    excludedSet.add(ownerId)
-    const candidates: { id: string; dist2: number }[] = []
-    this.state.players.forEach((player, pid) => {
-      if (excludedSet.has(pid)) return
-      if (!player.alive) return
-      if (this.state.tick < player.invulnUntilTick) return
-      const dx = player.transform.x - origin.x
-      const dy = player.transform.y - origin.y
-      const dz = player.transform.z - origin.z
-      const dist2 = dx * dx + dy * dy + dz * dz
-      if (dist2 <= radius * radius) candidates.push({ id: pid, dist2 })
-    })
-    candidates.sort((a, b) => a.dist2 - b.dist2)
-    return candidates.slice(0, maxTargets).map((c) => c.id)
-  }
   // Loadout handler: validates class-aware slot ids, then clears cooldowns and statuses.
   private handleLoadoutSet(sid: string, msg: ClientLoadoutMessage): void {
     const player = this.state.players.get(sid)
@@ -2331,7 +2309,7 @@ export class GameRoom extends Room<GameState> {
 
       case 'ice': {
         // Freeze snap: Freeze the nearest enemy (consumes all Chill stacks).
-        const target = this.findChainVictims(req.casterSid, [], origin, PROC_RADIUS, 1)[0]
+        const target = findChainVictims(this.state.players, this.state.tick, req.casterSid, [], origin, PROC_RADIUS, 1)[0]
         if (target) {
           this.statuses.cleanse(target, 'chill')
           this.statuses.applyToPlayer(target, 'freeze', 1.5, 1, req.casterSid)
@@ -2341,7 +2319,7 @@ export class GameRoom extends Room<GameState> {
 
       case 'lightning': {
         // Chain damage: deal 20 lightning dmg to nearest enemy within 4 m.
-        const target = this.findChainVictims(req.casterSid, [], origin, 4, 1)[0]
+        const target = findChainVictims(this.state.players, this.state.tick, req.casterSid, [], origin, 4, 1)[0]
         if (target) {
           this.damageQueue.push({
             attackerId: req.casterSid,
@@ -2367,7 +2345,7 @@ export class GameRoom extends Room<GameState> {
 
       case 'nature': {
         // Root: apply Root 1.5 s to nearest enemy.
-        const target = this.findChainVictims(req.casterSid, [], origin, PROC_RADIUS, 1)[0]
+        const target = findChainVictims(this.state.players, this.state.tick, req.casterSid, [], origin, PROC_RADIUS, 1)[0]
         if (target) {
           this.statuses.applyToPlayer(target, 'root', 1.5, 1, req.casterSid)
         }
