@@ -1,10 +1,8 @@
 import { Room, type Client } from '@colyseus/core'
 import {
   type ServerZoneExpiredMessage,
-  type ServerZoneSpawnedMessage,
   ABILITY_DEFS,
   type StatusKind,
-  Zone,
   movementCapsFromStatuses,
   BOW_CHARGE_FULL_SEC,
   BOW_DAMAGE_FULL,
@@ -103,7 +101,6 @@ import {
   recordMatchResult,
 } from '../db/supabase.js'
 import {
-  pointInsideWall,
   isCapsuleBlocked2D,
   hasLineOfSight,
   spellImpactPushDistance,
@@ -120,8 +117,8 @@ import {
   RateLimiter,
   ReplayRecorder,
   StatusRuntime,
+  ZoneSystem,
   type PendingDamage,
-  type ZoneSpawnRequest,
 } from '../sim/index.js'
 import { findChainVictims } from '../sim/projectile-collision.js'
 import { regenResource } from '../sim/resource-regen.js'
@@ -223,14 +220,13 @@ export class GameRoom extends Room<GameState> {
   // Damage queued during a tick by swings/casts/projectiles; drained at end.
   private damageQueue: PendingDamage[] = []
 
-  // Projectile lifecycle (spawn / step / impact / removal) lives in its own
-  // subsystem; GameRoom implements its small host interface.
+  // Projectile + zone lifecycles live in their own subsystems; GameRoom
+  // implements their small host interfaces.
   private projectiles!: ProjectileSystem
+  private zones!: ZoneSystem
 
   // Press-tick for parry, needed to decide tap vs hold at release.
   private readonly parryPressTick = new Map<string, number>()
-
-  private zoneIdCounter = 0
 
   private engine!: AbilityEngine
   private statuses!: StatusRuntime
@@ -399,7 +395,7 @@ export class GameRoom extends Room<GameState> {
         state: this.state,
         pendingDamage: pendingDamageBridge,
         spawnProjectile: (req) => this.projectiles.spawnFromEngine(req),
-        spawnZone: (req) => this.spawnZoneFromEngine(req),
+        spawnZone: (req) => this.zones.spawnFromEngine(req),
         sendAbilityFailed: (sid, abilityId, reason) =>
           this.sendAbilityFailed(sid, abilityId, reason),
         broadcast: (type, message) => this.broadcast(type, message),
@@ -433,6 +429,13 @@ export class GameRoom extends Room<GameState> {
           simState.pos.z = z
         }
       },
+    })
+    this.zones = new ZoneSystem({
+      state: this.state,
+      enqueueDamage: (d) => this.damageQueue.push(d),
+      applyStatus: (victimId, kind, durationSec, stacks, sourceId, slowFraction) =>
+        this.statuses.applyToPlayer(victimId, kind, durationSec, stacks, sourceId, slowFraction),
+      broadcast: (type, message) => this.broadcast(type, message),
     })
     // Match manager - drives BO5 round flow + ELO + scoreboard.
     // Replay recorder. Records every broadcast tagged with state.tick.
@@ -739,7 +742,7 @@ export class GameRoom extends Room<GameState> {
       this.statuses.tick(dt)
 
       // 2e. Tick zones (Flame Wall, etc.) — apply damage / status to occupants.
-      this.tickZones()
+      this.zones.tick()
 
       // 3. Simulate movement per player.
       for (const [sid, simState] of this.sim) {
@@ -2016,123 +2019,6 @@ export class GameRoom extends Room<GameState> {
         }
         break
       }
-    }
-  }
-
-  // --- Ability engine glue --------------------------------------------------
-
-  // Spawn a Zone (Flame Wall, Thorn Field, ...).
-  private spawnZoneFromEngine(req: ZoneSpawnRequest): string {
-    this.zoneIdCounter += 1
-    const zid = `z${this.zoneIdCounter}`
-    const z = new Zone()
-    z.id = zid
-    z.ownerId = req.ownerId
-    z.abilityId = req.abilityId
-    z.element = req.element
-    z.shape = req.shape
-    z.x = req.pos.x
-    z.y = req.pos.y
-    z.z = req.pos.z
-    z.yaw = req.yaw
-    z.radius = req.radius
-    z.width = req.width
-    z.spawnedAtTick = this.state.tick
-    z.armedAtTick = this.state.tick + Math.round((req.armDelaySec ?? 0) * TICK_RATE_HZ)
-    z.despawnAtTick = this.state.tick + Math.round(req.durationSec * TICK_RATE_HZ)
-    z.tickEveryTicks = Math.max(1, Math.round(req.tickEverySec * TICK_RATE_HZ))
-    z.nextTickAtTick = Math.max(this.state.tick + z.tickEveryTicks, z.armedAtTick)
-    z.damagePerTick = req.damagePerTick
-    z.expiresOnTrigger = !!req.expiresOnTrigger
-    if (req.applyStatus) {
-      z.applyStatusKind = req.applyStatus.kind
-      z.applyStatusDurationSec = req.applyStatus.durationSec
-      z.applyStatusStacks = req.applyStatus.stacks
-      z.applyStatusSlowFraction = req.applyStatus.slowFraction ?? 0
-    }
-    z.expired = false
-    this.state.zones.set(zid, z)
-    const msg: ServerZoneSpawnedMessage = {
-      id: zid,
-      ownerId: req.ownerId,
-      abilityId: req.abilityId,
-      element: req.element,
-      shape: req.shape,
-      pos: { x: req.pos.x, y: req.pos.y, z: req.pos.z },
-      radius: req.radius,
-      width: req.width,
-      yaw: req.yaw,
-      durationSec: req.durationSec,
-      atTick: this.state.tick,
-      armDelaySec: req.armDelaySec ?? 0,
-    }
-    this.broadcast(MessageTypes.ZoneSpawned, msg)
-    return zid
-  }
-
-  // Per-tick zone driver.
-  private tickZones(): void {
-    if (this.state.zones.size === 0) return
-    const now = this.state.tick
-    const removed: string[] = []
-    this.state.zones.forEach((z, zid) => {
-      if (z.expired) {
-        removed.push(zid)
-        return
-      }
-      if (now >= z.despawnAtTick) {
-        z.expired = true
-        removed.push(zid)
-        return
-      }
-      if (now < z.armedAtTick) return
-      if (now < z.nextTickAtTick) return
-      z.nextTickAtTick = now + z.tickEveryTicks
-      let triggered = false
-      this.state.players.forEach((player: Player, pid: string) => {
-        if (z.expiresOnTrigger && triggered) return
-        if (!player.alive) return
-        if (pid === z.ownerId) return
-        if (now < player.invulnUntilTick) return
-        const dx = player.transform.x - z.x
-        const dz = player.transform.z - z.z
-        const inside =
-          z.shape === 'wall'
-            ? pointInsideWall(dx, dz, z.yaw, z.width)
-            : Math.hypot(dx, dz) <= z.radius
-        if (!inside) return
-        triggered = true
-        if (z.damagePerTick > 0) {
-          this.damageQueue.push({
-            attackerId: z.ownerId,
-            victimId: pid,
-            damage: z.damagePerTick,
-            knockup: false,
-            cause: `zone:${z.abilityId}`,
-            canParry: false,
-            element: z.element,
-          })
-        }
-        if (z.applyStatusKind && z.applyStatusDurationSec > 0) {
-          this.statuses.applyToPlayer(
-            pid,
-            z.applyStatusKind as StatusKind,
-            z.applyStatusDurationSec,
-            z.applyStatusStacks || 1,
-            z.ownerId,
-            z.applyStatusSlowFraction > 0 ? z.applyStatusSlowFraction : undefined,
-          )
-        }
-      })
-      if (z.expiresOnTrigger && triggered) {
-        z.expired = true
-        removed.push(zid)
-      }
-    })
-    for (const zid of removed) {
-      this.state.zones.delete(zid)
-      const msg: ServerZoneExpiredMessage = { id: zid, atTick: now }
-      this.broadcast(MessageTypes.ZoneExpired, msg)
     }
   }
 

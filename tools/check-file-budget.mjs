@@ -27,7 +27,7 @@ const HARD_LIMIT = 800
 // Baselined against the prettier-formatted tree (the canonical line count).
 const BUDGET = {
   'packages/client/src/main.ts': 2910,
-  'packages/server/src/rooms/GameRoom.ts': 2347,
+  'packages/server/src/rooms/GameRoom.ts': 2233,
   'packages/shared/src/abilities/registry.ts': 1508,
   'packages/server/src/sim/AbilityEngine.ts': 1039,
   'packages/client/src/audio/sound-engine.ts': 878,

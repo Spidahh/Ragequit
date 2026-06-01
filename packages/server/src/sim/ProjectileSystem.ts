@@ -28,26 +28,13 @@ import {
 } from '@ragequit/shared'
 
 import type { ProjectileSpawnRequest } from './AbilityEngine.js'
+import type { PendingDamage } from './damage-types.js'
 import {
   findChainVictims,
   playersInRadius,
   projectileKnockbackVector,
   resolveProjectileHit,
 } from './projectile-collision.js'
-
-export interface PendingDamage {
-  attackerId: string
-  victimId: string
-  damage: number
-  knockup: boolean
-  cause: string
-  canParry: boolean
-  element: string // '' = physical; 'fire'/'ice'/etc. for elemental hits
-  lifestealFraction?: number
-  onDamageStatus?: { kind: StatusKind; durationSec: number; stacks: number; slowFraction?: number }
-  /** True when this damage entry carries a Flow +20% amplification. */
-  flowAmplified?: boolean
-}
 
 export interface ProjectileMeta {
   ownerId: string
