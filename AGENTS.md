@@ -255,7 +255,7 @@ Se una modifica rompe o ignora anche solo uno dei sistemi collegati, la soluzion
 
 ## Governance / Quality Gate
 
-- **Prima di committare: `pnpm check`** — gate unico (typecheck + `check:budget` + lint + validate:content + test). Se è verde, la modifica è sicura. Dettagli e struttura cartelle: `02_TECH/08_project_governance.md`.
+- **Prima di committare: `pnpm check`** — gate unico (typecheck + `check:budget` + lint + `format:check` + validate:content + test). Se è verde, la modifica è sicura. **CI esegue lo stesso identico `pnpm check`** (`.github/workflows/ci.yml`), quindi locale e CI non possono divergere. Dettagli e struttura cartelle: `02_TECH/08_project_governance.md`.
 - **Quando cambi un comportamento, aggiorna i doc che lo descrivono nello stesso commit.** I doc che mentono sono la causa #1 degli errori ricorrenti. Fidati del CODICE; se un doc è in disaccordo, correggi il doc.
 
 ## Dimensione File / Code Split

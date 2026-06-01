@@ -21,10 +21,14 @@ One command runs everything, in order:
 1. `pnpm typecheck` — no type errors anywhere.
 2. `pnpm check:budget` — file-size guard (see below).
 3. `pnpm lint` — eslint, zero warnings.
-4. `pnpm validate:content` — content/ability validation.
-5. `pnpm test` — all unit tests (client + server + shared).
+4. `pnpm format:check` — prettier, zero unformatted files.
+5. `pnpm validate:content` — content/ability validation.
+6. `pnpm test` — all unit tests (client + server + shared).
 
-If `pnpm check` is green, the change is safe to commit. CI should run it too.
+If `pnpm check` is green, the change is safe to commit. **CI runs the exact same
+`pnpm check`** (`.github/workflows/ci.yml` → "quality gate" job) — there is one
+gate, not two, so CI can never diverge from what you run locally. Don't add
+bespoke check steps to CI; add them to `pnpm check` and CI inherits them.
 
 ## File-size guard (the anti-monolith ratchet)
 
