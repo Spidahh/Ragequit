@@ -49,6 +49,7 @@ import {
 } from '@ragequit/shared'
 
 import type { PendingDamageEntry, StatusRuntime } from './StatusRuntime.js'
+import { placePointForward, clampPointToRange } from './targeting-geometry.js'
 
 // --- Host interface --------------------------------------------------------
 
@@ -728,8 +729,8 @@ export class AbilityEngine {
       placement === 'self'
         ? { x: caster.transform.x, y: caster.transform.y, z: caster.transform.z }
         : placement === 'point' && target.point
-          ? this.clampPointToRange(caster, target.point, def.range)
-          : this.placePointForward(caster, target.yaw, def.range)
+          ? clampPointToRange(caster.transform, target.point, def.range)
+          : placePointForward(caster.transform, target.yaw, def.range)
     this.host.spawnZone({
       ownerId: sid,
       abilityId: def.id,
@@ -888,7 +889,7 @@ export class AbilityEngine {
       return { x: player.transform.x, y: player.transform.y + halfH, z: player.transform.z }
     }
     if (def.targeting === 'point' && target.point) {
-      return this.clampPointToRange(player, target.point, def.range)
+      return clampPointToRange(player.transform, target.point, def.range)
     }
     if (def.targeting === 'target' && target.targetId) {
       const t = this.host.state.players.get(target.targetId)
@@ -938,7 +939,7 @@ export class AbilityEngine {
   ): Vec3 | null {
     if (def.targeting === 'self') return this.resolveAnchor(caster, target, def)
     if (def.targeting === 'point') {
-      return target.point ? this.clampPointToRange(caster, target.point, def.range) : null
+      return target.point ? clampPointToRange(caster.transform, target.point, def.range) : null
     }
     if (def.targeting === 'target' && target.targetId) {
       const victim = this.host.state.players.get(target.targetId)
@@ -1039,25 +1040,4 @@ export class AbilityEngine {
     return this.channels.some((c) => c.casterId === casterId && c.abilityId === abilityId)
   }
 
-  private placePointForward(player: Player, yaw: number, distance: number): Vec3 {
-    const dir = directionFromYawPitch(yaw, 0)
-    return {
-      x: player.transform.x + dir.x * distance,
-      y: player.transform.y,
-      z: player.transform.z + dir.z * distance,
-    }
-  }
-
-  private clampPointToRange(player: Player, point: Vec3, range: number): Vec3 {
-    const dx = point.x - player.transform.x
-    const dz = point.z - player.transform.z
-    const dist = Math.hypot(dx, dz)
-    if (range <= 0 || dist <= range || dist <= 1e-5) return { ...point }
-    const scale = range / dist
-    return {
-      x: player.transform.x + dx * scale,
-      y: point.y,
-      z: player.transform.z + dz * scale,
-    }
-  }
 }
