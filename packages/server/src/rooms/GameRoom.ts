@@ -15,7 +15,6 @@ import {
   HP_MAX,
   HP_REGEN_OOC_DELAY_SEC,
   HP_REGEN_PER_SEC_OOC,
-  LAG_COMP_BUFFER_MS,
   MANA_MAX,
   MANA_REGEN_DELAY_SEC,
   MANA_REGEN_PER_SEC,
@@ -103,6 +102,7 @@ import {
   MatchManager,
   MeleeSystem,
   ParrySystem,
+  PositionHistory,
   ProjectileSystem,
   RateLimiter,
   ReplayRecorder,
@@ -137,7 +137,6 @@ import {
 //     Collision against player capsules, static boxes, ground plane. One hit
 //     kills the projectile. Friendly fire is enabled for 1v1.
 
-const LAG_COMP_BUFFER_TICKS = Math.round(LAG_COMP_BUFFER_MS / TICK_MS) // ~24
 const RESPAWN_TICKS = Math.round(RESPAWN_SEC * TICK_RATE_HZ)
 const SPAWN_INVULN_TICKS = Math.round(SPAWN_INVULN_SEC * TICK_RATE_HZ)
 const UPPERCUT_AIRBORNE_TICKS = Math.round(UPPERCUT_AIRBORNE_SEC * TICK_RATE_HZ)
@@ -151,13 +150,6 @@ const STAFF_LIFETIME_TICKS = Math.max(1, Math.round(STAFF_M1_LIFETIME_SEC * TICK
 const PROJECTILE_SPAWN_FORWARD_OFFSET_M = 0.8
 // Eye/muzzle height above capsule centre. Must match the client FPS camera.
 const PROJECTILE_SPAWN_Y_OFFSET_M = PROJECTILE_MUZZLE_Y_OFFSET_M
-
-interface PositionSnapshot {
-  tick: number
-  x: number
-  y: number
-  z: number
-}
 
 // Melee ability ids — used in drainDamage to gate Fury damage bonuses.
 const MELEE_ABILITY_IDS = new Set([
@@ -181,9 +173,8 @@ export class GameRoom extends Room<GameState> {
   private readonly castQueues = new Map<string, ClientCastMessage[]>()
   private readonly lastSeqSeen = new Map<string, number>()
 
-  // Ring buffer of last LAG_COMP_BUFFER_TICKS position snapshots per player.
-  // Used to rewind victim positions when resolving melee hits.
-  private readonly positionHistory = new Map<string, PositionSnapshot[]>()
+  // Lag-comp ring buffer — rewinds victim positions for melee hit resolution.
+  private readonly history = new PositionHistory()
 
   // Damage queued during a tick by swings/casts/projectiles; drained at end.
   private damageQueue: PendingDamage[] = []
@@ -420,7 +411,7 @@ export class GameRoom extends Room<GameState> {
         const simState = this.sim.get(playerId)
         if (simState) simState.stamina = stamina
       },
-      lookupHistory: (playerId, tick) => this.lookupHistory(playerId, tick),
+      lookupHistory: (playerId, tick) => this.history.lookup(playerId, tick),
       sendAbilityFailed: (sid, abilityId, reason) => this.sendAbilityFailed(sid, abilityId, reason),
       hasStatus: (player, kind) => this.statuses.hasStatus(player, kind),
       onSwordHitLanded: (attackerId, now) => this.mechanics.onSwordHitLanded(attackerId, now),
@@ -526,7 +517,7 @@ export class GameRoom extends Room<GameState> {
     this.swingQueues.set(botId, [])
     this.castQueues.set(botId, [])
     this.lastSeqSeen.set(botId, 0)
-    this.positionHistory.set(botId, [])
+    this.history.register(botId)
 
     const bot = new BotController(
       botId,
@@ -664,7 +655,7 @@ export class GameRoom extends Room<GameState> {
     this.swingQueues.set(client.sessionId, [])
     this.castQueues.set(client.sessionId, [])
     this.lastSeqSeen.set(client.sessionId, 0)
-    this.positionHistory.set(client.sessionId, [])
+    this.history.register(client.sessionId)
 
     trackPlayerConnected(this.roomId, this.state.mode)
     if (this.state.players.size === 1)
@@ -683,7 +674,7 @@ export class GameRoom extends Room<GameState> {
     this.castQueues.delete(sid)
     this.rateLimiter.forgetClient(sid)
     this.lastSeqSeen.delete(sid)
-    this.positionHistory.delete(sid)
+    this.history.forget(sid)
     this.parry.forget(sid)
     this.killStreaks.delete(sid)
     this.bots.delete(sid)
@@ -771,7 +762,7 @@ export class GameRoom extends Room<GameState> {
 
       // 9. Push position history snapshots for lag comp.
       for (const [sid, simState] of this.sim) {
-        this.pushHistory(sid, now, simState)
+        this.history.push(sid, now, simState.pos)
       }
 
       // 10. Drive match phase state machine (countdown -> live -> roundEnd -> matchEnd).
@@ -1301,14 +1292,6 @@ export class GameRoom extends Room<GameState> {
     }
   }
 
-  private pushHistory(sid: string, tick: number, simState: PlayerSimState): void {
-    const buf = this.positionHistory.get(sid)
-    if (!buf) return
-    buf.push({ tick, x: simState.pos.x, y: simState.pos.y, z: simState.pos.z })
-    const cutoff = tick - LAG_COMP_BUFFER_TICKS
-    while (buf.length > 0 && buf[0]!.tick < cutoff) buf.shift()
-  }
-
   // Reset every player for a new round - full HP/Mana/Stamina,
   // clear cooldowns / statuses / projectiles / zones, return to spawn, grant
   // brief invuln. Reuses the per-player respawn helper to avoid divergence.
@@ -1333,18 +1316,6 @@ export class GameRoom extends Room<GameState> {
     }
     this.melee.clear()
     this.damageQueue = []
-  }
-
-  private lookupHistory(sid: string, targetTick: number): PositionSnapshot | null {
-    const buf = this.positionHistory.get(sid)
-    if (!buf || buf.length === 0) return null
-    let best: PositionSnapshot | null = null
-    for (const snap of buf) {
-      if (snap.tick <= targetTick) {
-        if (!best || snap.tick > best.tick) best = snap
-      }
-    }
-    return best
   }
 
   private sendAbilityFailed(
