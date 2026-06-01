@@ -1,7 +1,9 @@
 // ---------------------------------------------------------------------------
 // Character weapon prop system.
 // Owns: weapon GLTF loading/caching, grip configuration, applyWeaponProp.
-// Uses KayKit weapon assets (weapons/kaykit/*.gltf) as mandated by AGENTS.md.
+// Uses KayKit weapon assets — loaded as self-contained `.glb` from
+// `weapons/kaykit/` (see AGENTS.md). The legacy `.gltf`/`.bin`/`.png` sources
+// were removed; only the `.glb` are shipped.
 // ---------------------------------------------------------------------------
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'

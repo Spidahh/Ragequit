@@ -27,8 +27,9 @@ assunzioni precedenti come autorita.
   restano in `shared/sim/map.ts` e sono renderizzate come blocchi di pietra (cover).
 - Texture VFX (`public/vfx/*.png`): devono essere RGBA bianco-su-trasparente per il
   sistema additivo tintato via `instanceColor`. Mai sfondo scuro o colorato.
-- Armi caricate come `.glb` da `public/weapons/kaykit/` (sword_D, bow, staff, shield_A).
-  I file `.gltf` legacy in `public/weapons/` esistono ma non sono usati dal loader attivo.
+- Armi caricate come `.glb` auto-contenuti da `public/weapons/kaykit/` (sword, bow,
+  staff, shield_A). I sorgenti legacy `.gltf`/`.bin`/`.png` sono stati rimossi: solo i
+  `.glb` vengono spediti.
 - Personaggi: caricati come `.gltf` + `.bin` da `public/characters/`. NON usare `.glb`
   per i personaggi: le texture embedded producono file 15-40 MB ciascuno.
 - Post-processing bloom: Three.js layer 1 = bloom-eligible. Layer 0 = default.
