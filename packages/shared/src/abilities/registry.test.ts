@@ -199,3 +199,79 @@ describe('ability registry', () => {
     }
   })
 })
+
+// Engine-support invariants: each guards a class of "ships silently broken"
+// bug. They encode properties that were verified by hand against the server
+// effect handlers (AbilityEngine.tickChannels / GameRoom.tickZones /
+// AbilityEngine.effectProjectile) — so a future ability that violates the
+// engine's actual support surface fails the gate instead of doing nothing.
+describe('ability effect engine-support invariants', () => {
+  const defs = Object.values(ABILITY_DEFS) as AbilityDef[]
+
+  it('every zone has a payload — damage or a status (no silently inert zone)', () => {
+    // GameRoom.tickZones only acts when damagePerTick > 0 or a status applies.
+    // A zone with neither is a no-op that wastes a cast — almost always a typo.
+    for (const def of defs) {
+      for (const e of def.effects) {
+        if (e.kind !== 'zone') continue
+        const hasPayload = (e.damagePerTick ?? 0) > 0 || !!e.applyStatus
+        expect(hasPayload, `${def.id}: zone has no damage and no status`).toBe(true)
+      }
+    }
+  })
+
+  it('every ticking effect (zone/channel) has tickEverySec > 0', () => {
+    // tickEverySec is converted to an integer tick interval; 0 makes
+    // AbilityEngine.tickChannels spin (nextTickAtTick never advances).
+    for (const def of defs) {
+      for (const e of def.effects) {
+        if (e.kind === 'zone' || e.kind === 'channel') {
+          expect(e.tickEverySec, `${def.id}: ${e.kind}.tickEverySec`).toBeGreaterThan(0)
+        }
+      }
+    }
+  })
+
+  it('every projectile moves (speedMps > 0)', () => {
+    // effectProjectile derives lifetime as range*2/speed; speed 0 → Infinity →
+    // NaN lifetimeTicks, and the projectile would never travel anyway.
+    for (const def of defs) {
+      for (const e of def.effects) {
+        if (e.kind === 'projectile') {
+          expect(e.speedMps, `${def.id}: projectile.speedMps`).toBeGreaterThan(0)
+        }
+      }
+    }
+  })
+
+  it('every channel has a per-tick effect of a supported kind', () => {
+    // tickChannels fires c.perTick through applyEffect each tick; without it
+    // the channel occupies the cast but does nothing.
+    const supported = new Set(['damage', 'heal', 'applyStatus'])
+    for (const def of defs) {
+      for (const e of def.effects) {
+        if (e.kind !== 'channel') continue
+        expect(e.perTick, `${def.id}: channel.perTick`).toBeDefined()
+        expect(
+          supported.has(e.perTick.kind),
+          `${def.id}: channel.perTick.kind '${e.perTick.kind}'`,
+        ).toBe(true)
+      }
+    }
+  })
+
+  it('no heal uses the unimplemented overSec HoT path (would apply instantly)', () => {
+    // AbilityEngine.effectHeal ignores overSec (TODO) — a heal that sets it
+    // would silently apply all at once. HoT must go through a channel instead.
+    for (const def of defs) {
+      for (const e of def.effects) {
+        if (e.kind === 'heal') {
+          expect(e.overSec ?? 0, `${def.id}: heal.overSec (use a channel for HoT)`).toBe(0)
+        }
+        if (e.kind === 'channel' && e.perTick.kind === 'heal') {
+          expect(e.perTick.overSec ?? 0, `${def.id}: channel heal.overSec`).toBe(0)
+        }
+      }
+    }
+  })
+})
