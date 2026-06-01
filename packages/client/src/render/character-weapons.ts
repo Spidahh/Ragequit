@@ -22,7 +22,7 @@ const _loader = new GLTFLoader()
 const _weaponAssetPath: Record<'sword' | 'bow' | 'staff' | 'shield', string> = {
   // sword_C (kaykit/sword.glb) is a slim, elegant blade (0.27 m wide) — the old
   // sword_D was a chunky 0.71 m-wide slab that read as a low-quality club.
-  sword: '/weapons/knight_sword.glb',
+  sword: '/weapons/kaykit/sword.glb',
   bow: '/weapons/kaykit/bow.glb',
   staff: '/weapons/kaykit/staff.glb',
   shield: '/weapons/knight_shield.glb', // Knight heater shield (from the Knight Medieval Pack)
