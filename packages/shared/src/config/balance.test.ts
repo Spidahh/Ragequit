@@ -6,6 +6,17 @@ import {
   RUNTIME_BALANCE,
   validateBalance,
 } from './balance.js'
+import balanceJson from '../constants/balance.json'
+import {
+  SWORD_M1_DAMAGE,
+  BOW_CHARGE_MIN_SEC,
+  BOW_CHARGE_FULL_SEC,
+  BOW_DAMAGE_MIN,
+  BOW_DAMAGE_FULL,
+  STAFF_M1_DAMAGE,
+  STAFF_M1_MANA_COST,
+  STAFF_M1_CADENCE_SEC,
+} from '../constants/weapons.js'
 
 describe('balance config', () => {
   beforeEach(() => {
@@ -49,5 +60,23 @@ describe('balance config', () => {
     expect(RUNTIME_BALANCE.match.elo_k_ranked).toBe(25)
     applyBalanceOverride({ match: { elo_k_ranked: 32 } as never })
     expect(RUNTIME_BALANCE.match.elo_k_ranked).toBe(32)
+  })
+
+  // Anti-drift: the weapon numbers in balance config are mirrors of the
+  // authoritative as-const constants the sim actually uses. They must agree.
+  it('DEFAULT_BALANCE.weapons mirrors the weapons.ts constants', () => {
+    const w = DEFAULT_BALANCE.weapons
+    expect(w.sword_m1_damage).toEqual([...SWORD_M1_DAMAGE])
+    expect(w.bow_charge_min_sec).toBe(BOW_CHARGE_MIN_SEC)
+    expect(w.bow_charge_full_sec).toBe(BOW_CHARGE_FULL_SEC)
+    expect(w.bow_damage_min).toBe(BOW_DAMAGE_MIN)
+    expect(w.bow_damage_full).toBe(BOW_DAMAGE_FULL)
+    expect(w.staff_m1_damage).toBe(STAFF_M1_DAMAGE)
+    expect(w.staff_m1_mana_cost).toBe(STAFF_M1_MANA_COST)
+    expect(w.staff_m1_cadence_sec).toBe(STAFF_M1_CADENCE_SEC)
+  })
+
+  it('balance.json weapons stay in sync with DEFAULT_BALANCE', () => {
+    expect(balanceJson.weapons).toEqual(DEFAULT_BALANCE.weapons)
   })
 })

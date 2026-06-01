@@ -1,14 +1,30 @@
-// Runtime balance config loader.
+// Runtime balance config.
 //
-// `packages/shared/src/constants/balance.json` is the SINGLE SOURCE OF
-// TRUTH for tunable numbers post-launch. The server reads it at boot and
-// the values override the defaults exported from `constants/*.ts`. This
-// module exposes a typed shape + a default value built from the on-disk
-// JSON so:
-//   - server: import `RUNTIME_BALANCE` from this module to read live values.
+// Authority split (important):
+//   - The gameplay numbers for weapons (bow/staff/sword) and parry are the
+//     `as const` constants in `constants/weapons.ts` / `constants/stats.ts`.
+//     Both server and client import those constants DIRECTLY, so they are the
+//     real source of truth and cannot be changed at runtime (determinism).
+//   - `balance.json` is a runtime override surface that is currently only
+//     consumed for `ttk` and `match` (ELO/round counts) — see RUNTIME_BALANCE
+//     usage. The weapons/parry fields here MIRROR the constants for display and
+//     telemetry; they are derived from the constants below so they can never
+//     drift again (a test enforces the match).
+//
+// Usage:
+//   - server: import `RUNTIME_BALANCE` to read live ttk/match values.
 //   - tests: provide a custom JSON path to `loadBalance()` to verify overrides.
-//   - client: imports the JSON directly via vite for cosmetic display
-//     (tooltip text, ranked thresholds in lobby UI, etc).
+//   - client: imports the JSON directly via vite for cosmetic display.
+import {
+  SWORD_M1_DAMAGE,
+  BOW_CHARGE_MIN_SEC,
+  BOW_CHARGE_FULL_SEC,
+  BOW_DAMAGE_MIN,
+  BOW_DAMAGE_FULL,
+  STAFF_M1_DAMAGE,
+  STAFF_M1_MANA_COST,
+  STAFF_M1_CADENCE_SEC,
+} from '../constants/weapons.js'
 
 export interface BalanceConfig {
   version: number
@@ -40,21 +56,21 @@ export interface BalanceConfig {
   }
 }
 
-// Hardcoded defaults — mirror the JSON shape so the type system stays
-// honest even if the file is missing at runtime. These match the values
-// in `balance.json` 1:1; bump in lockstep with the JSON when tuning.
+// Hardcoded defaults. The `weapons` block is DERIVED from the authoritative
+// `constants/weapons.ts` values so it can never drift from real gameplay (a
+// test enforces this). `ttk`/`match` are the genuinely tunable runtime fields.
 export const DEFAULT_BALANCE: BalanceConfig = {
   version: 1,
   ttk: { min_sec: 20, max_sec: 30 },
   weapons: {
-    sword_m1_damage: [5, 5, 8],
-    bow_charge_min_sec: 0.3,
-    bow_charge_full_sec: 2.0,
-    bow_damage_min: 4,
-    bow_damage_full: 22,
-    staff_m1_damage: 8,
-    staff_m1_mana_cost: 5,
-    staff_m1_cadence_sec: 0.5,
+    sword_m1_damage: [...SWORD_M1_DAMAGE] as [number, number, number],
+    bow_charge_min_sec: BOW_CHARGE_MIN_SEC,
+    bow_charge_full_sec: BOW_CHARGE_FULL_SEC,
+    bow_damage_min: BOW_DAMAGE_MIN,
+    bow_damage_full: BOW_DAMAGE_FULL,
+    staff_m1_damage: STAFF_M1_DAMAGE,
+    staff_m1_mana_cost: STAFF_M1_MANA_COST,
+    staff_m1_cadence_sec: STAFF_M1_CADENCE_SEC,
   },
   parry: {
     tap_window_sec: 0.5,

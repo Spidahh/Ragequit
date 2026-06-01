@@ -1,16 +1,16 @@
 {
-  "$comment": "Runtime balance overrides. Server reads this file at boot and overrides the default constants in stats.ts, weapons.ts and combat.ts. Telemetry from match length, TTK and ability pickrate feeds balance tuning.",
+  "$comment": "Runtime balance. Only ttk + match are consumed live by the server (ELO/round counts). The weapons/parry fields mirror the authoritative as-const constants in weapons.ts/stats.ts (used directly by sim) for display/telemetry — keep them in sync; a test enforces it.",
   "version": 1,
   "ttk": { "min_sec": 20, "max_sec": 30 },
   "weapons": {
     "sword_m1_damage": [5, 5, 8],
-    "bow_charge_min_sec": 0.3,
-    "bow_charge_full_sec": 2.0,
+    "bow_charge_min_sec": 0.05,
+    "bow_charge_full_sec": 0.65,
     "bow_damage_min": 4,
     "bow_damage_full": 22,
     "staff_m1_damage": 8,
-    "staff_m1_mana_cost": 5,
-    "staff_m1_cadence_sec": 0.5
+    "staff_m1_mana_cost": 2,
+    "staff_m1_cadence_sec": 0.4
   },
   "parry": {
     "tap_window_sec": 0.5,
