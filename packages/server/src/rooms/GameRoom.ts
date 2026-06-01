@@ -142,6 +142,7 @@ import {
   projectileKnockbackVector,
 } from '../sim/projectile-collision.js'
 import { bestSpawnIndex } from '../sim/spawn-selection.js'
+import { regenResource } from '../sim/resource-regen.js'
 import {
   trackMatchStarted,
   trackMatchEnded,
@@ -1357,19 +1358,16 @@ export class GameRoom extends Room<GameState> {
       stamina: STAMINA_MAX,
     }
 
-    if (player.hp < maxima.hp && now - player.lastDamageAtTick >= OOC_DELAY_TICKS) {
-      player.hp = Math.min(maxima.hp, player.hp + HP_REGEN_PER_SEC_OOC * dt)
-    }
-    if (player.mana < maxima.mana && now - player.lastManaSpendAtTick >= MANA_DELAY_TICKS) {
-      player.mana = Math.min(maxima.mana, player.mana + MANA_REGEN_PER_SEC * dt)
-    }
+    player.hp = regenResource(player.hp, maxima.hp, now - player.lastDamageAtTick, OOC_DELAY_TICKS, HP_REGEN_PER_SEC_OOC, dt)
+    player.mana = regenResource(player.mana, maxima.mana, now - player.lastManaSpendAtTick, MANA_DELAY_TICKS, MANA_REGEN_PER_SEC, dt)
     const vxz2 = player.vx * player.vx + player.vz * player.vz
     const moving = vxz2 > 0.25
     const rate = moving ? STAMINA_REGEN_PER_SEC_MOVING : STAMINA_REGEN_PER_SEC_IDLE
     // Hold-parry drains stamina continuously; don't regen at the same time or
     // the drain has zero net effect. The drain itself runs in tickParry.
-    if (player.stamina < maxima.stamina && !(player.parrying && player.parryIsHold)) {
-      player.stamina = Math.min(maxima.stamina, player.stamina + rate * dt)
+    if (!(player.parrying && player.parryIsHold)) {
+      // No delay gate for stamina — it regenerates whenever not hold-parrying.
+      player.stamina = regenResource(player.stamina, maxima.stamina, 0, 0, rate, dt)
       const simState = this.sim.get(sid)
       if (simState) simState.stamina = player.stamina
     }
