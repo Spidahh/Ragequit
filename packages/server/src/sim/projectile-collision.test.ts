@@ -4,6 +4,7 @@ import {
   resolveProjectileHit,
   findChainVictims,
   playersInRadius,
+  projectileKnockbackVector,
   type CollidablePlayer,
 } from './projectile-collision.js'
 
@@ -111,5 +112,24 @@ describe('playersInRadius', () => {
   it('excludes players beyond the radius', () => {
     expect(playersInRadius(players, 50, 'owner', center, 100)).toContain('far')
     expect(playersInRadius(players, 50, 'owner', center, 5)).not.toContain('far')
+  })
+})
+
+describe('projectileKnockbackVector', () => {
+  it('direct hit pushes along the travel direction', () => {
+    const v = projectileKnockbackVector(false, 5, 0, 0, 0, 1, 0, 2)
+    expect(v).toEqual({ x: 2, z: 0 })
+  })
+
+  it('splash hit pushes radially away from the impact point', () => {
+    // victim at (3,0,0), impact at origin => push +x.
+    const v = projectileKnockbackVector(true, 3, 0, 0, 0, 0, 1, 2)
+    expect(v.x).toBeCloseTo(2)
+    expect(v.z).toBeCloseTo(0)
+  })
+
+  it('splash exactly at the impact point falls back to travel direction', () => {
+    const v = projectileKnockbackVector(true, 0, 0, 0, 0, 0, 1, 2)
+    expect(v).toEqual({ x: 0, z: 2 })
   })
 })

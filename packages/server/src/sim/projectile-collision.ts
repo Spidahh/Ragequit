@@ -101,6 +101,30 @@ export function resolveProjectileHit(
 }
 
 /**
+ * Horizontal knockback vector for an ability projectile impact. Splash hits push
+ * the victim radially away from the impact point; direct hits (and splash hits
+ * exactly at the impact point) push along the projectile's travel direction.
+ */
+export function projectileKnockbackVector(
+  splash: boolean,
+  victimX: number,
+  victimZ: number,
+  hitX: number,
+  hitZ: number,
+  velDirX: number,
+  velDirZ: number,
+  distance: number,
+): { x: number; z: number } {
+  if (splash) {
+    const dx = victimX - hitX
+    const dz = victimZ - hitZ
+    const len = Math.hypot(dx, dz)
+    if (len > 0.001) return { x: (dx / len) * distance, z: (dz / len) * distance }
+  }
+  return { x: velDirX * distance, z: velDirZ * distance }
+}
+
+/**
  * All valid victims within `radius` of `center` (unsorted) — used for splash.
  * Skips the owner, dead and invulnerable players.
  */

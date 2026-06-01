@@ -134,7 +134,12 @@ import {
   hasLineOfSight,
   spellImpactPushDistance,
 } from '../sim/combat-geometry.js'
-import { resolveProjectileHit, findChainVictims, playersInRadius } from '../sim/projectile-collision.js'
+import {
+  resolveProjectileHit,
+  findChainVictims,
+  playersInRadius,
+  projectileKnockbackVector,
+} from '../sim/projectile-collision.js'
 import { bestSpawnIndex } from '../sim/spawn-selection.js'
 import {
   trackMatchStarted,
@@ -2042,26 +2047,17 @@ export class GameRoom extends Room<GameState> {
 
       // Ability projectile knockback — applies horizontal push defined per-ability in the registry.
       if (meta.abilityId && meta.knockbackDistance && meta.knockbackDistance > 0 && !victim.parrying) {
-        let pushX: number
-        let pushZ: number
-        if (meta.splashRadius > 0) {
-          // Splash: push radially away from impact point.
-          const dx = victim.transform.x - hitPos.x
-          const dz = victim.transform.z - hitPos.z
-          const len = Math.hypot(dx, dz)
-          if (len > 0.001) {
-            pushX = (dx / len) * meta.knockbackDistance
-            pushZ = (dz / len) * meta.knockbackDistance
-          } else {
-            pushX = meta.velDirX * meta.knockbackDistance
-            pushZ = meta.velDirZ * meta.knockbackDistance
-          }
-        } else {
-          // Direct hit: push along projectile travel direction.
-          pushX = meta.velDirX * meta.knockbackDistance
-          pushZ = meta.velDirZ * meta.knockbackDistance
-        }
-        const resolved = this.resolveAbilityDisplacement(victim, pushX, pushZ, true)
+        const push = projectileKnockbackVector(
+          meta.splashRadius > 0,
+          victim.transform.x,
+          victim.transform.z,
+          hitPos.x,
+          hitPos.z,
+          meta.velDirX,
+          meta.velDirZ,
+          meta.knockbackDistance,
+        )
+        const resolved = this.resolveAbilityDisplacement(victim, push.x, push.z, true)
         victim.transform.x = resolved.x
         victim.transform.z = resolved.z
         const simVictim = this.sim.get(victimId)
