@@ -54,6 +54,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { SoundEngine } from './audio/sound-engine.js'
 import { type DeathcamData, type ScoreboardData } from './endgame.js'
 import { type ComboState, victimShakeIntensity, COMBO_RESET_MS } from './game/combat-feedback.js'
+import { accumulateHitStats } from './game/hit-stats.js'
 import {
   rawCauseId,
   isAirPunishCause,
@@ -1492,64 +1493,24 @@ function onHit(msg: ServerHitMessage): void {
   // Normalise power 0–1 against typical hit ceiling (~40 damage = full power).
   const power = Math.min(1, msg.damage / (isAirPunish ? 55 : 40))
 
-  // Accumulate stats
-  if (msg.damage > 0) {
-    if (msg.didParry) {
-      if (amISelf) {
-        selfStats.parries++
-      } else {
-        opponentStats.parries++
-      }
-    } else {
-      if (amIAttacker && !amISelf) {
-        selfStats.damageDealt += msg.damage
-        selfStats.yourHits++
-        if (msg.cause === 'uppercut' || isAirPunish) {
-          selfStats.knockups++
-        }
-        if (msg.cause.startsWith('combo:')) {
-          selfStats.comboProcs++
-        }
-        const players = getSchemaPlayers()
-        const opponent = players?.get(msg.victimId)
-        const tickNow = getSchemaTick()
-        if (opponent && opponent.airborneUntilTick > tickNow) {
-          selfStats.knockupConversions++
-        }
-      } else if (amISelf && !amIAttacker) {
-        selfStats.damageTaken += msg.damage
-        const tickNow = getSchemaTick()
-        const players = getSchemaPlayers()
-        const selfSchema = players?.get(self?.sessionId || '')
-        if (selfSchema && selfSchema.airborneUntilTick > tickNow) {
-          opponentStats.knockupConversions++
-        }
-
-        // Cache victim hit details for deathcam
-        const killerName = players?.get(msg.attackerId)?.name || msg.attackerId.slice(0, 6)
-        lastHitDetails = {
-          killer: killerName,
-          ability: ABILITY_DEFS[msg.cause]?.name || msg.cause.toUpperCase(),
-          element: msg.element || 'PHYSICAL',
-          damage: msg.damage,
-        }
-      } else {
-        // Opponent or other players
-        if (msg.attackerId !== self?.sessionId && msg.attackerId !== '') {
-          opponentStats.damageDealt += msg.damage
-          opponentStats.yourHits++
-          if (msg.cause === 'uppercut' || isAirPunish) {
-            opponentStats.knockups++
-          }
-          if (msg.cause.startsWith('combo:')) {
-            opponentStats.comboProcs++
-          }
-        }
-        if (msg.victimId !== self?.sessionId) {
-          opponentStats.damageTaken += msg.damage
-        }
-      }
-    }
+  // Accumulate match stats (pure folding — see game/hit-stats.ts).
+  {
+    const players = getSchemaPlayers()
+    const tickNow = getSchemaTick()
+    const selfId = self?.sessionId || ''
+    const victimSchema = players?.get(msg.victimId)
+    const selfSchema = players?.get(selfId)
+    const details = accumulateHitStats(selfStats, opponentStats, msg, {
+      amISelf,
+      amIAttacker,
+      isAirPunish,
+      selfId,
+      victimAirborne: !!(victimSchema && victimSchema.airborneUntilTick > tickNow),
+      selfAirborne: !!(selfSchema && selfSchema.airborneUntilTick > tickNow),
+      attackerName: players?.get(msg.attackerId)?.name || msg.attackerId.slice(0, 6),
+      abilityName: ABILITY_DEFS[msg.cause]?.name || msg.cause.toUpperCase(),
+    })
+    if (details) lastHitDetails = details
   }
 
   // --- Parry sound: victim side already handled by ParryEvent; play for others. ---
