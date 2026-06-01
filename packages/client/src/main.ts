@@ -134,6 +134,7 @@ import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './rend
 import { createFpvBow } from './render/fpv-bow.js'
 import { createFpvStaticViewmodel } from './render/fpv-static-viewmodel.js'
 import { getWeaponView } from './render/weapon-view.js'
+import { createSchemaReaders } from './net/schema-readers.js'
 import { createOutlineMesh } from './render/outlines.js'
 import { initPlacementPreview } from './render/placement-preview.js'
 import { initProjectileVisuals, type SchemaProjectile } from './render/projectile-visuals.js'
@@ -183,6 +184,18 @@ const streakDisplay = document.getElementById('streak-display')!
 const streakCountEl = document.getElementById('streak-count')!
 const streakBonusEl = document.getElementById('streak-bonus')!
 const roundTimer = document.getElementById('round-timer')!
+
+// Colyseus room (reassigned on connect) + schema read helpers. Declared early so
+// the readers are available to every call site (no temporal-dead-zone).
+let room: Room | null = null
+const {
+  getSchemaPlayers,
+  getSchemaProjectiles,
+  getSelfSchemaPlayer,
+  getSchemaTick,
+  getSchemaMapId,
+  getSchemaMode,
+} = createSchemaReaders(() => room)
 
 const hudHpFill = document.querySelector<HTMLElement>('#hud-hp .fill')!
 const hudHpNum = document.getElementById('hud-hp-num')!
@@ -781,7 +794,6 @@ let selfMesh: THREE.Group | null = null
 let selfArc: THREE.Mesh | null = null
 let selfArcExpiresAt = 0
 let selfLastWeapon = ''
-let room: Room | null = null
 let activeRoomMode = 'duel_arena'
 // Schema accessors — exported for use by sub-modules via createSchemaAccessors(getRoom)
 // The functions below (getSchemaPlayers, etc.) are wrappers kept in main.ts for
@@ -2423,40 +2435,8 @@ function initSelfIfNeeded(): void {
 // State reading
 // -----------------------------------------------------------------------
 
-// SchemaPlayer interface imported from ./game/schema-helpers.js
-
-function getSchemaPlayers(): Map<string, SchemaPlayer> | null {
-  if (!room?.state) return null
-  const s = room.state as { players?: Map<string, SchemaPlayer> }
-  return s.players ?? null
-}
-
-function getSchemaProjectiles(): Map<string, SchemaProjectile> | null {
-  if (!room?.state) return null
-  const s = room.state as { projectiles?: Map<string, SchemaProjectile> }
-  return s.projectiles ?? null
-}
-
-function getSelfSchemaPlayer(): SchemaPlayer | null {
-  if (!room) return null
-  const players = getSchemaPlayers()
-  return players?.get(room.sessionId) ?? null
-}
-
-function getSchemaTick(): number {
-  if (!room?.state) return 0
-  return (room.state as { tick?: number }).tick ?? 0
-}
-
-function getSchemaMapId(): string {
-  if (!room?.state) return 'blockout'
-  return (room.state as { mapId?: string }).mapId ?? 'blockout'
-}
-
-function getSchemaMode(): string {
-  if (!room?.state) return 'duel_arena'
-  return (room.state as { mode?: string }).mode ?? 'duel_arena'
-}
+// Schema read helpers (getSchemaPlayers/…) are created near the top via
+// createSchemaReaders — see the room declaration.
 
 function sendAbilityCast(abilityId: string, tick: number): void {
   if (!room) return
