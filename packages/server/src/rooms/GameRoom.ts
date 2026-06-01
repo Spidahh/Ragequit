@@ -1,6 +1,5 @@
 import { Room, type Client } from '@colyseus/core'
 import {
-  type AbilityComboRole,
   type ServerZoneExpiredMessage,
   type ServerZoneSpawnedMessage,
   ABILITY_DEFS,
@@ -32,7 +31,6 @@ import {
   PARRY_TAP_WINDOW_SEC,
   PROJECTILE_MUZZLE_Y_OFFSET_M,
   Player,
-  Projectile,
   RESPAWN_SEC,
   SPAWN_INVULN_SEC,
   STAFF_M1_CADENCE_SEC,
@@ -67,7 +65,6 @@ import {
   isInSwordM1Cone,
   makePlayerSimState,
   simulatePlayer,
-  stepProjectile,
   uppercutInitialVy,
   type ClientCastMessage,
   type ClientChargeReleaseMessage,
@@ -80,15 +77,12 @@ import {
   type ClientLoadoutMessage,
   type ClientWeaponSwapMessage,
   type PlayerSimState,
-  type ProjectileState,
   type ServerAbilityFailedMessage,
   type ServerDeathMessage,
   type ServerKillStreakMessage,
   type ServerHitMessage,
   type ServerNoteMessage,
   type ServerParryEventMessage,
-  type ServerProjectileExpiredMessage,
-  type ServerProjectileSpawnedMessage,
   type ServerWeaponSwappedMessage,
   type SimInput,
   type Weapon,
@@ -122,18 +116,14 @@ import {
   FLOW_DAMAGE_BONUS_FRAC,
   FURY_SURGE_DAMAGE_BONUS,
   MatchManager,
+  ProjectileSystem,
   RateLimiter,
   ReplayRecorder,
   StatusRuntime,
-  type ProjectileSpawnRequest,
+  type PendingDamage,
   type ZoneSpawnRequest,
 } from '../sim/index.js'
-import {
-  resolveProjectileHit,
-  findChainVictims,
-  playersInRadius,
-  projectileKnockbackVector,
-} from '../sim/projectile-collision.js'
+import { findChainVictims } from '../sim/projectile-collision.js'
 import { regenResource } from '../sim/resource-regen.js'
 import { bestSpawnIndex } from '../sim/spawn-selection.js'
 import {
@@ -201,20 +191,6 @@ interface PositionSnapshot {
   z: number
 }
 
-interface PendingDamage {
-  attackerId: string
-  victimId: string
-  damage: number
-  knockup: boolean
-  cause: string
-  canParry: boolean
-  element: string // '' = physical; 'fire'/'ice'/etc. for elemental hits
-  lifestealFraction?: number
-  onDamageStatus?: { kind: StatusKind; durationSec: number; stacks: number; slowFraction?: number }
-  /** True when this damage entry carries a Flow +20% amplification. */
-  flowAmplified?: boolean
-}
-
 // Melee ability ids — used in drainDamage to gate Fury damage bonuses.
 const MELEE_ABILITY_IDS = new Set([
   'uppercut',
@@ -224,26 +200,6 @@ const MELEE_ABILITY_IDS = new Set([
   'guard_break',
   'rending_dash',
 ])
-
-interface ProjectileMeta {
-  ownerId: string
-  abilityId?: string
-  comboRole?: AbilityComboRole
-  kind: 'arrow' | 'bolt'
-  damage: number
-  element: string
-  splashRadius: number
-  lifestealFraction?: number
-  onHitStatus?: { kind: StatusKind; durationSec: number; stacks: number; slowFraction?: number }
-  chainTargets?: number
-  chainRadius?: number
-  chainDamage?: number
-  chainChance?: number
-  // Normalized horizontal travel direction (xz), used for push-on-hit.
-  velDirX: number
-  velDirZ: number
-  knockbackDistance?: number
-}
 
 export class GameRoom extends Room<GameState> {
   override maxClients = Number(process.env['MAX_CLIENTS'] ?? 2)
@@ -267,16 +223,13 @@ export class GameRoom extends Room<GameState> {
   // Damage queued during a tick by swings/casts/projectiles; drained at end.
   private damageQueue: PendingDamage[] = []
 
-  // Projectile integration state. Keyed by projectile id; the schema
-  // object holds replicated fields but we keep a companion `Vec3` sim state
-  // to avoid reading/writing Colyseus primitives every substep.
-  private readonly projectileSim = new Map<string, ProjectileState>()
-  private readonly projectileMeta = new Map<string, ProjectileMeta>()
+  // Projectile lifecycle (spawn / step / impact / removal) lives in its own
+  // subsystem; GameRoom implements its small host interface.
+  private projectiles!: ProjectileSystem
 
   // Press-tick for parry, needed to decide tap vs hold at release.
   private readonly parryPressTick = new Map<string, number>()
 
-  private projectileIdCounter = 0
   private zoneIdCounter = 0
 
   private engine!: AbilityEngine
@@ -445,7 +398,7 @@ export class GameRoom extends Room<GameState> {
       {
         state: this.state,
         pendingDamage: pendingDamageBridge,
-        spawnProjectile: (req) => this.spawnProjectileFromEngine(req),
+        spawnProjectile: (req) => this.projectiles.spawnFromEngine(req),
         spawnZone: (req) => this.spawnZoneFromEngine(req),
         sendAbilityFailed: (sid, abilityId, reason) =>
           this.sendAbilityFailed(sid, abilityId, reason),
@@ -466,6 +419,21 @@ export class GameRoom extends Room<GameState> {
       },
       this.statuses,
     )
+    this.projectiles = new ProjectileSystem({
+      state: this.state,
+      getMapBoxes: () => this.activeMap.boxes,
+      enqueueDamage: (d) => this.damageQueue.push(d),
+      broadcast: (type, message) => this.broadcast(type, message),
+      resolveDisplacement: (player, dx, dz, cancelOnCollision) =>
+        this.resolveAbilityDisplacement(player, dx, dz, cancelOnCollision),
+      syncSimPos: (playerId, x, z) => {
+        const simState = this.sim.get(playerId)
+        if (simState) {
+          simState.pos.x = x
+          simState.pos.z = z
+        }
+      },
+    })
     // Match manager - drives BO5 round flow + ELO + scoreboard.
     // Replay recorder. Records every broadcast tagged with state.tick.
     this.replay = new ReplayRecorder(this.roomId)
@@ -723,11 +691,7 @@ export class GameRoom extends Room<GameState> {
     this.pendingSwings = this.pendingSwings.filter((s) => s.attackerId !== sid)
 
     // Clean up projectiles owned by the leaver.
-    const toRemove: string[] = []
-    for (const [pid, meta] of this.projectileMeta) {
-      if (meta.ownerId === sid) toRemove.push(pid)
-    }
-    for (const pid of toRemove) this.removeProjectile(pid)
+    this.projectiles.removeOwnedBy(sid)
     trackPlayerDisconnected(this.roomId, this.state.mode)
     console.info(`[GameRoom ${this.roomId}] leave ${sid}`)
   }
@@ -793,7 +757,7 @@ export class GameRoom extends Room<GameState> {
       this.resolveSwings(now)
 
       // 6. Integrate projectiles and resolve their collisions.
-      this.stepProjectiles(dt, now)
+      this.projectiles.step(dt, now)
 
       // 7. Drain damage queue -> HP updates / deaths.
       this.drainDamage(now)
@@ -838,7 +802,8 @@ export class GameRoom extends Room<GameState> {
 
     const projectileIds: string[] = []
     this.state.projectiles.forEach((_p, id) => projectileIds.push(id))
-    for (const id of projectileIds) this.removeProjectile(id, 'timeout', { x: 0, y: 0, z: 0 }, now)
+    for (const id of projectileIds)
+      this.projectiles.remove(id, 'timeout', { x: 0, y: 0, z: 0 }, now)
 
     const zoneIds: string[] = []
     this.state.zones.forEach((_z, id) => zoneIds.push(id))
@@ -1483,7 +1448,7 @@ export class GameRoom extends Room<GameState> {
     const projIds: string[] = []
     this.state.projectiles.forEach((_p, id) => projIds.push(id))
     for (const id of projIds) {
-      this.removeProjectile(id, 'timeout', { x: 0, y: 0, z: 0 }, this.state.tick)
+      this.projectiles.remove(id, 'timeout', { x: 0, y: 0, z: 0 }, this.state.tick)
     }
     const zoneIds: string[] = []
     this.state.zones.forEach((_z, id) => zoneIds.push(id))
@@ -1627,7 +1592,7 @@ export class GameRoom extends Room<GameState> {
     const origin = computeProjectileOrigin(player, dir)
     const vel = { x: dir.x * speed, y: dir.y * speed, z: dir.z * speed }
 
-    this.spawnProjectile({
+    this.projectiles.spawn({
       ownerId: sid,
       kind: 'arrow',
       origin,
@@ -1683,7 +1648,7 @@ export class GameRoom extends Room<GameState> {
       y: dir.y * STAFF_M1_SPEED_MPS,
       z: dir.z * STAFF_M1_SPEED_MPS,
     }
-    this.spawnProjectile({
+    this.projectiles.spawn({
       ownerId: sid,
       kind: 'bolt',
       origin,
@@ -1812,318 +1777,6 @@ export class GameRoom extends Room<GameState> {
   private emitParry(sid: string, kind: ServerParryEventMessage['kind'], atTick: number): void {
     const msg: ServerParryEventMessage = { playerId: sid, kind, atTick }
     this.broadcast(MessageTypes.ParryEvent, msg)
-  }
-
-  // --- Projectile integration ----------------------------------------------
-
-  private spawnProjectile(params: {
-    ownerId: string
-    abilityId?: string
-    comboRole?: AbilityComboRole
-    kind: 'arrow' | 'bolt'
-    origin: { x: number; y: number; z: number }
-    vel: { x: number; y: number; z: number }
-    gravity: number
-    damage: number
-    lifetimeTicks: number
-    spawnedAtTick: number
-    element?: string
-    splashRadius?: number
-    lifestealFraction?: number
-    knockbackDistance?: number
-    onHitStatus?: { kind: StatusKind; durationSec: number; stacks: number; slowFraction?: number }
-    chainTargets?: number
-    chainRadius?: number
-    chainDamage?: number
-    chainChance?: number
-  }): void {
-    this.projectileIdCounter += 1
-    const pid = `p${this.projectileIdCounter}`
-    const p = new Projectile()
-    p.id = pid
-    p.ownerId = params.ownerId
-    p.kind = params.kind
-    p.originX = params.origin.x
-    p.originY = params.origin.y
-    p.originZ = params.origin.z
-    p.x = params.origin.x
-    p.y = params.origin.y
-    p.z = params.origin.z
-    p.vx = params.vel.x
-    p.vy = params.vel.y
-    p.vz = params.vel.z
-    p.gravity = params.gravity
-    p.damage = params.damage
-    p.element = params.element ?? 'none'
-    p.spawnedAtTick = params.spawnedAtTick
-    p.despawnAtTick = params.spawnedAtTick + params.lifetimeTicks
-    p.expired = false
-    this.state.projectiles.set(pid, p)
-
-    this.projectileSim.set(pid, {
-      pos: { x: params.origin.x, y: params.origin.y, z: params.origin.z },
-      vel: { x: params.vel.x, y: params.vel.y, z: params.vel.z },
-      gravity: params.gravity,
-    })
-    const spd2D = Math.hypot(params.vel.x, params.vel.z) || 0.001
-    this.projectileMeta.set(pid, {
-      ownerId: params.ownerId,
-      abilityId: params.abilityId,
-      comboRole: params.comboRole,
-      kind: params.kind,
-      damage: params.damage,
-      element: params.element ?? 'none',
-      splashRadius: params.splashRadius ?? 0,
-      lifestealFraction: params.lifestealFraction,
-      onHitStatus: params.onHitStatus,
-      chainTargets: params.chainTargets,
-      chainRadius: params.chainRadius,
-      chainDamage: params.chainDamage,
-      chainChance: params.chainChance,
-      velDirX: params.vel.x / spd2D,
-      velDirZ: params.vel.z / spd2D,
-      knockbackDistance: params.knockbackDistance,
-    })
-
-    const spawnedMsg: ServerProjectileSpawnedMessage = {
-      id: pid,
-      ownerId: params.ownerId,
-      kind: params.kind,
-      atTick: params.spawnedAtTick,
-      origin: { ...params.origin },
-      velocity: { ...params.vel },
-      damage: params.damage,
-      element: params.element ?? 'none',
-    }
-    this.broadcast(MessageTypes.ProjectileSpawned, spawnedMsg)
-  }
-
-  private stepProjectiles(dt: number, now: number): void {
-    if (this.projectileSim.size === 0) return
-
-    const toRemove: {
-      id: string
-      reason: 'terrain' | 'victim' | 'timeout'
-      pos: { x: number; y: number; z: number }
-    }[] = []
-
-    for (const [pid, state] of this.projectileSim) {
-      const schema = this.state.projectiles.get(pid)
-      const meta = this.projectileMeta.get(pid)
-      if (!schema || !meta) {
-        toRemove.push({
-          id: pid,
-          reason: 'timeout',
-          pos: { x: state.pos.x, y: state.pos.y, z: state.pos.z },
-        })
-        continue
-      }
-      if (now >= schema.despawnAtTick) {
-        toRemove.push({
-          id: pid,
-          reason: 'timeout',
-          pos: { x: state.pos.x, y: state.pos.y, z: state.pos.z },
-        })
-        continue
-      }
-
-      const prev = { x: state.pos.x, y: state.pos.y, z: state.pos.z }
-      stepProjectile(state, dt)
-      const to = { x: state.pos.x, y: state.pos.y, z: state.pos.z }
-
-      // Resolve nearest collision (pure helper) and react to it.
-      const hit = resolveProjectileHit(
-        prev,
-        to,
-        this.state.players,
-        this.activeMap.boxes,
-        meta.ownerId,
-        now,
-      )
-      if (hit) {
-        const hitPos = {
-          x: prev.x + (to.x - prev.x) * hit.t,
-          y: prev.y + (to.y - prev.y) * hit.t,
-          z: prev.z + (to.z - prev.z) * hit.t,
-        }
-        // Snap schema pos to the impact point before removal for client VFX.
-        schema.x = hitPos.x
-        schema.y = hitPos.y
-        schema.z = hitPos.z
-
-        if (hit.kind === 'victim' && hit.victim) {
-          this.applyProjectileImpact(meta, hitPos, hit.victim)
-          toRemove.push({ id: pid, reason: 'victim', pos: hitPos })
-        } else {
-          if (meta.splashRadius > 0) this.applyProjectileImpact(meta, hitPos, null)
-          toRemove.push({ id: pid, reason: 'terrain', pos: hitPos })
-        }
-      } else {
-        // No hit — persist the integrated position to the schema for replication.
-        schema.x = state.pos.x
-        schema.y = state.pos.y
-        schema.z = state.pos.z
-        schema.vx = state.vel.x
-        schema.vy = state.vel.y
-        schema.vz = state.vel.z
-      }
-    }
-
-    for (const { id, reason, pos } of toRemove) {
-      this.removeProjectile(id, reason, pos, now)
-    }
-  }
-
-  private removeProjectile(
-    id: string,
-    reason: ServerProjectileExpiredMessage['reason'] = 'timeout',
-    pos?: { x: number; y: number; z: number },
-    atTick?: number,
-  ): void {
-    const p = this.state.projectiles.get(id)
-    const state = this.projectileSim.get(id)
-    const tick = atTick ?? this.state.tick
-    const finalPos =
-      pos ??
-      (p
-        ? { x: p.x, y: p.y, z: p.z }
-        : state
-          ? { x: state.pos.x, y: state.pos.y, z: state.pos.z }
-          : { x: 0, y: 0, z: 0 })
-    // Save meta before deleting — used for element in the expired message.
-    const meta = this.projectileMeta.get(id)
-    if (p) {
-      p.expired = true
-      this.state.projectiles.delete(id)
-    }
-    this.projectileSim.delete(id)
-    this.projectileMeta.delete(id)
-    const msg: ServerProjectileExpiredMessage = {
-      id,
-      atTick: tick,
-      reason,
-      pos: finalPos,
-      element: meta?.element,
-    }
-    this.broadcast(MessageTypes.ProjectileExpired, msg)
-  }
-
-  private applyProjectileImpact(
-    meta: ProjectileMeta,
-    hitPos: { x: number; y: number; z: number },
-    directVictimId: string | null,
-  ): void {
-    const baseCause = meta.abilityId
-      ? `ability:${meta.abilityId}`
-      : meta.kind === 'arrow'
-        ? 'bow'
-        : 'staff'
-    const victimIds: string[] =
-      meta.splashRadius > 0
-        ? playersInRadius(
-            this.state.players,
-            this.state.tick,
-            meta.ownerId,
-            hitPos,
-            meta.splashRadius,
-          )
-        : directVictimId
-          ? [directVictimId]
-          : []
-
-    for (const victimId of victimIds) {
-      const victim = this.state.players.get(victimId)
-      if (!victim) continue
-      this.damageQueue.push({
-        attackerId: meta.ownerId,
-        victimId,
-        damage: meta.damage,
-        knockup: false,
-        cause: baseCause,
-        canParry: meta.splashRadius <= 0,
-        element: meta.element,
-        lifestealFraction: meta.lifestealFraction,
-        onDamageStatus: meta.onHitStatus,
-      })
-
-      // Horizontal push for direct bow/staff hits — no splash, no ability override.
-      // Ability projectiles manage their own knockback through AbilityEngine.
-      if (!meta.abilityId && meta.splashRadius <= 0 && !victim.parrying) {
-        const pushDist = meta.kind === 'arrow' ? 0.5 : 0.4
-        const resolved = this.resolveAbilityDisplacement(
-          victim,
-          meta.velDirX * pushDist,
-          meta.velDirZ * pushDist,
-          true,
-        )
-        victim.transform.x = resolved.x
-        victim.transform.z = resolved.z
-        const simVictim = this.sim.get(victimId)
-        if (simVictim) {
-          simVictim.pos.x = resolved.x
-          simVictim.pos.z = resolved.z
-        }
-      }
-
-      // Ability projectile knockback — applies horizontal push defined per-ability in the registry.
-      if (
-        meta.abilityId &&
-        meta.knockbackDistance &&
-        meta.knockbackDistance > 0 &&
-        !victim.parrying
-      ) {
-        const push = projectileKnockbackVector(
-          meta.splashRadius > 0,
-          victim.transform.x,
-          victim.transform.z,
-          hitPos.x,
-          hitPos.z,
-          meta.velDirX,
-          meta.velDirZ,
-          meta.knockbackDistance,
-        )
-        const resolved = this.resolveAbilityDisplacement(victim, push.x, push.z, true)
-        victim.transform.x = resolved.x
-        victim.transform.z = resolved.z
-        const simVictim = this.sim.get(victimId)
-        if (simVictim) {
-          simVictim.pos.x = resolved.x
-          simVictim.pos.z = resolved.z
-        }
-      }
-    }
-
-    // chainChance: 1 = always chain (all current abilities), 0 = never.
-    // AGENTS.md mandates zero RNG — probabilistic values < 1 are not supported.
-    // If a future infusion needs a probability < 1, replace this with a
-    // deterministic tick-based gate (e.g. every N hits), not Math.random().
-    const chainChance = meta.chainChance ?? 1
-    const shouldChain =
-      (meta.chainTargets ?? 0) > 0 && (meta.chainDamage ?? 0) > 0 && chainChance >= 1
-    if (shouldChain) {
-      const chained = findChainVictims(
-        this.state.players,
-        this.state.tick,
-        meta.ownerId,
-        victimIds,
-        hitPos,
-        meta.chainRadius ?? 0,
-        meta.chainTargets ?? 0,
-      )
-      for (const victimId of chained) {
-        this.damageQueue.push({
-          attackerId: meta.ownerId,
-          victimId,
-          damage: meta.chainDamage ?? 0,
-          knockup: false,
-          cause: `${baseCause}:chain`,
-          canParry: false,
-          element: meta.element,
-          lifestealFraction: meta.lifestealFraction,
-          onDamageStatus: meta.onHitStatus,
-        })
-      }
-    }
   }
 
   // Loadout handler: validates class-aware slot ids, then clears cooldowns and statuses.
@@ -2367,84 +2020,6 @@ export class GameRoom extends Room<GameState> {
   }
 
   // --- Ability engine glue --------------------------------------------------
-
-  // Adapter from the engine's projectile request (with optional element /
-  // splash / onHitStatus) to the room's existing spawnProjectile pipeline.
-  private spawnProjectileFromEngine(req: ProjectileSpawnRequest): string {
-    this.projectileIdCounter += 1
-    const pid = `p${this.projectileIdCounter}`
-    const p = new Projectile()
-    p.id = pid
-    p.ownerId = req.ownerId
-    p.kind = req.kind
-    p.originX = req.origin.x
-    p.originY = req.origin.y
-    p.originZ = req.origin.z
-    p.x = req.origin.x
-    p.y = req.origin.y
-    p.z = req.origin.z
-    p.vx = req.vel.x
-    p.vy = req.vel.y
-    p.vz = req.vel.z
-    p.gravity = req.gravity
-    p.damage = req.damage
-    p.spawnedAtTick = req.spawnedAtTick
-    p.despawnAtTick = req.spawnedAtTick + req.lifetimeTicks
-    p.expired = false
-    this.state.projectiles.set(pid, p)
-    this.projectileSim.set(pid, {
-      pos: { x: req.origin.x, y: req.origin.y, z: req.origin.z },
-      vel: { x: req.vel.x, y: req.vel.y, z: req.vel.z },
-      gravity: req.gravity,
-    })
-    const elementStr = req.element ?? 'none'
-    p.element = elementStr
-    const reqSpd2D = Math.hypot(req.vel.x, req.vel.z) || 0.001
-    this.projectileMeta.set(pid, {
-      ownerId: req.ownerId,
-      abilityId: req.abilityId,
-      comboRole: req.comboRole,
-      kind: req.kind,
-      damage: req.damage,
-      element: elementStr,
-      splashRadius: req.splashRadius ?? 0,
-      lifestealFraction: req.lifestealFraction,
-      onHitStatus: req.onHitStatus,
-      velDirX: req.vel.x / reqSpd2D,
-      velDirZ: req.vel.z / reqSpd2D,
-    })
-    if (req.kind === 'bolt' && req.abilityId) {
-      const caster = this.state.players.get(req.ownerId)
-      if (caster?.alive) {
-        const recoilDistance = (req.splashRadius ?? 0) > 0 ? 0.22 : req.damage >= 20 ? 0.18 : 0.12
-        const resolved = this.resolveAbilityDisplacement(
-          caster,
-          -(req.vel.x / reqSpd2D) * recoilDistance,
-          -(req.vel.z / reqSpd2D) * recoilDistance,
-          true,
-        )
-        caster.transform.x = resolved.x
-        caster.transform.z = resolved.z
-        const simCaster = this.sim.get(req.ownerId)
-        if (simCaster) {
-          simCaster.pos.x = resolved.x
-          simCaster.pos.z = resolved.z
-        }
-      }
-    }
-    const spawnedMsg: ServerProjectileSpawnedMessage = {
-      id: pid,
-      ownerId: req.ownerId,
-      kind: req.kind,
-      atTick: req.spawnedAtTick,
-      origin: { ...req.origin },
-      velocity: { ...req.vel },
-      damage: req.damage,
-      element: elementStr,
-    }
-    this.broadcast(MessageTypes.ProjectileSpawned, spawnedMsg)
-    return pid
-  }
 
   // Spawn a Zone (Flame Wall, Thorn Field, ...).
   private spawnZoneFromEngine(req: ZoneSpawnRequest): string {
