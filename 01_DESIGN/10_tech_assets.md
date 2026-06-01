@@ -48,7 +48,7 @@ Tutti gli asset in `packages/client/public/` devono essere usati dal codice runt
 
 | Path | Contenuto | Loader |
 |---|---|---|
-| `public/weapons/kaykit/sword_D.glb` | Spada a due mani (attivo) | `character-weapons.ts` |
+| `public/weapons/kaykit/sword.glb` | Spada slim (attivo; `sword_D.glb` vecchio, non usato) | `character-weapons.ts` |
 | `public/weapons/kaykit/bow.glb` | Arco (attivo) | `character-weapons.ts` |
 | `public/weapons/kaykit/staff.glb` | Bastone (attivo) | `character-weapons.ts` |
 | `public/weapons/kaykit/shield_A.glb` | Scudo fisico (attivo) | `character-weapons.ts` |

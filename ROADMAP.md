@@ -36,7 +36,7 @@ Questo file descrive solo lo stato vivo del progetto.
 - Tutorial HUD: 4 tooltip sequenziali alla prima partita (localStorage, si dissolve da solo).
 
 ### Fase 4 — Architettura (2026-05-31)
-- Weapon loader aggiornato a .glb (sword_D, bow, staff, shield_A).
+- Weapon loader aggiornato a .glb (sword, bow, staff, shield_A; sword_D sostituito da sword).
 - 13 GLB erronei dei personaggi (~250 MB) eliminati.
 
 ### Fase 5 — Feature Avanzate (2026-06-01)

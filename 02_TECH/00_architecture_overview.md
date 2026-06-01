@@ -96,7 +96,7 @@ The Colyseus monitor is an admin surface, not public gameplay API. It is disable
   on regular geometry or it will glow incorrectly.
 - Character models load as .gltf + .bin (not .glb) — .glb embeds textures and
   produces 15-40 MB files per class.
-- Weapon models load as .glb from public/weapons/kaykit/ (sword_D, bow, staff, shield_A).
+- Weapon models load as self-contained .glb from public/weapons/kaykit/ (sword, bow, staff, shield_A). The loader uses `sword.glb`, not the old `sword_D.glb`.
 
 ## Build Outputs
 

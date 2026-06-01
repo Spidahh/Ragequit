@@ -61,7 +61,7 @@ Per la lista completa vedi `01_DESIGN/10_tech_assets.md`.
 | `packages/client/public/arena/gladiators_arena.glb` | Arena 3D (~171 KB) |
 | `packages/client/public/characters/UAL1_Standard.glb` | Animazioni (NON rimuovere) |
 | `packages/client/public/characters/*.gltf` | Modelli personaggio per classe |
-| `packages/client/public/weapons/kaykit/sword_D.glb` | Spada (loader attivo) |
+| `packages/client/public/weapons/kaykit/sword.glb` | Spada (loader attivo; `sword_D.glb` è il vecchio modello, non usato) |
 | `packages/client/public/weapons/kaykit/bow.glb` | Arco (loader attivo) |
 | `packages/client/public/weapons/kaykit/staff.glb` | Bastone (loader attivo) |
 | `packages/client/public/weapons/kaykit/shield_A.glb` | Scudo fisico |

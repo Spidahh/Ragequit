@@ -6,9 +6,10 @@ and a single live CSS visual system.
 
 ## Current Runtime
 
-- Server: Fly.io app `ragequit-server`, region `ams`, port `8080`.
-- Client: Vite browser app in `packages/client`, static output for Cloudflare
-  Pages.
+- Server: Fly.io app `ragequit-server`, region `ams`, port `8080` in prod
+  (`PORT` env); local dev default `2567`.
+- Client: Vite browser app in `packages/client`, static build output in
+  `packages/client/dist/` for Cloudflare Pages.
 - Shared gameplay source: `packages/shared/src/abilities/registry.ts`.
 - Active classes: Tank, Arciere, Mago, Ibrido.
 - Active loadout grammar: class-aware `melee[]`, `bow[]`, `magicBase[]`,

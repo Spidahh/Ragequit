@@ -5,9 +5,11 @@ assunzioni precedenti come autorita.
 
 ## Fatti Stabiliti
 
-- Server gia online su Fly.io: app `ragequit-server`, regione `ams`, porta 8080.
+- Server online su Fly.io: app `ragequit-server`, regione `ams`. In produzione
+  ascolta su `PORT=8080` (Fly); in locale il default è `2567` (`server/src/main.ts`).
 - Supabase gia configurato come Fly secrets: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
-- Client destinato a Cloudflare Pages; output statico in `apps/web/`.
+- Client: build vite con output in `packages/client/dist/` (NON `apps/web/`); da lì
+  si deploya lo statico (Cloudflare Pages).
 - Unico CSS UI vivo: `packages/client/public/game-ui.css`.
 - **Asset sorgente** in `E:\GIOCHI\ASSET_GRAFICA` (cartella FUORI dal repo — prendere
   SEMPRE i nuovi asset grafici da qui, poi copiarli in `packages/client/public/`):
@@ -202,8 +204,9 @@ Se una modifica rompe o ignora anche solo uno dei sistemi collegati, la soluzion
   identifica il tipo/elemento: fire, ice, lightning, dark, nature, melee/bow
   fisico e utility.
 - Le armi runtime vive usano gli asset KayKit in
-  `packages/client/public/weapons/kaykit/` come `.glb` (`sword_D.glb`, `bow.glb`,
+  `packages/client/public/weapons/kaykit/` come `.glb` (`sword.glb`, `bow.glb`,
   `staff.glb`, `shield_A.glb`) con grip/scala corretti per personaggio e vista first-person.
+  NB: il loader carica `sword.glb` (lama slim); `sword_D.glb` è il vecchio modello tozzo, non usato.
 - Le card abilita del Forge hanno copy a sinistra e icona grande a destra; il
   danno ha una riga dedicata separata da costi/cooldown.
 - Hotbar in-game: bordo rosso `melee`, verde `bow`, blu `staff/magic`, oro
@@ -271,7 +274,8 @@ troppo grande, è stato spezzato in moduli separati per responsabilità:
 4. Aggiornare le importazioni nel file originale.
 5. Aggiornare `02_TECH/00_architecture_overview.md` con il nuovo file nella tabella "Main Code Surfaces".
 
-**File attualmente grandi da monitorare:**
-- `packages/client/src/main.ts` — ~3245 righe (da continuare a sfoltire)
-- `packages/server/src/rooms/GameRoom.ts` — ~2882 righe (candidato al prossimo split)
-- `packages/server/src/sim/AbilityEngine.ts` — ~1063 righe (borderline)
+**File attualmente grandi da monitorare** (oltre il limite "obbligatorio" di 800 righe — vanno spezzati):
+- `packages/client/src/main.ts` — ~3321 righe (PRIORITÀ split: god-file, ~58 `let` di modulo)
+- `packages/server/src/rooms/GameRoom.ts` — ~2867 righe (god-object: input+fisica+danno+abilità)
+- `packages/server/src/sim/AbilityEngine.ts` — ~1063 righe (split effetti per tipo)
+- `packages/client/src/loadout-station.ts` — ~804 righe (oltre soglia 500, monitorare)
