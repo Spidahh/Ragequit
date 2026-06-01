@@ -132,6 +132,7 @@ import {
 } from './render/characters.js'
 import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
 import { createFpvBow } from './render/fpv-bow.js'
+import { createFpvStaticViewmodel } from './render/fpv-static-viewmodel.js'
 import { getWeaponView } from './render/weapon-view.js'
 import { createOutlineMesh } from './render/outlines.js'
 import { initPlacementPreview } from './render/placement-preview.js'
@@ -492,10 +493,10 @@ function invalidateBloomCache(): void { _bloomDirty = true }
 // world camera) so they render in the separate viewmodel pass with their own
 // depth buffer and FOV. Visibility toggles in the render loop reference these
 // objects directly, so they keep working regardless of parent.
-const firstPersonViewModel = new THREE.Group()
-viewmodelCamera.add(firstPersonViewModel)
+const fpvStatic = createFpvStaticViewmodel()
+viewmodelCamera.add(fpvStatic.root)
 // Animated FPS bow viewmodel (arms + bow + real draw/fire/reload clips).
-// Used for the bow weapon; the static firstPersonViewModel is staff-only now.
+// Used for the bow weapon; fpvStatic above is the staff (and other static FPV).
 const fpvBow = createFpvBow()
 viewmodelCamera.add(fpvBow.root)
 // Subtle key light for first-person weapon — gives shape/depth without clipping.
@@ -508,121 +509,6 @@ firstPersonParryShield.position.set(0, -0.03, -0.8)
 firstPersonParryShield.userData['parryShield'] = firstPersonParryShield
 viewmodelCamera.add(firstPersonParryShield)
 scene.add(camera)
-let firstPersonViewWeapon: Weapon | null = null
-
-function clearFirstPersonViewModel(): void {
-  while (firstPersonViewModel.children.length > 0) {
-    const child = firstPersonViewModel.children[0]!
-    child.traverse((node) => {
-      if (!(node instanceof THREE.Mesh)) return
-      node.geometry.dispose()
-      const material = node.material
-      if (Array.isArray(material)) material.forEach((mat) => mat.dispose())
-      else material.dispose()
-    })
-    firstPersonViewModel.remove(child)
-  }
-}
-
-function rebuildFirstPersonViewModel(weapon: Weapon): void {
-  // Don't clear the existing model immediately — keep it visible while the
-  // new GLB loads to prevent a 1-frame flash of empty first-person view.
-  // The old model stays until the new one is fully ready.
-  firstPersonViewWeapon = weapon
-
-  // Re-use the same weapon GLB cache as third-person props.
-  fetchWeaponGlb(weapon)
-    .then((scene) => {
-      // Guard against race conditions (if player swapped weapons while loading)
-      if (firstPersonViewWeapon !== weapon) return
-
-      // Only clear the old model now that the replacement is ready.
-      clearFirstPersonViewModel()
-      const model = scene.clone()
-
-      // Reset firstPersonViewModel base transforms to avoid double offsets
-      firstPersonViewModel.position.set(0, 0, 0)
-      firstPersonViewModel.rotation.set(0, 0, 0)
-
-      // Rendered in the dedicated viewmodel pass (separate scene + fresh depth
-      // buffer), so no depthTest/renderOrder hacks are needed — just keep the
-      // meshes always drawn (the 58° viewmodel camera is tighter than the world's).
-      model.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          child.frustumCulled = false
-          const src = child.material as THREE.MeshStandardMaterial | THREE.MeshToonMaterial | undefined
-          const hasMap = !!(src && 'map' in src && src.map && !(src.map instanceof Function))
-          const color = src?.color?.clone() ?? new THREE.Color(0xffffff)
-
-          const nameLower = child.name.toLowerCase()
-          const isGlowing =
-            nameLower.includes('glow') ||
-            nameLower.includes('glyph') ||
-            nameLower.includes('orb') ||
-            nameLower.includes('element')
-
-          // MeshStandardMaterial responds to the fpvKeyLight for depth/shape.
-          if (isGlowing) {
-            child.material = new THREE.MeshBasicMaterial({
-              color: new THREE.Color(0x00d0ff),
-              transparent: true,
-              opacity: src?.opacity ?? 1.0,
-            })
-          } else {
-            child.material = new THREE.MeshStandardMaterial({
-              color,
-              map: hasMap ? src.map : null,
-              roughness: 0.55,
-              metalness: 0.3,
-              transparent: src?.transparent ?? false,
-              opacity: src?.opacity ?? 1.0,
-            })
-          }
-        }
-      })
-
-      // Add outlines to keep weapon silhouettes readable in dark arenas.
-      const outlines: THREE.Mesh[] = []
-      model.traverse((child) => {
-        if (child instanceof THREE.Mesh && !child.name.endsWith('_outline')) {
-          const outline = createOutlineMesh(child, 0.016, 0x0a0a0f)
-          outline.frustumCulled = false
-          outlines.push(outline)
-        }
-      })
-      for (const outline of outlines) {
-        outline.parent?.add(outline)
-      }
-
-      // Weapon-specific first-person positions and orientations.
-      if (weapon === 'sword') {
-        model.position.set(0.18, -0.25, -0.5)
-        model.rotation.set(-0.25, -0.4, 0.1)
-        model.scale.setScalar(0.55)
-      } else if (weapon === 'bow') {
-        // bow.glb: limbs along local X, riser/arrow-shelf along local Z. Rotate
-        // (π/2, π/2, 0) so the limbs stand VERTICAL and the bow's broad FACE
-        // turns toward the camera with the arrow shelf pointing forward (toward
-        // the target) — the asset reads as a bow facing forward, not a thin
-        // edge-on sliver. Held low-left so it frames the view without covering
-        // the crosshair. Tuned live in-browser.
-        model.position.set(-0.26, -0.16, -0.6)
-        model.rotation.set(Math.PI / 2, Math.PI / 2, 0)
-        model.scale.setScalar(0.33)
-      } else if (weapon === 'staff') {
-        // Held diagonally in the lower-right; tuned for the 58° viewmodel camera.
-        model.position.set(0.13, -0.24, -0.5)
-        model.rotation.set(-0.18, -0.42, 0.12)
-        model.scale.setScalar(0.3)
-      }
-
-      firstPersonViewModel.add(model)
-    })
-    .catch((err) => {
-      console.error(`[first-person] Failed to load weapon model ${weapon}:`, err)
-    })
-}
-
 const { loadMapGeometry, getActiveMapId, animateArena } = buildArena(scene, toonGradient)
 
 const placementPreview = initPlacementPreview({
@@ -3022,7 +2908,7 @@ function _renderInner(now: number): void {
     // character model can never be shown while a viewmodel is active.
     selfMesh.visible = !dead && !firstPerson
     fpvBow.setVisible(!dead && cfg.viewModel === 'fpvBow')
-    firstPersonViewModel.visible = !dead && cfg.viewModel === 'staticViewmodel'
+    fpvStatic.root.visible = !dead && cfg.viewModel === 'staticViewmodel'
     setParryShieldState(selfMesh, !dead && !!selfSchema?.parrying, !!selfSchema?.parryIsHold, now)
     setParryShieldState(
       firstPersonParryShield,
@@ -3030,8 +2916,8 @@ function _renderInner(now: number): void {
       !!selfSchema?.parryIsHold,
       now,
     )
-    if (cfg.viewModel === 'staticViewmodel' && firstPersonViewWeapon !== wSchema)
-      rebuildFirstPersonViewModel(wSchema)
+    if (cfg.viewModel === 'staticViewmodel' && fpvStatic.getCurrentWeapon() !== wSchema)
+      fpvStatic.rebuild(wSchema)
 
     // ── Animated first-person bow ──────────────────────────────────────────
     // Real arms+bow rig: drive its clips from gameplay state and fire the
