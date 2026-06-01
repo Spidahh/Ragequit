@@ -132,6 +132,7 @@ import {
 } from './render/characters.js'
 import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
 import { createFpvBow } from './render/fpv-bow.js'
+import { getWeaponView } from './render/weapon-view.js'
 import { createOutlineMesh } from './render/outlines.js'
 import { initPlacementPreview } from './render/placement-preview.js'
 import { initProjectileVisuals, type SchemaProjectile } from './render/projectile-visuals.js'
@@ -2903,9 +2904,8 @@ function _renderInner(now: number): void {
         loadCharacterGlb(selfMesh, 0x3a8fde, toonGradient, currentClassId)
       }
     }
-    // Hide own capsule when dead (you see the respawn overlay instead) and
-    // when the camera is very close so you never clip through your own head.
-    selfMesh.visible = !dead
+    // selfMesh.visible is set authoritatively below from the weapon view config
+    // (hidden when dead, or in first person so the body is never shown).
 
     const distToSim = Math.hypot(self.sim.pos.x - renderPos.x, self.sim.pos.y - renderPos.y, self.sim.pos.z - renderPos.z)
     if (dead && selfSchema) {
@@ -2930,8 +2930,16 @@ function _renderInner(now: number): void {
     selfMesh.position.set(x, y + idleBob, z)
     selfMesh.rotation.y = inp.mouseYaw
 
-    const wSchema =
-      selfSchema && isWeapon(selfSchema.activeWeapon) ? selfSchema.activeWeapon : 'sword'
+    // Resolve the active weapon. If the schema's weapon is briefly missing/invalid
+    // (right after spawn or mid weapon-swap), fall back to the LAST known-good
+    // weapon rather than snapping to 'sword' — snapping to sword would flip a
+    // first-person player into third person and flash their body for a frame.
+    const wSchema: Weapon =
+      selfSchema && isWeapon(selfSchema.activeWeapon)
+        ? selfSchema.activeWeapon
+        : isWeapon(selfLastWeapon)
+          ? selfLastWeapon
+          : 'sword'
 
     // Detect windup cast COMPLETION: casting was true last frame, now false,
     // and no interruption fired (interruptions clear castStartedAtMs to 0).
@@ -2998,40 +3006,37 @@ function _renderInner(now: number): void {
       selfLastWeapon = wSchema
       applyWeaponProp(selfMesh, wSchema, toonGradient)
     }
-    const firstPersonWeapon = wSchema === 'bow' || wSchema === 'staff'
-    const wBackTarget = firstPersonWeapon ? 0 : 5.5
-    const wUpTarget = firstPersonWeapon ? PROJECTILE_MUZZLE_Y_OFFSET_M : 1.3
-
-    // Bow ADS narrows more while drawn; staff keeps a crisp FPS FOV.
-    const wFovTarget =
-      wSchema === 'bow'
-        ? settingsFovBase - 7 - bowChargeRatio * 5
-        : wSchema === 'staff'
-          ? settingsFovBase - 3
-          : settingsFovBase
+    // Per-weapon view config (camera mode, offsets, FOV, viewmodel) — single
+    // source of truth in render/weapon-view.ts.
+    const cfg = getWeaponView(wSchema)
+    const firstPerson = cfg.view === 'first'
+    const wBackTarget = cfg.camBack
+    const wUpTarget = cfg.camUp
+    const wFovTarget = settingsFovBase + cfg.fovDelta(bowChargeRatio)
     const CAM_LERP = inHitStop ? 0 : 0.12
     camBack += (wBackTarget - camBack) * CAM_LERP
     camUp += (wUpTarget - camUp) * CAM_LERP
     camFovBase += (wFovTarget - camFovBase) * CAM_LERP
 
-    const isBowFpv = wSchema === 'bow'
-    selfMesh.visible = !dead && !firstPersonWeapon
-    fpvBow.setVisible(!dead && isBowFpv)
-    // The static first-person viewmodel is staff-only now (bow uses fpvBow).
-    firstPersonViewModel.visible = !dead && wSchema === 'staff'
+    // Self body hidden in first person — derived from view mode alone, so the
+    // character model can never be shown while a viewmodel is active.
+    selfMesh.visible = !dead && !firstPerson
+    fpvBow.setVisible(!dead && cfg.viewModel === 'fpvBow')
+    firstPersonViewModel.visible = !dead && cfg.viewModel === 'staticViewmodel'
     setParryShieldState(selfMesh, !dead && !!selfSchema?.parrying, !!selfSchema?.parryIsHold, now)
     setParryShieldState(
       firstPersonParryShield,
-      !dead && firstPersonWeapon && !!selfSchema?.parrying,
+      !dead && firstPerson && !!selfSchema?.parrying,
       !!selfSchema?.parryIsHold,
       now,
     )
-    if (wSchema === 'staff' && firstPersonViewWeapon !== wSchema) rebuildFirstPersonViewModel(wSchema)
+    if (cfg.viewModel === 'staticViewmodel' && firstPersonViewWeapon !== wSchema)
+      rebuildFirstPersonViewModel(wSchema)
 
     // ── Animated first-person bow ──────────────────────────────────────────
     // Real arms+bow rig: drive its clips from gameplay state and fire the
     // shoot→reload one-shot when a charged shot is released.
-    if (isBowFpv) {
+    if (cfg.viewModel === 'fpvBow') {
       const charging = self.bowChargeStartMs > 0 || (selfSchema?.bowChargeStartTick ?? 0) > 0
       fpvBow.update(dt, { moving: selfSpeed > 0.3, speed: selfSpeed, charging })
       if (_prevBowCharging && !charging) fpvBow.fire()
@@ -3040,7 +3045,7 @@ function _renderInner(now: number): void {
       _prevBowCharging = false
     }
 
-    if (firstPersonWeapon) {
+    if (firstPerson) {
       camera.position.set(x, y + camUp, z)
       camera.rotation.set(inp.mousePitch, inp.mouseYaw, 0, 'YXZ')
     } else {
@@ -3058,7 +3063,7 @@ function _renderInner(now: number): void {
     const groundFloor = getMap(getActiveMapId() || 'blockout').groundY
     if (camera.position.y < groundFloor + 0.4) camera.position.y = groundFloor + 0.4
 
-    if (!firstPersonWeapon) {
+    if (!firstPerson) {
       const aimForward = new THREE.Vector3(0, 0, -1).applyEuler(
         new THREE.Euler(inp.mousePitch, inp.mouseYaw, 0, 'YXZ'),
       )
