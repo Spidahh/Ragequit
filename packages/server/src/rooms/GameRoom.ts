@@ -134,7 +134,7 @@ import {
   hasLineOfSight,
   spellImpactPushDistance,
 } from '../sim/combat-geometry.js'
-import { resolveProjectileHit, findChainVictims } from '../sim/projectile-collision.js'
+import { resolveProjectileHit, findChainVictims, playersInRadius } from '../sim/projectile-collision.js'
 import { bestSpawnIndex } from '../sim/spawn-selection.js'
 import {
   trackMatchStarted,
@@ -1999,20 +1999,12 @@ export class GameRoom extends Room<GameState> {
       : meta.kind === 'arrow'
         ? 'bow'
         : 'staff'
-    const victimIds: string[] = []
-    if (meta.splashRadius > 0) {
-      this.state.players.forEach((player, pid) => {
-        if (pid === meta.ownerId) return
-        if (!player.alive) return
-        if (this.state.tick < player.invulnUntilTick) return
-        const dx = player.transform.x - hitPos.x
-        const dy = player.transform.y - hitPos.y
-        const dz = player.transform.z - hitPos.z
-        if (Math.hypot(dx, dy, dz) <= meta.splashRadius) victimIds.push(pid)
-      })
-    } else if (directVictimId) {
-      victimIds.push(directVictimId)
-    }
+    const victimIds: string[] =
+      meta.splashRadius > 0
+        ? playersInRadius(this.state.players, this.state.tick, meta.ownerId, hitPos, meta.splashRadius)
+        : directVictimId
+          ? [directVictimId]
+          : []
 
     for (const victimId of victimIds) {
       const victim = this.state.players.get(victimId)

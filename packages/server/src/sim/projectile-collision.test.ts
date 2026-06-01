@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { resolveProjectileHit, findChainVictims, type CollidablePlayer } from './projectile-collision.js'
+import {
+  resolveProjectileHit,
+  findChainVictims,
+  playersInRadius,
+  type CollidablePlayer,
+} from './projectile-collision.js'
 
 function player(x: number, y: number, z: number, over: Partial<CollidablePlayer> = {}): CollidablePlayer {
   return { transform: { x, y, z }, alive: true, invulnUntilTick: 0, ...over }
@@ -85,5 +90,26 @@ describe('findChainVictims', () => {
   it('returns empty for non-positive radius or maxTargets', () => {
     expect(findChainVictims(players, 0, 'owner', [], origin, 0, 5)).toEqual([])
     expect(findChainVictims(players, 0, 'owner', [], origin, 10, 0)).toEqual([])
+  })
+})
+
+describe('playersInRadius', () => {
+  const center = { x: 0, y: 0, z: 0 }
+  const players = new Map<string, CollidablePlayer>([
+    ['owner', player(0, 0, 0)],
+    ['near', player(1, 0, 0)],
+    ['far', player(50, 0, 0)],
+    ['dead', player(1, 0, 0, { alive: false })],
+    ['invuln', player(1, 0, 0, { invulnUntilTick: 100 })],
+  ])
+
+  it('returns all valid players within the radius (owner/dead/invuln excluded)', () => {
+    const out = playersInRadius(players, 50, 'owner', center, 5)
+    expect(out).toEqual(['near'])
+  })
+
+  it('excludes players beyond the radius', () => {
+    expect(playersInRadius(players, 50, 'owner', center, 100)).toContain('far')
+    expect(playersInRadius(players, 50, 'owner', center, 5)).not.toContain('far')
   })
 })

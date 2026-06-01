@@ -101,6 +101,30 @@ export function resolveProjectileHit(
 }
 
 /**
+ * All valid victims within `radius` of `center` (unsorted) — used for splash.
+ * Skips the owner, dead and invulnerable players.
+ */
+export function playersInRadius(
+  players: Iterable<readonly [string, CollidablePlayer]>,
+  tick: number,
+  ownerId: string,
+  center: Vec3,
+  radius: number,
+): string[] {
+  const out: string[] = []
+  for (const [pid, player] of players) {
+    if (pid === ownerId) continue
+    if (!player.alive) continue
+    if (tick < player.invulnUntilTick) continue
+    const dx = player.transform.x - center.x
+    const dy = player.transform.y - center.y
+    const dz = player.transform.z - center.z
+    if (Math.hypot(dx, dy, dz) <= radius) out.push(pid)
+  }
+  return out
+}
+
+/**
  * Find up to `maxTargets` chain-jump victims within `radius` of `origin`, nearest
  * first. Skips the owner, the already-excluded ids, dead and invulnerable players.
  */
