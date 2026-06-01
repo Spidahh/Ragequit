@@ -87,3 +87,6 @@ _tmp_*
 .smoke.mjs
 .smoke.*.mjs
 .aider*
+
+# Texture-resize backups (local only)
+tools/asset-pipeline/.tex-backup/
