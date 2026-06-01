@@ -21,11 +21,7 @@ import {
   MANA_REGEN_PER_SEC,
   MessageTypes,
   PARRY_HOLD_BLOCK_FRAC,
-  PARRY_HOLD_DRAIN_PER_SEC,
   PARRY_TAP_BLOCK_FRAC,
-  PARRY_TAP_COOLDOWN_SEC,
-  PARRY_TAP_COST_STAMINA,
-  PARRY_TAP_WINDOW_SEC,
   PROJECTILE_MUZZLE_Y_OFFSET_M,
   Player,
   RESPAWN_SEC,
@@ -73,7 +69,6 @@ import {
   type ServerKillStreakMessage,
   type ServerHitMessage,
   type ServerNoteMessage,
-  type ServerParryEventMessage,
   type ServerWeaponSwappedMessage,
   type SimInput,
   type Weapon,
@@ -107,6 +102,7 @@ import {
   FURY_SURGE_DAMAGE_BONUS,
   MatchManager,
   MeleeSystem,
+  ParrySystem,
   ProjectileSystem,
   RateLimiter,
   ReplayRecorder,
@@ -147,8 +143,6 @@ const SPAWN_INVULN_TICKS = Math.round(SPAWN_INVULN_SEC * TICK_RATE_HZ)
 const UPPERCUT_AIRBORNE_TICKS = Math.round(UPPERCUT_AIRBORNE_SEC * TICK_RATE_HZ)
 const OOC_DELAY_TICKS = Math.round(HP_REGEN_OOC_DELAY_SEC * TICK_RATE_HZ)
 const MANA_DELAY_TICKS = Math.round(MANA_REGEN_DELAY_SEC * TICK_RATE_HZ)
-const PARRY_TAP_WINDOW_TICKS = Math.round(PARRY_TAP_WINDOW_SEC * TICK_RATE_HZ)
-const PARRY_TAP_COOLDOWN_TICKS = Math.round(PARRY_TAP_COOLDOWN_SEC * TICK_RATE_HZ)
 const STAFF_CADENCE_TICKS = Math.round(STAFF_M1_CADENCE_SEC * TICK_RATE_HZ)
 const BOW_LIFETIME_TICKS = Math.round(BOW_PROJECTILE_LIFETIME_SEC * TICK_RATE_HZ)
 const STAFF_LIFETIME_TICKS = Math.max(1, Math.round(STAFF_M1_LIFETIME_SEC * TICK_RATE_HZ))
@@ -194,14 +188,12 @@ export class GameRoom extends Room<GameState> {
   // Damage queued during a tick by swings/casts/projectiles; drained at end.
   private damageQueue: PendingDamage[] = []
 
-  // Projectile / zone / melee lifecycles live in their own subsystems; GameRoom
-  // implements their small host interfaces.
+  // Projectile / zone / melee / parry lifecycles live in their own subsystems;
+  // GameRoom implements their small host interfaces.
   private projectiles!: ProjectileSystem
   private zones!: ZoneSystem
   private melee!: MeleeSystem
-
-  // Press-tick for parry, needed to decide tap vs hold at release.
-  private readonly parryPressTick = new Map<string, number>()
+  private parry!: ParrySystem
 
   private engine!: AbilityEngine
   private statuses!: StatusRuntime
@@ -335,16 +327,16 @@ export class GameRoom extends Room<GameState> {
       this.handleFireStaff(client.sessionId, message)
     })
 
-    this.onMessage<ClientParryPressMessage>(MessageTypes.ParryPress, (client, message) => {
+    this.onMessage<ClientParryPressMessage>(MessageTypes.ParryPress, (client) => {
       if (!this.gateRate(client, 'parry')) return
       if (!this.canAcceptCombatAction()) return
-      this.handleParryPress(client.sessionId, message)
+      this.parry.press(client.sessionId)
     })
 
-    this.onMessage<ClientParryReleaseMessage>(MessageTypes.ParryRelease, (client, message) => {
+    this.onMessage<ClientParryReleaseMessage>(MessageTypes.ParryRelease, (client) => {
       if (!this.gateRate(client, 'parry')) return
       if (!this.canAcceptCombatAction()) return
-      this.handleParryRelease(client.sessionId, message)
+      this.parry.release(client.sessionId)
     })
 
     this.onMessage(MessageTypes.Heartbeat, (client, message: { clientTime: number }) => {
@@ -432,6 +424,15 @@ export class GameRoom extends Room<GameState> {
       sendAbilityFailed: (sid, abilityId, reason) => this.sendAbilityFailed(sid, abilityId, reason),
       hasStatus: (player, kind) => this.statuses.hasStatus(player, kind),
       onSwordHitLanded: (attackerId, now) => this.mechanics.onSwordHitLanded(attackerId, now),
+    })
+    this.parry = new ParrySystem({
+      state: this.state,
+      sendAbilityFailed: (sid, abilityId, reason) => this.sendAbilityFailed(sid, abilityId, reason),
+      syncSimStamina: (playerId, stamina) => {
+        const simState = this.sim.get(playerId)
+        if (simState) simState.stamina = stamina
+      },
+      broadcast: (type, message) => this.broadcast(type, message),
     })
     // Match manager - drives BO5 round flow + ELO + scoreboard.
     // Replay recorder. Records every broadcast tagged with state.tick.
@@ -683,7 +684,7 @@ export class GameRoom extends Room<GameState> {
     this.rateLimiter.forgetClient(sid)
     this.lastSeqSeen.delete(sid)
     this.positionHistory.delete(sid)
-    this.parryPressTick.delete(sid)
+    this.parry.forget(sid)
     this.killStreaks.delete(sid)
     this.bots.delete(sid)
     this.mechanics.forgetPlayer(sid)
@@ -729,7 +730,7 @@ export class GameRoom extends Room<GameState> {
       this.bots.forEach((bot) => bot.step())
 
       // 2. Close expired parry tap windows + hold-drain stamina.
-      this.tickParry(now, dt)
+      this.parry.tick(now, dt)
 
       // 2b. Resolve windups that completed this tick (engine-driven).
       this.engine.tickWindups()
@@ -794,7 +795,7 @@ export class GameRoom extends Room<GameState> {
         player.parrying = false
         player.parryIsHold = false
         player.parryTapEndsAtTick = 0
-        this.parryPressTick.delete(sid)
+        this.parry.forget(sid)
       }
       if (player.casting) this.engine.cancelCast(sid, 'death')
     })
@@ -882,9 +883,8 @@ export class GameRoom extends Room<GameState> {
     // Parry edge detection for bots (and any client that sends m2 on the input message).
     // Human players send ParryPress/ParryRelease as separate messages; bots piggyback on m2.
     if (!dead && lastM2 !== undefined) {
-      const atTick = this.state.tick
-      if (lastM2 && !player.parrying) this.handleParryPress(sid, { atTick })
-      else if (!lastM2 && player.parrying) this.handleParryRelease(sid, { atTick })
+      if (lastM2 && !player.parrying) this.parry.press(sid)
+      else if (!lastM2 && player.parrying) this.parry.release(sid)
     }
 
     if (inputsThisTick === 0) {
@@ -1532,125 +1532,6 @@ export class GameRoom extends Room<GameState> {
       lifetimeTicks: STAFF_LIFETIME_TICKS,
       spawnedAtTick: now,
     })
-  }
-
-  private handleParryPress(sid: string, _msg: ClientParryPressMessage): void {
-    const player = this.state.players.get(sid)
-    if (!player || !player.alive) return
-    if (this.state.tick < player.weaponSwapEndTick) {
-      this.sendAbilityFailed(sid, 'parry', 'swapping')
-      return
-    }
-    if (player.casting) {
-      this.sendAbilityFailed(sid, 'parry', 'casting')
-      return
-    }
-    // Can't open a new parry while one is already in progress.
-    if (player.parrying) {
-      this.sendAbilityFailed(sid, 'parry', 'parrying')
-      return
-    }
-    // Tap CD only gates NEW taps; hold requires no CD. At press-time we
-    // don't know yet if it'll be a tap, so gate by CD up front. If stamina is
-    // too low even for a tap, the press is a no-op.
-    if (this.state.tick < player.parryCooldownReadyAtTick) {
-      this.sendAbilityFailed(sid, 'parry', 'cooldown')
-      return
-    }
-    if (player.stamina < PARRY_TAP_COST_STAMINA) {
-      this.sendAbilityFailed(sid, 'parry', 'cost')
-      return
-    }
-
-    const now = this.state.tick
-    // Parry is a defensive commitment. Starting it cancels a bow draw so the
-    // player cannot hold a charged shot and block/release at the same time.
-    player.bowChargeStartTick = 0
-    // Enter tap mode; on release inside the window we finalise tap + burn
-    // stamina + start CD. If release comes after the window, we slide into
-    // hold mode.
-    player.parrying = true
-    player.parryIsHold = false
-    player.parryTapEndsAtTick = now + PARRY_TAP_WINDOW_TICKS
-    this.parryPressTick.set(sid, now)
-
-    const ev: ServerParryEventMessage = {
-      playerId: sid,
-      kind: 'tapStart',
-      atTick: now,
-    }
-    this.broadcast(MessageTypes.ParryEvent, ev)
-  }
-
-  private handleParryRelease(sid: string, _msg: ClientParryReleaseMessage): void {
-    const player = this.state.players.get(sid)
-    if (!player) return
-    if (!player.parrying) return
-    const now = this.state.tick
-    const pressTick = this.parryPressTick.get(sid) ?? now
-    const heldTicks = now - pressTick
-
-    if (heldTicks <= PARRY_TAP_WINDOW_TICKS && !player.parryIsHold) {
-      // Tap completed inside window. Burn stamina + CD.
-      player.stamina = Math.max(0, player.stamina - PARRY_TAP_COST_STAMINA)
-      const simState = this.sim.get(sid)
-      if (simState) simState.stamina = player.stamina
-      player.parryCooldownReadyAtTick = now + PARRY_TAP_COOLDOWN_TICKS
-      this.emitParry(sid, 'tapEnd', now)
-    } else if (player.parryIsHold) {
-      this.emitParry(sid, 'holdEnd', now)
-    } else {
-      // Released after tap window without having converted to hold — still
-      // treat as tap end (but tick loop should already have emitted it).
-      this.emitParry(sid, 'tapEnd', now)
-    }
-
-    player.parrying = false
-    player.parryIsHold = false
-    player.parryTapEndsAtTick = 0
-    this.parryPressTick.delete(sid)
-  }
-
-  private tickParry(now: number, dt: number): void {
-    for (const [sid, player] of this.state.players) {
-      if (!player.parrying) continue
-      // If tap window elapsed and the key is still held, transition to hold.
-      if (!player.parryIsHold && now >= player.parryTapEndsAtTick) {
-        player.parryIsHold = true
-        player.parryTapEndsAtTick = 0
-        this.emitParry(sid, 'holdStart', now)
-      }
-
-      if (player.parryIsHold) {
-        // Drain stamina; cancel if empty.
-        const drained = player.stamina - PARRY_HOLD_DRAIN_PER_SEC * dt
-        if (drained <= 0) {
-          player.stamina = 0
-          player.parrying = false
-          player.parryIsHold = false
-          this.parryPressTick.delete(sid)
-          this.emitParry(sid, 'holdEnd', now)
-        } else {
-          player.stamina = drained
-          const simState = this.sim.get(sid)
-          if (simState) simState.stamina = player.stamina
-        }
-      }
-
-      // Death cancels parry immediately.
-      if (!player.alive) {
-        const wasHold = player.parryIsHold
-        player.parrying = false
-        player.parryIsHold = false
-        this.parryPressTick.delete(sid)
-        this.emitParry(sid, wasHold ? 'holdEnd' : 'tapEnd', now)
-      }
-    }
-  }
-
-  private emitParry(sid: string, kind: ServerParryEventMessage['kind'], atTick: number): void {
-    const msg: ServerParryEventMessage = { playerId: sid, kind, atTick }
-    this.broadcast(MessageTypes.ParryEvent, msg)
   }
 
   // Loadout handler: validates class-aware slot ids, then clears cooldowns and statuses.
