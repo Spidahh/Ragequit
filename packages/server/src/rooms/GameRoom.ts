@@ -135,6 +135,7 @@ import {
   spellImpactPushDistance,
 } from '../sim/combat-geometry.js'
 import { resolveProjectileHit, findChainVictims } from '../sim/projectile-collision.js'
+import { bestSpawnIndex } from '../sim/spawn-selection.js'
 import {
   trackMatchStarted,
   trackMatchEnded,
@@ -1374,38 +1375,14 @@ export class GameRoom extends Room<GameState> {
   // players the point that maximises minimum-distance to any enemy wins.
   // Falls back to the join-order index when no living opponents exist (round
   // start, bot-only lobby) so the first reset is still symmetric.
-  private bestSpawnIndex(sid: string): number {
-    const spawns = this.activeMap.spawns
-    if (spawns.length === 1) return 0
-
-    let bestIdx = indexOfSid(this.state.players, sid) % spawns.length
-    let bestDist = -1
-    let hasEnemy = false
-
-    for (let i = 0; i < spawns.length; i++) {
-      const sp = spawns[i]!
-      let minDistToEnemy = Infinity
-      for (const [otherId, other] of this.state.players) {
-        if (otherId === sid || !other.alive) continue
-        hasEnemy = true
-        const dx = other.transform.x - sp.x
-        const dz = other.transform.z - sp.z
-        const d = Math.hypot(dx, dz)
-        if (d < minDistToEnemy) minDistToEnemy = d
-      }
-      if (isFinite(minDistToEnemy) && minDistToEnemy > bestDist) {
-        bestDist = minDistToEnemy
-        bestIdx = i
-      }
-    }
-
-    // No living enemies — keep symmetric join-order assignment.
-    if (!hasEnemy) return indexOfSid(this.state.players, sid) % spawns.length
-    return bestIdx
-  }
 
   private respawn(sid: string, player: Player): void {
-    const spawnIndex = this.bestSpawnIndex(sid)
+    const spawnIndex = bestSpawnIndex(
+      this.activeMap.spawns,
+      this.state.players,
+      sid,
+      indexOfSid(this.state.players, sid),
+    )
     const spawn = this.activeMap.spawns[spawnIndex]!
     const now = this.state.tick
 
