@@ -69,19 +69,19 @@ The Colyseus monitor is an admin surface, not public gameplay API. It is disable
 
 ## Additional Client Systems (added 2026-06-01)
 
-| System | File | Notes |
-|---|---|---|
-| Asset preloader | `src/preloader.ts` | Preloads character + weapons before match starts; shows loading bar |
-| Match state machine | `src/game/match-state-machine.ts` | Explicit FSM for disconnected/lobby/countdown/live/roundEnd/matchEnd |
-| Post-processing bloom | `main.ts` (EffectComposer) | Three.js layer 1 = bloom-eligible; UnrealBloomPass strength 0.45 |
-| LOD remote players | `render/remote-players.ts` | >40m: hide mesh; 20-40m: disable shadows |
-| Audio spatial 3D | `audio/sound-engine.ts` | PannerNode HRTF for remote player hits/casts; listener updated every frame |
-| Arena torches | `world/arena.ts` | Torch_Metal.gltf at 4 pillars + PointLight flickering (per-torch phase offset) |
-| Sky dome | `world/arena.ts` | ShaderMaterial gradient (dark zenith -> lighter horizon) |
-| FPV weapon depth | `main.ts` | fpvKeyLight (PointLight camera-attached) + MeshStandardMaterial |
-| Dynamic crosshair | `main.ts` + CSS | Expands on WASD movement; green flash on kill |
-| Low-HP heartbeat | `audio/sound-engine.ts` | Procedural lub-dub below 25% HP, rate proportional to danger |
-| Camera shake | `main.ts` | Exponential decay + micro-oscillation for organic feel |
+| System                | File                              | Notes                                                                          |
+| --------------------- | --------------------------------- | ------------------------------------------------------------------------------ |
+| Asset preloader       | `src/preloader.ts`                | Preloads character + weapons before match starts; shows loading bar            |
+| Match state machine   | `src/game/match-state-machine.ts` | Explicit FSM for disconnected/lobby/countdown/live/roundEnd/matchEnd           |
+| Post-processing bloom | `main.ts` (EffectComposer)        | Three.js layer 1 = bloom-eligible; UnrealBloomPass strength 0.45               |
+| LOD remote players    | `render/remote-players.ts`        | >40m: hide mesh; 20-40m: disable shadows                                       |
+| Audio spatial 3D      | `audio/sound-engine.ts`           | PannerNode HRTF for remote player hits/casts; listener updated every frame     |
+| Arena torches         | `world/arena.ts`                  | Torch_Metal.gltf at 4 pillars + PointLight flickering (per-torch phase offset) |
+| Sky dome              | `world/arena.ts`                  | ShaderMaterial gradient (dark zenith -> lighter horizon)                       |
+| FPV weapon depth      | `main.ts`                         | fpvKeyLight (PointLight camera-attached) + MeshStandardMaterial                |
+| Dynamic crosshair     | `main.ts` + CSS                   | Expands on WASD movement; green flash on kill                                  |
+| Low-HP heartbeat      | `audio/sound-engine.ts`           | Procedural lub-dub below 25% HP, rate proportional to danger                   |
+| Camera shake          | `main.ts`                         | Exponential decay + micro-oscillation for organic feel                         |
 
 ## Runtime Invariants
 

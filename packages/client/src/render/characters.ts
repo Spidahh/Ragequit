@@ -10,10 +10,7 @@
 import { CAPSULE_HALF_HEIGHT_M, CAPSULE_HEIGHT_M } from '@ragequit/shared'
 import * as THREE from 'three'
 
-import {
-  makeCharacter as makeCharacterAnchor,
-  type CharacterOpts,
-} from '../character.js'
+import { makeCharacter as makeCharacterAnchor, type CharacterOpts } from '../character.js'
 
 import { type MixerStore, initMixerStore } from './character-animation.js'
 import { buildCharacterModel, findBone } from './character-loader.js'
@@ -28,11 +25,7 @@ export {
   triggerWeaponRecoil,
   disposeCharacterMixer,
 } from './character-animation.js'
-export {
-  fetchWeaponGlb,
-  applyWeaponProp,
-  makeCastRing,
-} from './character-weapons.js'
+export { fetchWeaponGlb, applyWeaponProp, makeCastRing } from './character-weapons.js'
 
 // ---------------------------------------------------------------------------
 // Internal utilities — rendering/scaling/materials
@@ -68,7 +61,9 @@ function _makeToonMaterial(
 ): THREE.MeshToonMaterial {
   const src = source as THREE.MeshStandardMaterial | THREE.MeshToonMaterial | undefined
   const hasMap = !!(src && 'map' in src && src.map)
-  const color = hasMap ? (src?.color?.clone() ?? new THREE.Color(0xffffff)) : new THREE.Color(teamColor)
+  const color = hasMap
+    ? (src?.color?.clone() ?? new THREE.Color(0xffffff))
+    : new THREE.Color(teamColor)
   return new THREE.MeshToonMaterial({
     color,
     map: hasMap ? (src as THREE.MeshStandardMaterial).map : null,
@@ -76,9 +71,9 @@ function _makeToonMaterial(
     side: THREE.DoubleSide,
     emissive: hasMap ? new THREE.Color(teamColor) : new THREE.Color(0x000000),
     emissiveIntensity: hasMap ? 0.08 : 0.0,
-    alphaTest:   src?.alphaTest ?? 0,
+    alphaTest: src?.alphaTest ?? 0,
     transparent: src?.transparent ?? false,
-    opacity:     src?.opacity ?? 1,
+    opacity: src?.opacity ?? 1,
   })
 }
 
@@ -107,11 +102,11 @@ function _installCharacterModel(
   }
 
   // --- Scale and position ---
-  const nativeBox    = _measureRenderableBox(model)
+  const nativeBox = _measureRenderableBox(model)
   const nativeHeight = _validBoxHeight(nativeBox)
-  const targetScale  = (CAPSULE_HEIGHT_M / nativeHeight) * 1.45
+  const targetScale = (CAPSULE_HEIGHT_M / nativeHeight) * 1.45
   model.scale.setScalar(targetScale)
-  model.rotation.y = Math.PI          // face forward (game convention)
+  model.rotation.y = Math.PI // face forward (game convention)
   const scaledBox = _measureRenderableBox(model)
   model.position.y = -CAPSULE_HALF_HEIGHT_M - scaledBox.min.y
 
@@ -148,19 +143,19 @@ function _installCharacterModel(
     const applyOffset = (mat: THREE.Material) => {
       mat.polygonOffset = true
       mat.polygonOffsetFactor = -2
-      mat.polygonOffsetUnits  = -2
+      mat.polygonOffsetUnits = -2
     }
     if (Array.isArray(child.material)) (child.material as THREE.Material[]).forEach(applyOffset)
     else if (child.material instanceof THREE.Material) applyOffset(child.material)
   })
 
-  charGroup.userData['armorMat']     = glbMaterials[0]
+  charGroup.userData['armorMat'] = glbMaterials[0]
   charGroup.userData['glbMaterials'] = glbMaterials
   charGroup.userData['toonGradient'] = toonGradient
 
   const rightHand = findBone(model, 'RightHand')
-  const wg     = charGroup.userData['weaponGroup'] as THREE.Group | undefined
-  const sg     = charGroup.userData['shieldGroup'] as THREE.Group | undefined
+  const wg = charGroup.userData['weaponGroup'] as THREE.Group | undefined
+  const sg = charGroup.userData['shieldGroup'] as THREE.Group | undefined
   const shield = charGroup.userData['parryShield'] as THREE.Group | undefined
 
   // Ensure transforms are up-to-date before adding.
@@ -169,7 +164,14 @@ function _installCharacterModel(
 
   // --- Remove old children (procedural silhouette, old model) ---
   for (const child of [...charGroup.children]) {
-    if (child === wg || child === sg || child === shield || child === model || child.name === 'shadow') continue
+    if (
+      child === wg ||
+      child === sg ||
+      child === shield ||
+      child === model ||
+      child.name === 'shadow'
+    )
+      continue
     child.visible = false
     charGroup.remove(child)
   }
@@ -179,8 +181,9 @@ function _installCharacterModel(
 
   // --- Re-attach weaponGroup to new hand bone using per-weapon grip config ---
   if (rightHand && wg) {
-    const activeId = (charGroup.userData['activeWeaponProp'] as 'sword' | 'bow' | 'staff') ?? 'sword'
-    const classId = charGroup.userData['loadedClassId'] as string || 'hybrid'
+    const activeId =
+      (charGroup.userData['activeWeaponProp'] as 'sword' | 'bow' | 'staff') ?? 'sword'
+    const classId = (charGroup.userData['loadedClassId'] as string) || 'hybrid'
     const grip = getWeaponGrip(activeId, classId)
     rightHand.add(wg)
     wg.position.set(...grip.position)
@@ -192,20 +195,27 @@ function _installCharacterModel(
   const outlinePairs: { mesh: THREE.Mesh; outline: THREE.Mesh }[] = []
   charGroup.traverse((child) => {
     if (!(child instanceof THREE.Mesh)) return
-    if (!child.visible) return                  // skip hidden base body meshes
+    if (!child.visible) return // skip hidden base body meshes
     if (child.name.endsWith('_outline')) return
 
     // Skip parry shield children
-    let p = child.parent; let isShield = false
-    while (p) { if (p === shield) { isShield = true; break } p = p.parent }
+    let p = child.parent
+    let isShield = false
+    while (p) {
+      if (p === shield) {
+        isShield = true
+        break
+      }
+      p = p.parent
+    }
     if (isShield) return
     if (child.name === 'shadow') return
 
     const isWeaponMesh =
       child.name.toLowerCase().includes('weapon') ||
-      child.name.toLowerCase().includes('sword')  ||
+      child.name.toLowerCase().includes('sword') ||
       child.name.toLowerCase().includes('dagger') ||
-      child.name.toLowerCase().includes('staff')  ||
+      child.name.toLowerCase().includes('staff') ||
       child.name.toLowerCase().includes('bow')
     const outline = createOutlineMesh(child, isWeaponMesh ? 0.016 : 0.012, 0x0a0a0f)
     outlinePairs.push({ mesh: child, outline })
@@ -216,7 +226,12 @@ function _installCharacterModel(
   applyShieldProp(charGroup, toonGradient)
 
   // --- AnimationMixer ---
-  const store = initMixerStore(model, clipsByName as Partial<Record<import('./character-animation.js').AnimName, THREE.AnimationClip>>)
+  const store = initMixerStore(
+    model,
+    clipsByName as Partial<
+      Record<import('./character-animation.js').AnimName, THREE.AnimationClip>
+    >,
+  )
   charGroup.userData['mixerStore'] = store
 }
 
@@ -248,7 +263,14 @@ export function loadCharacterGlb(
       }
       if (charGroup.userData['disposed'] as boolean) return
 
-      _installCharacterModel(charGroup, model, clips, teamColor, toonGradient, `${resolvedClass} GLTF`)
+      _installCharacterModel(
+        charGroup,
+        model,
+        clips,
+        teamColor,
+        toonGradient,
+        `${resolvedClass} GLTF`,
+      )
     })
     .catch((err) => {
       console.error('[characters] Failed to load character:', err)
@@ -293,14 +315,23 @@ export function makeParryShieldVisual(radius = 0.62): THREE.Group {
   shield.renderOrder = 18
 
   const mk = (color: number, opacity: number) =>
-    new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide })
+    new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    })
 
-  const core  = new THREE.Mesh(new THREE.CircleGeometry(radius, 8),                       mk(0x68ddff, 0.18))
-  const edge  = new THREE.Mesh(new THREE.RingGeometry(radius * 0.84, radius, 8),           mk(0xffd260, 0.92))
-  const glyph = new THREE.Mesh(new THREE.RingGeometry(radius * 0.38, radius * 0.46, 6),    mk(0x00d0ff, 0.78))
+  const core = new THREE.Mesh(new THREE.CircleGeometry(radius, 8), mk(0x68ddff, 0.18))
+  const edge = new THREE.Mesh(new THREE.RingGeometry(radius * 0.84, radius, 8), mk(0xffd260, 0.92))
+  const glyph = new THREE.Mesh(
+    new THREE.RingGeometry(radius * 0.38, radius * 0.46, 6),
+    mk(0x00d0ff, 0.78),
+  )
 
-  core.userData['parryShieldCore']   = true
-  edge.userData['parryShieldEdge']   = true
+  core.userData['parryShieldCore'] = true
+  edge.userData['parryShieldEdge'] = true
   glyph.userData['parryShieldGlyph'] = true
   shield.add(core, edge, glyph)
   return shield
@@ -336,9 +367,9 @@ export function setParryShieldState(
   shield.traverse((child) => {
     if (!(child instanceof THREE.Mesh)) return
     const mat = child.material as THREE.MeshBasicMaterial
-    if (child.userData['parryShieldCore'])   mat.opacity = hold ? 0.16 + pulse * 0.09 : 0.26
-    if (child.userData['parryShieldEdge'])   mat.opacity = hold ? 0.68 + pulse * 0.22 : 0.96
-    if (child.userData['parryShieldGlyph'])  mat.opacity = hold ? 0.58 + pulse * 0.20 : 0.90
+    if (child.userData['parryShieldCore']) mat.opacity = hold ? 0.16 + pulse * 0.09 : 0.26
+    if (child.userData['parryShieldEdge']) mat.opacity = hold ? 0.68 + pulse * 0.22 : 0.96
+    if (child.userData['parryShieldGlyph']) mat.opacity = hold ? 0.58 + pulse * 0.2 : 0.9
   })
 }
 
@@ -346,8 +377,8 @@ export function setParryShieldState(
 // The skeleton has no dedicated block clip, so we additively rotate the left
 // arm bones AFTER the mixer writes the idle pose each frame.
 const PARRY_UPPERARM_Z = -1.15 // lift the upper arm up/across the chest
-const PARRY_UPPERARM_X = 0.55  // bring it forward, in front of the torso
-const PARRY_LOWERARM_Z = 1.35  // bend the elbow so the shield rises to face level
+const PARRY_UPPERARM_X = 0.55 // bring it forward, in front of the torso
+const PARRY_LOWERARM_Z = 1.35 // bend the elbow so the shield rises to face level
 
 /**
  * Procedurally raise the left (shield) arm into a blocking stance while

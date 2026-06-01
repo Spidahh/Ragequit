@@ -29,9 +29,7 @@ describe('loadout slot helpers', () => {
 
   it('normalizeLoadoutSlots pads to 8 without injecting abilities', () => {
     expect(
-      normalizeLoadoutSlots(['m', 'b', 'a', 'b2', 'c', 'd', 'e', 'quick_dash']).slice(
-        5,
-      ),
+      normalizeLoadoutSlots(['m', 'b', 'a', 'b2', 'c', 'd', 'e', 'quick_dash']).slice(5),
     ).toEqual(['d', 'e', 'quick_dash'])
   })
 })

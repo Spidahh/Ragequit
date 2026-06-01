@@ -19,9 +19,15 @@ export class MatchStateMachine {
   private _anyListeners: MatchStateCallback[] = []
   private _history: Array<{ from: MatchState; to: MatchState; at: number }> = []
 
-  get state(): MatchState { return this._state }
-  get history() { return this._history }
-  get isLive(): boolean { return this._state === 'live' }
+  get state(): MatchState {
+    return this._state
+  }
+  get history() {
+    return this._history
+  }
+  get isLive(): boolean {
+    return this._state === 'live'
+  }
   get isInMatch(): boolean {
     return this._state === 'live' || this._state === 'countdown' || this._state === 'roundEnd'
   }
@@ -44,7 +50,11 @@ export class MatchStateMachine {
     if (this._history.length > 50) this._history.shift()
     const listeners = this._listeners.get(next) ?? []
     for (const cb of [...listeners, ...this._anyListeners]) {
-      try { cb(from, next) } catch (e) { console.error('[MatchSM] listener error:', e) }
+      try {
+        cb(from, next)
+      } catch (e) {
+        console.error('[MatchSM] listener error:', e)
+      }
     }
     return true
   }
@@ -53,7 +63,9 @@ export class MatchStateMachine {
     return states.includes(this._state)
   }
 
-  reset(): void { this._state = 'disconnected' }
+  reset(): void {
+    this._state = 'disconnected'
+  }
 }
 
 /** Singleton — import this in main.ts and any module that needs match state. */

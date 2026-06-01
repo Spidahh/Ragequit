@@ -119,10 +119,10 @@ export async function logOut(): Promise<{ error: string | null }> {
 export async function signInWithGoogle(): Promise<{ error: string | null }> {
   const sb = getClient()
   if (!sb) return { error: 'Supabase URL o anon key mancanti' }
-  
+
   // Dynamic host detection for local vs fly deploy redirects
   const redirectUrl = window.location.origin
-  
+
   const { error } = await sb.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -132,9 +132,10 @@ export async function signInWithGoogle(): Promise<{ error: string | null }> {
   return { error: error?.message || null }
 }
 
-
 /** Get player stats (ELO, wins, losses) from Supabase players table. */
-export async function getPlayerStats(userId: string): Promise<{ elo_rating: number; wins: number; losses: number } | null> {
+export async function getPlayerStats(
+  userId: string,
+): Promise<{ elo_rating: number; wins: number; losses: number } | null> {
   const sb = getClient()
   if (!sb) return null
   const { data, error } = await sb
@@ -152,5 +153,3 @@ export async function getPlayerStats(userId: string): Promise<{ elo_rating: numb
 export function isSupabaseConfigured(): boolean {
   return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY)
 }
-
-

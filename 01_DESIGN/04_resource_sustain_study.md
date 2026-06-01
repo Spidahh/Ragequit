@@ -14,12 +14,12 @@ RAGEQUIT does not use fixed resource-transfer slots.
 
 ## Recovery Rows
 
-| Class   | Recovery utility | Core action                                                        |
-| ------- | ---------------- | ------------------------------------------------------------------ |
-| Tank    | Brace Recovery   | Spend Stamina, recover HP and gain a short readable guard          |
-| Arciere | Hunter's Flow    | Recover while moving                                               |
-| Mago    | Arcane Rebind    | Spend Mana with a visible cast                                     |
-| Ibrido  | Adaptive Mend    | Fast lower-peak self recovery                                      |
+| Class   | Recovery utility | Core action                                               |
+| ------- | ---------------- | --------------------------------------------------------- |
+| Tank    | Brace Recovery   | Spend Stamina, recover HP and gain a short readable guard |
+| Arciere | Hunter's Flow    | Recover while moving                                      |
+| Mago    | Arcane Rebind    | Spend Mana with a visible cast                            |
+| Ibrido  | Adaptive Mend    | Fast lower-peak self recovery                             |
 
 ## Budget Band
 

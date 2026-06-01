@@ -265,8 +265,7 @@ export function initGameInput(
     (e) => {
       if (isTextEditingTarget(e.target)) return
       const k = e.code
-      const gameplaySurfaceKey =
-        canEngageGameplaySurface() && isGameplayKeyCode(k)
+      const gameplaySurfaceKey = canEngageGameplaySurface() && isGameplayKeyCode(k)
       if (gameplaySurfaceKey) {
         e.preventDefault()
         e.stopImmediatePropagation()
@@ -312,11 +311,7 @@ export function initGameInput(
         return
       }
 
-      if (
-        isOverlayOpen(settingsOverlay) ||
-        !loadoutStationHidden() ||
-        isPauseMenuOpen()
-      ) {
+      if (isOverlayOpen(settingsOverlay) || !loadoutStationHidden() || isPauseMenuOpen()) {
         return
       }
 
@@ -382,7 +377,9 @@ export function initGameInput(
       if (matchesAction(k, 'swapWeapon')) {
         e.preventDefault()
         const activeClassId = getCurrentClassId()
-        const allowedWeapons = (TARGET_CLASS_DEFS[activeClassId]?.weapons ?? ['sword']) as readonly Weapon[]
+        const allowedWeapons = (TARGET_CLASS_DEFS[activeClassId]?.weapons ?? [
+          'sword',
+        ]) as readonly Weapon[]
         if (allowedWeapons.length > 1) {
           const cur = getCurrentWeaponForInput() as Weapon
           const idx = allowedWeapons.indexOf(cur)
@@ -397,8 +394,7 @@ export function initGameInput(
     'keyup',
     (e) => {
       if (isTextEditingTarget(e.target)) return
-      const gameplaySurfaceKey =
-        canEngageGameplaySurface() && isGameplayKeyCode(e.code)
+      const gameplaySurfaceKey = canEngageGameplaySurface() && isGameplayKeyCode(e.code)
       if (gameplaySurfaceKey) {
         e.preventDefault()
         e.stopImmediatePropagation()
@@ -510,7 +506,9 @@ export function initGameInput(
     e.preventDefault()
     engageCanvasInput()
     const activeClassId = getCurrentClassId()
-    const allowedWeapons = (TARGET_CLASS_DEFS[activeClassId]?.weapons ?? ['sword']) as readonly Weapon[]
+    const allowedWeapons = (TARGET_CLASS_DEFS[activeClassId]?.weapons ?? [
+      'sword',
+    ]) as readonly Weapon[]
     if (allowedWeapons.length > 1) {
       const cur = getCurrentWeaponForInput() as Weapon
       const idx = allowedWeapons.indexOf(cur)

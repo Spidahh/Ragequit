@@ -1,11 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import {
-  actionCode,
-  actionLabel,
-  resetKeybinds,
-  setKeybind,
-} from './keybinds.js'
+import { actionCode, actionLabel, resetKeybinds, setKeybind } from './keybinds.js'
 
 describe('keybind settings', () => {
   beforeEach(() => {

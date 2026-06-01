@@ -69,6 +69,7 @@ Non aggiungere bonus condizionali lato server (es. +X% danno se Y) a meno che no
 ## Filosofia di Sviluppo Connesso
 
 Qualsiasi intervento su una singola parte del codice deve essere progettato e implementato pensando a **tutti i sistemi collegati** (la "Rete di Sistemi"). Non agire mai con fretta o con fix isolati. Prima di modificare qualsiasi elemento, verifica e allinea l'intera catena di dipendenze visive, fisiche e logiche:
+
 1. **Visuale & Telecamera (FPV/TPV)**: Quando si modifica un'arma o un accessorio, assicurarsi che l'allineamento, il grip e le animazioni funzionino perfettamente sia in prima persona (First-Person View / ViewModels) sia in terza persona (Third-Person View / Character Skeleton), evitando clipping, torsioni innaturali o disallineamenti del mirino.
 2. **Replicazione & Stato Multiplayer**: Ogni stato visivo locale (es. parata attiva, scudo sul fianco, swap dell'arma) deve essere perfettamente sincronizzato con lo stato autoritativo del server e replicato correttamente sulle schermate degli altri giocatori (bystanders) senza lag o anomalie di posizionamento.
 3. **Fisica del Server & Feedback Client**: I vettori di impatto delle abilità e i segmenti di collisione (hitbox) lato server devono corrispondere al pixel con il feedback visivo sul client (es. la traiettoria del fendente della spada, il crosshair delle armi a distanza, e le direzioni delle spinte fisiche).
@@ -263,6 +264,7 @@ Se una modifica rompe o ignora anche solo uno dei sistemi collegati, la soluzion
 
 **Regola derivata dall'esperienza su `main.ts`**: quando `main.ts` è diventato
 troppo grande, è stato spezzato in moduli separati per responsabilità:
+
 - logica arena → `world/arena.ts`
 - caricamento personaggi → `render/character-loader.ts`, `character-animation.ts`, `character-weapons.ts`
 - HUD separati → `hud/cd-strip.ts`, `hud/self-hud.ts`, `hud/combat-feed.ts`, `hud/hit-feedback.ts`, ecc.
@@ -273,6 +275,7 @@ troppo grande, è stato spezzato in moduli separati per responsabilità:
 - asset preload → `preloader.ts`
 
 **Pattern da seguire quando un file supera la soglia:**
+
 1. Identificare le responsabilità distinte nel file.
 2. Creare un nuovo file nella sottocartella appropriata (es. `game/`, `hud/`, `render/`).
 3. Spostare la responsabilità nel nuovo file con export named.
@@ -280,6 +283,7 @@ troppo grande, è stato spezzato in moduli separati per responsabilità:
 5. Aggiornare `02_TECH/00_architecture_overview.md` con il nuovo file nella tabella "Main Code Surfaces".
 
 **File attualmente grandi da monitorare** (oltre il limite "obbligatorio" di 800 righe — vanno spezzati):
+
 - `packages/client/src/main.ts` — ~2900 righe (in decomposizione: 3321 → 2899). Componenti puliti
   estratti in moduli: `render/weapon-view.ts`, `render/fpv-static-viewmodel.ts`, `net/schema-readers.ts`,
   `menu/account-ui.ts`. Quel che resta è core orchestrativo accoppiato (connect, handler server, teardown,

@@ -270,7 +270,7 @@ describe('AbilityEngine — Whirlwind (channel)', () => {
       if (d.victimId === 'B' && d.amount === 11) total += d.amount
     }
     expect(total).toBeGreaterThanOrEqual(22) // 2 ticks minimum
-    expect(total).toBeLessThanOrEqual(33)    // 3 ticks maximum
+    expect(total).toBeLessThanOrEqual(33) // 3 ticks maximum
   })
 })
 

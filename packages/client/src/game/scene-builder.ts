@@ -58,9 +58,9 @@ export function buildScene(app: HTMLElement): SceneObjects {
   bloomComposer.addPass(new RenderPass(scene, camera))
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(window.innerWidth, window.innerHeight),
-    0.45,   // strength — subtle, not blown out
-    0.55,   // radius
-    0.75,   // threshold — only very bright emissive gets bloomed
+    0.45, // strength — subtle, not blown out
+    0.55, // radius
+    0.75, // threshold — only very bright emissive gets bloomed
   )
   bloomComposer.addPass(bloomPass)
 
@@ -124,11 +124,7 @@ export function buildScene(app: HTMLElement): SceneObjects {
 }
 
 /** Update all size-dependent objects after a window resize. */
-export function onSceneResize(
-  sceneObjects: SceneObjects,
-  width: number,
-  height: number,
-): void {
+export function onSceneResize(sceneObjects: SceneObjects, width: number, height: number): void {
   const { renderer, bloomComposer, finalComposer, bloomPass } = sceneObjects
   renderer.setSize(width, height)
   bloomComposer.setSize(width, height)

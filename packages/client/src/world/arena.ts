@@ -84,9 +84,11 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
         // Apply explicit warm sandstone tones rather than the GLB material colour —
         // the original material is olive-grey which reads green under the scene's
         // cool hemisphere light. Warm sand/stone colours fight the blue tint.
-        const stoneColor = nodeName.includes('door') ? new THREE.Color(0x8a6a40)
-          : isFlag ? new THREE.Color(0x993322)
-          : new THREE.Color(0xc0a060) // main arena sandstone
+        const stoneColor = nodeName.includes('door')
+          ? new THREE.Color(0x8a6a40)
+          : isFlag
+            ? new THREE.Color(0x993322)
+            : new THREE.Color(0xc0a060) // main arena sandstone
         child.material = new THREE.MeshToonMaterial({
           color: stoneColor,
           gradientMap: toonGradient,
@@ -107,7 +109,8 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
   // Placed just inside the arena wall so they wash warm light across the pit.
   const TORCH_RING_R = 20
   const torchLights: THREE.PointLight[] = []
-  for (let i = 0; i < 8; i += 2) { // 4 torch lights around the wall
+  for (let i = 0; i < 8; i += 2) {
+    // 4 torch lights around the wall
     const a = (i / 8) * Math.PI * 2 + Math.PI / 8
     const x = Math.cos(a) * TORCH_RING_R
     const z = Math.sin(a) * TORCH_RING_R
@@ -135,10 +138,11 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
           const srcMat = child.material as THREE.MeshStandardMaterial | undefined
           const baseColor = srcMat?.color?.clone() ?? new THREE.Color(0xb87030)
           // Add warm emissive glow for the torch metal (hot metal look)
-          const isFireBowl = child.name.toLowerCase().includes('bowl') ||
-                             child.name.toLowerCase().includes('fire') ||
-                             child.name.toLowerCase().includes('flame') ||
-                             child.name.toLowerCase().includes('top')
+          const isFireBowl =
+            child.name.toLowerCase().includes('bowl') ||
+            child.name.toLowerCase().includes('fire') ||
+            child.name.toLowerCase().includes('flame') ||
+            child.name.toLowerCase().includes('top')
           child.material = new THREE.MeshToonMaterial({
             color: baseColor,
             gradientMap: toonGradient,
@@ -213,10 +217,10 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
   const skyMat = new THREE.ShaderMaterial({
     side: THREE.BackSide,
     uniforms: {
-      topColor:    { value: new THREE.Color(0x10142e) }, // deep dusk blue (not black)
+      topColor: { value: new THREE.Color(0x10142e) }, // deep dusk blue (not black)
       bottomColor: { value: new THREE.Color(0x5a3a2e) }, // warm amber dusk haze
-      offset:      { value: 30 },
-      exponent:    { value: 0.7 },
+      offset: { value: 30 },
+      exponent: { value: 0.7 },
     },
     vertexShader: `
       varying vec3 vWorldPosition;
@@ -347,7 +351,10 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
               child.castShadow = true
               child.receiveShadow = true
 
-              const src = child.material as THREE.MeshStandardMaterial | THREE.MeshToonMaterial | undefined
+              const src = child.material as
+                | THREE.MeshStandardMaterial
+                | THREE.MeshToonMaterial
+                | undefined
               const color = src?.color?.clone() ?? new THREE.Color(0xffffff)
 
               child.material = new THREE.MeshToonMaterial({
@@ -365,7 +372,7 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
         undefined,
         (err) => {
           console.error(`[arena] Failed to load prop ${s.type}:`, err)
-        }
+        },
       )
     })
   }
@@ -373,7 +380,7 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
   function loadMapGeometry(mapId: string): boolean {
     if (mapId === activeMapId) return false
     activeMapId = mapId
-    
+
     // Clean up inactive box meshes
     for (const m of mapBoxMeshes) {
       scene.remove(m)
@@ -412,8 +419,8 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
     if (!inHitStop) {
       for (let i = 0; i < torchLights.length; i++) {
         const torch = torchLights[i]!
-        const flicker = 0.7 + 0.3 * Math.sin(now * 0.0047 + i * 1.618) +
-                        0.08 * Math.sin(now * 0.019 + i * 2.4)
+        const flicker =
+          0.7 + 0.3 * Math.sin(now * 0.0047 + i * 1.618) + 0.08 * Math.sin(now * 0.019 + i * 2.4)
         torch.intensity = 0.85 * flicker
       }
     }

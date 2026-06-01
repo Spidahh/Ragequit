@@ -42,7 +42,7 @@ export function makeSwingArcMesh(): THREE.Mesh {
     opacity: 0,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
-    side: THREE.DoubleSide
+    side: THREE.DoubleSide,
   })
   const m = new THREE.Mesh(geo, mat)
   m.visible = false

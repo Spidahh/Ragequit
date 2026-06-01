@@ -53,11 +53,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 
 import { SoundEngine } from './audio/sound-engine.js'
 import { type DeathcamData, type ScoreboardData } from './endgame.js'
-import {
-  type ComboState,
-  victimShakeIntensity,
-  COMBO_RESET_MS,
-} from './game/combat-feedback.js'
+import { type ComboState, victimShakeIntensity, COMBO_RESET_MS } from './game/combat-feedback.js'
 import {
   rawCauseId,
   isAirPunishCause,
@@ -97,11 +93,7 @@ import { createAccountUi } from './menu/account-ui.js'
 import { initMenu } from './menu.js'
 import { sendLoadout } from './net/loadout-sync.js'
 import { createSchemaReaders } from './net/schema-readers.js'
-import {
-  initSupabaseAuth,
-  getAccessToken,
-  getCurrentUserEmail,
-} from './net/supabase-auth.js'
+import { initSupabaseAuth, getAccessToken, getCurrentUserEmail } from './net/supabase-auth.js'
 import {
   showLoadingScreen,
   hideLoadingScreen,
@@ -383,8 +375,6 @@ renderer.domElement.tabIndex = 0
 renderer.domElement.style.outline = 'none'
 app.appendChild(renderer.domElement)
 
-
-
 // Nameplate container — absolutely positioned over the canvas for HP bars /
 // name labels above remote players. Updated each render frame via 3D projection.
 const nameplateContainer = document.createElement('div')
@@ -412,7 +402,10 @@ const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerH
 const viewmodelScene = new THREE.Scene()
 const VIEWMODEL_FOV = 58
 const viewmodelCamera = new THREE.PerspectiveCamera(
-  VIEWMODEL_FOV, window.innerWidth / window.innerHeight, 0.01, 10,
+  VIEWMODEL_FOV,
+  window.innerWidth / window.innerHeight,
+  0.01,
+  10,
 )
 viewmodelScene.add(viewmodelCamera)
 // The viewmodel scene has its own lights (the world's lights live in `scene`).
@@ -433,9 +426,9 @@ const bloomRenderPass = new RenderPass(scene, camera)
 bloomComposer.addPass(bloomRenderPass)
 const bloomPass = new UnrealBloomPass(
   new THREE.Vector2(window.innerWidth, window.innerHeight),
-  0.45,   // strength — subtle, not blown out
-  0.55,   // radius
-  0.75,   // threshold — only bright emissive gets bloomed
+  0.45, // strength — subtle, not blown out
+  0.55, // radius
+  0.75, // threshold — only bright emissive gets bloomed
 )
 bloomComposer.addPass(bloomPass)
 // Final composer: full scene render output
@@ -487,7 +480,9 @@ const _blackMat = new THREE.MeshBasicMaterial({ color: 0x000000 })
 let _bloomDirty = true
 let _nonBloomEntries: Array<{ mesh: THREE.Mesh; mat: THREE.Material | THREE.Material[] }> = []
 /** Call after adding/removing major scene objects to invalidate the bloom cache. */
-function invalidateBloomCache(): void { _bloomDirty = true }
+function invalidateBloomCache(): void {
+  _bloomDirty = true
+}
 
 // First-person viewmodels are parented to the dedicated viewmodelCamera (not the
 // world camera) so they render in the separate viewmodel pass with their own
@@ -766,7 +761,12 @@ let selfRollingUntilMs = 0
 // applyDirectionalShake: wraps _applyDirectionalShake from visual-helpers.js
 // Kept here because it closes over the module-level shakeOffset/shakeDecay vars.
 function applyDirectionalShake(attackerWorldPos: THREE.Vector3 | null, intensity = 1): void {
-  shakeDecay = _applyDirectionalShake(shakeOffset, self?.sim.pos ?? null, attackerWorldPos, intensity)
+  shakeDecay = _applyDirectionalShake(
+    shakeOffset,
+    self?.sim.pos ?? null,
+    attackerWorldPos,
+    intensity,
+  )
 }
 
 // Live round phase start tick — set when MatchPhase 'live' arrives.
@@ -889,16 +889,16 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
     // falling back to kill count only when neither is available.
     const selfEloDelta = lastMatchEloDeltas[selfId]
     const oppEloDelta = otherId ? lastMatchEloDeltas[otherId] : undefined
-    const isWin = selfEloDelta !== undefined
-      ? selfEloDelta > 0
-      : oppEloDelta !== undefined
-        ? oppEloDelta < 0
-        : selfStats.kills > opponentStats.kills
+    const isWin =
+      selfEloDelta !== undefined
+        ? selfEloDelta > 0
+        : oppEloDelta !== undefined
+          ? oppEloDelta < 0
+          : selfStats.kills > opponentStats.kills
 
     const eloBefore = ELO_STARTING // real per-player ELO from Supabase — TODO when auth is complete
-    const eloDelta = selfEloDelta !== undefined
-      ? selfEloDelta
-      : computeEloDelta(eloBefore, ELO_STARTING, isWin)
+    const eloDelta =
+      selfEloDelta !== undefined ? selfEloDelta : computeEloDelta(eloBefore, ELO_STARTING, isWin)
 
     const arenaName = getSchemaMapId()
     const matchMs = performance.now() - matchStartMs
@@ -907,10 +907,7 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
     const scoreboardData: ScoreboardData = {
       arena: arenaName.toUpperCase(),
       matchMs: matchMs > 0 ? matchMs : 120000,
-      rounds:
-        mode === 'training'
-          ? 'PRATICA'
-          : `${selfStats.kills} - ${opponentStats.kills} kill`,
+      rounds: mode === 'training' ? 'PRATICA' : `${selfStats.kills} - ${opponentStats.kills} kill`,
       league: mode === 'training' ? 'NO ELO' : 'RANKED',
       winner: isWin
         ? {
@@ -1200,7 +1197,9 @@ const menu = initMenu({
 const accountUi = createAccountUi({
   loadoutStation,
   menu,
-  setPlayerProfile: (p) => { playerProfile = p },
+  setPlayerProfile: (p) => {
+    playerProfile = p
+  },
 })
 
 // Call on startup — menu is now initialized, safe to call
@@ -1208,7 +1207,9 @@ accountUi.initPlayerProfile()
 
 // Re-run profile init once auth resolves (updates auth UI + stats from Supabase)
 _supabaseAuthReady
-  .then(() => { accountUi.initPlayerProfile() })
+  .then(() => {
+    accountUi.initPlayerProfile()
+  })
   .catch((e: unknown) => console.warn('[supabase] auth init failed:', e))
 setStatus('offline', 'rgba(200,200,200,0.35)')
 
@@ -1290,7 +1291,10 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
     setStatus('connected', '#9be39b')
     trackMatchJoined(mode)
     _reconnectAttempted = false
-    if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null }
+    if (_reconnectTimer) {
+      clearTimeout(_reconnectTimer)
+      _reconnectTimer = null
+    }
 
     // Kick off asset preload in background while the player configures loadout.
     const selfClass = loadoutStation.getClassId() || 'hybrid'
@@ -1584,7 +1588,11 @@ function onHit(msg: ServerHitMessage): void {
       // ── Normal hit 1 ──
       soundEngine.playHitByType(msg.cause, power)
       // Play element-specific impact sound for ability hits
-      if (msg.cause.startsWith('ability:') || msg.cause.startsWith('zone:') || msg.cause.startsWith('combo:')) {
+      if (
+        msg.cause.startsWith('ability:') ||
+        msg.cause.startsWith('zone:') ||
+        msg.cause.startsWith('combo:')
+      ) {
         soundEngine.playElementImpact(msg.element ?? 'none', Math.min(1, power * 0.8))
       }
       hitStopUntilMs = now + hitstopAttacker(msg.cause)
@@ -1904,7 +1912,6 @@ function clearLocalMatchState(): void {
   clearSelfVisuals()
 }
 
-
 // -----------------------------------------------------------------------
 // Tutorial HUD — shown once per player on first match entry
 // -----------------------------------------------------------------------
@@ -1914,7 +1921,7 @@ function showTutorialIfFirstTime(): void {
   localStorage.setItem('ragequit.tutorial.done', 'true')
 
   const TIPS = [
-    { delay: 500,  dur: 4500, text: 'WASD per muoverti — SPAZIO per saltare' },
+    { delay: 500, dur: 4500, text: 'WASD per muoverti — SPAZIO per saltare' },
     { delay: 5500, dur: 4000, text: 'LMB = attacco base — RMB = parata / ricarica' },
     { delay: 10000, dur: 4500, text: 'E / Q aprono le ruote abilità — 1-8 cast diretto' },
     { delay: 15000, dur: 4000, text: 'TAB cambia arma — ESC pausa' },
@@ -1953,7 +1960,9 @@ function showTutorialIfFirstTime(): void {
       ].join(';')
       el.textContent = tip.text
       overlay.appendChild(el)
-      requestAnimationFrame(() => { el.style.opacity = '1' })
+      requestAnimationFrame(() => {
+        el.style.opacity = '1'
+      })
       setTimeout(() => {
         el.style.opacity = '0'
         setTimeout(() => el.remove(), 400)
@@ -1968,7 +1977,10 @@ function returnToMainMenu(opts: { leaveRoom: boolean; statusText?: string }): vo
   soundEngine.stopArenaAmbient()
   connectSeq++
   _reconnectAttempted = false
-  if (_reconnectTimer) { clearTimeout(_reconnectTimer); _reconnectTimer = null }
+  if (_reconnectTimer) {
+    clearTimeout(_reconnectTimer)
+    _reconnectTimer = null
+  }
   const leavingRoom = room
   if (leavingRoom)
     trackMatchLeft(
@@ -2471,7 +2483,11 @@ function _renderInner(now: number): void {
     // selfMesh.visible is set authoritatively below from the weapon view config
     // (hidden when dead, or in first person so the body is never shown).
 
-    const distToSim = Math.hypot(self.sim.pos.x - renderPos.x, self.sim.pos.y - renderPos.y, self.sim.pos.z - renderPos.z)
+    const distToSim = Math.hypot(
+      self.sim.pos.x - renderPos.x,
+      self.sim.pos.y - renderPos.y,
+      self.sim.pos.z - renderPos.z,
+    )
     if (dead && selfSchema) {
       renderPos.set(selfSchema.transform.x, selfSchema.transform.y, selfSchema.transform.z)
       renderPosInitialized = true
@@ -2518,7 +2534,11 @@ function _renderInner(now: number): void {
         if (lastCastTargetPoint) {
           const elemColor = (ELEMENT_COLOR[def.element] ?? '#4a90d8').replace('#', '')
           const col = parseInt(elemColor, 16) || 0x4a90d8
-          spawnImpact(new THREE.Vector3(lastCastTargetPoint.x, lastCastTargetPoint.y, lastCastTargetPoint.z), col, 'magic')
+          spawnImpact(
+            new THREE.Vector3(lastCastTargetPoint.x, lastCastTargetPoint.y, lastCastTargetPoint.z),
+            col,
+            'magic',
+          )
           lastCastTargetPoint = null
         }
       }
@@ -2671,12 +2691,16 @@ function _renderInner(now: number): void {
     crosshairEl.dataset['weapon'] = wSchema
     // Dynamic crosshair: expand when moving, contract when still
     // Check movement via WASD keys (moveX/moveZ are local to simStep)
-    const selfMoving = self !== null && (
-      inp.keys.has('KeyW') || inp.keys.has('KeyS') ||
-      inp.keys.has('KeyA') || inp.keys.has('KeyD') ||
-      inp.keys.has('ArrowUp') || inp.keys.has('ArrowDown') ||
-      inp.keys.has('ArrowLeft') || inp.keys.has('ArrowRight')
-    )
+    const selfMoving =
+      self !== null &&
+      (inp.keys.has('KeyW') ||
+        inp.keys.has('KeyS') ||
+        inp.keys.has('KeyA') ||
+        inp.keys.has('KeyD') ||
+        inp.keys.has('ArrowUp') ||
+        inp.keys.has('ArrowDown') ||
+        inp.keys.has('ArrowLeft') ||
+        inp.keys.has('ArrowRight'))
     crosshairEl.dataset['moving'] = selfMoving ? 'true' : 'false'
     if (now < _killConfirmUntilMs) crosshairEl.classList.add('kill-confirm')
     else crosshairEl.classList.remove('kill-confirm')

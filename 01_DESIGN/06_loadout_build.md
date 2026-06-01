@@ -42,12 +42,12 @@ Every ability has a direct key on the hotbar (default `1`-`8`, rebindable). The 
 
 Per-class assignment (4 slots per wheel, all 8 covered):
 
-| Class   | E Wheel (4)                       | Q Wheel (4)                                    |
-| ------- | --------------------------------- | ---------------------------------------------- |
-| Tank    | 4 melee                           | 1 bow + 3 utility                              |
-| Arciere | 4 bow                             | 2 magicBase + 2 utility                        |
-| Mago    | 3 magicBase + 1 magicAdvanced     | 2 magicAdvanced + 2 utility                    |
-| Ibrido  | 2 melee + 1 bow + 1 magicBase     | 1 magicBase + 1 magicAdvanced + 2 utility      |
+| Class   | E Wheel (4)                   | Q Wheel (4)                               |
+| ------- | ----------------------------- | ----------------------------------------- |
+| Tank    | 4 melee                       | 1 bow + 3 utility                         |
+| Arciere | 4 bow                         | 2 magicBase + 2 utility                   |
+| Mago    | 3 magicBase + 1 magicAdvanced | 2 magicAdvanced + 2 utility               |
+| Ibrido  | 2 melee + 1 bow + 1 magicBase | 1 magicBase + 1 magicAdvanced + 2 utility |
 
 ## Loadout Forge UI Contract
 

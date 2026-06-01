@@ -20,9 +20,15 @@ export class VfxTextures {
     return this.lightning
   }
   // smoke/muzzle/blood alias -> fire (unused in gameplay, kept for type safety)
-  static get smoke(): THREE.Texture { return this.fire }
-  static get muzzle(): THREE.Texture { return this.fire }
-  static get blood(): THREE.Texture { return this.fire }
+  static get smoke(): THREE.Texture {
+    return this.fire
+  }
+  static get muzzle(): THREE.Texture {
+    return this.fire
+  }
+  static get blood(): THREE.Texture {
+    return this.fire
+  }
 
   private static loader = new THREE.TextureLoader()
   private static initialized = false
@@ -30,13 +36,13 @@ export class VfxTextures {
   static init(): void {
     if (this.initialized) return
 
-    this.fire      = this.load('vfx_fire.png')
-    this.slash     = this.load('vfx_slash.png')
-    this.ice       = this.load('vfx_ice.png')
+    this.fire = this.load('vfx_fire.png')
+    this.slash = this.load('vfx_slash.png')
+    this.ice = this.load('vfx_ice.png')
     this.lightning = this.load('vfx_lightning.png')
-    this.dark      = this.load('vfx_dark.png')
-    this.nature    = this.load('vfx_nature.png')
-    this.shield    = this.load('vfx_shield.png')
+    this.dark = this.load('vfx_dark.png')
+    this.nature = this.load('vfx_nature.png')
+    this.shield = this.load('vfx_shield.png')
 
     this.initialized = true
   }

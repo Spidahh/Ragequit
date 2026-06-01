@@ -38,7 +38,7 @@ export function disposeObject3D(obj: THREE.Object3D): void {
     if (Array.isArray(mesh.material)) {
       mesh.material.forEach((m: THREE.Material) => m.dispose())
     } else {
-      (mesh.material as THREE.Material | undefined)?.dispose()
+      ;(mesh.material as THREE.Material | undefined)?.dispose()
     }
   })
 }
@@ -87,8 +87,12 @@ export function computeImpactKick(
 ): { kickBack: number; kickLift: number } {
   const raw = cause.startsWith('ability:') ? cause.slice(8) : cause
   const melee =
-    raw === 'sword_m1' || raw === 'uppercut' || raw === 'whirlwind' ||
-    raw === 'gap_closer' || raw === 'bleed_strike' || raw === 'guard_break' ||
+    raw === 'sword_m1' ||
+    raw === 'uppercut' ||
+    raw === 'whirlwind' ||
+    raw === 'gap_closer' ||
+    raw === 'bleed_strike' ||
+    raw === 'guard_break' ||
     raw === 'rending_dash'
   const kickBack = melee ? 0.34 : raw === 'bow' ? 0.14 : 0.12
   const kickLift = melee ? 0.06 : 0.035

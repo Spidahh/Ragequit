@@ -33,7 +33,7 @@ If `pnpm check` is green, the change is safe to commit. CI should run it too.
 violation produced the god-files (`main.ts`, `GameRoom.ts`).
 
 It uses a **ratchet**: the handful of currently-oversized files are grandfathered
-with their current line count as a *ceiling* — they may only SHRINK, never grow.
+with their current line count as a _ceiling_ — they may only SHRINK, never grow.
 Every other source file must stay ≤ 800. So:
 
 - New monoliths are impossible (a new file over 800 fails the gate).

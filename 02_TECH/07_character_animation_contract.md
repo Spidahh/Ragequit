@@ -45,25 +45,25 @@ the current low-poly stylized direction.
 These states are required by gameplay. The active playable asset includes
 distinct clips for each row.
 
-| Gameplay state         | Required clip intent                | Current runtime clip       |
-| ---------------------- | ----------------------------------- | -------------------------- |
-| Idle                   | Relaxed standing combat idle        | `Idle_Loop`                |
-| Run                    | Full-speed movement                 | `Sprint_Loop`              |
-| Walk                   | Slow/interpolated movement, if used | `Walk_Loop`                |
-| Jump start             | Voluntary jump launch               | `Jump_Start`               |
-| Fall / airborne        | Falling, knockup, or airborne lock  | `Jump_Loop`                |
-| Land                   | Ground contact after jump/fall      | `Jump_Land`                |
-| Sword attack 1         | Primary melee swing                 | `Sword_Attack`             |
-| Sword attack 2 / combo | Alternate melee swing               | `Sword_Attack`             |
-| Parry / block          | Defensive weapon pose               | `Sword_Idle`               |
-| Bow draw / aim         | Held bow charge                     | `Spell_Simple_Idle_Loop`   |
-| Bow release            | Shot release                        | `Spell_Simple_Shoot`       |
-| Staff cast             | Magic cast gesture                  | `Spell_Simple_Shoot`       |
-| Channel                | Held cast/beam/totem style action   | `Spell_Simple_Idle_Loop`   |
-| Hit reaction           | Damage response                     | `Hit_Chest`                |
-| Dash / roll            | Utility movement burst              | `Roll`                     |
-| Death                  | Death pose/fall                     | `Death01`                  |
-| Respawn                | Return to controllable idle         | `Spell_Simple_Enter`       |
+| Gameplay state         | Required clip intent                | Current runtime clip     |
+| ---------------------- | ----------------------------------- | ------------------------ |
+| Idle                   | Relaxed standing combat idle        | `Idle_Loop`              |
+| Run                    | Full-speed movement                 | `Sprint_Loop`            |
+| Walk                   | Slow/interpolated movement, if used | `Walk_Loop`              |
+| Jump start             | Voluntary jump launch               | `Jump_Start`             |
+| Fall / airborne        | Falling, knockup, or airborne lock  | `Jump_Loop`              |
+| Land                   | Ground contact after jump/fall      | `Jump_Land`              |
+| Sword attack 1         | Primary melee swing                 | `Sword_Attack`           |
+| Sword attack 2 / combo | Alternate melee swing               | `Sword_Attack`           |
+| Parry / block          | Defensive weapon pose               | `Sword_Idle`             |
+| Bow draw / aim         | Held bow charge                     | `Spell_Simple_Idle_Loop` |
+| Bow release            | Shot release                        | `Spell_Simple_Shoot`     |
+| Staff cast             | Magic cast gesture                  | `Spell_Simple_Shoot`     |
+| Channel                | Held cast/beam/totem style action   | `Spell_Simple_Idle_Loop` |
+| Hit reaction           | Damage response                     | `Hit_Chest`              |
+| Dash / roll            | Utility movement burst              | `Roll`                   |
+| Death                  | Death pose/fall                     | `Death01`                |
+| Respawn                | Return to controllable idle         | `Spell_Simple_Enter`     |
 
 ## Runtime Mapping Rules
 

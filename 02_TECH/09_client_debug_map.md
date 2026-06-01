@@ -15,20 +15,20 @@ Questo documento tiene insieme il quadro operativo del client mentre il progetto
 
 ## 2. Flussi Da Tenere Verificati
 
-| Flusso                                                     | Superfici coinvolte                          | Stato verifica 2026-05-22 (flussi confermati; nuovi sistemi vedi sez. 4)        |
-| ---------------------------------------------------------- | -------------------------------------------- | --------------------------------------- |
-| Boot -> Main menu                                          | `index.html`, `main.ts`, `menu.ts`           | verificato                              |
-| Main -> Settings -> Back                                   | `menu.ts`, settings DOM                      | verificato                              |
-| Main -> Loadout -> Back                                    | `menu.ts`, `loadout-station.ts`              | verificato                              |
-| Main -> Training -> Loadout -> Countdown -> Live           | menu, loadout, room connect, HUD             | verificato                              |
-| Main -> Play 1v1 -> Loadout -> Countdown                   | menu, loadout, bot-fill connect              | verificato                              |
-| Main -> FFA -> Loadout                                     | menu, loadout                                | verificato                              |
-| Live -> Escape -> Pause -> Return to Lobby                 | input, pause, menu reset                     | verificato dopo reset round HUD         |
-| Live -> pointer lock                                       | input, canvas focus                          | verificato in Chrome locale             |
-| Live -> Tab weapon swap                                    | input, server sync, weapon strip             | verificato in Training                  |
-| Live -> hold/release `E` ability wheel                     | input, radial wheel, primed flow             | verificato in Training                  |
-| Live -> hold/release `Q` wheel (4 settori classe)          | input, radial wheel, Q slots                 | verificato in Training                  |
-| Live -> seleziona slot da wheel -> `LMB` fire / placement  | cast dispatcher, placement preview, cd strip | verificato con `Flame Wall` in Training |
+| Flusso                                                    | Superfici coinvolte                          | Stato verifica 2026-05-22 (flussi confermati; nuovi sistemi vedi sez. 4) |
+| --------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------ |
+| Boot -> Main menu                                         | `index.html`, `main.ts`, `menu.ts`           | verificato                                                               |
+| Main -> Settings -> Back                                  | `menu.ts`, settings DOM                      | verificato                                                               |
+| Main -> Loadout -> Back                                   | `menu.ts`, `loadout-station.ts`              | verificato                                                               |
+| Main -> Training -> Loadout -> Countdown -> Live          | menu, loadout, room connect, HUD             | verificato                                                               |
+| Main -> Play 1v1 -> Loadout -> Countdown                  | menu, loadout, bot-fill connect              | verificato                                                               |
+| Main -> FFA -> Loadout                                    | menu, loadout                                | verificato                                                               |
+| Live -> Escape -> Pause -> Return to Lobby                | input, pause, menu reset                     | verificato dopo reset round HUD                                          |
+| Live -> pointer lock                                      | input, canvas focus                          | verificato in Chrome locale                                              |
+| Live -> Tab weapon swap                                   | input, server sync, weapon strip             | verificato in Training                                                   |
+| Live -> hold/release `E` ability wheel                    | input, radial wheel, primed flow             | verificato in Training                                                   |
+| Live -> hold/release `Q` wheel (4 settori classe)         | input, radial wheel, Q slots                 | verificato in Training                                                   |
+| Live -> seleziona slot da wheel -> `LMB` fire / placement | cast dispatcher, placement preview, cd strip | verificato con `Flame Wall` in Training                                  |
 
 ## 3. Problemi Attuali Classificati
 
@@ -67,19 +67,19 @@ Ogni fix deve dichiarare:
 
 ## 4. Nuovi Sistemi (2026-06-01)
 
-| Sistema | File | Cosa verifica |
-|---|---|---|
-| Loading screen | `src/preloader.ts` | Appare prima del match, scompare quando render parte |
-| Match FSM | `src/game/match-state-machine.ts` | `matchSM.state` deve corrispondere a `currentMatchPhase` |
-| Bloom layer | `main.ts` (EffectComposer) | Layer 1 su sigil, border, zone VFX, torce, cast ring, impact pool |
-| LOD | `render/remote-players.ts` | >40m: mesh invisibile, >20m: no shadow |
-| Audio listener | `main.ts` (in _renderInner) | `soundEngine.updateListener()` chiamato ogni frame |
-| Heartbeat | `main.ts` | Suona sotto HP 25%, accelera con danger |
-| Dynamic crosshair | `main.ts` + CSS | `data-moving="true"` su WASD, `.kill-confirm` 200ms al kill |
-| Torce arena | `world/arena.ts` | 4 PointLight + Torch_Metal.gltf ai pilastri alternati con flicker |
-| Sky dome | `world/arena.ts` | ShaderMaterial visibile da qualsiasi angolo camera |
-| Reconnect | `main.ts` (onLeave) | 1 retry su code !== 4000/1000 durante fase live |
-| Tutorial | `main.ts` (engage()) | Solo alla prima partita, localStorage `ragequit.tutorial.done` |
+| Sistema           | File                              | Cosa verifica                                                     |
+| ----------------- | --------------------------------- | ----------------------------------------------------------------- |
+| Loading screen    | `src/preloader.ts`                | Appare prima del match, scompare quando render parte              |
+| Match FSM         | `src/game/match-state-machine.ts` | `matchSM.state` deve corrispondere a `currentMatchPhase`          |
+| Bloom layer       | `main.ts` (EffectComposer)        | Layer 1 su sigil, border, zone VFX, torce, cast ring, impact pool |
+| LOD               | `render/remote-players.ts`        | >40m: mesh invisibile, >20m: no shadow                            |
+| Audio listener    | `main.ts` (in \_renderInner)      | `soundEngine.updateListener()` chiamato ogni frame                |
+| Heartbeat         | `main.ts`                         | Suona sotto HP 25%, accelera con danger                           |
+| Dynamic crosshair | `main.ts` + CSS                   | `data-moving="true"` su WASD, `.kill-confirm` 200ms al kill       |
+| Torce arena       | `world/arena.ts`                  | 4 PointLight + Torch_Metal.gltf ai pilastri alternati con flicker |
+| Sky dome          | `world/arena.ts`                  | ShaderMaterial visibile da qualsiasi angolo camera                |
+| Reconnect         | `main.ts` (onLeave)               | 1 retry su code !== 4000/1000 durante fase live                   |
+| Tutorial          | `main.ts` (engage())              | Solo alla prima partita, localStorage `ragequit.tutorial.done`    |
 
 ## 5. Invarianti da Non Rompere
 

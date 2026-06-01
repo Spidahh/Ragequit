@@ -47,14 +47,8 @@ interface AbilityDef {
   windupSec: number
   range: number
   targeting: 'self' | 'forward' | 'target' | 'point'
-  comboRole:
-    // Standard 6-role taxonomy. See 01_DESIGN/05_abilities_philosophy.md.
-    | 'starter'
-    | 'finisher'
-    | 'pressure'
-    | 'survival'
-    | 'counter'
-    | 'mobility'
+  comboRole: // Standard 6-role taxonomy. See 01_DESIGN/05_abilities_philosophy.md.
+    'starter' | 'finisher' | 'pressure' | 'survival' | 'counter' | 'mobility'
   effects: readonly EffectSpec[]
   description: string
   miniMalus: string
@@ -97,22 +91,22 @@ Current primitives:
 
 Standard 6-role taxonomy (design target):
 
-| Role       | Contract                                                                                       |
-| ---------- | ---------------------------------------------------------------------------------------------- |
-| `starter`  | Applies real control: launch, root, freeze, stun, blind, or meaningful slow                    |
-| `finisher` | Rewards setup with high-value damage or precision payoff (no airborne multiplier)              |
-| `pressure` | Damage/debuff that is not an opener: poke, DoT, zone, space denial, or resource drain           |
-| `survival` | Heal, shield, sustain, or resource restore                                                      |
-| `counter`  | Cleanse, phase, disengage, anti-melee, or interrupt answer                                      |
-| `mobility` | Repositioning tool that changes engage/disengage geometry                                       |
+| Role       | Contract                                                                              |
+| ---------- | ------------------------------------------------------------------------------------- |
+| `starter`  | Applies real control: launch, root, freeze, stun, blind, or meaningful slow           |
+| `finisher` | Rewards setup with high-value damage or precision payoff (no airborne multiplier)     |
+| `pressure` | Damage/debuff that is not an opener: poke, DoT, zone, space denial, or resource drain |
+| `survival` | Heal, shield, sustain, or resource restore                                            |
+| `counter`  | Cleanse, phase, disengage, anti-melee, or interrupt answer                            |
+| `mobility` | Repositioning tool that changes engage/disengage geometry                             |
 
 Legacy roles were removed from the type. For reference, they mapped as:
 
-| Removed role | Now expressed as                                                        |
-| ------------ | ----------------------------------------------------------------------- |
-| `extender`   | `pressure` (zone/space-denial is pressure)                              |
-| `drain`      | `pressure` (resource attrition is pressure)                            |
-| `resource`   | `survival` (restoring own resources is sustain)                        |
+| Removed role | Now expressed as                                                            |
+| ------------ | --------------------------------------------------------------------------- |
+| `extender`   | `pressure` (zone/space-denial is pressure)                                  |
+| `drain`      | `pressure` (resource attrition is pressure)                                 |
+| `resource`   | `survival` (restoring own resources is sustain)                             |
 | `ray`        | a real role + instant-LOS delivery (`windupSec: 0`, `targeting: 'forward'`) |
 
 ## Runtime Guarantees

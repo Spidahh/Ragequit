@@ -15,10 +15,10 @@ let _sub: HTMLElement | null = null
 
 function ensureRefs(): void {
   if (_screen) return
-  _screen  = document.getElementById('loading-screen')
+  _screen = document.getElementById('loading-screen')
   _barFill = document.getElementById('loading-bar-fill')
-  _label   = document.getElementById('loading-label')
-  _sub     = document.getElementById('loading-sub')
+  _label = document.getElementById('loading-label')
+  _sub = document.getElementById('loading-sub')
 }
 
 // ---------------------------------------------------------------------------
@@ -77,11 +77,7 @@ export async function preloadMatchAssets(
       sub: 'SWORD · BOW · STAFF',
       weight: 45,
       fn: async () => {
-        await Promise.all([
-          fetchWeaponGlb('sword'),
-          fetchWeaponGlb('bow'),
-          fetchWeaponGlb('staff'),
-        ])
+        await Promise.all([fetchWeaponGlb('sword'), fetchWeaponGlb('bow'), fetchWeaponGlb('staff')])
       },
     },
     {

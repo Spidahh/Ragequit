@@ -35,12 +35,12 @@ Resource pools are the confirmed starting design. The target sustain model has n
 
 There is no baseline transfer strip and no free background heal. Every class needs legal Recovery options in its utility pool, and first-session builds include one Recovery pick.
 
-| Class   | Starter Recovery | Recovery identity                                                                   |
-| ------- | ---------------- | ----------------------------------------------------------------------------------- |
-| Tank    | Brace Recovery   | Stamina recovery action; provides baseline heal and stamina restore                 |
-| Arciere | Hunter's Flow    | Moving recovery with lateral push; provides baseline heal while moving              |
-| Mago    | Arcane Rebind    | Mana-cast recovery; provides baseline heal with a visible cast time                 |
-| Ibrido  | Adaptive Mend    | Fast lower-peak heal; provides quick healing balance                                 |
+| Class   | Starter Recovery | Recovery identity                                                      |
+| ------- | ---------------- | ---------------------------------------------------------------------- |
+| Tank    | Brace Recovery   | Stamina recovery action; provides baseline heal and stamina restore    |
+| Arciere | Hunter's Flow    | Moving recovery with lateral push; provides baseline heal while moving |
+| Mago    | Arcane Rebind    | Mana-cast recovery; provides baseline heal with a visible cast time    |
+| Ibrido  | Adaptive Mend    | Fast lower-peak heal; provides quick healing balance                   |
 
 Dark lifesteal and Nature healing remain magic sustain lanes only when a legal class spends those magic slots. They count against the same TTK sustain budget as Recovery utilities.
 

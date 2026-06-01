@@ -28,9 +28,9 @@ const _loader = new GLTFLoader()
 // ---------------------------------------------------------------------------
 
 interface _ClassLayers {
-  base:        string   // Superhero_Male_FullBody | Superhero_Female_FullBody
-  outfit:      string   // Male_Ranger | Female_Ranger | Male_Peasant | Female_Peasant
-  hair:        string   // Hair_Buzzed | Hair_Buns | Hair_Long | Hair_SimpleParted
+  base: string // Superhero_Male_FullBody | Superhero_Female_FullBody
+  outfit: string // Male_Ranger | Female_Ranger | Male_Peasant | Female_Peasant
+  hair: string // Hair_Buzzed | Hair_Buns | Hair_Long | Hair_SimpleParted
   accessories: string[] // Accessories like head hoods, pauldrons, beards
 }
 
@@ -51,21 +51,23 @@ function _getClassLayers(classId: string): _ClassLayers {
 
 export interface CharacterData {
   /** FullBody base scene — cloned via SkeletonUtils for each instance. */
-  baseScene:   THREE.Group
+  baseScene: THREE.Group
   /** Outfit scene — used read-only to attach layer meshes. */
   outfitScene: THREE.Group
   /** Hair scene — optional, used read-only. */
-  hairScene?:  THREE.Group
+  hairScene?: THREE.Group
   /** Accessories scenes — optional, used read-only. */
   accessoriesScenes: THREE.Group[]
   /** Animation clips keyed by internal AnimName, sourced from UAL1_Standard.glb. */
   clips: Partial<Record<AnimName, THREE.AnimationClip>>
 }
 
-const _cache     = new Map<string, CharacterData>()
-const _inflight  = new Map<string, Promise<CharacterData>>()
+const _cache = new Map<string, CharacterData>()
+const _inflight = new Map<string, Promise<CharacterData>>()
 
-function _loadGltf(url: string): Promise<{ scene: THREE.Group; animations: THREE.AnimationClip[] }> {
+function _loadGltf(
+  url: string,
+): Promise<{ scene: THREE.Group; animations: THREE.AnimationClip[] }> {
   return new Promise((resolve, reject) =>
     _loader.load(url, resolve as (v: unknown) => void, undefined, reject),
   )
@@ -73,7 +75,7 @@ function _loadGltf(url: string): Promise<{ scene: THREE.Group; animations: THREE
 
 /** Load all three layers plus animation clips. Results are cached per class. */
 export function fetchCharacterData(classId = 'hybrid'): Promise<CharacterData> {
-  const layers   = _getClassLayers(classId)
+  const layers = _getClassLayers(classId)
   const cacheKey = `${layers.base}|${layers.outfit}|${layers.hair}|${layers.accessories.join(',')}`
 
   const cached = _cache.get(cacheKey)
@@ -120,9 +122,9 @@ export function fetchCharacterData(classId = 'hybrid'): Promise<CharacterData> {
     }
 
     const data: CharacterData = {
-      baseScene:   baseGltf.scene,
+      baseScene: baseGltf.scene,
       outfitScene: outfitGltf.scene,
-      hairScene:   hairGltf?.scene,
+      hairScene: hairGltf?.scene,
       accessoriesScenes,
       clips,
     }
@@ -150,9 +152,9 @@ export function fetchCharacterData(classId = 'hybrid'): Promise<CharacterData> {
  *  - hand alias: hand_r / hand_l
  */
 export function findBone(model: THREE.Object3D, name: string): THREE.Object3D | null {
-  const nLower    = name.toLowerCase()
+  const nLower = name.toLowerCase()
   const canonical = name.startsWith('mixamorig') ? name.slice(9) : name
-  const withPfx   = name.startsWith('mixamorig') ? name : 'mixamorig' + name
+  const withPfx = name.startsWith('mixamorig') ? name : 'mixamorig' + name
   const candidates: string[] = [name, canonical, withPfx]
 
   // Hand aliases
@@ -196,12 +198,8 @@ export function findBone(model: THREE.Object3D, name: string): THREE.Object3D | 
  */
 function _attachLayer(model: THREE.Group, layerScene: THREE.Group, tag: 'outfit' | 'hair'): void {
   // Fallback bone: used when a bone in the layer skeleton cannot be matched.
-  const fallback = (
-    findBone(model, 'Hips') ??
-    findBone(model, 'root') ??
-    findBone(model, 'Spine') ??
-    null
-  )
+  const fallback =
+    findBone(model, 'Hips') ?? findBone(model, 'root') ?? findBone(model, 'Spine') ?? null
 
   layerScene.traverse((child) => {
     if (!(child instanceof THREE.SkinnedMesh)) return
@@ -218,7 +216,7 @@ function _attachLayer(model: THREE.Group, layerScene: THREE.Group, tag: 'outfit'
     if (missingBones > 0) {
       console.warn(
         `[character-loader] ${missingBones} bone(s) unmatched for layer "${tag}" ` +
-        `mesh "${child.name}" — using fallback`,
+          `mesh "${child.name}" — using fallback`,
       )
     }
 

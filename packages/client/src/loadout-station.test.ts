@@ -56,10 +56,7 @@ describe('loadout station smoke', () => {
     expect(msg['bow']).toEqual(['marksman_shot'])
     expect(msg['magicBase']).toEqual(['fireball', 'lightning_dash'])
     expect(msg['magicAdvanced']).toEqual(['arc_lift'])
-    expect(msg['utility']).toEqual([
-      'adaptive_mend',
-      'quick_dash',
-    ])
+    expect(msg['utility']).toEqual(['adaptive_mend', 'quick_dash'])
     expect(Object.keys(msg).sort()).toEqual([
       'bow',
       'classId',
@@ -101,10 +98,7 @@ describe('loadout station smoke', () => {
     expect(msg['melee']).toEqual(['uppercut', 'gap_closer'])
     expect(msg['magicBase']).toEqual(['fireball', 'lightning_dash'])
     expect(msg['magicAdvanced']).toEqual(['arc_lift'])
-    expect(msg['utility']).toEqual([
-      'adaptive_mend',
-      'quick_dash',
-    ])
+    expect(msg['utility']).toEqual(['adaptive_mend', 'quick_dash'])
     expect(api.getLoadout()).not.toContain('chain_bolt')
   })
 

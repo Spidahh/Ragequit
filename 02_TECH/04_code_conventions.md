@@ -132,13 +132,14 @@ The shared ability registry tests remain the first safety net. The root
 
 ## File size limits
 
-| Status | Line count | Action |
-|--------|-----------|--------|
-| ✅ OK | ≤ 500 | No action needed |
-| ⚠️ Monitor | 500–800 | Consider splitting on next touch |
-| 🚨 Must split | > 800 | Extract a distinct responsibility before adding features |
+| Status        | Line count | Action                                                   |
+| ------------- | ---------- | -------------------------------------------------------- |
+| ✅ OK         | ≤ 500      | No action needed                                         |
+| ⚠️ Monitor    | 500–800    | Consider splitting on next touch                         |
+| 🚨 Must split | > 800      | Extract a distinct responsibility before adding features |
 
 **Pattern** (learned from `main.ts` → game/, hud/, render/, input/, world/ split):
+
 1. Identify distinct responsibilities in the large file.
 2. Create a new file in the appropriate subfolder.
 3. Move the responsibility with named exports.
@@ -146,6 +147,7 @@ The shared ability registry tests remain the first safety net. The root
 5. Update the "Main Code Surfaces" table in `02_TECH/00_architecture_overview.md`.
 
 Current large files to watch:
+
 - `packages/client/src/main.ts` (~3245 lines) — continue extracting
 - `packages/server/src/rooms/GameRoom.ts` (~2882 lines) — next split candidate
 - `packages/server/src/sim/AbilityEngine.ts` (~1063 lines) — borderline

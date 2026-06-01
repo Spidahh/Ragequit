@@ -336,7 +336,8 @@ export function initRemotePlayers({
       lastStatusKey: '',
       statuses: [],
       hp: HP_MAX,
-      hpMax: TARGET_CLASS_DEFS[p.classId as keyof typeof TARGET_CLASS_DEFS]?.resourceMaxima.hp ?? HP_MAX,
+      hpMax:
+        TARGET_CLASS_DEFS[p.classId as keyof typeof TARGET_CLASS_DEFS]?.resourceMaxima.hp ?? HP_MAX,
       alive: true,
       lastWeapon: '',
       activeWeapon: 'sword',
@@ -399,7 +400,9 @@ export function initRemotePlayers({
         const currentClassId = p.classId || 'hybrid'
         if (r.mesh.userData['loadedClassId'] !== currentClassId) {
           loadCharacterGlb(r.mesh, resolveRemoteColor(p), toonGradient, currentClassId)
-          r.hpMax = TARGET_CLASS_DEFS[currentClassId as keyof typeof TARGET_CLASS_DEFS]?.resourceMaxima.hp ?? HP_MAX
+          r.hpMax =
+            TARGET_CLASS_DEFS[currentClassId as keyof typeof TARGET_CLASS_DEFS]?.resourceMaxima
+              .hp ?? HP_MAX
         }
       }
       r.hp = p.hp
@@ -482,10 +485,7 @@ export function initRemotePlayers({
       }
       // ── LOD: distance-based level of detail ─────────────────────────────
       const camPos = camera.position
-      const rDist = Math.hypot(
-        r.mesh.position.x - camPos.x,
-        r.mesh.position.z - camPos.z,
-      )
+      const rDist = Math.hypot(r.mesh.position.x - camPos.x, r.mesh.position.z - camPos.z)
       // > 40m: hide model entirely (just nameplate remains), skip animation
       if (rDist > 40) {
         r.mesh.visible = false
@@ -509,7 +509,11 @@ export function initRemotePlayers({
           r.mesh.position.set(last.x, last.y, last.z)
         }
         // Still update nameplate
-        const npWorld = new THREE.Vector3(r.mesh.position.x, r.mesh.position.y + capsuleHeightM + 0.4, r.mesh.position.z)
+        const npWorld = new THREE.Vector3(
+          r.mesh.position.x,
+          r.mesh.position.y + capsuleHeightM + 0.4,
+          r.mesh.position.z,
+        )
         npWorld.project(camera)
         if (npWorld.z <= 1) {
           const sx = (npWorld.x * 0.5 + 0.5) * domElement.clientWidth

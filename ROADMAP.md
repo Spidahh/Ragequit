@@ -7,6 +7,7 @@ Questo file descrive solo lo stato vivo del progetto.
 ## Implementato
 
 ### Core Runtime
+
 - Monorepo pnpm con `packages/shared`, `packages/client`, `packages/server`.
 - Server Colyseus autoritativo a 60 Hz.
 - Client Vite + Three.js con toon shading, ACES filmic, PCF soft shadows.
@@ -19,27 +20,32 @@ Questo file descrive solo lo stato vivo del progetto.
 - CSS unificato in `packages/client/public/game-ui.css`.
 
 ### Fase 1 — Stabilizzazione (2026-05-31)
+
 - Loading screen con barra di progresso e preload asset prima dell'ingresso arena.
-- Error boundary nel render loop (try/catch su _renderInner, toast errore).
+- Error boundary nel render loop (try/catch su \_renderInner, toast errore).
 - Texture VFX convertite in RGBA bianco-su-trasparente (Kenney Particle Pack CC0).
 - Audit GLTF .bin: tutti i 21 file corretti.
 
 ### Fase 2 — Qualita Visiva (2026-05-31)
+
 - Prima persona: fpvKeyLight + MeshStandardMaterial per armi FPV.
 - Nameplate remote players: transform: translate3d() invece di left/top.
 - Arena dust: DynamicDrawUsage per upload GPU efficiente.
 - Audio: variazione pitch +/-8% su tutti i BufferSource nodes.
 
 ### Fase 3 — Game Feel (2026-05-31)
+
 - Bot AI: strafing orbitale, retreat HP < 20%, dodge su cast nemico, weapon swap per distanza.
 - Reconnect automatico: 1 retry dopo 2s su disconnessione inaspettata durante fase live.
 - Tutorial HUD: 4 tooltip sequenziali alla prima partita (localStorage, si dissolve da solo).
 
 ### Fase 4 — Architettura (2026-05-31)
+
 - Weapon loader aggiornato a .glb (sword, bow, staff, shield_A; sword_D sostituito da sword).
 - 13 GLB erronei dei personaggi (~250 MB) eliminati.
 
 ### Fase 5 — Feature Avanzate (2026-06-01)
+
 - Bloom post-processing: EffectComposer + UnrealBloomPass selettivo (Three.js layer 1).
 - LOD remote players: oltre 40m modello nascosto, oltre 20m shadow disabilitato.
 - Audio spaziale 3D: PannerNode HRTF per impatti/cast remoti.

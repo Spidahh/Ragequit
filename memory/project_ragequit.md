@@ -63,7 +63,6 @@ Ultimo riallineamento: 2026-05-30.
 - Il 2026-05-30 bonus air-punish finisher RIMOSSO DAL CODICE: tolto `AIR_PUNISH_DAMAGE_MULT`/`damageWithAirPunish` da `AbilityEngine.ts`, tolto il ramo air-punish su impatto proiettile in `GameRoom.ts`, ripulito il client (`main.ts` `isAirPunishCause` e rami VFX/sound morti). Il finisher fa danno piatto a terra e in aria. Test air-punish invertito in `AbilityEngine.test.ts` (meteor 44 piatto). Verifica: shared 90 + server 69 + client 15 test verdi, typecheck/build/lint puliti.
 - Il 2026-05-30 rimossa una contraddizione in `00_classes.md`: la riga Tank vs Mage citava ancora un +0.4s di cast a corto raggio, in conflitto con "Proximity Casting REMOVED" e con la regola cast veloci.
 
-
 - Il 2026-05-30 (audit) trovato e corretto un REVERT della grammatica classi nel working tree: `classes.ts`, `classes.test.ts`, `loadout-slots.test.ts`, `loadout-station.test.ts`, preset di `loadout-station.ts` e `DEFAULT_LOADOUT` di `GameRoom.ts` erano tornati ai valori vecchi (Mago 3/2/3, Ibrido 1/1/2/2/2). HEAD aveva i valori giusti. Ripristinata la grammatica corretta ovunque (Mago 3 base/3 adv/2 util, Ibrido 2 melee/1 bow/2 base/1 adv/2 util).
 - Il 2026-05-30 ALINEAMENTO CLASSI & WEAPON SWAP BOT COMPLETATO:
   - Spostato e condiviso `CLASS_PRESET_BUILDS` in `@ragequit/shared` per eliminare la duplicazione di codice tra client e server.
@@ -211,23 +210,19 @@ astratte.
   non esistono toggle di cast-mode nel Forge. Le abilita `targeting: 'point'`
   aprono placement, le altre sono dirette/primed dal runtime.
 - **Rework Classi & Armi Chiuso (2026-05-30)**: Le 4 classi sono ora entità completamente separate e configurate come moduli indipendenti e riutilizzabili.
-  - *Single Source of Truth*: `classes.ts` in `@ragequit/shared` definisce per ogni classe le sue configurazioni visive (base, outfit, hair, accessories), massimali risorsa, armi permesse e recovery spell. `character-loader.ts` risolve i layer GLTF dinamicamente da questo schema.
-  - *Restrizione Armi Autoritativa*:
+  - _Single Source of Truth_: `classes.ts` in `@ragequit/shared` definisce per ogni classe le sue configurazioni visive (base, outfit, hair, accessories), massimali risorsa, armi permesse e recovery spell. `character-loader.ts` risolve i layer GLTF dinamicamente da questo schema.
+  - _Restrizione Armi Autoritativa_:
     - **Client**: `game-input.ts` intercetta lo swap armi (Tab/scroll wheel) ciclando dinamicamente solo tra le armi permesse per la classe corrente (`allowedWeapons = TARGET_CLASS_DEFS[activeClassId].weapons`).
     - **Server**: `GameRoom.ts` (`handleWeaponSwap`) valida autoritativamente lo swap sul server, rigettando pacchetti non autorizzati.
-  - *ClassMechanicRuntime Modulare*: Riformulato l'engine delle meccaniche server-side con l'interfaccia `IClassMechanic`, scorporando Fury, Momentum, Resonance e Flow in handler separati (`TankMechanic`, `ArcherMechanic`, etc.) per rendere l'aggiunta di nuove classi banalmente estensibile.
+  - _ClassMechanicRuntime Modulare_: Riformulato l'engine delle meccaniche server-side con l'interfaccia `IClassMechanic`, scorporando Fury, Momentum, Resonance e Flow in handler separati (`TankMechanic`, `ArcherMechanic`, etc.) per rendere l'aggiunta di nuove classi banalmente estensibile.
 - **Posizioni & Grip Fine-Tuning (2026-05-30)**:
-  - *Allineamento Dritto*: Ripristinate le rotazioni calibrate Y-axis (`0.18` sword, `-0.08` bow, `-0.14` staff) per allineare le armi perfettamente dritte rispetto alla mano, compensando gli assi inclinati dei modelli 3D.
-  - *Scudo Aderente*: Riposizionato lo scudo sheathed sul fianco (`Hips`) a coordinate `[-0.16, -0.06, 0.05]` e inclinazione `[-0.1, Math.PI / 2 + 0.2, Math.PI / 2 - 0.2]`, allineandolo perfettamente e aderente al corpo del giocatore.
+  - _Allineamento Dritto_: Ripristinate le rotazioni calibrate Y-axis (`0.18` sword, `-0.08` bow, `-0.14` staff) per allineare le armi perfettamente dritte rispetto alla mano, compensando gli assi inclinati dei modelli 3D.
+  - _Scudo Aderente_: Riposizionato lo scudo sheathed sul fianco (`Hips`) a coordinate `[-0.16, -0.06, 0.05]` e inclinazione `[-0.1, Math.PI / 2 + 0.2, Math.PI / 2 - 0.2]`, allineandolo perfettamente e aderente al corpo del giocatore.
 - Nella UI Loadout le uniche classi valide sono Tank, Arciere, Mago e Ibrido.
 - Conservare nel progetto solo asset runtime e contratti presenti approvati.
 - **Filosofia di Sviluppo Connesso Allineata (2026-05-30)**: Qualsiasi modifica a una parte del codice deve considerare tutti i sistemi collegati in rete (grip/allineamenti FPV e TPV, mesh del corpo, netcode Colyseus, simulazione del server, comandi HUD e VFX/audio) per evitare disallineamenti o regressioni visive.
 - **Rapporto Visuale Gladiators Arena (2026-05-30)**: Aggiornato `packages/client/src/world/arena.ts` per caricare in modo asincrono l'asset 3D reale `gladiators_arena.glb` per la mappa Gladiators Arena. Ciascun mesh caricato viene cel-shadato con Toon Materials e dotato di outlines (`createOutlineMesh`). Le collisioni server-authoritative sono mantenute mediante box procedurali nascosti per evitare conflitti visivi. La compatibilità con le mappe procedurali `blockout` e `duel_arena` è preservata.
 - **Studio Decorazioni Tattiche Paintball (2026-05-30)**: Copiati gli asset `Crate_Wooden`, `Barrel` e `Banner_1` (con relative texture) in `/arena/props/` ed integrato il metodo `spawnDecorativeProps` in `packages/client/src/world/arena.ts`. Spawnerà 8 stendardi da torneo orientati verso il centro sugli 8 pilastri esterni dell'arena, e pile di casse/barili disposti in conformazione tattica nei 4 angoli e a ridosso degli ostacoli centrali per le mappe `blockout` e `duel_arena`. Le decorazioni sono cel-shadate con Toon Materials, dotate di outline e pulite ad ogni cambio mappa.
-
-
-
-
 
 ## Scelte Architetturali Chiuse (2026-06-01)
 
@@ -239,7 +234,7 @@ astratte.
 - **Audio spaziale**: PannerNode HRTF per suoni remoti. updateListener() ogni frame.
 - **Match FSM**: singleton `matchSM` in `src/game/match-state-machine.ts`. Unica fonte di verita per la fase partita lato client.
 - **Preloader**: `src/preloader.ts`. Preload su joinedRoom, gate su fase 'live'. Loading screen con barra progresso.
-- **Camera shake**: decay esponenziale (exp(-rate*dt)) + micro-oscillazione random. NON lineare.
+- **Camera shake**: decay esponenziale (exp(-rate\*dt)) + micro-oscillazione random. NON lineare.
 - **Nameplate**: sempre via transform:translate3d(), mai left/top (layout reflow).
 - **Sky dome**: ShaderMaterial custom gradient (zenith->orizzonte). NON skybox texture.
 - **Props arena**: KayKit Dungeon + Fantasy Props MegaKit (barrel_large, barrel_small, box_large, banner_patternA_red, Torch_Metal, Lantern_Wall).

@@ -233,16 +233,25 @@ export function setCharAnimState(charGroup: THREE.Group, state: CharAnimState): 
   if (!store) return
   const target = _chooseAnimState(store, state)
   const fadeSec =
-    target === 'Death' || target === 'Respawn' ? 0.25
-    : target === 'Dagger_Attack' || target === 'Dagger_Attack2' ? 0.04
-    : target === 'Punch' ? 0.05
-    : target === 'RecieveHit' || target === 'RecieveHit_Attacking' ? 0.05
-    : target === 'Roll' ? 0.07
-    : target === 'Jump' || target === 'Land' ? 0.08
-    : target === 'Bow_Release' || target === 'Staff_Cast' ? 0.07
-    : target === 'Bow_Draw' ? 0.12
-    : target === 'Run' || target === 'Walk' ? 0.14
-    : 0.18
+    target === 'Death' || target === 'Respawn'
+      ? 0.25
+      : target === 'Dagger_Attack' || target === 'Dagger_Attack2'
+        ? 0.04
+        : target === 'Punch'
+          ? 0.05
+          : target === 'RecieveHit' || target === 'RecieveHit_Attacking'
+            ? 0.05
+            : target === 'Roll'
+              ? 0.07
+              : target === 'Jump' || target === 'Land'
+                ? 0.08
+                : target === 'Bow_Release' || target === 'Staff_Cast'
+                  ? 0.07
+                  : target === 'Bow_Draw'
+                    ? 0.12
+                    : target === 'Run' || target === 'Walk'
+                      ? 0.14
+                      : 0.18
   _crossfade(store, target, fadeSec)
 }
 

@@ -53,8 +53,13 @@ export interface FpvBowController {
 }
 
 type ClipName =
-  | 'Bow_IDLE' | 'Bow_WALK' | 'Bow_RUN' | 'Bow_AIM' | 'Bow_AIM_IDLE'
-  | 'Bow_FIRE' | 'Bow_RELOAD'
+  | 'Bow_IDLE'
+  | 'Bow_WALK'
+  | 'Bow_RUN'
+  | 'Bow_AIM'
+  | 'Bow_AIM_IDLE'
+  | 'Bow_FIRE'
+  | 'Bow_RELOAD'
 
 export function createFpvBow(): FpvBowController {
   const root = new THREE.Group()
@@ -157,7 +162,9 @@ export function createFpvBow(): FpvBowController {
 
   return {
     root,
-    setVisible: (v) => { root.visible = v },
+    setVisible: (v) => {
+      root.visible = v
+    },
     update,
     fire,
     dispose: () => {

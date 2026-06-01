@@ -72,7 +72,8 @@ export const ABILITY_M2_GAP_CLOSER: AbilityDef = {
       slowFraction: 0.5,
     },
   ],
-  description: 'Engage dash that closes distance rapidly. The landing impact hits nearby enemies and Slows them.',
+  description:
+    'Engage dash that closes distance rapidly. The landing impact hits nearby enemies and Slows them.',
   miniMalus: 'Linear path — collision stops the dash. The landing blow is parryable.',
   canParry: true,
 }
@@ -140,7 +141,8 @@ export const ABILITY_M5_GUARD_BREAK: AbilityDef = {
     { at: 'onCast', kind: 'applyStatus', status: 'stun', durationSec: 1.5, stacks: 1 },
     { at: 'onCast', kind: 'knockup', airborneSec: 0.5, knockbackDistance: 1.2 },
   ],
-  description: 'Crushing blow that Stuns the target and briefly launches them Airborne. Hard CC setup.',
+  description:
+    'Crushing blow that Stuns the target and briefly launches them Airborne. Hard CC setup.',
   miniMalus: 'Very short reach and fully parryable.',
   canParry: true,
 }
@@ -152,21 +154,22 @@ export const ABILITY_M6_RENDING_DASH: AbilityDef = {
   element: 'none',
   weapon: 'sword',
   costMana: 0,
-  costStamina: 28,  // cheaper than Gap Closer's burst model; trade-off is DoT vs instant
-  cooldownSec: 8,   // was 10 — now competitive but with different payoff profile
+  costStamina: 28, // cheaper than Gap Closer's burst model; trade-off is DoT vs instant
+  cooldownSec: 8, // was 10 — now competitive but with different payoff profile
   windupSec: 0,
   range: 5,
   targeting: 'forward',
   comboRole: 'mobility',
   effects: [
     { at: 'onCast', kind: 'move', mode: 'dash', distance: 5, cancelOnCollision: true },
-    { at: 'onLand', kind: 'damage', amount: 12, radius: 2.0 },  // wider radius than Gap Closer (1.5m)
+    { at: 'onLand', kind: 'damage', amount: 12, radius: 2.0 }, // wider radius than Gap Closer (1.5m)
     // Long bleed: 5s × 6 dmg/s = 30 DoT on top of 12 immediate = 42 total.
     // Gap Closer: 18 burst + 50% slow. Rending Dash: 42 over 5s, wider AoE.
     // Identity: bleed+DoT option vs Gap Closer's burst+CC option.
     { at: 'onLand', kind: 'applyStatus', status: 'bleed', durationSec: 5, stacks: 1, radius: 2.0 },
   ],
-  description: 'Slashing dash with wide landing arc. The impact applies a long Bleed — 42 total damage over 5 s versus Gap Closer\'s burst CC. Different tools for different fights.',
+  description:
+    "Slashing dash with wide landing arc. The impact applies a long Bleed — 42 total damage over 5 s versus Gap Closer's burst CC. Different tools for different fights.",
   miniMalus: 'Damage is delayed via Bleed — vulnerable to cleanse. Collision stops the dash.',
   canParry: true,
 }
@@ -225,7 +228,8 @@ export const ABILITY_B2_VOLLEY: AbilityDef = {
       applyStatus: { status: 'slow', durationSec: 3.0, stacks: 1, slowFraction: 0.45 },
     },
   ],
-  description: 'Arcing arrow rain that creates a damage zone. Enemies caught inside are repeatedly Slowed.',
+  description:
+    'Arcing arrow rain that creates a damage zone. Enemies caught inside are repeatedly Slowed.',
   miniMalus: 'Landing zone is telegraphed — targets can walk out before waves hit.',
 }
 
@@ -283,7 +287,8 @@ export const ABILITY_B4_SNARE_TRAP: AbilityDef = {
       applyStatus: { status: 'root', durationSec: 3.0, stacks: 1 },
     },
   ],
-  description: 'Place a trap at your feet that arms after a short delay. First enemy to trigger it is damaged and Rooted.',
+  description:
+    'Place a trap at your feet that arms after a short delay. First enemy to trigger it is damaged and Rooted.',
   miniMalus: 'No effect before the arm delay — place it preemptively.',
 }
 
@@ -336,7 +341,8 @@ export const ABILITY_B6_DISENGAGE_SHOT: AbilityDef = {
       damage: 12,
     },
   ],
-  description: 'Step backward while simultaneously firing a shot forward. Creates distance from the target.',
+  description:
+    'Step backward while simultaneously firing a shot forward. Creates distance from the target.',
   miniMalus: 'Low damage — primarily a repositioning tool.',
 }
 
@@ -393,7 +399,8 @@ export const ABILITY_B8_BLAST_ARROW: AbilityDef = {
       onHitStatus: { status: 'burn', durationSec: 3, stacks: 2 },
     },
   ],
-  description: 'Explosive fire arrow that detonates on impact, blasting and Burning all targets in the area.',
+  description:
+    'Explosive fire arrow that detonates on impact, blasting and Burning all targets in the area.',
   miniMalus: 'Slow heavy arc — distant targets can dodge the impact point.',
 }
 
@@ -427,7 +434,8 @@ export const ABILITY_F1_FIREBALL: AbilityDef = {
       onHitStatus: { status: 'burn', durationSec: 3, stacks: 1 },
     },
   ],
-  description: 'Arcing fire orb that explodes on impact, dealing AoE fire damage, applying Burn, and blasting targets away.',
+  description:
+    'Arcing fire orb that explodes on impact, dealing AoE fire damage, applying Burn, and blasting targets away.',
   miniMalus: 'Visible travel arc — lateral movement can dodge it.',
 }
 
@@ -457,7 +465,8 @@ export const ABILITY_F2_FLAME_WALL: AbilityDef = {
       applyStatus: { status: 'burn', durationSec: 3, stacks: 1 },
     },
   ],
-  description: 'Conjure a wide wall of fire at a target point. Enemies who cross it take damage and Burn.',
+  description:
+    'Conjure a wide wall of fire at a target point. Enemies who cross it take damage and Burn.',
   miniMalus: 'Wall is visible — no instant burst, enemies can choose to avoid it.',
 }
 
@@ -475,7 +484,8 @@ export const ABILITY_F3_IGNITE: AbilityDef = {
   targeting: 'forward',
   comboRole: 'pressure',
   effects: [{ at: 'onCast', kind: 'applyStatus', status: 'burn', durationSec: 3, stacks: 3 }],
-  description: 'Instant cast that applies multiple Burn stacks to the target. Pure status tool with no direct damage.',
+  description:
+    'Instant cast that applies multiple Burn stacks to the target. Pure status tool with no direct damage.',
   miniMalus: 'No direct damage — requires clear line of sight.',
 }
 
@@ -504,7 +514,8 @@ export const ABILITY_F4_METEOR: AbilityDef = {
     },
     { at: 'onLand', kind: 'knockup', airborneSec: 0.65, radius: 3.5, knockbackDistance: 2.8 },
   ],
-  description: 'Massive delayed impact that launches all nearby targets Airborne and applies Burn. Highest AoE damage in fire.',
+  description:
+    'Massive delayed impact that launches all nearby targets Airborne and applies Burn. Highest AoE damage in fire.',
   miniMalus: 'Long windup and visible impact point — easily dodged if spotted.',
   isKnockup: true,
 }
@@ -526,7 +537,8 @@ export const ABILITY_F5_ERUPTION: AbilityDef = {
     { at: 'onCast', kind: 'damage', amount: 8, radius: 2.4, element: 'fire' },
     { at: 'onCast', kind: 'knockup', airborneSec: 0.5, radius: 2.4, knockbackDistance: 1.0 },
   ],
-  description: 'Instant detonation under the aimed enemy. Launches nearby targets Airborne. Reliable fire combo starter.',
+  description:
+    'Instant detonation under the aimed enemy. Launches nearby targets Airborne. Reliable fire combo starter.',
   miniMalus: 'Short detonation range — needs to be close.',
   isKnockup: true,
 }
@@ -558,7 +570,8 @@ export const ABILITY_F6_FIRE_BLINK: AbilityDef = {
     },
     { at: 'onCast', kind: 'move', mode: 'teleport', distance: 7, cancelOnCollision: true },
   ],
-  description: 'Teleport forward, leaving a burning fire zone at your origin. Good for repositioning while pressuring.',
+  description:
+    'Teleport forward, leaving a burning fire zone at your origin. Good for repositioning while pressuring.',
   miniMalus: 'Blocked if destination is occupied.',
 }
 
@@ -591,7 +604,8 @@ export const ABILITY_I1_FROST_BOLT: AbilityDef = {
       onHitStatus: { status: 'chill', durationSec: 6, stacks: 1 },
     },
   ],
-  description: 'Fast frost projectile that Chills on hit and pushes the target back. Repeated Chills build toward a full Freeze.',
+  description:
+    'Fast frost projectile that Chills on hit and pushes the target back. Repeated Chills build toward a full Freeze.',
   miniMalus: 'Lower direct damage than fire or bow finishers — value is in CC buildup.',
 }
 
@@ -621,7 +635,8 @@ export const ABILITY_I2_ICE_WALL: AbilityDef = {
       applyStatus: { status: 'root', durationSec: 1.5, stacks: 1 },
     },
   ],
-  description: 'Creates an ice strip that repeatedly Roots any enemy who steps on it. Strong zone denial.',
+  description:
+    'Creates an ice strip that repeatedly Roots any enemy who steps on it. Strong zone denial.',
   miniMalus: 'No damage — purely crowd control.',
 }
 
@@ -650,7 +665,8 @@ export const ABILITY_I3_BLIZZARD: AbilityDef = {
       applyStatus: { status: 'slow', durationSec: 3.5, stacks: 1, slowFraction: 0.6 },
     },
   ],
-  description: 'Large slow-moving storm zone that repeatedly Slows enemies inside and deals periodic damage.',
+  description:
+    'Large slow-moving storm zone that repeatedly Slows enemies inside and deals periodic damage.',
   miniMalus: 'No hard lock — enemies can dash out or still shoot while inside.',
 }
 
@@ -671,7 +687,8 @@ export const ABILITY_I4_FREEZE_TARGET: AbilityDef = {
     { at: 'onCast', kind: 'damage', amount: 8, element: 'ice' },
     { at: 'onCast', kind: 'applyStatus', status: 'freeze', durationSec: 2.5, stacks: 1 },
   ],
-  description: 'Quick cast that Freezes the target completely. Hard lockdown for follow-up attacks.',
+  description:
+    'Quick cast that Freezes the target completely. Hard lockdown for follow-up attacks.',
   miniMalus: 'Short windup — parryable and requires line of sight.',
   canParry: true,
 }
@@ -693,7 +710,8 @@ export const ABILITY_I5_FROST_PILLAR: AbilityDef = {
     { at: 'onCast', kind: 'damage', amount: 12, element: 'ice' },
     { at: 'onCast', kind: 'knockup', airborneSec: 0.5, knockbackDistance: 0.6 },
   ],
-  description: 'Frost pillar that erupts under the target, launching them briefly Airborne. Ice combo starter.',
+  description:
+    'Frost pillar that erupts under the target, launching them briefly Airborne. Ice combo starter.',
   miniMalus: 'Erupts at a fixed point — sidestep before it lands and it misses.',
   isKnockup: true,
 }
@@ -726,7 +744,8 @@ export const ABILITY_L1_CHAIN_BOLT: AbilityDef = {
       excludePrimary: true,
     },
   ],
-  description: 'Instant cast that deals heavy damage to the primary target, then arcs electricity to nearby enemies.',
+  description:
+    'Instant cast that deals heavy damage to the primary target, then arcs electricity to nearby enemies.',
   miniMalus: 'Chain damage requires a secondary target nearby.',
 }
 
@@ -748,7 +767,8 @@ export const ABILITY_L2_THUNDER_CLAP: AbilityDef = {
     { at: 'onCast', kind: 'applyStatus', status: 'stun', durationSec: 1.8, stacks: 1, radius: 3.2 },
     { at: 'onCast', kind: 'knockup', airborneSec: 0.35, radius: 3.2, knockbackDistance: 2.5 },
   ],
-  description: 'Release a shockwave around you that Stuns nearby enemies and blasts them away. Devastating in close range.',
+  description:
+    'Release a shockwave around you that Stuns nearby enemies and blasts them away. Devastating in close range.',
   miniMalus: 'Short range — must be in melee contact to connect.',
 }
 
@@ -777,7 +797,8 @@ export const ABILITY_L3_STORM_FIELD: AbilityDef = {
       applyStatus: { status: 'slow', durationSec: 2.0, stacks: 1, slowFraction: 0.45 },
     },
   ],
-  description: 'Create an electric storm zone that Slows enemies inside and deals periodic lightning damage.',
+  description:
+    'Create an electric storm zone that Slows enemies inside and deals periodic lightning damage.',
   miniMalus: 'Zone is visible — enemies can choose to avoid it.',
 }
 
@@ -798,7 +819,8 @@ export const ABILITY_L4_LIGHTNING_DASH: AbilityDef = {
     { at: 'onCast', kind: 'move', mode: 'teleport', distance: 5, cancelOnCollision: true },
     { at: 'onCast', kind: 'damage', amount: 15, radius: 1, element: 'lightning' },
   ],
-  description: 'Instant teleport that deals AoE lightning damage at the destination. High-speed repositioning.',
+  description:
+    'Instant teleport that deals AoE lightning damage at the destination. High-speed repositioning.',
   miniMalus: 'Damage only at the destination — no area at origin.',
 }
 
@@ -819,7 +841,8 @@ export const ABILITY_L5_ARC_LIFT: AbilityDef = {
     { at: 'onCast', kind: 'damage', amount: 8, element: 'lightning' },
     { at: 'onCast', kind: 'knockup', airborneSec: 0.5, knockbackDistance: 1.4 },
   ],
-  description: 'Instant lightning ray that launches the target Airborne with a backward jolt. Lightning combo starter.',
+  description:
+    'Instant lightning ray that launches the target Airborne with a backward jolt. Lightning combo starter.',
   miniMalus: 'Requires line of sight.',
   isKnockup: true,
 }
@@ -875,7 +898,8 @@ export const ABILITY_D2_CURSE_OF_WEAKNESS: AbilityDef = {
     { at: 'onCast', kind: 'applyStatus', status: 'blind', durationSec: 4.0, stacks: 1 },
     { at: 'onCast', kind: 'resourceDrain', resource: 'mana', amount: 18, gainFraction: 0.5 },
   ],
-  description: 'Ray that Curses, Blinds, and drains Mana from the target. Refunds half the drained Mana to you.',
+  description:
+    'Ray that Curses, Blinds, and drains Mana from the target. Refunds half the drained Mana to you.',
   miniMalus: 'Windup required — parryable and needs line of sight.',
   canParry: true,
 }
@@ -906,7 +930,8 @@ export const ABILITY_D3_LIFE_DRAIN: AbilityDef = {
     },
     { at: 'onCast', kind: 'resourceDrain', resource: 'stamina', amount: 20, gainFraction: 0.5 },
   ],
-  description: 'Channel a drain beam that first rips Stamina from the target, then leeches their HP back to you each tick.',
+  description:
+    'Channel a drain beam that first rips Stamina from the target, then leeches their HP back to you each tick.',
   miniMalus: 'Movement or taking damage interrupts the beam immediately.',
 }
 
@@ -932,7 +957,8 @@ export const ABILITY_D4_DARK_BARRIER: AbilityDef = {
       stacks: 38,
     },
   ],
-  description: 'Instantly conjure a dark barrier that absorbs incoming damage. Pure defensive tool.',
+  description:
+    'Instantly conjure a dark barrier that absorbs incoming damage. Pure defensive tool.',
   miniMalus: 'No offensive component — no damage, cleanse, or mobility.',
 }
 
@@ -954,7 +980,8 @@ export const ABILITY_D5_VOID_SPIKE: AbilityDef = {
     { at: 'onCast', kind: 'knockup', airborneSec: 0.5, knockbackDistance: 1.0 },
     { at: 'onCast', kind: 'resourceDrain', resource: 'mana', amount: 12, gainFraction: 0.5 },
   ],
-  description: 'Dark ray that launches the target Airborne and drains their Mana. Combo starter with resource pressure.',
+  description:
+    'Dark ray that launches the target Airborne and drains their Mana. Combo starter with resource pressure.',
   miniMalus: 'Short range and clear line of sight required.',
   isKnockup: true,
 }
@@ -1016,7 +1043,8 @@ export const ABILITY_N2_THORN_FIELD: AbilityDef = {
       applyStatus: { status: 'slow', durationSec: 3.0, stacks: 1, slowFraction: 0.5 },
     },
   ],
-  description: 'Summon a thorn zone that Slows and deals periodic damage to enemies who stay inside.',
+  description:
+    'Summon a thorn zone that Slows and deals periodic damage to enemies who stay inside.',
   miniMalus: 'Visible zone — enemies can walk out to avoid it.',
 }
 
@@ -1085,7 +1113,8 @@ export const ABILITY_N5_ROOT_UPTHROW: AbilityDef = {
     { at: 'onCast', kind: 'damage', amount: 8, element: 'nature' },
     { at: 'onCast', kind: 'knockup', airborneSec: 0.5, requiresGroundedTarget: true },
   ],
-  description: 'Erupting vines that launch a grounded target Airborne. Fails if they are already in the air.',
+  description:
+    'Erupting vines that launch a grounded target Airborne. Fails if they are already in the air.',
   miniMalus: 'Cannot be used on airborne targets — time it before a knockup, not after.',
   isKnockup: true,
 }
@@ -1117,7 +1146,8 @@ export const ABILITY_N6_VINE_DASH: AbilityDef = {
       applyStatus: { status: 'root', durationSec: 2.8, stacks: 1 },
     },
   ],
-  description: 'Dash forward and leave a Root zone at your landing point. Traps enemies who follow you.',
+  description:
+    'Dash forward and leave a Root zone at your landing point. Traps enemies who follow you.',
   miniMalus: 'Collision stops the dash early.',
 }
 
@@ -1148,7 +1178,8 @@ export const ABILITY_U1_SELF_HEAL_POTION: AbilityDef = {
       breakOnMove: true,
     },
   ],
-  description: 'Drink a healing potion that restores HP over time. Must stand still to benefit fully.',
+  description:
+    'Drink a healing potion that restores HP over time. Must stand still to benefit fully.',
   miniMalus: 'Movement cancels the channel — cannot fight and heal simultaneously.',
 }
 
@@ -1218,7 +1249,8 @@ export const ABILITY_U4_CLEANSE_SURGE: AbilityDef = {
     { at: 'onCast', kind: 'cleanse' },
     { at: 'onCast', kind: 'applyStatus', status: 'haste', durationSec: 2, stacks: 1 },
   ],
-  description: 'Instantly cleanse all debuffs, then surge forward with Haste. Best used when CC breaks your momentum.',
+  description:
+    'Instantly cleanse all debuffs, then surge forward with Haste. Best used when CC breaks your momentum.',
   miniMalus: 'No healing — purely removes debuffs and boosts movement.',
 }
 
@@ -1236,7 +1268,8 @@ export const ABILITY_U5_BARRIER: AbilityDef = {
   targeting: 'self',
   comboRole: 'survival',
   effects: [{ at: 'onCast', kind: 'applyStatus', status: 'shield', durationSec: 8, stacks: 42 }],
-  description: 'Instantly conjure a personal shield that absorbs incoming damage. Long-duration defensive cooldown.',
+  description:
+    'Instantly conjure a personal shield that absorbs incoming damage. Long-duration defensive cooldown.',
   miniMalus: 'No cleanse or heal — only absorbs damage.',
 }
 
@@ -1254,7 +1287,8 @@ export const ABILITY_U6_ENERGIZE: AbilityDef = {
   targeting: 'self',
   comboRole: 'survival',
   effects: [{ at: 'onCast', kind: 'restoreStamina', amount: 35 }],
-  description: 'Instantly restore a large chunk of Stamina. Enables more dashes, parries, and melee abilities.',
+  description:
+    'Instantly restore a large chunk of Stamina. Enables more dashes, parries, and melee abilities.',
   miniMalus: 'No Mana restore.',
 }
 
@@ -1274,7 +1308,8 @@ export const ABILITY_U7_PHASE_SHIFT: AbilityDef = {
   effects: [
     { at: 'onCast', kind: 'applyStatus', status: 'invulnerable', durationSec: 0.6, stacks: 1 },
   ],
-  description: 'Brief invulnerability window — immune to all damage and crowd control. Use to dodge a critical hit.',
+  description:
+    'Brief invulnerability window — immune to all damage and crowd control. Use to dodge a critical hit.',
   miniMalus: 'Cannot attack or cast during the phase — purely defensive.',
 }
 
@@ -1301,7 +1336,8 @@ export const ABILITY_U8_SMOKE_SCREEN: AbilityDef = {
       applyStatus: { status: 'blind', durationSec: 3.0, stacks: 1 },
     },
   ],
-  description: 'Throw a smoke bomb that creates a zone repeatedly Blinding enemies inside. Strong area denial.',
+  description:
+    'Throw a smoke bomb that creates a zone repeatedly Blinding enemies inside. Strong area denial.',
   miniMalus: 'No damage — purely crowd control.',
 }
 
@@ -1324,7 +1360,8 @@ export const ABILITY_U_BRACE_RECOVERY: AbilityDef = {
     { at: 'onCast', kind: 'heal', amount: 50 },
     { at: 'onCast', kind: 'applyStatus', status: 'shield', durationSec: 3, stacks: 20 },
   ],
-  description: 'Tank exclusive. Spend Stamina to restore HP and gain a damage shield. At max Fury, consumes all stacks to heal for twice as much.',
+  description:
+    'Tank exclusive. Spend Stamina to restore HP and gain a damage shield. At max Fury, consumes all stacks to heal for twice as much.',
   miniMalus: 'High Stamina cost — using it leaves you vulnerable to melee pressure.',
 }
 
@@ -1347,7 +1384,8 @@ export const ABILITY_U_HUNTERS_FLOW: AbilityDef = {
     { at: 'onCast', kind: 'heal', amount: 35 },
     { at: 'onCast', kind: 'move', mode: 'dash', distance: 3, useMovementDirection: true },
   ],
-  description: 'Archer exclusive. Restore HP while performing a quick repositioning dash. At high Momentum, healing is amplified.',
+  description:
+    'Archer exclusive. Restore HP while performing a quick repositioning dash. At high Momentum, healing is amplified.',
   miniMalus: 'Dash has no invulnerability frames — can be hit mid-dash.',
 }
 
@@ -1367,7 +1405,8 @@ export const ABILITY_U_ARCANE_REBIND: AbilityDef = {
   targeting: 'self',
   comboRole: 'survival',
   effects: [{ at: 'onCast', kind: 'heal', amount: 60 }],
-  description: 'Mage exclusive. Channel arcane energy to restore HP. When elemental Resonance is active, the heal is nearly doubled.',
+  description:
+    'Mage exclusive. Channel arcane energy to restore HP. When elemental Resonance is active, the heal is nearly doubled.',
   miniMalus: 'Windup required — vulnerable to interrupts during the cast.',
 }
 
@@ -1387,7 +1426,8 @@ export const ABILITY_U_ADAPTIVE_MEND: AbilityDef = {
   targeting: 'self',
   comboRole: 'survival',
   effects: [{ at: 'onCast', kind: 'heal', amount: 30 }],
-  description: 'Hybrid exclusive. Restore HP at dual resource cost. At full Flow stacks, the heal is dramatically amplified.',
+  description:
+    'Hybrid exclusive. Restore HP at dual resource cost. At full Flow stacks, the heal is dramatically amplified.',
   miniMalus: 'Low base healing — requires Flow stacks from weapon swapping to be effective.',
 }
 

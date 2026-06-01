@@ -64,7 +64,10 @@ export function createFpvStaticViewmodel(): FpvStaticViewmodel {
         model.traverse((child) => {
           if (child instanceof THREE.Mesh) {
             child.frustumCulled = false
-            const src = child.material as THREE.MeshStandardMaterial | THREE.MeshToonMaterial | undefined
+            const src = child.material as
+              | THREE.MeshStandardMaterial
+              | THREE.MeshToonMaterial
+              | undefined
             const hasMap = !!(src && 'map' in src && src.map && !(src.map instanceof Function))
             const color = src?.color?.clone() ?? new THREE.Color(0xffffff)
 

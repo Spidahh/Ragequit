@@ -58,7 +58,8 @@ function slotMeta(loadout: ReadonlyArray<string>, slotIdx: number): HotbarSlotMe
   const label = getSlotKeyLabel(slotIdx)
   if (family === 'utility') return { kind: 'utility', label, pipClass: 'utility-pip pip-utility' }
   if (family === 'magicBase') return { kind: 'spell', label, pipClass: 'spell-pip pip-magic' }
-  if (family === 'magicAdvanced') return { kind: 'spell', label, pipClass: 'spell-pip pip-magic-adv' }
+  if (family === 'magicAdvanced')
+    return { kind: 'spell', label, pipClass: 'spell-pip pip-magic-adv' }
   if (family === 'melee') return { kind: 'weapon', label, pipClass: 'ability-pip pip-sword' }
   if (family === 'bow') return { kind: 'weapon', label, pipClass: 'ability-pip pip-bow' }
   return null
@@ -156,8 +157,12 @@ export function initCooldownStrip(
         e.stopPropagation()
         onSlotClick(slotIdx)
       })
-      ;(meta.kind === 'utility' ? utilityRail : meta.kind === 'spell' ? spellRail : weaponRail)
-        .appendChild(pip)
+      ;(meta.kind === 'utility'
+        ? utilityRail
+        : meta.kind === 'spell'
+          ? spellRail
+          : weaponRail
+      ).appendChild(pip)
       pipEls.set(id, pip)
     }
     if (weaponRail.children.length > 0) root.appendChild(weaponSection)

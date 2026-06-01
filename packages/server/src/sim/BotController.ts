@@ -78,7 +78,8 @@ export class BotController {
     const pitch = Math.atan2(dy, Math.max(dist, 0.1))
 
     const classId = (self.classId ?? 'hybrid') as ClassId
-    const allowedWeapons = TARGET_CLASS_DEFS[classId]?.weapons ?? (['sword', 'bow', 'staff'] as const)
+    const allowedWeapons =
+      TARGET_CLASS_DEFS[classId]?.weapons ?? (['sword', 'bow', 'staff'] as const)
     const hpMax = TARGET_CLASS_DEFS[classId]?.resourceMaxima.hp ?? 200
     const hpFraction = self.hp / hpMax
 
@@ -92,14 +93,14 @@ export class BotController {
 
     // Unit vector perpendicular to the enemy direction (orbital strafe)
     const len = Math.max(dist, 0.01)
-    const perpX = (dz / len) * this.strafeDir   // rotate 90 degrees
+    const perpX = (dz / len) * this.strafeDir // rotate 90 degrees
     const perpZ = (-dx / len) * this.strafeDir
 
     // ── Desired engagement range + hysteresis band based on active weapon ──
     // For melee the band MUST keep the bot inside SWORD_M1_RANGE_M (1.8 m),
     // otherwise the bot settles just out of sword reach and never connects.
     let desiredRange = 1.1 // default melee — comfortably inside sword range
-    let closeBand = 0.4    // close when dist > desiredRange + closeBand (=1.5 m)
+    let closeBand = 0.4 // close when dist > desiredRange + closeBand (=1.5 m)
     if (self.activeWeapon === 'bow') {
       desiredRange = 14.0
       closeBand = 0.8
@@ -109,7 +110,7 @@ export class BotController {
     }
 
     // ── Retreat behavior when critically low HP ───────────────────────────
-    const retreatThreshold = this.difficulty === 'master' ? 0.25 : 0.20
+    const retreatThreshold = this.difficulty === 'master' ? 0.25 : 0.2
     const isRetreating = tick < this.retreatUntilTick
     if (hpFraction < retreatThreshold && !isRetreating) {
       // Trigger a 2-second retreat window to create distance + attempt heal
@@ -153,7 +154,7 @@ export class BotController {
     // Bot forward in world: (-sinY, -cosY) for the current yaw convention
     // Bot right in world:   (cosY, -sinY)
     // Project world-space strafe onto input axes
-    const inputX = finalStrafeX * cosY + finalStrafeZ * (-sinY)
+    const inputX = finalStrafeX * cosY + finalStrafeZ * -sinY
     // mz is already in bot-forward space; clamp combined magnitude to 1
     const rawMag = Math.hypot(inputX, mz)
     const scale = rawMag > 1 ? 1 / rawMag : 1
@@ -186,7 +187,7 @@ export class BotController {
       const sz = (-dx / len) * this.unstickDir
       mx = (sx * cosY + sz * -sinY) * 0.9
       finalMz = -0.5 // still bias toward the enemy
-      unstickJump = (tick % Math.round(0.5 * TICK_RATE_HZ)) === 0
+      unstickJump = tick % Math.round(0.5 * TICK_RATE_HZ) === 0
     }
 
     // ── Jump occasionally in melee range ─────────────────────────────────
@@ -204,7 +205,8 @@ export class BotController {
     if (this.difficulty === 'competent') {
       if (dist <= 3.5 && enemy.swingEndsAtTick > tick && Math.random() < 0.55) doParry = true
     } else if (this.difficulty === 'master') {
-      if (dist <= 4.0 && (enemy.swingEndsAtTick > tick || enemy.casting) && Math.random() < 0.82) doParry = true
+      if (dist <= 4.0 && (enemy.swingEndsAtTick > tick || enemy.casting) && Math.random() < 0.82)
+        doParry = true
     }
 
     this.host.sendInput(this.botId, mx, finalMz, yaw, doJump || unstickJump, doParry)
@@ -229,9 +231,10 @@ export class BotController {
 
     // ── Smart weapon swap (competent + master) ────────────────────────────
     // Prefer ranged weapon at distance, melee at close range.
-    const hasRanged = (allowedWeapons as readonly string[]).includes('bow') ||
-                      (allowedWeapons as readonly string[]).includes('staff')
-    const hasBow    = (allowedWeapons as readonly string[]).includes('bow')
+    const hasRanged =
+      (allowedWeapons as readonly string[]).includes('bow') ||
+      (allowedWeapons as readonly string[]).includes('staff')
+    const hasBow = (allowedWeapons as readonly string[]).includes('bow')
     const preferRangedDist = this.difficulty === 'master' ? 7 : 10
 
     if (hasRanged && dist > preferRangedDist && self.activeWeapon === 'sword') {
@@ -240,7 +243,11 @@ export class BotController {
       this.nextDecisionTick = tick + Math.round(0.3 * TICK_RATE_HZ)
       return
     }
-    if (dist < 4.0 && self.activeWeapon !== 'sword' && (allowedWeapons as readonly string[]).includes('sword')) {
+    if (
+      dist < 4.0 &&
+      self.activeWeapon !== 'sword' &&
+      (allowedWeapons as readonly string[]).includes('sword')
+    ) {
       this.host.sendWeaponSwap(this.botId, 'sword')
       this.nextDecisionTick = tick + Math.round(0.3 * TICK_RATE_HZ)
       return

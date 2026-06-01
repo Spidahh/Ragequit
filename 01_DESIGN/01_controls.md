@@ -20,15 +20,15 @@ status: current
 
 ## Keyboard — core
 
-| Key      | Action                                                                                                    |
-| -------- | --------------------------------------------------------------------------------------------------------- |
-| WASD     | Movement (sprint is always on — no Shift)                                                                 |
-| Space    | Jump (fixed tap-height impulse; hold adds no extra height)                                                |
-| 1–8      | **Direct ability binds** — one per hotbar slot, fires immediately (rebindable)                            |
-| Q (hold) | Open **Q Wheel** — radial alternative for slots 5–8 (see per-class assignment below)                      |
-| E (hold) | Open **E Wheel** — radial alternative for slots 1–4 (see per-class assignment below)                      |
-| Tab      | Cycle equipped weapon (rebindable)                                                                        |
-| Escape   | Menu                                                                                                      |
+| Key      | Action                                                                               |
+| -------- | ------------------------------------------------------------------------------------ |
+| WASD     | Movement (sprint is always on — no Shift)                                            |
+| Space    | Jump (fixed tap-height impulse; hold adds no extra height)                           |
+| 1–8      | **Direct ability binds** — one per hotbar slot, fires immediately (rebindable)       |
+| Q (hold) | Open **Q Wheel** — radial alternative for slots 5–8 (see per-class assignment below) |
+| E (hold) | Open **E Wheel** — radial alternative for slots 1–4 (see per-class assignment below) |
+| Tab      | Cycle equipped weapon (rebindable)                                                   |
+| Escape   | Menu                                                                                 |
 
 Every one of the 8 class abilities has its own direct key (default `1`–`8`,
 rebindable in Settings). The two wheels are an **alternative** radial way to fire
@@ -55,12 +55,12 @@ are also on the E wheel, slots 5–8 on the Q wheel.
 
 Every class has exactly 4 abilities on E and 4 on Q, covering all 8 slots with no orphaned abilities.
 
-| Class   | E Wheel (4 slots)                         | Q Wheel (4 slots)                                    |
-| ------- | ----------------------------------------- | ---------------------------------------------------- |
-| Tank    | 4 melee                                   | 1 bow + 3 utility                                    |
-| Arciere | 4 bow                                     | 2 magicBase + 2 utility                              |
-| Mago    | 3 magicBase + 1 magicAdvanced             | 2 magicAdvanced + 2 utility                          |
-| Ibrido  | 2 melee + 1 bow + 1 magicBase             | 1 magicBase + 1 magicAdvanced + 2 utility            |
+| Class   | E Wheel (4 slots)             | Q Wheel (4 slots)                         |
+| ------- | ----------------------------- | ----------------------------------------- |
+| Tank    | 4 melee                       | 1 bow + 3 utility                         |
+| Arciere | 4 bow                         | 2 magicBase + 2 utility                   |
+| Mago    | 3 magicBase + 1 magicAdvanced | 2 magicAdvanced + 2 utility               |
+| Ibrido  | 2 melee + 1 bow + 1 magicBase | 1 magicBase + 1 magicAdvanced + 2 utility |
 
 ## Hotbar
 
@@ -81,12 +81,12 @@ When a primed ability requires a different weapon than the currently equipped on
 
 ## Direct Binds
 
-| Key   | Action                                |
-| ----- | ------------------------------------- |
-| 1–8   | Fire hotbar ability slots 1–8         |
-| E     | E Wheel (radial alternative, slots 1–4) |
-| Q     | Q Wheel (radial alternative, slots 5–8) |
-| Tab   | Weapon swap                           |
+| Key | Action                                  |
+| --- | --------------------------------------- |
+| 1–8 | Fire hotbar ability slots 1–8           |
+| E   | E Wheel (radial alternative, slots 1–4) |
+| Q   | Q Wheel (radial alternative, slots 5–8) |
+| Tab | Weapon swap                             |
 
 All binds above are rebindable in Settings. `Z`, `X`, `F`, `V`, `R` and `G` are not used.
 

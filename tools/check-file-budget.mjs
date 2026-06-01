@@ -24,12 +24,13 @@ const HARD_LIMIT = 800
 // raise them. Goal: every entry reaches <= HARD_LIMIT, then gets deleted here.
 // `registry.ts` is a pure DATA table (53 ability defs) — large by nature, exempt
 // from the "split" intent but still ratcheted so it can't balloon.
+// Baselined against the prettier-formatted tree (the canonical line count).
 const BUDGET = {
-  'packages/client/src/main.ts': 2886,
-  'packages/server/src/rooms/GameRoom.ts': 2710,
-  'packages/shared/src/abilities/registry.ts': 1468,
-  'packages/server/src/sim/AbilityEngine.ts': 1034,
-  'packages/client/src/audio/sound-engine.ts': 861,
+  'packages/client/src/main.ts': 2910,
+  'packages/server/src/rooms/GameRoom.ts': 2772,
+  'packages/shared/src/abilities/registry.ts': 1508,
+  'packages/server/src/sim/AbilityEngine.ts': 1039,
+  'packages/client/src/audio/sound-engine.ts': 878,
 }
 
 const SCAN_DIRS = ['packages/client/src', 'packages/server/src', 'packages/shared/src']

@@ -145,8 +145,8 @@ function makeProjectileObject(
         break
       case 'nature':
         texture = VfxTextures.nature
-        scaleX = 0.40
-        scaleY = 0.40
+        scaleX = 0.4
+        scaleY = 0.4
         break
       default:
         texture = VfxTextures.fire

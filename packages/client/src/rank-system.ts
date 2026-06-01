@@ -68,7 +68,7 @@ export const RANKS: readonly Rank[] = [
   {
     id: 'apex_reaper',
     name: 'Apex Reaper',
-    subtitle: 'Il predatore perfetto all\'apice delle competitive',
+    subtitle: "Il predatore perfetto all'apice delle competitive",
     minWins: 110,
     color: '#ff6b35',
     glowColor: 'rgba(255,107,53,0.45)',
@@ -112,9 +112,7 @@ export function updateRankBadge(wins: number): void {
   const rank = getRank(wins)
   const next = getNextRank(wins)
   const winsToNext = next ? next.minWins - wins : 0
-  const progressPct = next
-    ? ((wins - rank.minWins) / (next.minWins - rank.minWins)) * 100
-    : 100
+  const progressPct = next ? ((wins - rank.minWins) / (next.minWins - rank.minWins)) * 100 : 100
 
   badge.style.setProperty('--rank-color', rank.color)
   badge.style.setProperty('--rank-glow', rank.glowColor)

@@ -424,7 +424,8 @@ export function initMenu(handlers: {
           hybrid: '#00f0ff',
         }
         const previewEl = document.getElementById('menu-loadout-preview')
-        if (previewEl) previewEl.style.setProperty('--class-color', CLASS_COLORS[classId] || '#ffd260')
+        if (previewEl)
+          previewEl.style.setProperty('--class-color', CLASS_COLORS[classId] || '#ffd260')
 
         menuBg.updateClass(classId)
 
@@ -435,7 +436,6 @@ export function initMenu(handlers: {
         const iconEl = statusEl?.querySelector('.pc-loadout-icon')
         if (iconEl) iconEl.textContent = '✓'
         if (statusTextEl) statusTextEl.textContent = 'Loadout pronto'
-
         ;[playBtn, ffaBtn, trainBtn, noviceBtn, competentBtn, masterBtn].forEach((btn) => {
           if (btn) {
             btn.disabled = false

@@ -53,22 +53,22 @@ Attualmente il client viene servito localmente via `pnpm dev:client` (Vite dev s
 Questi asset sono nel repo e NON vanno cercati o scaricati.
 Per la lista completa vedi `01_DESIGN/10_tech_assets.md`.
 
-| Path | Contenuto |
-|---|---|
-| `packages/client/public/ui/ragequit-logo-full.png` | Logo principale |
-| `packages/client/public/ui/ragequit-logo-small.png` | Logo small |
-| `packages/client/public/icons-sprite.svg` | SVG sprite icone (~45 KB) |
-| `packages/client/public/arena/gladiators_arena.glb` | Arena 3D (~171 KB) |
-| `packages/client/public/characters/UAL1_Standard.glb` | Animazioni (NON rimuovere) |
-| `packages/client/public/characters/*.gltf` | Modelli personaggio per classe |
-| `packages/client/public/weapons/kaykit/sword.glb` | Spada (loader attivo; `sword_D.glb` è il vecchio modello, non usato) |
-| `packages/client/public/weapons/kaykit/bow.glb` | Arco (loader attivo) |
-| `packages/client/public/weapons/kaykit/staff.glb` | Bastone (loader attivo) |
-| `packages/client/public/weapons/kaykit/shield_A.glb` | Scudo fisico |
-| `packages/client/public/arena/props/Torch_Metal.gltf` | Torcia arena |
-| `packages/client/public/arena/props/barrel_large.gltf` | Barile KayKit |
-| `packages/client/public/vfx/vfx_*.png` | Texture VFX (RGBA bianco-su-trasparente) |
-| `packages/client/public/ability-icons/*.png` | Icone 53 abilita |
+| Path                                                   | Contenuto                                                            |
+| ------------------------------------------------------ | -------------------------------------------------------------------- |
+| `packages/client/public/ui/ragequit-logo-full.png`     | Logo principale                                                      |
+| `packages/client/public/ui/ragequit-logo-small.png`    | Logo small                                                           |
+| `packages/client/public/icons-sprite.svg`              | SVG sprite icone (~45 KB)                                            |
+| `packages/client/public/arena/gladiators_arena.glb`    | Arena 3D (~171 KB)                                                   |
+| `packages/client/public/characters/UAL1_Standard.glb`  | Animazioni (NON rimuovere)                                           |
+| `packages/client/public/characters/*.gltf`             | Modelli personaggio per classe                                       |
+| `packages/client/public/weapons/kaykit/sword.glb`      | Spada (loader attivo; `sword_D.glb` è il vecchio modello, non usato) |
+| `packages/client/public/weapons/kaykit/bow.glb`        | Arco (loader attivo)                                                 |
+| `packages/client/public/weapons/kaykit/staff.glb`      | Bastone (loader attivo)                                              |
+| `packages/client/public/weapons/kaykit/shield_A.glb`   | Scudo fisico                                                         |
+| `packages/client/public/arena/props/Torch_Metal.gltf`  | Torcia arena                                                         |
+| `packages/client/public/arena/props/barrel_large.gltf` | Barile KayKit                                                        |
+| `packages/client/public/vfx/vfx_*.png`                 | Texture VFX (RGBA bianco-su-trasparente)                             |
+| `packages/client/public/ability-icons/*.png`           | Icone 53 abilita                                                     |
 
 **Loader attivo armi**: `packages/client/src/render/character-weapons.ts` carica
 da `public/weapons/kaykit/*.glb`. I file `public/weapons/sword.glb`, `bow.glb`,

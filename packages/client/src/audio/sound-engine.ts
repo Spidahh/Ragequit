@@ -552,7 +552,11 @@ export class SoundEngine {
     const gain = ac.createGain()
     osc.type = 'sine'
     const freqByElement: Record<string, number> = {
-      fire: 440, ice: 900, lightning: 1200, dark: 220, nature: 550,
+      fire: 440,
+      ice: 900,
+      lightning: 1200,
+      dark: 220,
+      nature: 550,
     }
     osc.frequency.value = freqByElement[element] ?? 360
     gain.gain.setValueAtTime(0.18, ac.currentTime)
@@ -651,7 +655,8 @@ export class SoundEngine {
     const out = this._spatialOut(wx, wy, wz)
     const osc = ac.createOscillator()
     const gain = ac.createGain()
-    const baseFreq = element === 'fire' ? 180 : element === 'ice' ? 320 : element === 'lightning' ? 480 : 240
+    const baseFreq =
+      element === 'fire' ? 180 : element === 'ice' ? 320 : element === 'lightning' ? 480 : 240
     osc.type = 'sine'
     osc.frequency.setValueAtTime(baseFreq, ac.currentTime)
     osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.6, ac.currentTime + 0.15)
@@ -786,8 +791,10 @@ export class SoundEngine {
         osc.frequency.exponentialRampToValueAtTime(60, ac.currentTime + 0.15)
         g.gain.setValueAtTime(0.22 * power, ac.currentTime)
         g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.22)
-        osc.connect(g); g.connect(out)
-        osc.start(); osc.stop(ac.currentTime + 0.25)
+        osc.connect(g)
+        g.connect(out)
+        osc.start()
+        osc.stop(ac.currentTime + 0.25)
         break
       }
       case 'ice': {
@@ -799,8 +806,10 @@ export class SoundEngine {
         osc.frequency.exponentialRampToValueAtTime(900, ac.currentTime + 0.18)
         g.gain.setValueAtTime(0.18 * power, ac.currentTime)
         g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.28)
-        osc.connect(g); g.connect(out)
-        osc.start(); osc.stop(ac.currentTime + 0.3)
+        osc.connect(g)
+        g.connect(out)
+        osc.start()
+        osc.stop(ac.currentTime + 0.3)
         break
       }
       case 'lightning': {
@@ -812,11 +821,14 @@ export class SoundEngine {
         const srcN = ac.createBufferSource()
         srcN.buffer = buf
         const hp = ac.createBiquadFilter()
-        hp.type = 'highpass'; hp.frequency.value = 2800
+        hp.type = 'highpass'
+        hp.frequency.value = 2800
         const g = ac.createGain()
         g.gain.setValueAtTime(0.35 * power, ac.currentTime)
         g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.06)
-        srcN.connect(hp); hp.connect(g); g.connect(out)
+        srcN.connect(hp)
+        hp.connect(g)
+        g.connect(out)
         this._pitch(srcN, 0.12)
         srcN.start()
         break
@@ -830,8 +842,10 @@ export class SoundEngine {
         osc.frequency.exponentialRampToValueAtTime(28, ac.currentTime + 0.2)
         g.gain.setValueAtTime(0.3 * power, ac.currentTime)
         g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.3)
-        osc.connect(g); g.connect(out)
-        osc.start(); osc.stop(ac.currentTime + 0.35)
+        osc.connect(g)
+        g.connect(out)
+        osc.start()
+        osc.stop(ac.currentTime + 0.35)
         break
       }
       case 'nature': {
@@ -843,11 +857,15 @@ export class SoundEngine {
         const srcN = ac.createBufferSource()
         srcN.buffer = buf
         const bp = ac.createBiquadFilter()
-        bp.type = 'bandpass'; bp.frequency.value = 600; bp.Q.value = 1.2
+        bp.type = 'bandpass'
+        bp.frequency.value = 600
+        bp.Q.value = 1.2
         const g = ac.createGain()
         g.gain.setValueAtTime(0.25 * power, ac.currentTime)
         g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.12)
-        srcN.connect(bp); bp.connect(g); g.connect(out)
+        srcN.connect(bp)
+        bp.connect(g)
+        g.connect(out)
         this._pitch(srcN, 0.1)
         srcN.start()
         break
@@ -857,5 +875,4 @@ export class SoundEngine {
         this.playHit(power)
     }
   }
-
 }

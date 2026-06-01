@@ -245,7 +245,6 @@ interface ProjectileMeta {
   knockbackDistance?: number
 }
 
-
 export class GameRoom extends Room<GameState> {
   override maxClients = Number(process.env['MAX_CLIENTS'] ?? 2)
 
@@ -529,27 +528,27 @@ export class GameRoom extends Room<GameState> {
     if (this.state.players.has(botId)) return
     const player = new Player()
     player.id = botId
-    
+
     const botNum = Number(botId.replace('bot-', ''))
     player.name = BOT_NAMES[botNum % BOT_NAMES.length] ?? 'Bot'
     player.team = ''
-    
+
     const spawnIndex = this.state.players.size % this.activeMap.spawns.length
     const spawn = this.activeMap.spawns[spawnIndex]!
     player.transform.x = spawn.x
     player.transform.y = spawn.y
     player.transform.z = spawn.z
     player.invulnUntilTick = this.state.tick + SPAWN_INVULN_TICKS
-    
+
     // Dynamically assign bot class based on bot index
     const classId = CLASS_IDS[botNum % CLASS_IDS.length] ?? 'hybrid'
     player.classId = classId
-    
+
     const presetLoadout = CLASS_PRESET_BUILDS[classId]
     for (const id of presetLoadout) {
       player.loadout.push(id)
     }
-    
+
     // Set active weapon to the first weapon permitted by the class
     player.activeWeapon = TARGET_CLASS_DEFS[classId].weapons[0] ?? 'sword'
 
@@ -624,7 +623,7 @@ export class GameRoom extends Room<GameState> {
     )
     this.bots.set(botId, bot)
     console.info(
-      `[GameRoom ${this.roomId}] spawned bot ${botId} (class: ${classId}, activeWeapon: ${player.activeWeapon}) at spawn ${spawnIndex}`
+      `[GameRoom ${this.roomId}] spawned bot ${botId} (class: ${classId}, activeWeapon: ${player.activeWeapon}) at spawn ${spawnIndex}`,
     )
   }
 
@@ -949,9 +948,12 @@ export class GameRoom extends Room<GameState> {
     if (player.vz !== simState.vel.z) player.vz = simState.vel.z
     if (player.onGround !== simState.onGround) player.onGround = simState.onGround
     if (player.stamina !== simState.stamina) player.stamina = simState.stamina
-    if (player.momentumTicks !== simState.momentumTicks) player.momentumTicks = simState.momentumTicks
-    if (player.jumpHoldTicksLeft !== simState.jumpHoldTicksLeft) player.jumpHoldTicksLeft = simState.jumpHoldTicksLeft
-    if (player.coyoteTicksLeft !== simState.coyoteTicksLeft) player.coyoteTicksLeft = simState.coyoteTicksLeft
+    if (player.momentumTicks !== simState.momentumTicks)
+      player.momentumTicks = simState.momentumTicks
+    if (player.jumpHoldTicksLeft !== simState.jumpHoldTicksLeft)
+      player.jumpHoldTicksLeft = simState.jumpHoldTicksLeft
+    if (player.coyoteTicksLeft !== simState.coyoteTicksLeft)
+      player.coyoteTicksLeft = simState.coyoteTicksLeft
     if (player.lastProcessedInputSeq !== lastProcessedSeq) {
       player.lastProcessedInputSeq = lastProcessedSeq
     }
@@ -1351,8 +1353,22 @@ export class GameRoom extends Room<GameState> {
       stamina: STAMINA_MAX,
     }
 
-    player.hp = regenResource(player.hp, maxima.hp, now - player.lastDamageAtTick, OOC_DELAY_TICKS, HP_REGEN_PER_SEC_OOC, dt)
-    player.mana = regenResource(player.mana, maxima.mana, now - player.lastManaSpendAtTick, MANA_DELAY_TICKS, MANA_REGEN_PER_SEC, dt)
+    player.hp = regenResource(
+      player.hp,
+      maxima.hp,
+      now - player.lastDamageAtTick,
+      OOC_DELAY_TICKS,
+      HP_REGEN_PER_SEC_OOC,
+      dt,
+    )
+    player.mana = regenResource(
+      player.mana,
+      maxima.mana,
+      now - player.lastManaSpendAtTick,
+      MANA_DELAY_TICKS,
+      MANA_REGEN_PER_SEC,
+      dt,
+    )
     const vxz2 = player.vx * player.vx + player.vz * player.vz
     const moving = vxz2 > 0.25
     const rate = moving ? STAMINA_REGEN_PER_SEC_MOVING : STAMINA_REGEN_PER_SEC_IDLE
@@ -1605,7 +1621,7 @@ export class GameRoom extends Room<GameState> {
     const effectiveChargeFullSec = this.mechanics.getBowChargeTimeSec(BOW_CHARGE_FULL_SEC, player)
     const ratio = Math.max(0.15, bowChargeRatio(chargeSec, 0, effectiveChargeFullSec))
     const damage = bowLerp(BOW_DAMAGE_MIN, BOW_DAMAGE_FULL, ratio)
-    const speed  = bowLerp(BOW_SPEED_MIN_MPS, BOW_SPEED_FULL_MPS, ratio)
+    const speed = bowLerp(BOW_SPEED_MIN_MPS, BOW_SPEED_FULL_MPS, ratio)
 
     const dir = directionFromYawPitch(msg.yaw, msg.pitch)
     const origin = computeProjectileOrigin(player, dir)
@@ -1678,7 +1694,6 @@ export class GameRoom extends Room<GameState> {
       spawnedAtTick: now,
     })
   }
-
 
   private handleParryPress(sid: string, _msg: ClientParryPressMessage): void {
     const player = this.state.players.get(sid)
@@ -1917,7 +1932,14 @@ export class GameRoom extends Room<GameState> {
       const to = { x: state.pos.x, y: state.pos.y, z: state.pos.z }
 
       // Resolve nearest collision (pure helper) and react to it.
-      const hit = resolveProjectileHit(prev, to, this.state.players, this.activeMap.boxes, meta.ownerId, now)
+      const hit = resolveProjectileHit(
+        prev,
+        to,
+        this.state.players,
+        this.activeMap.boxes,
+        meta.ownerId,
+        now,
+      )
       if (hit) {
         const hitPos = {
           x: prev.x + (to.x - prev.x) * hit.t,
@@ -1998,7 +2020,13 @@ export class GameRoom extends Room<GameState> {
         : 'staff'
     const victimIds: string[] =
       meta.splashRadius > 0
-        ? playersInRadius(this.state.players, this.state.tick, meta.ownerId, hitPos, meta.splashRadius)
+        ? playersInRadius(
+            this.state.players,
+            this.state.tick,
+            meta.ownerId,
+            hitPos,
+            meta.splashRadius,
+          )
         : directVictimId
           ? [directVictimId]
           : []
@@ -2038,7 +2066,12 @@ export class GameRoom extends Room<GameState> {
       }
 
       // Ability projectile knockback — applies horizontal push defined per-ability in the registry.
-      if (meta.abilityId && meta.knockbackDistance && meta.knockbackDistance > 0 && !victim.parrying) {
+      if (
+        meta.abilityId &&
+        meta.knockbackDistance &&
+        meta.knockbackDistance > 0 &&
+        !victim.parrying
+      ) {
         const push = projectileKnockbackVector(
           meta.splashRadius > 0,
           victim.transform.x,
@@ -2066,9 +2099,7 @@ export class GameRoom extends Room<GameState> {
     // deterministic tick-based gate (e.g. every N hits), not Math.random().
     const chainChance = meta.chainChance ?? 1
     const shouldChain =
-      (meta.chainTargets ?? 0) > 0 &&
-      (meta.chainDamage ?? 0) > 0 &&
-      chainChance >= 1
+      (meta.chainTargets ?? 0) > 0 && (meta.chainDamage ?? 0) > 0 && chainChance >= 1
     if (shouldChain) {
       const chained = findChainVictims(
         this.state.players,
@@ -2266,7 +2297,15 @@ export class GameRoom extends Room<GameState> {
 
       case 'ice': {
         // Freeze snap: Freeze the nearest enemy (consumes all Chill stacks).
-        const target = findChainVictims(this.state.players, this.state.tick, req.casterSid, [], origin, PROC_RADIUS, 1)[0]
+        const target = findChainVictims(
+          this.state.players,
+          this.state.tick,
+          req.casterSid,
+          [],
+          origin,
+          PROC_RADIUS,
+          1,
+        )[0]
         if (target) {
           this.statuses.cleanse(target, 'chill')
           this.statuses.applyToPlayer(target, 'freeze', 1.5, 1, req.casterSid)
@@ -2276,7 +2315,15 @@ export class GameRoom extends Room<GameState> {
 
       case 'lightning': {
         // Chain damage: deal 20 lightning dmg to nearest enemy within 4 m.
-        const target = findChainVictims(this.state.players, this.state.tick, req.casterSid, [], origin, 4, 1)[0]
+        const target = findChainVictims(
+          this.state.players,
+          this.state.tick,
+          req.casterSid,
+          [],
+          origin,
+          4,
+          1,
+        )[0]
         if (target) {
           this.damageQueue.push({
             attackerId: req.casterSid,
@@ -2302,7 +2349,15 @@ export class GameRoom extends Room<GameState> {
 
       case 'nature': {
         // Root: apply Root 1.5 s to nearest enemy.
-        const target = findChainVictims(this.state.players, this.state.tick, req.casterSid, [], origin, PROC_RADIUS, 1)[0]
+        const target = findChainVictims(
+          this.state.players,
+          this.state.tick,
+          req.casterSid,
+          [],
+          origin,
+          PROC_RADIUS,
+          1,
+        )[0]
         if (target) {
           this.statuses.applyToPlayer(target, 'root', 1.5, 1, req.casterSid)
         }
@@ -2361,8 +2416,7 @@ export class GameRoom extends Room<GameState> {
     if (req.kind === 'bolt' && req.abilityId) {
       const caster = this.state.players.get(req.ownerId)
       if (caster?.alive) {
-        const recoilDistance =
-          (req.splashRadius ?? 0) > 0 ? 0.22 : req.damage >= 20 ? 0.18 : 0.12
+        const recoilDistance = (req.splashRadius ?? 0) > 0 ? 0.22 : req.damage >= 20 ? 0.18 : 0.12
         const resolved = this.resolveAbilityDisplacement(
           caster,
           -(req.vel.x / reqSpd2D) * recoilDistance,
@@ -2560,7 +2614,12 @@ export class GameRoom extends Room<GameState> {
       victim.transform.z,
       attacker.transform.yaw,
     )
-    const resolved = this.resolveAbilityDisplacement(victim, dir.x * distance, dir.z * distance, true)
+    const resolved = this.resolveAbilityDisplacement(
+      victim,
+      dir.x * distance,
+      dir.z * distance,
+      true,
+    )
     victim.transform.x = resolved.x
     victim.transform.z = resolved.z
     const simVictim = this.sim.get(victim.id)
@@ -2609,7 +2668,10 @@ export class GameRoom extends Room<GameState> {
     player.vx = 0
     player.vz = 0
     player.onGround = false
-    const clampedSec = Math.max(KNOCKUP_AIRBORNE_MIN_SEC, Math.min(KNOCKUP_AIRBORNE_MAX_SEC, airborneSec))
+    const clampedSec = Math.max(
+      KNOCKUP_AIRBORNE_MIN_SEC,
+      Math.min(KNOCKUP_AIRBORNE_MAX_SEC, airborneSec),
+    )
     player.airborneUntilTick = this.state.tick + Math.max(1, Math.round(clampedSec * TICK_RATE_HZ))
   }
 }

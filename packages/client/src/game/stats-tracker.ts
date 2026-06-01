@@ -64,7 +64,11 @@ export function recordKnockupConversion(stats: MatchStats): void {
 }
 
 /** Compute a simple real ELO delta given two ratings and the outcome. */
-export function computeEloDelta(selfRating: number, opponentRating: number, isWin: boolean): number {
+export function computeEloDelta(
+  selfRating: number,
+  opponentRating: number,
+  isWin: boolean,
+): number {
   const K = 32
   const expectedScore = 1 / (1 + Math.pow(10, (opponentRating - selfRating) / 400))
   const actualScore = isWin ? 1 : 0

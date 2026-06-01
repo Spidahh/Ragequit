@@ -41,7 +41,9 @@ describe('ability-format', () => {
 
   describe('escapeHtml', () => {
     it('escapes the dangerous characters', () => {
-      expect(escapeHtml('<b>"a"&\'b\'</b>')).toBe('&lt;b&gt;&quot;a&quot;&amp;&#39;b&#39;&lt;/b&gt;')
+      expect(escapeHtml('<b>"a"&\'b\'</b>')).toBe(
+        '&lt;b&gt;&quot;a&quot;&amp;&#39;b&#39;&lt;/b&gt;',
+      )
     })
   })
 

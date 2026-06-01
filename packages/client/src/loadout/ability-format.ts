@@ -59,8 +59,7 @@ export function recommendationTags(
   if (!hasFinisher && candidate.comboRole === 'finisher') tags.push('CHIUSURA')
   if (!hasReset && ['survival', 'counter', 'mobility'].includes(candidate.comboRole))
     tags.push('RESET')
-  if (hasPointPreview && !hasInstantHit && candidate.targeting === 'forward')
-    tags.push('FOLLOW-UP')
+  if (hasPointPreview && !hasInstantHit && candidate.targeting === 'forward') tags.push('FOLLOW-UP')
   return Array.from(new Set(tags)).slice(0, 2)
 }
 
@@ -76,7 +75,8 @@ export function abilityNatureLabel(def: AbilityDef): string {
       statuses.push(effect.perTick.status)
   }
 
-  const hasControl = statuses.some((status) => statusControlScore(status) >= 2) || kinds.has('knockup')
+  const hasControl =
+    statuses.some((status) => statusControlScore(status) >= 2) || kinds.has('knockup')
   const hasDot = statuses.some((status) => ['burn', 'bleed', 'poison', 'chill'].includes(status))
 
   if (
@@ -87,7 +87,8 @@ export function abilityNatureLabel(def: AbilityDef): string {
     statuses.some((status) => status === 'shield')
   )
     return 'RECUPERO'
-  if (def.comboRole === 'mobility' || kinds.has('move')) return hasControl ? 'MOBILITA + CONTROLLO' : 'MOBILITA'
+  if (def.comboRole === 'mobility' || kinds.has('move'))
+    return hasControl ? 'MOBILITA + CONTROLLO' : 'MOBILITA'
   if (kinds.has('resourceDrain') || kinds.has('lifesteal')) return 'DRENAGGIO'
   if (hasControl) return kinds.has('zone') ? 'CONTROLLO AREA' : 'CONTROLLO'
   if (kinds.has('zone')) return 'ZONA'

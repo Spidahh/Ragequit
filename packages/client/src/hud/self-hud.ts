@@ -79,8 +79,6 @@ export interface SelfHudController {
   update: (params: SelfHudUpdateParams) => void
 }
 
-
-
 export function initSelfHud({
   hudHpFill,
   hudManaFill,
@@ -182,8 +180,6 @@ export function initSelfHud({
     } else {
       respawnOverlay.classList.remove('active')
     }
-
-
 
     const liveStatuses = Array.from(selfSchema.statuses ?? [])
     while (statusStrip.firstChild) statusStrip.removeChild(statusStrip.firstChild)

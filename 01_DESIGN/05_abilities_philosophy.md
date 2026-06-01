@@ -55,21 +55,21 @@ Every ability must declare its `comboRole` in the registry. The loadout UI reads
 
 Each ability has **exactly one** `comboRole`. The standard taxonomy is **6 strategic roles** — that is the full, intended set. Each role answers "what does this ability DO in a fight", never "how is it delivered".
 
-| Role       | Code value   | Purpose                                                                                | Live assignments                                                                                                                              |
-| ---------- | ------------ | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Starter    | `'starter'`  | Opens a punish window through launch, root, freeze, stun, blind or slow                | Uppercut, Guard Break, Pin Shot, Eruption, Frost Pillar, Arc Lift, Entangle, Root Upthrow, Void Spike, Curse of Weakness, Freeze Target       |
-| Finisher   | `'finisher'` | Rewards accurate follow-up aim after a starter; no special airborne bonus              | Marksman Shot, Piercing Shot, Meteor, Fireball, Blast Arrow                                                                                   |
-| Pressure   | `'pressure'` | Damage/debuff that is not an opener: pokes, DoTs, zones, space denial, resource drain  | Shadow Bolt, Poison Dart, Thunder Clap, Ignite, Chain Bolt, Flame Wall, Blizzard, Thorn Field, Storm Field, Smoke Screen, Life Drain, Mark Target |
-| Survival   | `'survival'` | Heal, shield, sustain or resource restore on the caster                                | Barrier, Dark Barrier, Healing Totem, Energize, Recovery utilities                                                                            |
-| Counter    | `'counter'`  | Active response to an enemy combo: cleanse, phase, disengage, anti-melee, interrupt    | Cleanse Surge, Phase Shift, Parry Shot                                                                                                        |
-| Mobility   | `'mobility'` | Primary function is repositioning the caster                                           | Lightning Dash, Vine Dash, Quick Dash                                                                                                         |
+| Role     | Code value   | Purpose                                                                               | Live assignments                                                                                                                                  |
+| -------- | ------------ | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Starter  | `'starter'`  | Opens a punish window through launch, root, freeze, stun, blind or slow               | Uppercut, Guard Break, Pin Shot, Eruption, Frost Pillar, Arc Lift, Entangle, Root Upthrow, Void Spike, Curse of Weakness, Freeze Target           |
+| Finisher | `'finisher'` | Rewards accurate follow-up aim after a starter; no special airborne bonus             | Marksman Shot, Piercing Shot, Meteor, Fireball, Blast Arrow                                                                                       |
+| Pressure | `'pressure'` | Damage/debuff that is not an opener: pokes, DoTs, zones, space denial, resource drain | Shadow Bolt, Poison Dart, Thunder Clap, Ignite, Chain Bolt, Flame Wall, Blizzard, Thorn Field, Storm Field, Smoke Screen, Life Drain, Mark Target |
+| Survival | `'survival'` | Heal, shield, sustain or resource restore on the caster                               | Barrier, Dark Barrier, Healing Totem, Energize, Recovery utilities                                                                                |
+| Counter  | `'counter'`  | Active response to an enemy combo: cleanse, phase, disengage, anti-melee, interrupt   | Cleanse Surge, Phase Shift, Parry Shot                                                                                                            |
+| Mobility | `'mobility'` | Primary function is repositioning the caster                                          | Lightning Dash, Vine Dash, Quick Dash                                                                                                             |
 
 **Removed/merged roles (were redundant or badly defined):**
 
 - `extender` → **merged into `pressure`**. "Keeping the enemy in danger" is just pressure applied to a zone. It never needed its own role.
 - `drain` → **merged into `pressure`**. Attacking enemy resources is a form of pressure; it does not change how the ability is built.
 - `resource` → **merged into `survival`**. Restoring your own resources is sustain.
-- `ray` → **deleted as a combo role**. "Ray" described *delivery* (instant `windupSec: 0` line-of-sight hit), not combat function. The instant-LOS property stays as a delivery flag, but the ability keeps a real strategic role: Freeze Target is a `starter`, Chain Bolt and Ignite are `pressure`.
+- `ray` → **deleted as a combo role**. "Ray" described _delivery_ (instant `windupSec: 0` line-of-sight hit), not combat function. The instant-LOS property stays as a delivery flag, but the ability keeps a real strategic role: Freeze Target is a `starter`, Chain Bolt and Ignite are `pressure`.
 
 This leaves exactly the 6 roles above. The migration is **done in code**: `AbilityComboRole` in `packages/shared/src/abilities/types.ts` now defines exactly these 6 roles, and every entry in `registry.ts` has been remapped (`extender`/`drain` → `pressure`, `resource` → `survival`, `ray` → its real role with instant-LOS kept as `windupSec: 0` + `targeting: 'forward'`).
 

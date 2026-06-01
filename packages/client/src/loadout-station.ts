@@ -41,8 +41,6 @@ import {
 const STORAGE_KEY = 'ragequit.loadout.v6'
 const CLASS_STORAGE_KEY = 'ragequit.loadout.classId'
 
-
-
 // Default build used when no class is selected or no saved build exists.
 // Matches the Ibrido (hybrid) preset.
 // Server DEFAULT_LOADOUT in GameRoom.ts must stay in sync with this.
@@ -351,31 +349,53 @@ export function initLoadoutStation(
       for (const e of def.effects) {
         if (e.kind === 'applyStatus' && statusControlScore(e.status) >= 2) {
           const stacks = (e.stacks ?? 1) > 1 ? ` x${e.stacks}` : ''
-          ccFooterItems.push(`<span class="pf-cc pf-cc-${e.status}">${e.status.toUpperCase()}${stacks} ${e.durationSec}s</span>`)
+          ccFooterItems.push(
+            `<span class="pf-cc pf-cc-${e.status}">${e.status.toUpperCase()}${stacks} ${e.durationSec}s</span>`,
+          )
         } else if (e.kind === 'knockup') {
           ccFooterItems.push(`<span class="pf-cc pf-cc-airborne">AIRBORNE ${e.airborneSec}s</span>`)
-        } else if (e.kind === 'projectile' && e.onHitStatus && statusControlScore(e.onHitStatus.status) >= 2) {
-          ccFooterItems.push(`<span class="pf-cc pf-cc-${e.onHitStatus.status}">${e.onHitStatus.status.toUpperCase()} ${e.onHitStatus.durationSec}s</span>`)
-        } else if (e.kind === 'zone' && e.applyStatus && statusControlScore(e.applyStatus.status) >= 2) {
-          ccFooterItems.push(`<span class="pf-cc pf-cc-${e.applyStatus.status}">${e.applyStatus.status.toUpperCase()} ${e.applyStatus.durationSec}s</span>`)
+        } else if (
+          e.kind === 'projectile' &&
+          e.onHitStatus &&
+          statusControlScore(e.onHitStatus.status) >= 2
+        ) {
+          ccFooterItems.push(
+            `<span class="pf-cc pf-cc-${e.onHitStatus.status}">${e.onHitStatus.status.toUpperCase()} ${e.onHitStatus.durationSec}s</span>`,
+          )
+        } else if (
+          e.kind === 'zone' &&
+          e.applyStatus &&
+          statusControlScore(e.applyStatus.status) >= 2
+        ) {
+          ccFooterItems.push(
+            `<span class="pf-cc pf-cc-${e.applyStatus.status}">${e.applyStatus.status.toUpperCase()} ${e.applyStatus.durationSec}s</span>`,
+          )
         }
       }
 
       // Footer: danno | CC con durata | portata | costo | cast | cooldown
       const footerParts: string[] = []
-      for (const t of damageTags)
-        footerParts.push(`<span class="pf-dmg">${escapeHtml(t)}</span>`)
-      for (const cc of ccFooterItems.slice(0, 2))
-        footerParts.push(cc)
+      for (const t of damageTags) footerParts.push(`<span class="pf-dmg">${escapeHtml(t)}</span>`)
+      for (const cc of ccFooterItems.slice(0, 2)) footerParts.push(cc)
       if (def.targeting !== 'self' && def.range > 0 && def.range < 50)
-        footerParts.push(`<span class="pf-stat"><span class="pf-val">${def.range}m</span><span class="pf-lbl">portata</span></span>`)
+        footerParts.push(
+          `<span class="pf-stat"><span class="pf-val">${def.range}m</span><span class="pf-lbl">portata</span></span>`,
+        )
       if (def.costMana > 0)
-        footerParts.push(`<span class="pf-stat pf-mana"><span class="pf-val">${def.costMana}</span><span class="pf-lbl">mana</span></span>`)
+        footerParts.push(
+          `<span class="pf-stat pf-mana"><span class="pf-val">${def.costMana}</span><span class="pf-lbl">mana</span></span>`,
+        )
       if (def.costStamina > 0)
-        footerParts.push(`<span class="pf-stat pf-stam"><span class="pf-val">${def.costStamina}</span><span class="pf-lbl">stamina</span></span>`)
+        footerParts.push(
+          `<span class="pf-stat pf-stam"><span class="pf-val">${def.costStamina}</span><span class="pf-lbl">stamina</span></span>`,
+        )
       if (def.windupSec > 0)
-        footerParts.push(`<span class="pf-stat pf-cast"><span class="pf-val">${def.windupSec}s</span><span class="pf-lbl">cast</span></span>`)
-      footerParts.push(`<span class="pf-stat pf-cd"><span class="pf-val">${def.cooldownSec}s</span><span class="pf-lbl">cooldown</span></span>`)
+        footerParts.push(
+          `<span class="pf-stat pf-cast"><span class="pf-val">${def.windupSec}s</span><span class="pf-lbl">cast</span></span>`,
+        )
+      footerParts.push(
+        `<span class="pf-stat pf-cd"><span class="pf-val">${def.cooldownSec}s</span><span class="pf-lbl">cooldown</span></span>`,
+      )
 
       // Struttura: header (icon+name+badge) → sub (element·targeting·key) → descrizione → footer
       card.innerHTML = `
@@ -453,9 +473,11 @@ export function initLoadoutStation(
 
   const CLASS_MECHANIC_LABEL: Record<ClassId, string> = {
     tank: '🔥 FURY — subendo colpi accumuli 5 stack. Al massimo, il prossimo colpo melee esplode con danno bonus e lento.',
-    archer: '⚡ MOMENTUM — muovendoti carichi ritmo. Più momentum: arco più rapido e magie con recupero ridotto.',
+    archer:
+      '⚡ MOMENTUM — muovendoti carichi ritmo. Più momentum: arco più rapido e magie con recupero ridotto.',
     mage: '🌀 RISONANZA — due spell dello stesso elemento entro 2.5s attivano una proc elementale potenziata.',
-    hybrid: '💧 FLOW — cambiare arma genera stack. Al pieno, la prossima cura o spell offensiva viene amplificata.',
+    hybrid:
+      '💧 FLOW — cambiare arma genera stack. Al pieno, la prossima cura o spell offensiva viene amplificata.',
   }
 
   function rebuildClassVitals(): void {
@@ -475,7 +497,6 @@ export function initLoadoutStation(
     if (barHp) barHp.style.width = `${(hp / 250) * 100}%`
     if (barMana) barMana.style.width = `${(mana / 160) * 100}%`
     if (barStam) barStam.style.width = `${(stamina / 150) * 100}%`
-
   }
 
   // --- Preset Loader ---------------------------------------------------------

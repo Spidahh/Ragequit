@@ -122,7 +122,6 @@ export function initRadialWheels({
           }
         }
         slotEl.classList.toggle('r-on-cd', cdSec > 0.4)
-
       } else {
         iconEl.replaceChildren()
         nameEl.textContent = 'empty'

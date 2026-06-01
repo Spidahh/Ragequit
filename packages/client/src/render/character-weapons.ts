@@ -22,9 +22,9 @@ const _loader = new GLTFLoader()
 const _weaponAssetPath: Record<'sword' | 'bow' | 'staff' | 'shield', string> = {
   // sword_C (kaykit/sword.glb) is a slim, elegant blade (0.27 m wide) — the old
   // sword_D was a chunky 0.71 m-wide slab that read as a low-quality club.
-  sword:  '/weapons/kaykit/sword.glb',
-  bow:    '/weapons/kaykit/bow.glb',
-  staff:  '/weapons/kaykit/staff.glb',
+  sword: '/weapons/kaykit/sword.glb',
+  bow: '/weapons/kaykit/bow.glb',
+  staff: '/weapons/kaykit/staff.glb',
   shield: '/weapons/kaykit/shield_A.glb', // Physical shield model
 }
 
@@ -43,24 +43,56 @@ interface WeaponGrip {
 const _weaponGripConfig: Record<string, Record<'sword' | 'bow' | 'staff', WeaponGrip>> = {
   tank: {
     sword: { position: [0.025, -0.01, -0.02], rotation: [Math.PI / 2, 0, 0], scale: 0.44 },
-    bow:   { position: [0.01,  0.015, -0.03], rotation: [Math.PI / 2, -0.08, Math.PI / 2], scale: 0.50 },
-    staff: { position: [0.015, -0.02, -0.01], rotation: [Math.PI / 2, -0.14, Math.PI / 2], scale: 0.46 }
+    bow: {
+      position: [0.01, 0.015, -0.03],
+      rotation: [Math.PI / 2, -0.08, Math.PI / 2],
+      scale: 0.5,
+    },
+    staff: {
+      position: [0.015, -0.02, -0.01],
+      rotation: [Math.PI / 2, -0.14, Math.PI / 2],
+      scale: 0.46,
+    },
   },
   mage: {
     sword: { position: [0.02, -0.01, -0.02], rotation: [Math.PI / 2, 0, 0], scale: 0.42 },
-    bow:   { position: [0.01,  0.01, -0.03], rotation: [Math.PI / 2, -0.08, Math.PI / 2], scale: 0.48 },
-    staff: { position: [0.015, -0.015, -0.01], rotation: [Math.PI / 2, -0.14, Math.PI / 2], scale: 0.46 }
+    bow: {
+      position: [0.01, 0.01, -0.03],
+      rotation: [Math.PI / 2, -0.08, Math.PI / 2],
+      scale: 0.48,
+    },
+    staff: {
+      position: [0.015, -0.015, -0.01],
+      rotation: [Math.PI / 2, -0.14, Math.PI / 2],
+      scale: 0.46,
+    },
   },
   archer: {
     sword: { position: [0.015, -0.01, -0.015], rotation: [Math.PI / 2, 0, 0], scale: 0.38 },
-    bow:   { position: [0.008, 0.008, -0.025], rotation: [Math.PI / 2, -0.08, Math.PI / 2], scale: 0.44 },
-    staff: { position: [0.01, -0.015, -0.01], rotation: [Math.PI / 2, -0.14, Math.PI / 2], scale: 0.42 }
+    bow: {
+      position: [0.008, 0.008, -0.025],
+      rotation: [Math.PI / 2, -0.08, Math.PI / 2],
+      scale: 0.44,
+    },
+    staff: {
+      position: [0.01, -0.015, -0.01],
+      rotation: [Math.PI / 2, -0.14, Math.PI / 2],
+      scale: 0.42,
+    },
   },
   hybrid: {
     sword: { position: [0.016, -0.008, -0.015], rotation: [Math.PI / 2, 0, 0], scale: 0.39 },
-    bow:   { position: [0.008, 0.008, -0.025], rotation: [Math.PI / 2, -0.08, Math.PI / 2], scale: 0.44 },
-    staff: { position: [0.01, -0.015, -0.01], rotation: [Math.PI / 2, -0.14, Math.PI / 2], scale: 0.42 }
-  }
+    bow: {
+      position: [0.008, 0.008, -0.025],
+      rotation: [Math.PI / 2, -0.08, Math.PI / 2],
+      scale: 0.44,
+    },
+    staff: {
+      position: [0.01, -0.015, -0.01],
+      rotation: [Math.PI / 2, -0.14, Math.PI / 2],
+      scale: 0.42,
+    },
+  },
 }
 
 /** Return the grip config for a weapon — used by _installCharacterModel when
@@ -98,7 +130,9 @@ export function clearWeaponGroup(wg: THREE.Group): void {
 // ---------------------------------------------------------------------------
 
 /** Load (and cache) a weapon GLTF. Returns the canonical scene group. */
-export function fetchWeaponGlb(weaponId: 'sword' | 'bow' | 'staff' | 'shield'): Promise<THREE.Group> {
+export function fetchWeaponGlb(
+  weaponId: 'sword' | 'bow' | 'staff' | 'shield',
+): Promise<THREE.Group> {
   const cached = _weaponCache.get(weaponId)
   if (cached) return Promise.resolve(cached)
   const inflight = _weaponInflightMap.get(weaponId)
@@ -142,8 +176,11 @@ export function applyWeaponProp(
   }
 
   const wStr = String(weapon).toLowerCase()
-  const weaponId: 'sword' | 'bow' | 'staff' =
-    wStr.includes('bow') ? 'bow' : wStr.includes('staff') ? 'staff' : 'sword'
+  const weaponId: 'sword' | 'bow' | 'staff' = wStr.includes('bow')
+    ? 'bow'
+    : wStr.includes('staff')
+      ? 'staff'
+      : 'sword'
 
   const wg = charGroup.userData['weaponGroup'] as THREE.Group | undefined
   if (!wg) return
@@ -189,7 +226,7 @@ export function applyWeaponProp(
       wg.add(model)
 
       // Apply grip — repositions the weaponGroup so the blade sits correctly in hand.
-      const classId = charGroup.userData['loadedClassId'] as string || 'hybrid'
+      const classId = (charGroup.userData['loadedClassId'] as string) || 'hybrid'
       const grip = getWeaponGrip(weaponId, classId)
       wg.position.set(...grip.position)
       wg.rotation.set(...grip.rotation)
@@ -213,10 +250,7 @@ export function applyWeaponProp(
 }
 
 /** Load the shield model and attach it inside charGroup's shieldGroup. */
-export function applyShieldProp(
-  charGroup: THREE.Group,
-  toonGradient?: THREE.DataTexture,
-): void {
+export function applyShieldProp(charGroup: THREE.Group, toonGradient?: THREE.DataTexture): void {
   const sg = charGroup.userData['shieldGroup'] as THREE.Group | undefined
   if (!sg) return
 
@@ -225,7 +259,8 @@ export function applyShieldProp(
   fetchWeaponGlb('shield')
     .then((scene) => {
       const model = scene.clone() as THREE.Group
-      const gradMap = toonGradient || (charGroup.userData['toonGradient'] as THREE.DataTexture) || null
+      const gradMap =
+        toonGradient || (charGroup.userData['toonGradient'] as THREE.DataTexture) || null
 
       model.traverse((child) => {
         if (!(child instanceof THREE.Mesh)) return
@@ -275,7 +310,8 @@ export function updateShieldAttachment(charGroup: THREE.Group): void {
   const sg = charGroup.userData['shieldGroup'] as THREE.Group | undefined
   if (!sg) return
 
-  const activeWeapon = (charGroup.userData['activeWeaponProp'] as 'sword' | 'bow' | 'staff') ?? 'sword'
+  const activeWeapon =
+    (charGroup.userData['activeWeaponProp'] as 'sword' | 'bow' | 'staff') ?? 'sword'
   const isParrying = !!charGroup.userData['isParrying']
 
   // Only display the shield if the player is wielding the sword
@@ -285,7 +321,7 @@ export function updateShieldAttachment(charGroup: THREE.Group): void {
   }
   sg.visible = true
 
-  const classId = (charGroup.userData['loadedClassId'] as string || 'hybrid').toLowerCase()
+  const classId = ((charGroup.userData['loadedClassId'] as string) || 'hybrid').toLowerCase()
   const leftHand = findBone(model, 'LeftHand')
   if (!leftHand) return
 

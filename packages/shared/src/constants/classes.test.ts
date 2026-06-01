@@ -85,11 +85,11 @@ describe('ability slot family and class legality', () => {
     expect(
       classLoadoutFitsSlotGrammar('hybrid', [
         'uppercut',
-        'gap_closer',   // 2 melee
+        'gap_closer', // 2 melee
         'marksman_shot', // 1 bow
         'fireball',
         'lightning_dash', // 2 magicBase
-        'arc_lift',      // 1 magicAdvanced
+        'arc_lift', // 1 magicAdvanced
       ]),
     ).toBe(true)
     expect(classLoadoutFitsSlotGrammar('hybrid', ['uppercut', 'uppercut'])).toBe(false)
@@ -139,22 +139,22 @@ describe('ability slot family and class legality', () => {
       mage: [
         'fireball',
         'frost_bolt',
-        'chain_bolt',    // 3 magicBase
+        'chain_bolt', // 3 magicBase
         'eruption',
         'meteor',
-        'frost_pillar',  // 3 magicAdvanced
+        'frost_pillar', // 3 magicAdvanced
         'arcane_rebind',
-        'phase_shift',   // 2 utility
+        'phase_shift', // 2 utility
       ],
       hybrid: [
         'uppercut',
-        'gap_closer',    // 2 melee
+        'gap_closer', // 2 melee
         'marksman_shot', // 1 bow
         'fireball',
         'lightning_dash', // 2 magicBase
-        'arc_lift',       // 1 magicAdvanced
+        'arc_lift', // 1 magicAdvanced
         'adaptive_mend',
-        'quick_dash',    // 2 utility
+        'quick_dash', // 2 utility
       ],
     }
 

@@ -27,7 +27,7 @@ status: current
 | --------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | `input`         | `{ tick, seq, moveX, moveZ, yaw, pitch, jump, jumpHold, m1, m2 }` | Movement intent; server echoes processed seq through player schema                              |
 | `swing`         | `{ atTick, yaw }`                                                 | Sword M1 rising edge                                                                            |
-| `cast`          | `{ abilityId, atTick, targetYaw?, targetPitch?, targetPoint? }`   | Direct casts, LMB-fired primed wheel abilities, and LMB-confirmed point-target placement casts   |
+| `cast`          | `{ abilityId, atTick, targetYaw?, targetPitch?, targetPoint? }`   | Direct casts, LMB-fired primed wheel abilities, and LMB-confirmed point-target placement casts  |
 | `weaponSwap`    | `{ weapon, atTick }`                                              | `sword`, `bow`, or `staff`                                                                      |
 | `chargeStart`   | `{ atTick }`                                                      | Bow M1 press                                                                                    |
 | `chargeRelease` | `{ atTick, yaw, pitch }`                                          | Bow M1 release                                                                                  |

@@ -4,12 +4,12 @@ Utility is a class-legal slot family. It contains recovery, movement, protection
 
 ## Class Recovery
 
-| Class   | Utility        | Role                                                                   |
-| ------- | -------------- | ---------------------------------------------------------------------- |
-| Tank    | Brace Recovery | Spend Stamina to brace and recover                                     |
-| Arciere | Hunter's Flow  | Recover while moving                                                   |
-| Mago    | Arcane Rebind  | Spend Mana and cast a visible heal                                     |
-| Ibrido  | Adaptive Mend  | Fast lower-peak heal                                                   |
+| Class   | Utility        | Role                               |
+| ------- | -------------- | ---------------------------------- |
+| Tank    | Brace Recovery | Spend Stamina to brace and recover |
+| Arciere | Hunter's Flow  | Recover while moving               |
+| Mago    | Arcane Rebind  | Spend Mana and cast a visible heal |
+| Ibrido  | Adaptive Mend  | Fast lower-peak heal               |
 
 Every preset build includes its class Recovery.
 

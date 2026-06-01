@@ -603,7 +603,13 @@ export class AbilityEngine {
   ): { x: number; z: number; distance: number } | undefined {
     const distance = effect.knockbackDistance ?? 0
     if (distance <= 0) return undefined
-    const dir = impactPushDirection(origin.x, origin.z, victim.transform.x, victim.transform.z, fallbackYaw)
+    const dir = impactPushDirection(
+      origin.x,
+      origin.z,
+      victim.transform.x,
+      victim.transform.z,
+      fallbackYaw,
+    )
     return { x: dir.x, z: dir.z, distance }
   }
 
@@ -1030,5 +1036,4 @@ export class AbilityEngine {
   private hasActiveChannel(casterId: string, abilityId: string): boolean {
     return this.channels.some((c) => c.casterId === casterId && c.abilityId === abilityId)
   }
-
 }

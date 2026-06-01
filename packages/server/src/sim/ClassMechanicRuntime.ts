@@ -58,13 +58,18 @@ export interface IClassMechanic {
       targetId?: string
     },
     now: number,
-    runtime: ClassMechanicRuntime
+    runtime: ClassMechanicRuntime,
   ): void
   getMeleeDamageMult?(player: Player): number
   consumeSurge?(player: Player): boolean
   getBowChargeTimeSec?(baseSec: number, player: Player): number
   getMomentumCooldownMult?(player: Player): number
-  getRecoveryHealBonus?(sid: string, abilityId: string, now: number, runtime: ClassMechanicRuntime): number
+  getRecoveryHealBonus?(
+    sid: string,
+    abilityId: string,
+    now: number,
+    runtime: ClassMechanicRuntime,
+  ): number
 }
 
 export class TankMechanic implements IClassMechanic {
@@ -122,7 +127,12 @@ export class TankMechanic implements IClassMechanic {
     return true
   }
 
-  getRecoveryHealBonus(sid: string, abilityId: string, now: number, runtime: ClassMechanicRuntime): number {
+  getRecoveryHealBonus(
+    sid: string,
+    abilityId: string,
+    now: number,
+    runtime: ClassMechanicRuntime,
+  ): number {
     if (abilityId !== 'brace_recovery') return 0
     const player = runtime.getPlayer(sid)
     if (!player) return 0
@@ -137,7 +147,13 @@ export class TankMechanic implements IClassMechanic {
 export class ArcherMechanic implements IClassMechanic {
   readonly classId = 'archer'
 
-  tick(_sid: string, player: Player, dt: number, _now: number, _runtime: ClassMechanicRuntime): void {
+  tick(
+    _sid: string,
+    player: Player,
+    dt: number,
+    _now: number,
+    _runtime: ClassMechanicRuntime,
+  ): void {
     const vxz2 = player.vx * player.vx + player.vz * player.vz
     if (vxz2 > 0.25) {
       player.momentum = Math.min(MOMENTUM_MAX, player.momentum + MOMENTUM_GAIN_PER_SEC * dt)
@@ -159,7 +175,12 @@ export class ArcherMechanic implements IClassMechanic {
     return 1
   }
 
-  getRecoveryHealBonus(sid: string, abilityId: string, now: number, runtime: ClassMechanicRuntime): number {
+  getRecoveryHealBonus(
+    sid: string,
+    abilityId: string,
+    now: number,
+    runtime: ClassMechanicRuntime,
+  ): number {
     if (abilityId !== 'hunters_flow') return 0
     const player = runtime.getPlayer(sid)
     if (!player) return 0
@@ -181,7 +202,7 @@ export class MageMechanic implements IClassMechanic {
       targetId?: string
     },
     now: number,
-    runtime: ClassMechanicRuntime
+    runtime: ClassMechanicRuntime,
   ): void {
     const player = runtime.getPlayer(sid)
     if (!player) return
@@ -201,7 +222,7 @@ export class MageMechanic implements IClassMechanic {
       targetId?: string
     },
     now: number,
-    runtime: ClassMechanicRuntime
+    runtime: ClassMechanicRuntime,
   ): void {
     const windowActive = now < player.risonanzaArmedUntilTick
     const sameElement = player.risonanzaElement === element
@@ -217,7 +238,12 @@ export class MageMechanic implements IClassMechanic {
     player.risonanzaArmedUntilTick = now + RISONANZA_WINDOW_TICKS
   }
 
-  getRecoveryHealBonus(sid: string, abilityId: string, now: number, runtime: ClassMechanicRuntime): number {
+  getRecoveryHealBonus(
+    sid: string,
+    abilityId: string,
+    now: number,
+    runtime: ClassMechanicRuntime,
+  ): number {
     if (abilityId !== 'arcane_rebind') return 0
     const player = runtime.getPlayer(sid)
     if (!player) return 0
@@ -254,7 +280,12 @@ export class HybridMechanic implements IClassMechanic {
     }
   }
 
-  getRecoveryHealBonus(sid: string, abilityId: string, _now: number, runtime: ClassMechanicRuntime): number {
+  getRecoveryHealBonus(
+    sid: string,
+    abilityId: string,
+    _now: number,
+    runtime: ClassMechanicRuntime,
+  ): number {
     if (abilityId !== 'adaptive_mend') return 0
     const player = runtime.getPlayer(sid)
     if (!player) return 0
@@ -275,7 +306,7 @@ export class HybridMechanic implements IClassMechanic {
 export class ClassMechanicRuntime {
   private readonly ps = new Map<string, PlayerMechanicState>()
   private readonly flowDamagePending = new Set<string>()
-  
+
   private readonly mechanicsRegistry: Record<ClassId, IClassMechanic> = {
     tank: new TankMechanic(),
     archer: new ArcherMechanic(),
@@ -375,29 +406,31 @@ export class ClassMechanicRuntime {
 
   getMeleeDamageMult(player: Player): number {
     const mech = this.getMechanic(player.classId)
-    return (mech && mech.getMeleeDamageMult) ? mech.getMeleeDamageMult(player) : 1
+    return mech && mech.getMeleeDamageMult ? mech.getMeleeDamageMult(player) : 1
   }
 
   consumeSurge(player: Player): boolean {
     const mech = this.getMechanic(player.classId)
-    return (mech && mech.consumeSurge) ? mech.consumeSurge(player) : false
+    return mech && mech.consumeSurge ? mech.consumeSurge(player) : false
   }
 
   getBowChargeTimeSec(baseSec: number, player: Player): number {
     const mech = this.getMechanic(player.classId)
-    return (mech && mech.getBowChargeTimeSec) ? mech.getBowChargeTimeSec(baseSec, player) : baseSec
+    return mech && mech.getBowChargeTimeSec ? mech.getBowChargeTimeSec(baseSec, player) : baseSec
   }
 
   getMomentumCooldownMult(player: Player): number {
     const mech = this.getMechanic(player.classId)
-    return (mech && mech.getMomentumCooldownMult) ? mech.getMomentumCooldownMult(player) : 1
+    return mech && mech.getMomentumCooldownMult ? mech.getMomentumCooldownMult(player) : 1
   }
 
   getRecoveryHealBonus(sid: string, abilityId: string, now: number): number {
     const player = this.getPlayer(sid)
     if (!player) return 0
     const mech = this.getMechanic(player.classId)
-    return (mech && mech.getRecoveryHealBonus) ? mech.getRecoveryHealBonus(sid, abilityId, now, this) : 0
+    return mech && mech.getRecoveryHealBonus
+      ? mech.getRecoveryHealBonus(sid, abilityId, now, this)
+      : 0
   }
 
   reset(sid: string): void {

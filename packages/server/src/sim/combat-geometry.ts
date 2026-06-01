@@ -86,7 +86,9 @@ export function spellImpactPushDistance(cause: string): number {
   if (family !== 'magicBase' && family !== 'magicAdvanced') return 0
   if (def.effects.some((effect) => effect.kind === 'knockup')) return 0
   if (def.effects.some((effect) => effect.kind === 'projectile')) {
-    return def.effects.some((effect) => effect.kind === 'projectile' && (effect.splashRadius ?? 0) > 0)
+    return def.effects.some(
+      (effect) => effect.kind === 'projectile' && (effect.splashRadius ?? 0) > 0,
+    )
       ? 0.34
       : 0.26
   }
