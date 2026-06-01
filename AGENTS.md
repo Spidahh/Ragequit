@@ -252,9 +252,14 @@ Se una modifica rompe o ignora anche solo uno dei sistemi collegati, la soluzion
 - I colpi melee devono dare feedback anche a chi attacca:
   kick/hit-stop visivo locale all'impatto; non solo sul bersaglio.
 
+## Governance / Quality Gate
+
+- **Prima di committare: `pnpm check`** — gate unico (typecheck + `check:budget` + lint + validate:content + test). Se è verde, la modifica è sicura. Dettagli e struttura cartelle: `02_TECH/08_project_governance.md`.
+- **Quando cambi un comportamento, aggiorna i doc che lo descrivono nello stesso commit.** I doc che mentono sono la causa #1 degli errori ricorrenti. Fidati del CODICE; se un doc è in disaccordo, correggi il doc.
+
 ## Dimensione File / Code Split
 
-**Soglia**: un file sorgente TypeScript non deve superare **~500 righe** come target; oltre **800 righe** è obbligatorio splitlarlo.
+**Soglia**: un file sorgente TypeScript non deve superare **~500 righe** come target; oltre **800 righe** è obbligatorio splitlarlo. **Imposto automaticamente** da `tools/check-file-budget.mjs` (`pnpm check:budget`): un "ratchet" — i file grandi attuali possono solo rimpicciolire, i nuovi file devono stare ≤ 800.
 
 **Regola derivata dall'esperienza su `main.ts`**: quando `main.ts` è diventato
 troppo grande, è stato spezzato in moduli separati per responsabilità:
