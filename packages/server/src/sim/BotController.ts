@@ -32,7 +32,32 @@ export interface BotHostFns {
   cdReady: (botId: string, abilityId: string, atTick: number) => boolean
 }
 
+// Deterministic PRNG so bot behavior is reproducible (AGENTS.md zero-RNG
+// mandate / replay fidelity). Seeded per-bot from the botId, so different bots
+// still behave differently and the same bot replays bit-identically.
+function hashStringToSeed(s: string): number {
+  let h = 2166136261 >>> 0
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
+
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0
+  return () => {
+    a = (a + 0x6d2b79f5) | 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
 export class BotController {
+  // Seeded RNG (assigned in the constructor from botId) — replaces Math.random
+  // so bot decisions are deterministic for replay.
+  private readonly rng: () => number
   private nextDecisionTick = 0
   private strafeDir = 1
   private strafeChangeTick = 0
@@ -55,7 +80,9 @@ export class BotController {
     private readonly tickRef: () => number,
     private readonly loadout: readonly string[],
     private readonly difficulty: 'novice' | 'competent' | 'master' = 'competent',
-  ) {}
+  ) {
+    this.rng = mulberry32(hashStringToSeed(botId))
+  }
 
   step(): void {
     // Dev/verification escape hatch: BOT_PASSIVE=1 makes bots stand idle so a
@@ -87,8 +114,8 @@ export class BotController {
     // Perpendicular to the enemy direction (true orbital movement).
     // strafeDir (+1 or -1) rotates periodically for unpredictability.
     if (tick >= this.strafeChangeTick) {
-      this.strafeDir = Math.random() < 0.5 ? 1 : -1
-      this.strafeChangeTick = tick + Math.round((0.4 + Math.random() * 0.5) * TICK_RATE_HZ)
+      this.strafeDir = this.rng() < 0.5 ? 1 : -1
+      this.strafeChangeTick = tick + Math.round((0.4 + this.rng() * 0.5) * TICK_RATE_HZ)
     }
 
     // Unit vector perpendicular to the enemy direction (orbital strafe)
@@ -121,7 +148,7 @@ export class BotController {
     // When enemy starts casting, increase strafe speed and lock direction briefly.
     const enemyCasting = enemy.casting
     if (enemyCasting && tick >= this.dodgeDirTick) {
-      this.dodgeDir = Math.random() < 0.5 ? 1 : -1
+      this.dodgeDir = this.rng() < 0.5 ? 1 : -1
       this.dodgeDirTick = tick + Math.round(0.8 * TICK_RATE_HZ)
     }
     const dodgeActive = enemyCasting && this.difficulty !== 'novice'
@@ -177,7 +204,7 @@ export class BotController {
     if (this.stuckTicks > 18 && tick >= this.unstickUntilTick) {
       // Commit to a ~0.7 s lateral detour (pick the side, hop the obstacle).
       this.unstickUntilTick = tick + Math.round(0.7 * TICK_RATE_HZ)
-      this.unstickDir = Math.random() < 0.5 ? 1 : -1
+      this.unstickDir = this.rng() < 0.5 ? 1 : -1
       this.stuckTicks = 0
     }
     let unstickJump = false
@@ -194,7 +221,7 @@ export class BotController {
     let doJump = false
     if (dist < 3.5 && tick - this.lastJumpTick > Math.round(1.8 * TICK_RATE_HZ)) {
       const jumpChance = this.difficulty === 'master' ? 0.3 : 0.18
-      if (Math.random() < jumpChance) {
+      if (this.rng() < jumpChance) {
         doJump = true
         this.lastJumpTick = tick
       }
@@ -203,9 +230,9 @@ export class BotController {
     // ── Parry ─────────────────────────────────────────────────────────────
     let doParry = false
     if (this.difficulty === 'competent') {
-      if (dist <= 3.5 && enemy.swingEndsAtTick > tick && Math.random() < 0.55) doParry = true
+      if (dist <= 3.5 && enemy.swingEndsAtTick > tick && this.rng() < 0.55) doParry = true
     } else if (this.difficulty === 'master') {
-      if (dist <= 4.0 && (enemy.swingEndsAtTick > tick || enemy.casting) && Math.random() < 0.82)
+      if (dist <= 4.0 && (enemy.swingEndsAtTick > tick || enemy.casting) && this.rng() < 0.82)
         doParry = true
     }
 
@@ -225,7 +252,7 @@ export class BotController {
 
     // Novice: only basic movement + swings, no abilities
     if (this.difficulty === 'novice') {
-      this.nextDecisionTick = tick + Math.round((0.6 + Math.random() * 0.2) * TICK_RATE_HZ)
+      this.nextDecisionTick = tick + Math.round((0.6 + this.rng() * 0.2) * TICK_RATE_HZ)
       return
     }
 
@@ -255,11 +282,11 @@ export class BotController {
     // Competent: occasional random weapon swap for variety
     if (
       this.difficulty === 'competent' &&
-      Math.random() < 0.04 &&
+      this.rng() < 0.04 &&
       allowedWeapons.length > 1 &&
       tick - this.lastSwingTick > Math.round(3.0 * TICK_RATE_HZ)
     ) {
-      const randomWeapon = allowedWeapons[Math.floor(Math.random() * allowedWeapons.length)]!
+      const randomWeapon = allowedWeapons[Math.floor(this.rng() * allowedWeapons.length)]!
       if (randomWeapon !== self.activeWeapon) {
         this.host.sendWeaponSwap(this.botId, randomWeapon as 'sword' | 'bow' | 'staff')
         this.nextDecisionTick = tick + Math.round(0.4 * TICK_RATE_HZ)
@@ -367,7 +394,7 @@ export class BotController {
         }
       }
       const baseDelaySec = this.difficulty === 'master' ? 0.15 : 0.35
-      const jitterTicks = Math.round(Math.random() * 0.2 * TICK_RATE_HZ)
+      const jitterTicks = Math.round(this.rng() * 0.2 * TICK_RATE_HZ)
       this.host.sendCast(this.botId, id, yaw, pitch)
       this.nextDecisionTick = tick + Math.round(baseDelaySec * TICK_RATE_HZ) + jitterTicks
       return

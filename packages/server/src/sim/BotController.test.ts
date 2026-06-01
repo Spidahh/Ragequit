@@ -103,17 +103,10 @@ describe('BotController', () => {
     r.opponent.transform.x = 2
     r.opponent.transform.z = 0
 
-    const originalRandom = Math.random
-    Math.random = () => 0 // Force success in random checks and selection
-
-    try {
-      // Cast should trigger
-      bot.step()
-      expect(r.casts.length).toBe(1)
-      expect(r.casts[0]?.abilityId).toBe('uppercut')
-    } finally {
-      Math.random = originalRandom
-    }
+    // Bot RNG is now seeded from botId (deterministic) — no Math.random mock needed.
+    bot.step()
+    expect(r.casts.length).toBe(1)
+    expect(r.casts[0]?.abilityId).toBe('uppercut')
   })
 
   it('Master AI: parries predictably when opponent is swinging', () => {
@@ -129,20 +122,12 @@ describe('BotController', () => {
     r.opponent.swingEndsAtTick = 100
     r.setTick(10)
 
-    // In our test, self is hybrid, holding a sword.
-    // Master AI parry check checks if dist <= 4.0 and (opponent.swingEndsAtTick > tick || opponent.casting).
-    // Let's force Math.random() in BotController to return 0 inside the test so parry is guaranteed 100% of the time,
-    // Simulate enough steps to guarantee at least one parry branch.
-    const originalRandom = Math.random
-    Math.random = () => 0 // Force success in random checks
-
-    try {
-      bot.step()
-      const parryInput = r.inputs.find((i) => i.m2 === true)
-      expect(parryInput).toBeDefined()
-    } finally {
-      Math.random = originalRandom
-    }
+    // Self is hybrid holding a sword; Master parry check fires when dist <= 4.0
+    // and the opponent is swinging. Bot RNG is seeded deterministically from the
+    // botId, so the parry roll is reproducible — no Math.random mock needed.
+    bot.step()
+    const parryInput = r.inputs.find((i) => i.m2 === true)
+    expect(parryInput).toBeDefined()
   })
 
   it('Master AI: swaps weapon and executes combo when opponent is airborne', () => {
@@ -168,5 +153,27 @@ describe('BotController', () => {
     bot.step()
 
     expect(r.casts).toContainEqual(expect.objectContaining({ abilityId: 'marksman_shot' }))
+  })
+
+  it('is deterministic — same botId + inputs produce identical decisions', () => {
+    const loadout = ['uppercut', 'marksman_shot', 'fireball', 'adaptive_mend']
+    const run = (botId: string): string => {
+      const h = makeTestHost()
+      h.self.transform.x = 0
+      h.self.transform.z = 0
+      h.opponent.transform.x = 6
+      h.opponent.transform.z = 0
+      h.opponent.casting = true // exercises the rng-gated dodge branch
+      const bot = new BotController(botId, h.host, h.currentTick, loadout, 'competent')
+      for (let t = 0; t < 40; t++) {
+        h.setTick(t)
+        bot.step()
+      }
+      return JSON.stringify({ inputs: h.inputs, swings: h.swings, casts: h.casts })
+    }
+    // Same seed (botId) → bit-identical decision stream (replay fidelity).
+    expect(run('bot-1')).toBe(run('bot-1'))
+    // Different seed → behaviour may differ (variety preserved across bots).
+    expect(run('bot-1')).not.toBe(run('bot-2'))
   })
 })
