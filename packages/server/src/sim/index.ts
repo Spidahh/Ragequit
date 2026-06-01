@@ -1,6 +1,7 @@
 export * from './AbilityEngine.js'
 export * from './AntiCheat.js'
 export * from './BotController.js'
+export * from './cast-validation.js'
 export * from './ClassMechanicRuntime.js'
 export * from './damage-types.js'
 export * from './MatchManager.js'

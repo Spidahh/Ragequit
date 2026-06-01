@@ -49,6 +49,7 @@ import {
 } from '@ragequit/shared'
 
 import type { PendingDamageEntry, StatusRuntime } from './StatusRuntime.js'
+import { validateCast } from './cast-validation.js'
 import { impactPushDirection } from './combat-geometry.js'
 import { placePointForward, clampPointToRange } from './targeting-geometry.js'
 
@@ -176,47 +177,14 @@ export class AbilityEngine {
     }
     const player = this.host.state.players.get(sid)
     if (!player) return false
-    if (!player.alive) {
-      this.host.sendAbilityFailed(sid, abilityId, 'dead')
-      return false
-    }
     const now = this.host.state.tick
-
-    if (player.casting) {
-      this.host.sendAbilityFailed(sid, abilityId, 'casting')
-      return false
-    }
-    if (now < player.swingEndsAtTick || player.bowChargeStartTick > 0) {
-      this.host.sendAbilityFailed(sid, abilityId, 'casting')
-      return false
-    }
-    if (baseDef.airPolicy === 'groundedCaster' && now < player.airborneUntilTick) {
-      this.host.sendAbilityFailed(sid, abilityId, 'grounded_required')
-      return false
-    }
-    if (player.parrying) {
-      this.host.sendAbilityFailed(sid, abilityId, 'parrying')
-      return false
-    }
-    if (this.statuses.isCastLocked(player)) {
-      this.host.sendAbilityFailed(sid, abilityId, 'cc')
-      return false
-    }
-    if (this.statuses.hasStatus(player, 'invulnerable')) {
-      this.host.sendAbilityFailed(sid, abilityId, 'cc')
-      return false
-    }
-    if (now < player.gcdReadyAtTick) {
-      this.host.sendAbilityFailed(sid, abilityId, 'gcd')
-      return false
-    }
-    const cdReady = player.abilityCooldowns.get(baseDef.id) ?? 0
-    if (now < cdReady) {
-      this.host.sendAbilityFailed(sid, abilityId, 'cooldown')
-      return false
-    }
-    if (!Array.from(player.loadout).includes(baseDef.id)) {
-      this.host.sendAbilityFailed(sid, abilityId, 'not_in_loadout')
+    const reason = validateCast(player, baseDef, {
+      now,
+      isCastLocked: this.statuses.isCastLocked(player),
+      isInvulnerable: this.statuses.hasStatus(player, 'invulnerable'),
+    })
+    if (reason) {
+      this.host.sendAbilityFailed(sid, abilityId, reason)
       return false
     }
 
@@ -225,15 +193,6 @@ export class AbilityEngine {
     const effectiveCdSec = def.cooldownSec * cdMult
     const effectiveMana = def.costMana
     const effectiveStam = def.costStamina
-
-    if (effectiveMana > player.mana) {
-      this.host.sendAbilityFailed(sid, abilityId, 'cost')
-      return false
-    }
-    if (effectiveStam > player.stamina) {
-      this.host.sendAbilityFailed(sid, abilityId, 'cost')
-      return false
-    }
 
     // Auto-swap on bound cast — atomic, no GCD penalty. But if we JUST manually
     // swapped to a weapon, block for the swap-lock window to give VFX time and
