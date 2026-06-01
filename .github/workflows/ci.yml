@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   validate:
-    name: lint + typecheck + test
+    name: quality gate (pnpm check)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -33,17 +33,10 @@ jobs:
       - name: Build shared (declarations needed by client/server)
         run: pnpm --filter=@ragequit/shared build
 
-      - name: Typecheck
-        run: pnpm -r typecheck
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Prettier check
-        run: pnpm format:check
-
-      - name: Unit tests
-        run: pnpm test
+      # Single source of truth: the same gate developers run locally
+      # (typecheck + file-size budget + lint + prettier + content + tests).
+      - name: Quality gate (pnpm check)
+        run: pnpm check
 
   build:
     name: build

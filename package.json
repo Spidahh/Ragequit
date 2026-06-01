@@ -23,7 +23,7 @@
     "audit:character": "node tools/asset-pipeline/audit-character-glb.mjs packages/client/public/characters/UAL1_Standard.glb",
     "validate:content": "tsx tools/content-validator/validate.ts",
     "check:budget": "node tools/check-file-budget.mjs",
-    "check": "pnpm typecheck && pnpm check:budget && pnpm lint && pnpm validate:content && pnpm test",
+    "check": "pnpm typecheck && pnpm check:budget && pnpm lint && pnpm format:check && pnpm validate:content && pnpm test",
     "clean": "node tools/clean.mjs"
   },
   "pnpm": {
