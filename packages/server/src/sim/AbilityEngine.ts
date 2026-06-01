@@ -50,6 +50,7 @@ import {
 
 import type { PendingDamageEntry, StatusRuntime } from './StatusRuntime.js'
 import { placePointForward, clampPointToRange } from './targeting-geometry.js'
+import { impactPushDirection } from './combat-geometry.js'
 
 // --- Host interface --------------------------------------------------------
 
@@ -602,18 +603,8 @@ export class AbilityEngine {
   ): { x: number; z: number; distance: number } | undefined {
     const distance = effect.knockbackDistance ?? 0
     if (distance <= 0) return undefined
-    let dx = victim.transform.x - origin.x
-    let dz = victim.transform.z - origin.z
-    const len = Math.hypot(dx, dz)
-    if (len <= 0.001) {
-      const dir = directionFromYawPitch(fallbackYaw, 0)
-      dx = dir.x
-      dz = dir.z
-    } else {
-      dx /= len
-      dz /= len
-    }
-    return { x: dx, z: dz, distance }
+    const dir = impactPushDirection(origin.x, origin.z, victim.transform.x, victim.transform.z, fallbackYaw)
+    return { x: dir.x, z: dir.z, distance }
   }
 
   private effectHeal(sid: string, e: HealEffect, abilityId?: string): void {
