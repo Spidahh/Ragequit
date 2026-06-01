@@ -16,7 +16,6 @@ import {
   HP_REGEN_OOC_DELAY_SEC,
   HP_REGEN_PER_SEC_OOC,
   LAG_COMP_BUFFER_MS,
-  LAG_COMP_MAX_COMPENSATE_MS,
   MANA_MAX,
   MANA_REGEN_DELAY_SEC,
   MANA_REGEN_PER_SEC,
@@ -46,21 +45,15 @@ import {
   STATIC_MAP,
   getMap,
   type StaticMap,
-  SWORD_M1_HIT_FRACTION,
-  SWORD_M1_COST_STAMINA,
-  SWORD_M1_SWING_SEC,
   TICK_MS,
   TICK_RATE_HZ,
   UPPERCUT_AIRBORNE_SEC,
   WEAPON_IDS,
   WEAPON_SWAP_LOCK_SEC,
-  advanceSwordCombo,
   applyParryReduction,
   bowChargeRatio,
   bowLerp,
   directionFromYawPitch,
-  finishSwordCombo,
-  isInSwordM1Cone,
   makePlayerSimState,
   simulatePlayer,
   uppercutInitialVy,
@@ -113,6 +106,7 @@ import {
   FLOW_DAMAGE_BONUS_FRAC,
   FURY_SURGE_DAMAGE_BONUS,
   MatchManager,
+  MeleeSystem,
   ProjectileSystem,
   RateLimiter,
   ReplayRecorder,
@@ -148,12 +142,9 @@ import {
 //     kills the projectile. Friendly fire is enabled for 1v1.
 
 const LAG_COMP_BUFFER_TICKS = Math.round(LAG_COMP_BUFFER_MS / TICK_MS) // ~24
-const LAG_COMP_MAX_TICKS = Math.floor(LAG_COMP_MAX_COMPENSATE_MS / TICK_MS) // ~12
 const RESPAWN_TICKS = Math.round(RESPAWN_SEC * TICK_RATE_HZ)
 const SPAWN_INVULN_TICKS = Math.round(SPAWN_INVULN_SEC * TICK_RATE_HZ)
 const UPPERCUT_AIRBORNE_TICKS = Math.round(UPPERCUT_AIRBORNE_SEC * TICK_RATE_HZ)
-const SWORD_SWING_TICKS = Math.round(SWORD_M1_SWING_SEC * TICK_RATE_HZ)
-const SWORD_HIT_OFFSET_TICKS = Math.round(SWORD_SWING_TICKS * SWORD_M1_HIT_FRACTION)
 const OOC_DELAY_TICKS = Math.round(HP_REGEN_OOC_DELAY_SEC * TICK_RATE_HZ)
 const MANA_DELAY_TICKS = Math.round(MANA_REGEN_DELAY_SEC * TICK_RATE_HZ)
 const PARRY_TAP_WINDOW_TICKS = Math.round(PARRY_TAP_WINDOW_SEC * TICK_RATE_HZ)
@@ -166,20 +157,6 @@ const STAFF_LIFETIME_TICKS = Math.max(1, Math.round(STAFF_M1_LIFETIME_SEC * TICK
 const PROJECTILE_SPAWN_FORWARD_OFFSET_M = 0.8
 // Eye/muzzle height above capsule centre. Must match the client FPS camera.
 const PROJECTILE_SPAWN_Y_OFFSET_M = PROJECTILE_MUZZLE_Y_OFFSET_M
-
-interface PendingSwing {
-  attackerId: string
-  startTick: number
-  hitTick: number
-  fromAtTick: number // client-estimated server tick at fire time (for rewind)
-  yaw: number
-  damage: number
-  comboIndex: number
-  originX: number
-  originY: number
-  originZ: number
-  resolved: boolean
-}
 
 interface PositionSnapshot {
   tick: number
@@ -214,16 +191,14 @@ export class GameRoom extends Room<GameState> {
   // Used to rewind victim positions when resolving melee hits.
   private readonly positionHistory = new Map<string, PositionSnapshot[]>()
 
-  // Active sword swings — resolved on their hit tick.
-  private pendingSwings: PendingSwing[] = []
-
   // Damage queued during a tick by swings/casts/projectiles; drained at end.
   private damageQueue: PendingDamage[] = []
 
-  // Projectile + zone lifecycles live in their own subsystems; GameRoom
+  // Projectile / zone / melee lifecycles live in their own subsystems; GameRoom
   // implements their small host interfaces.
   private projectiles!: ProjectileSystem
   private zones!: ZoneSystem
+  private melee!: MeleeSystem
 
   // Press-tick for parry, needed to decide tap vs hold at release.
   private readonly parryPressTick = new Map<string, number>()
@@ -436,6 +411,27 @@ export class GameRoom extends Room<GameState> {
       applyStatus: (victimId, kind, durationSec, stacks, sourceId, slowFraction) =>
         this.statuses.applyToPlayer(victimId, kind, durationSec, stacks, sourceId, slowFraction),
       broadcast: (type, message) => this.broadcast(type, message),
+    })
+    this.melee = new MeleeSystem({
+      state: this.state,
+      enqueueDamage: (d) => this.damageQueue.push(d),
+      resolveDisplacement: (player, dx, dz, cancelOnCollision) =>
+        this.resolveAbilityDisplacement(player, dx, dz, cancelOnCollision),
+      syncSimPos: (playerId, x, z) => {
+        const simState = this.sim.get(playerId)
+        if (simState) {
+          simState.pos.x = x
+          simState.pos.z = z
+        }
+      },
+      syncSimStamina: (playerId, stamina) => {
+        const simState = this.sim.get(playerId)
+        if (simState) simState.stamina = stamina
+      },
+      lookupHistory: (playerId, tick) => this.lookupHistory(playerId, tick),
+      sendAbilityFailed: (sid, abilityId, reason) => this.sendAbilityFailed(sid, abilityId, reason),
+      hasStatus: (player, kind) => this.statuses.hasStatus(player, kind),
+      onSwordHitLanded: (attackerId, now) => this.mechanics.onSwordHitLanded(attackerId, now),
     })
     // Match manager - drives BO5 round flow + ELO + scoreboard.
     // Replay recorder. Records every broadcast tagged with state.tick.
@@ -691,7 +687,7 @@ export class GameRoom extends Room<GameState> {
     this.killStreaks.delete(sid)
     this.bots.delete(sid)
     this.mechanics.forgetPlayer(sid)
-    this.pendingSwings = this.pendingSwings.filter((s) => s.attackerId !== sid)
+    this.melee.removeByAttacker(sid)
 
     // Clean up projectiles owned by the leaver.
     this.projectiles.removeOwnedBy(sid)
@@ -757,7 +753,7 @@ export class GameRoom extends Room<GameState> {
       }
 
       // 5. Resolve sword swings whose hit-tick is now.
-      this.resolveSwings(now)
+      this.melee.resolveSwings(now)
 
       // 6. Integrate projectiles and resolve their collisions.
       this.projectiles.step(dt, now)
@@ -786,7 +782,7 @@ export class GameRoom extends Room<GameState> {
   private clearCombatStateOutsideLive(now: number): void {
     if (this.state.phase === 'live') return
 
-    this.pendingSwings = []
+    this.melee.clear()
     this.damageQueue = []
     this.swingQueues.forEach((queue) => queue.splice(0))
     this.castQueues.forEach((queue) => queue.splice(0))
@@ -939,7 +935,7 @@ export class GameRoom extends Room<GameState> {
     const swings = this.swingQueues.get(sid)
     if (swings && swings.length > 0) {
       const msg = swings.shift()!
-      this.tryStartSwing(sid, player, msg, now)
+      this.melee.tryStartSwing(sid, player, msg, now)
     }
 
     const casts = this.castQueues.get(sid)
@@ -947,52 +943,6 @@ export class GameRoom extends Room<GameState> {
       const msg = casts.shift()!
       this.tryStartCast(sid, player, msg)
     }
-  }
-
-  private tryStartSwing(sid: string, player: Player, msg: ClientSwingMessage, now: number): void {
-    if (!player.alive) return
-    if (this.state.tick < player.weaponSwapEndTick) {
-      this.sendAbilityFailed(sid, 'sword_m1', 'swapping')
-      return
-    }
-    if (this.statuses.hasStatus(player, 'invulnerable')) return
-    if (player.activeWeapon !== 'sword') return
-    // Can't swing while a cast windup is in progress.
-    if (player.casting) return
-    // Can't start a new swing while the previous is still animating.
-    if (now < player.swingEndsAtTick) return
-    if (player.stamina < SWORD_M1_COST_STAMINA) {
-      this.sendAbilityFailed(sid, 'sword_m1', 'cost')
-      return
-    }
-    // Note: onGround is deliberately not a gate. Target air combat keeps sword
-    // input legal during a launch; actual reach and server hit tests decide it.
-
-    const combo = advanceSwordCombo(player.comboIndex, player.lastSwingStartTick, now)
-
-    const startTick = now
-    const hitTick = startTick + SWORD_HIT_OFFSET_TICKS
-    const endTick = startTick + SWORD_SWING_TICKS
-
-    player.stamina = Math.max(0, player.stamina - SWORD_M1_COST_STAMINA)
-    const simState = this.sim.get(sid)
-    if (simState) simState.stamina = player.stamina
-    player.lastSwingStartTick = startTick
-    player.swingEndsAtTick = endTick
-
-    this.pendingSwings.push({
-      attackerId: sid,
-      startTick,
-      hitTick,
-      fromAtTick: msg.atTick,
-      yaw: msg.yaw,
-      damage: combo.damage,
-      comboIndex: combo.indexJustPlayed,
-      originX: player.transform.x,
-      originY: player.transform.y,
-      originZ: player.transform.z,
-      resolved: false,
-    })
   }
 
   private tryStartCast(sid: string, player: Player, msg: ClientCastMessage): void {
@@ -1034,85 +984,6 @@ export class GameRoom extends Room<GameState> {
         player.flowStacks = 0
       }
     }
-  }
-
-  private resolveSwings(now: number): void {
-    const keep: PendingSwing[] = []
-    for (const swing of this.pendingSwings) {
-      if (swing.resolved) continue
-      if (now < swing.hitTick) {
-        keep.push(swing)
-        continue
-      }
-      swing.resolved = true
-      const attacker = this.state.players.get(swing.attackerId)
-      if (!attacker || !attacker.alive) continue
-
-      const rewindTicks = clamp(
-        now - swing.fromAtTick,
-        0,
-        Math.min(LAG_COMP_BUFFER_TICKS, LAG_COMP_MAX_TICKS),
-      )
-      const rewindTargetTick = now - rewindTicks
-      const origin = { x: swing.originX, y: swing.originY, z: swing.originZ }
-      let landed = false
-
-      const swingAttacker = this.state.players.get(swing.attackerId)
-      for (const [vid, victim] of this.state.players) {
-        if (vid === swing.attackerId) continue
-        // No friendly fire in team modes.
-        if (swingAttacker?.team && victim.team && swingAttacker.team === victim.team) continue
-        if (!victim.alive) continue
-        if (now < victim.invulnUntilTick) continue
-        const victimPos = this.lookupHistory(vid, rewindTargetTick) ?? {
-          x: victim.transform.x,
-          y: victim.transform.y,
-          z: victim.transform.z,
-        }
-        if (isInSwordM1Cone(origin, swing.yaw, victimPos)) {
-          this.damageQueue.push({
-            attackerId: swing.attackerId,
-            victimId: vid,
-            damage: swing.damage,
-            knockup: false,
-            cause: 'sword_m1',
-            canParry: true,
-            element: '',
-          })
-          // Horizontal stagger push — gives the hit physical weight.
-          // Skip when victim is parrying (they hold their ground).
-          if (!victim.parrying) {
-            const pvx = victim.transform.x - origin.x
-            const pvz = victim.transform.z - origin.z
-            const pd = Math.hypot(pvx, pvz) || 0.001
-            const pushDist = swing.comboIndex >= 2 ? 0.7 : 0.45
-            const resolved = this.resolveAbilityDisplacement(
-              victim,
-              (pvx / pd) * pushDist,
-              (pvz / pd) * pushDist,
-              true,
-            )
-            victim.transform.x = resolved.x
-            victim.transform.z = resolved.z
-            const simVictim = this.sim.get(vid)
-            if (simVictim) {
-              simVictim.pos.x = resolved.x
-              simVictim.pos.z = resolved.z
-            }
-          }
-          landed = true
-          break
-        }
-      }
-
-      if (landed) {
-        // Fury stack gain for Tank on every 3rd sword hit.
-        this.mechanics.onSwordHitLanded(swing.attackerId, now)
-      }
-      attacker.comboIndex = finishSwordCombo(swing.comboIndex, landed)
-      if (!landed) attacker.lastSwingStartTick = 0
-    }
-    this.pendingSwings = keep
   }
 
   private drainDamage(now: number): void {
@@ -1460,7 +1331,7 @@ export class GameRoom extends Room<GameState> {
       if (z) z.expired = true
       this.state.zones.delete(id)
     }
-    this.pendingSwings = []
+    this.melee.clear()
     this.damageQueue = []
   }
 
@@ -1511,7 +1382,7 @@ export class GameRoom extends Room<GameState> {
     // Swap cancels any pending weapon commitment. Without this, a client can
     // start a sword swing, swap before the hit frame, then still land a ghost
     // melee hit while already shooting another weapon under latency.
-    this.pendingSwings = this.pendingSwings.filter((s) => s.attackerId !== sid)
+    this.melee.removeByAttacker(sid)
     player.swingEndsAtTick = 0
     // Swap cancels any pending charge / bolt cadence.
     player.bowChargeStartTick = 0
@@ -2054,7 +1925,7 @@ export class GameRoom extends Room<GameState> {
     if (!player || !player.alive) return
     if (player.activeWeapon === weapon) return
     player.activeWeapon = weapon
-    this.pendingSwings = this.pendingSwings.filter((s) => s.attackerId !== sid)
+    this.melee.removeByAttacker(sid)
     player.swingEndsAtTick = 0
     player.bowChargeStartTick = 0
     player.staffNextFireTick = 0
