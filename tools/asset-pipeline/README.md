@@ -9,6 +9,18 @@ asset source and does not define UI, loadout, menu, VFX or gameplay direction.
 ## Current Scripts
 
 - `audit-character-glb.mjs` checks incoming GLB/GLTF character assets.
+- `prune-glb-clips.mjs <in> <out> <keep,clip,names>` drops unused animation
+  clips from a GLB then resample/dedup/prunes (geometry/skin/skeleton are kept).
+  Errors if any keep-name is missing from the GLB. Applied to shrink the two big
+  animated assets (verified in-browser after each):
+  - **FPV bow** (8.8MB→5.5MB) — keep the 7 clips in `render/fpv-bow.ts`'s
+    `ClipName` union:
+    `node tools/asset-pipeline/prune-glb-clips.mjs packages/client/public/weapons/animated_fps_bow.glb out.glb "Bow_IDLE,Bow_WALK,Bow_RUN,Bow_AIM,Bow_AIM_IDLE,Bow_FIRE,Bow_RELOAD"`
+  - **UAL1_Standard** (7.7MB→5.4MB) — keep the source clips referenced by
+    `render/character-animation.ts`'s `ANIM_NAME_MAP`:
+    `... UAL1_Standard.glb out.glb "Idle_Loop,Sprint_Loop,Walk_Loop,Sword_Attack,Death01,Punch_Cross,Hit_Chest,Roll,Jump_Start,Jump_Land,Jump_Loop,Sword_Idle,Spell_Simple_Idle_Loop,Spell_Simple_Shoot,Spell_Simple_Enter"`
+  - When the rig's clip list changes, update the keep-list to match (the script
+    aborts if a kept name is absent, catching drift).
 
 ## Current Runtime
 
