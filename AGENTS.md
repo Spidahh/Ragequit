@@ -275,7 +275,10 @@ troppo grande, è stato spezzato in moduli separati per responsabilità:
 5. Aggiornare `02_TECH/00_architecture_overview.md` con il nuovo file nella tabella "Main Code Surfaces".
 
 **File attualmente grandi da monitorare** (oltre il limite "obbligatorio" di 800 righe — vanno spezzati):
-- `packages/client/src/main.ts` — ~3321 righe (PRIORITÀ split: god-file, ~58 `let` di modulo)
-- `packages/server/src/rooms/GameRoom.ts` — ~2867 righe (god-object: input+fisica+danno+abilità)
+- `packages/client/src/main.ts` — ~2900 righe (in decomposizione: 3321 → 2899). Componenti puliti
+  estratti in moduli: `render/weapon-view.ts`, `render/fpv-static-viewmodel.ts`, `net/schema-readers.ts`,
+  `menu/account-ui.ts`. Quel che resta è core orchestrativo accoppiato (connect, handler server, teardown,
+  pause/gating, hot loop) — va estratto con deps-object, una alla volta, verificando.
+- `packages/server/src/rooms/GameRoom.ts` — ~2867 righe (god-object: input+fisica+danno+abilità; ha 70 test → più sicuro da splittare: MeleeResolver / ProjectileSystem)
 - `packages/server/src/sim/AbilityEngine.ts` — ~1063 righe (split effetti per tipo)
 - `packages/client/src/loadout-station.ts` — ~804 righe (oltre soglia 500, monitorare)
