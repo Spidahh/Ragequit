@@ -304,6 +304,9 @@ const castDispatcher = initCastDispatcher({
   // without waiting for the server schema echo (~16 ms). Makes the weapon
   // animation feel perfectly in sync with the click.
   onSwingSent: () => {
+    // Audible whoosh on every swing so the attack reads instantly (the hit
+    // sound only plays on contact — without this a missed/short swing was silent).
+    soundEngine.playSwing()
     if (selfArc) {
       selfArc.visible = true
       selfArcExpiresAt = performance.now() + 400

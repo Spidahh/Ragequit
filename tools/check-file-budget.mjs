@@ -30,7 +30,7 @@ const BUDGET = {
   'packages/server/src/rooms/GameRoom.ts': 1956,
   'packages/shared/src/abilities/registry.ts': 1508,
   'packages/server/src/sim/AbilityEngine.ts': 998,
-  'packages/client/src/audio/sound-engine.ts': 878,
+  'packages/client/src/audio/sound-engine.ts': 904,
 }
 
 const SCAN_DIRS = ['packages/client/src', 'packages/server/src', 'packages/shared/src']

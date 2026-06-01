@@ -79,6 +79,32 @@ export class SoundEngine {
     src.start()
   }
 
+  /** Airy swing whoosh — played on every melee swing so the attack reads. */
+  playSwing(): void {
+    if (this._muted) return
+    const ac = this.ac,
+      out = this.out
+    const len = Math.floor(ac.sampleRate * 0.2)
+    const buf = ac.createBuffer(1, len, ac.sampleRate)
+    const d = buf.getChannelData(0)
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * (i / len))
+    const src = ac.createBufferSource()
+    src.buffer = buf
+    const filt = ac.createBiquadFilter()
+    filt.type = 'bandpass'
+    filt.Q.value = 1.3
+    filt.frequency.setValueAtTime(1900, ac.currentTime)
+    filt.frequency.exponentialRampToValueAtTime(420, ac.currentTime + 0.18)
+    const gain = ac.createGain()
+    gain.gain.setValueAtTime(0.0001, ac.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.24, ac.currentTime + 0.04)
+    gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.2)
+    src.connect(filt)
+    filt.connect(gain)
+    gain.connect(out)
+    src.start()
+  }
+
   // ─── Impact sounds ───────────────────────────────────────────────────────
 
   /** Attacker: physical melee thud — low sine body + high metallic click. */
