@@ -133,6 +133,7 @@ import {
   isCapsuleBlocked2D,
   hasLineOfSight,
   spellImpactPushDistance,
+  impactPushDirection,
 } from '../sim/combat-geometry.js'
 import {
   resolveProjectileHit,
@@ -2561,18 +2562,14 @@ export class GameRoom extends Room<GameState> {
 
   private applyHorizontalImpactPush(attacker: Player, victim: Player, distance: number): void {
     if (distance <= 0) return
-    let dx = victim.transform.x - attacker.transform.x
-    let dz = victim.transform.z - attacker.transform.z
-    const len = Math.hypot(dx, dz)
-    if (len <= 0.001) {
-      const dir = directionFromYawPitch(attacker.transform.yaw, 0)
-      dx = dir.x
-      dz = dir.z
-    } else {
-      dx /= len
-      dz /= len
-    }
-    const resolved = this.resolveAbilityDisplacement(victim, dx * distance, dz * distance, true)
+    const dir = impactPushDirection(
+      attacker.transform.x,
+      attacker.transform.z,
+      victim.transform.x,
+      victim.transform.z,
+      attacker.transform.yaw,
+    )
+    const resolved = this.resolveAbilityDisplacement(victim, dir.x * distance, dir.z * distance, true)
     victim.transform.x = resolved.x
     victim.transform.z = resolved.z
     const simVictim = this.sim.get(victim.id)

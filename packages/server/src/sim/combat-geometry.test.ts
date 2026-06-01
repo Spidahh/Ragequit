@@ -5,6 +5,7 @@ import {
   isCapsuleBlocked2D,
   hasLineOfSight,
   spellImpactPushDistance,
+  impactPushDirection,
 } from './combat-geometry.js'
 
 // A tall box centred at the origin (2x2 footprint, 0..4 tall).
@@ -60,6 +61,21 @@ describe('combat-geometry', () => {
     it('unknown ability causes no push', () => {
       expect(spellImpactPushDistance('ability:__nope__')).toBe(0)
       expect(spellImpactPushDistance('bow')).toBe(0)
+    })
+  })
+
+  describe('impactPushDirection', () => {
+    it('points from attacker to victim (normalized)', () => {
+      const d = impactPushDirection(0, 0, 3, 0, 0)
+      expect(d.x).toBeCloseTo(1)
+      expect(d.z).toBeCloseTo(0)
+    })
+    it('falls back to the attacker facing when overlapping', () => {
+      const d = impactPushDirection(0, 0, 0, 0, 0)
+      // Just needs to be a unit-ish vector, not NaN.
+      expect(Number.isFinite(d.x)).toBe(true)
+      expect(Number.isFinite(d.z)).toBe(true)
+      expect(Math.hypot(d.x, d.z)).toBeGreaterThan(0.5)
     })
   })
 })

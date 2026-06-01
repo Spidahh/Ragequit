@@ -9,6 +9,7 @@ import {
   ABILITY_DEFS,
   getAbilitySlotFamily,
   segmentVsAabb,
+  directionFromYawPitch,
   PLAYER_CAPSULE_RADIUS_M,
   PLAYER_CAPSULE_HEIGHT_M,
   type StaticMap,
@@ -50,6 +51,28 @@ export function hasLineOfSight(boxes: Boxes, from: Vec3, to: Vec3): boolean {
     if (segmentVsAabb(from, to, box) !== null) return false
   }
   return true
+}
+
+/**
+ * Normalized horizontal push direction from attacker to victim. When the two
+ * overlap (len ~ 0) it falls back to the attacker's facing direction so the push
+ * still has a sensible direction.
+ */
+export function impactPushDirection(
+  attackerX: number,
+  attackerZ: number,
+  victimX: number,
+  victimZ: number,
+  attackerYaw: number,
+): { x: number; z: number } {
+  const dx = victimX - attackerX
+  const dz = victimZ - attackerZ
+  const len = Math.hypot(dx, dz)
+  if (len <= 0.001) {
+    const dir = directionFromYawPitch(attackerYaw, 0)
+    return { x: dir.x, z: dir.z }
+  }
+  return { x: dx / len, z: dz / len }
 }
 
 /** Horizontal push distance applied when a magic spell impacts (deterministic). */
