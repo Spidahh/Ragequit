@@ -35,8 +35,8 @@ export function isAirPunishCause(cause: string): boolean {
 }
 
 /** Hit-stop duration (ms) for the attacker side. */
-export function hitstopAttacker(cause: string): number {
-  if (isAirPunishCause(cause)) return 100
+export function hitstopAttacker(cause: string, airPunish = false): number {
+  if (airPunish || isAirPunishCause(cause)) return 100
   const raw = rawCauseId(cause)
   return (
     HITSTOP_ATTACKER[raw] ?? (cause.startsWith('zone:') || cause.startsWith('combo:') ? 20 : 50)
@@ -44,8 +44,8 @@ export function hitstopAttacker(cause: string): number {
 }
 
 /** Hit-stop duration (ms) for the victim side. */
-export function hitstopVictim(cause: string): number {
-  if (isAirPunishCause(cause)) return 75
+export function hitstopVictim(cause: string, airPunish = false): number {
+  if (airPunish || isAirPunishCause(cause)) return 75
   const raw = rawCauseId(cause)
   return HITSTOP_VICTIM[raw] ?? (cause.startsWith('zone:') || cause.startsWith('combo:') ? 25 : 40)
 }

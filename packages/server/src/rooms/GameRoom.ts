@@ -1016,6 +1016,13 @@ export class GameRoom extends Room<GameState> {
       // Phase Shift invulnerability: skip all damage while the status is active.
       if (this.statuses.hasStatus(victim, 'invulnerable')) continue
 
+      // Air punish: victim already airborne from an EARLIER tick's knockup (a
+      // follow-up hit). The `now > start` guard excludes the LAUNCHING hit of
+      // both melee (d.knockup block below) and ability knockups (applied in the
+      // engine before this drain) — their knockup starts this same tick.
+      const victimWasAirborne =
+        now < victim.airborneUntilTick && now > victim.airborneUntilTick - UPPERCUT_AIRBORNE_TICKS
+
       // Parry absorbs / reduces whenever the protection state is active. Air
       // displacement is pressure, not an implicit parry shutdown.
       let didParry = false
@@ -1126,6 +1133,7 @@ export class GameRoom extends Room<GameState> {
         didParry,
         atTick: now,
         cause: d.cause,
+        airPunish: victimWasAirborne && !didParry,
       }
       this.broadcast(MessageTypes.Hit, hitMsg)
 

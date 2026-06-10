@@ -124,6 +124,9 @@ export interface ServerHitMessage {
   // 'combo:<kind>', ability ids from the engine. Client maps these to broad
   // categories (swing/projectile/zone/ability) for VFX and sound dispatch.
   cause: string
+  // True when the victim was already airborne (knockup follow-up) at hit time —
+  // drives the client's AIR PUNISH popup / sound / enhanced hit-stop / stat.
+  airPunish?: boolean
 }
 
 export interface ServerDeathMessage {

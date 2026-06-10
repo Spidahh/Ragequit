@@ -1499,7 +1499,9 @@ function onHit(msg: ServerHitMessage): void {
     }
   }
   const now = performance.now()
-  const isAirPunish = isAirPunishCause(msg.cause)
+  // Server-authoritative air-punish flag (victim airborne at hit). Fall back to
+  // the legacy cause-suffix check for safety.
+  const isAirPunish = msg.airPunish ?? isAirPunishCause(msg.cause)
   // Normalise power 0–1 against typical hit ceiling (~40 damage = full power).
   const power = Math.min(1, msg.damage / (isAirPunish ? 55 : 40))
 
@@ -1539,7 +1541,7 @@ function onHit(msg: ServerHitMessage): void {
       soundEngine.playCrack(Math.max(power, 0.85))
       combatFeedHud.triggerComboFlash()
       combatFeedHud.showComboPopupLabel('AIR PUNISH ✈')
-      hitStopUntilMs = now + hitstopAttacker(msg.cause)
+      hitStopUntilMs = now + hitstopAttacker(msg.cause, isAirPunish)
       applyDirectionalShake(getPlayerWorldPos(msg.victimId), 1.0)
       localComboCount = 0
     } else if (localComboCount >= 3) {
@@ -1574,7 +1576,7 @@ function onHit(msg: ServerHitMessage): void {
   // --- Victim (self): receive-damage sound + freeze + shake ---
   if (amISelf && msg.damage > 0 && !msg.didParry) {
     soundEngine.playHurtByType(msg.cause, power)
-    victimHitStopUntilMs = now + hitstopVictim(msg.cause)
+    victimHitStopUntilMs = now + hitstopVictim(msg.cause, isAirPunish)
     selfHitReactUntilMs = now + 650
     // Victim camera shake — melee hits harder, felt directly on screen.
     const _victimShakeI = victimShakeIntensity(msg.cause, msg.damage)
