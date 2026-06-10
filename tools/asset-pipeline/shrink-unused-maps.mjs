@@ -19,10 +19,13 @@ import sharp from 'sharp'
 const TARGET = 64
 const args = process.argv.slice(2)
 const CHECK = args.includes('--check')
-const dirs = args.filter((a) => a !== '--check')
+const ALL = args.includes('--all')
+const dirs = args.filter((a) => !a.startsWith('--'))
 if (dirs.length === 0) {
-  console.error('usage: node shrink-unused-maps.mjs [--check] <dir> [<dir> ...]')
-  console.error('  --check: CI guard — exit 1 if any toon-discarded map exceeds the budget (no writes)')
+  console.error('usage: node shrink-unused-maps.mjs [--check] [--all] <dir> [<dir> ...]')
+  console.error('  --check: CI guard — exit 1 if any in-scope map exceeds the budget (no writes)')
+  console.error('  --all:   every referenced texture is in scope (use for flat-shaded dirs like')
+  console.error('           arena/props, where the runtime material keeps NO map at all)')
   process.exit(1)
 }
 
@@ -55,7 +58,11 @@ for (const dir of dirs) {
   }
 }
 
-const targets = [...usage.entries()].filter(([, e]) => !e.baseColor)
+// Default: only maps the toon material discards (normal/ORM/occlusion). With
+// --all: every referenced texture (the dir is flat-shaded, no map kept at all).
+const targets = ALL
+  ? [...usage.entries()]
+  : [...usage.entries()].filter(([, e]) => !e.baseColor)
 
 if (CHECK) {
   // CI guard: fail if any toon-discarded map is bigger than the budget — keeps

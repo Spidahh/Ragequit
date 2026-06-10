@@ -24,7 +24,7 @@
     "audit:character": "node tools/asset-pipeline/audit-character-glb.mjs packages/client/public/characters/UAL1_Standard.glb",
     "validate:content": "tsx tools/content-validator/validate.ts",
     "check:budget": "node tools/check-file-budget.mjs",
-    "check:assets": "node tools/asset-pipeline/shrink-unused-maps.mjs --check packages/client/public/characters packages/client/public/arena/props",
+    "check:assets": "node tools/asset-pipeline/shrink-unused-maps.mjs --check packages/client/public/characters && node tools/asset-pipeline/shrink-unused-maps.mjs --check --all packages/client/public/arena/props",
     "check": "pnpm typecheck && pnpm check:budget && pnpm check:assets && pnpm lint && pnpm format:check && pnpm validate:content && pnpm test",
     "clean": "node tools/clean.mjs"
   },
