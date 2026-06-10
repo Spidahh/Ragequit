@@ -13,11 +13,6 @@ function spriteId(kind: IconKind, id: string): string {
   return `${kind}-${normalized}`
 }
 
-export function iconMarkup(kind: IconKind, id: string, className = 'sprite-icon'): string {
-  if (kind === 'ability') return abilityIconMarkup(id, className)
-  return `<svg class="${className}" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><use href="#${spriteId(kind, id)}"></use></svg>`
-}
-
 export function makeIcon(kind: IconKind, id: string, size = 32): SVGElement {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
   svg.setAttribute('class', 'sprite-icon')

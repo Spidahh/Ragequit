@@ -33,35 +33,8 @@ export function recordAbilityCast(stats: MatchStats, abilityId: string): void {
   stats.abilitiesUsed[abilityId] = (stats.abilitiesUsed[abilityId] ?? 0) + 1
 }
 
-export function recordHit(stats: MatchStats, damage: number): void {
-  stats.yourHits++
-  stats.damageDealt += damage
-}
-
-export function recordDamageTaken(stats: MatchStats, damage: number): void {
-  stats.damageTaken += damage
-}
-
-export function recordKill(stats: MatchStats): void {
-  stats.kills++
-}
-
-export function recordParry(stats: MatchStats): void {
-  stats.parries++
-}
-
-export function recordComboProc(stats: MatchStats): void {
-  stats.comboProcs++
-}
-
-export function recordKnockupAttempt(stats: MatchStats): void {
-  stats.knockupAttempts++
-}
-
-export function recordKnockupConversion(stats: MatchStats): void {
-  stats.knockupConversions++
-  stats.knockups++
-}
+// Per-stat record helpers were removed — match stats are folded in one place by
+// accumulateHitStats (game/hit-stats.ts), which is the single source of truth.
 
 /** Compute a simple real ELO delta given two ratings and the outcome. */
 export function computeEloDelta(

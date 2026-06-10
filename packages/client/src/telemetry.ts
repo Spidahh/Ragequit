@@ -38,8 +38,3 @@ export function trackAbilityCast(abilityId: string, element: string): void {
   if (!KEY) return
   posthog.capture('ability_cast', { ability_id: abilityId, element })
 }
-
-export function trackLoadoutSaved(slotCount: number): void {
-  if (!KEY) return
-  posthog.capture('loadout_saved', { slot_count: slotCount })
-}
