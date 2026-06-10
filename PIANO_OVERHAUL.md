@@ -32,8 +32,14 @@ codice morto, de-bloatare gli asset, modernizzare la pipeline, fixare bug e cose
   - downscale baseColor 2048→1024 (renderizzate, cambio lieve) · KTX2/Basis · Draco/meshopt
   - strip pulito delle mappe inutili dai gltf (gltf-transform) come versione definitiva
 
-- [ ] **W3 — Validator esteso = rete di sicurezza**
-  - orfani asset = errore CI · texture over-budget = errore · copertura animazioni (~18 stati) gate
+- [x] **W3 — Rete di sicurezza asset (fatto, parziale)**
+  - `check:assets` in `pnpm check`: fallisce se una mappa scartata-dal-toon supera 64²
+    → i 67MB di normal/ORM non possono più rientrare full-res.
+  - launch.json: aggiunta config `ragequit-server` per il preview harness (client+server).
+  - TODO futuro: orfani-asset = errore · copertura animazioni (~18 stati) gate.
+  - VERIFICA VISIVA: harness preview funziona (client 5174 + server 2567); il match entra
+    LIVE senza errori, WebGL sano. Limite: screenshot del 3D in loop va in timeout headless
+    → per i cambi visivi (downscale baseColor/KTX2) serve cattura single-frame, da risolvere.
 
 - [ ] **W4 — Loader unico + cache props + preload esteso**
   - un solo `THREE.LoadingManager` · cache+dedup props · preload arena/vfx/icone loadout

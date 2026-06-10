@@ -17,9 +17,12 @@ import { join } from 'node:path'
 import sharp from 'sharp'
 
 const TARGET = 64
-const dirs = process.argv.slice(2)
+const args = process.argv.slice(2)
+const CHECK = args.includes('--check')
+const dirs = args.filter((a) => a !== '--check')
 if (dirs.length === 0) {
-  console.error('usage: node shrink-unused-maps.mjs <dir> [<dir> ...]')
+  console.error('usage: node shrink-unused-maps.mjs [--check] <dir> [<dir> ...]')
+  console.error('  --check: CI guard — exit 1 if any toon-discarded map exceeds the budget (no writes)')
   process.exit(1)
 }
 
@@ -53,6 +56,31 @@ for (const dir of dirs) {
 }
 
 const targets = [...usage.entries()].filter(([, e]) => !e.baseColor)
+
+if (CHECK) {
+  // CI guard: fail if any toon-discarded map is bigger than the budget — keeps
+  // the ~67MB of normal/ORM maps from creeping back full-res.
+  const offenders = []
+  for (const [uri, e] of targets) {
+    const path = join(e.dir, uri)
+    try {
+      const meta = await sharp(path).metadata()
+      if ((meta.width ?? 0) > TARGET || (meta.height ?? 0) > TARGET) {
+        offenders.push(`${uri} (${meta.width}x${meta.height}, ${Math.round(statSync(path).size / 1024)} KB)`)
+      }
+    } catch {
+      /* missing file — referenced-but-absent is a different validator's job */
+    }
+  }
+  if (offenders.length) {
+    console.error(`✗ ${offenders.length} toon-discarded map(s) exceed ${TARGET}px budget (run shrink-unused-maps.mjs):`)
+    for (const o of offenders) console.error(`  - ${o}`)
+    process.exit(1)
+  }
+  console.log(`✓ all toon-discarded maps within ${TARGET}px budget (${targets.length} checked)`)
+  process.exit(0)
+}
+
 let before = 0
 let after = 0
 let shrunk = 0
