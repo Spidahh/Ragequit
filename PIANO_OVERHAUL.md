@@ -1,5 +1,24 @@
 # PIANO OVERHAUL AUTONOMO — RAGEQUIT
 
+## STATO FINALE (sessione notturna autonoma)
+**8 commit su `main`, tutti gate-verdi e deployati in prod. Gioco verificato LIVE
+end-to-end col preview harness (client+server).** Riepilogo:
+- **Asset: public/ 135MB → 65MB (−52%)** rimuovendo tutto ciò che il runtime scarta:
+  il materiale toon tiene solo baseColor (`.map`); l'arena renderizza a colore piatto
+  (nessun `map:`). Tutte le normal/ORM (character+arena) e le arena-baseColor → 64².
+  Guardia CI `check:assets` impedisce il ritorno del bloat. La character-baseColor
+  (18MB, pelle visibile) e la UI restano (renderizzate).
+- **Codice morto + sistema duplicato rimossi** (knip-verificato): 7 `record*` di
+  stats-tracker (duplicato di hit-stats), 4 funzioni combat-feedback, markBloom/
+  computeImpactKick, iconMarkup, trackLoadoutSaved, scene-builder.ts, tool duplicato.
+- **2 feature scollegate ricollegate**: setHitStop (freeze nemico) + triggerWeaponRecoil.
+- **Limite verifica**: lo screenshot del 3D in loop non si cattura headless (serve
+  Playwright+SwiftShader); verifica via health-signal (LIVE, no errori, GL sano).
+  Compressione di character-baseColor/UI (rendered) DEFERRED → serve l'occhio umano.
+
+---
+
+
 Lavoro autonomo (utente che dorme, pieni poteri). Regola: **`main` sempre verde** —
 ogni ondata passa `pnpm check` (typecheck + budget + lint + prettier + content + 257 test)
 prima del commit+push. Niente deploy di un gioco rotto.
