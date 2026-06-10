@@ -48,7 +48,12 @@ codice morto, de-bloatare gli asset, modernizzare la pipeline, fixare bug e cose
   - consolidare il sistema a layer (base+outfit+capelli+accessori) come API dati-driven pulita
   - pipeline Mixamo standardizzata (retarget → libreria unica GLB → prune → audit)
 
-- [ ] **W6 — Bug & cose scollegate (sweep continuo)**
-  - audit ricorrente correttezza/leak/scollegamenti tra sistemi (server/client/render/HUD/audio)
+- [~] **W6 — Bug & cose scollegate (sweep continuo)**
+  - [x] collegato `setHitStop` (freeze animazione del nemico colpito — macchina già
+        presente nel mixer, mai innescata) → ora innescato in onHit per la vittima remota.
+  - [x] collegato `triggerWeaponRecoil` (rinculo lama spada) — era ri-esportato ma mai
+        chiamato → ora innescato in onHit sull'attaccante (self + remoto via nuovo metodo).
+  - Verificato: gate verde + preview entra LIVE senza errori coi nuovi path.
+  - TODO: continuare la caccia ad altre cose scollegate/morte.
 
 Aggiorno questo file man mano. Stato live nei commit su `main`.

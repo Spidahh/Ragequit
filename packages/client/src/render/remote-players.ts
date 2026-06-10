@@ -11,6 +11,7 @@ import {
   disposeCharacterMixer,
   setParryShieldState,
   applyParryArmPose,
+  triggerWeaponRecoil as charWeaponRecoil,
 } from './characters.js'
 import { SWING_ARC_YAW_OFFSET, makeSwingArcMesh } from './factories.js'
 
@@ -132,6 +133,7 @@ export interface RemotePlayersController {
   setDamageBlink: (sid: string, untilMs: number) => void
   triggerRoll: (sid: string, untilMs: number) => void
   setHitStop: (sid: string, untilMs: number) => void
+  triggerWeaponRecoil: (sid: string) => void
   getPlayerWorldPos: (sid: string) => { x: number; y: number; z: number } | null
 }
 
@@ -731,6 +733,11 @@ export function initRemotePlayers({
     if (r) r.hitStopUntilMs = untilMs
   }
 
+  function triggerWeaponRecoil(sid: string): void {
+    const r = remotePlayers.get(sid)
+    if (r) charWeaponRecoil(r.mesh)
+  }
+
   return {
     updateFromSchema,
     renderFrame,
@@ -745,5 +752,6 @@ export function initRemotePlayers({
     setDamageBlink,
     triggerRoll,
     setHitStop,
+    triggerWeaponRecoil,
   }
 }

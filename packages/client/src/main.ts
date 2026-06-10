@@ -115,6 +115,7 @@ import {
   makeParryShieldVisual,
   setParryShieldState,
   applyParryArmPose,
+  triggerWeaponRecoil,
 } from './render/characters.js'
 import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
 import { createFpvBow } from './render/fpv-bow.js'
@@ -1698,9 +1699,16 @@ function onHit(msg: ServerHitMessage): void {
       airPunish: isAirPunish && amIAttacker && !amISelf,
     })
   }
-  // Trigger white blink on the victim's remote character mesh so hits feel impactful.
+  // White blink + a brief animation freeze on the struck enemy so hits land with
+  // weight (the remote mixer already honours hitStopUntilMs — this just triggers it).
   if (!amISelf && msg.damage > 0 && !msg.didParry) {
     remotePlayerSystem.setDamageBlink(msg.victimId, performance.now() + 160)
+    remotePlayerSystem.setHitStop(msg.victimId, now + hitstopVictim(msg.cause, isAirPunish))
+  }
+  // Weapon recoil: the attacker's sword blade bounces back when a swing connects.
+  if (msg.damage > 0 && !msg.didParry && rawCauseId(msg.cause) === 'sword_m1') {
+    if (amIAttacker && selfMesh?.visible) triggerWeaponRecoil(selfMesh)
+    else if (!amIAttacker) remotePlayerSystem.triggerWeaponRecoil(msg.attackerId)
   }
 }
 
