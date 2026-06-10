@@ -51,13 +51,14 @@ describe('accumulateHitStats', () => {
     expect(opp.parries).toBe(1)
   })
 
-  it('attacker self: accrues damageDealt, hits, combo + knockup conversion', () => {
+  it('attacker self: accrues damageDealt, hits, combo + knockup conversion; mirrors opp.damageTaken', () => {
     const self = emptyMatchStats()
     const opp = emptyMatchStats()
+    // Server sends the prefixed 'ability:uppercut' cause — must still count.
     const res = accumulateHitStats(
       self,
       opp,
-      hit({ damage: 30, cause: 'uppercut' }),
+      hit({ damage: 30, cause: 'ability:uppercut' }),
       ctx({ amIAttacker: true, amISelf: false, victimAirborne: true }),
     )
     expect(res).toBeNull()
@@ -66,9 +67,11 @@ describe('accumulateHitStats', () => {
     expect(self.knockups).toBe(1)
     expect(self.knockupConversions).toBe(1)
     expect(self.comboProcs).toBe(0)
+    // 1v1 mirror: the opponent took this damage.
+    expect(opp.damageTaken).toBe(30)
   })
 
-  it('victim self: accrues damageTaken, returns deathcam details, opp gets airborne conversion', () => {
+  it('victim self: accrues damageTaken, returns deathcam details, mirrors opp dealt/hits + airborne conversion', () => {
     const self = emptyMatchStats()
     const opp = emptyMatchStats()
     const res = accumulateHitStats(
@@ -84,6 +87,8 @@ describe('accumulateHitStats', () => {
       }),
     )
     expect(self.damageTaken).toBe(25)
+    expect(opp.damageDealt).toBe(25)
+    expect(opp.yourHits).toBe(1)
     expect(opp.knockupConversions).toBe(1)
     expect(res).toEqual({ killer: 'BOT', ability: 'Frost', element: 'ice', damage: 25 })
   })

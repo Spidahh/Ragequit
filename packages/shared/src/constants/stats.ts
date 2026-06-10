@@ -17,8 +17,8 @@ export const STAMINA_MAX = 100 as const
 // Balance rationale (TTK target 20-30 s):
 //   OOC HP regen: 0.5→2.0/s — 0.5 was invisible noise; 2/s = 100s to full,
 //   still slow but means being at 180 HP after a skirmish recovery break.
-//   Mana regen: 1.5→2.5/s + delay 3→2 s — tighter combat loop; a mage can
-//   cast Fireball (20 mp) and recover in 8 s instead of 17 s.
+//   Mana regen: 8.0/s + 0.5 s delay — sustainable casting; a mage can
+//   cast Fireball (20 mp) and recover in ~3 s.
 export const HP_REGEN_PER_SEC_OOC = 2.0 as const
 export const HP_REGEN_OOC_DELAY_SEC = 5 as const
 

@@ -40,6 +40,7 @@ function summary(stats: MatchStats, name: string, build: string): PlayerSummary 
     knockups: `${stats.knockupConversions} / ${stats.knockupAttempts}`,
     parries: stats.parries,
     comboProcs: stats.comboProcs,
+    abilitiesUsed: stats.abilitiesUsed,
   }
 }
 
@@ -50,6 +51,7 @@ export function buildScoreboardData(p: ScoreboardParams): ScoreboardData {
   return {
     arena: p.arena.toUpperCase(),
     matchMs: p.matchMs > 0 ? p.matchMs : 120000,
+    isWin: p.isWin,
     rounds: isTraining ? 'PRATICA' : `${p.selfStats.kills} - ${p.opponentStats.kills} kill`,
     league: isTraining ? 'NO ELO' : 'RANKED',
     winner: p.isWin ? self : opponent,

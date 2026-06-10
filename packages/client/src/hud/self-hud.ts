@@ -102,6 +102,10 @@ export function initSelfHud({
   const hudHpBar = document.getElementById('hud-hp')
   const hudManaBar = document.getElementById('hud-mana')
   const hudStamBar = document.getElementById('hud-stam')
+  // Signature of the current status set — the strip's DOM is only rebuilt when
+  // the set of kinds/stacks changes, not every frame (avoids per-frame layout
+  // thrash while any status is active). Timer fills update in place below.
+  let lastStatusKey = ''
 
   function update({
     selfSchema,
@@ -182,28 +186,42 @@ export function initSelfHud({
     }
 
     const liveStatuses = Array.from(selfSchema.statuses ?? [])
-    while (statusStrip.firstChild) statusStrip.removeChild(statusStrip.firstChild)
-    for (const st of liveStatuses) {
-      const icon = document.createElement('div')
-      icon.className = 'status-icon'
-      icon.dataset['kind'] = st.kind
-      icon.appendChild(statusIcon(st.kind, 22))
-      icon.title = `${st.kind} x${st.stacks} (${st.remainingSec.toFixed(1)}s)`
-      const stack = document.createElement('span')
-      stack.className = 'stack'
-      stack.textContent = st.stacks > 1 ? String(st.stacks) : ''
-      if (st.stacks > 1) icon.appendChild(stack)
-      const tm = document.createElement('div')
-      tm.className = 'timer'
-      const fill = document.createElement('div')
-      fill.className = 'fill'
-      const total = Math.max(0.1, st.remainingSec)
+    // Rebuild the strip's DOM only when the set of statuses (kind + stack count)
+    // changes; otherwise just refresh the timer fills/titles in place. Tearing
+    // it down and recreating SVG icons every frame thrashed layout 60×/s.
+    const statusKey = liveStatuses.map((s) => `${s.kind}:${s.stacks}`).join('|')
+    if (statusKey !== lastStatusKey) {
+      lastStatusKey = statusKey
+      while (statusStrip.firstChild) statusStrip.removeChild(statusStrip.firstChild)
+      for (const st of liveStatuses) {
+        const icon = document.createElement('div')
+        icon.className = 'status-icon'
+        icon.dataset['kind'] = st.kind
+        icon.appendChild(statusIcon(st.kind, 22))
+        if (st.stacks > 1) {
+          const stack = document.createElement('span')
+          stack.className = 'stack'
+          stack.textContent = String(st.stacks)
+          icon.appendChild(stack)
+        }
+        const tm = document.createElement('div')
+        tm.className = 'timer'
+        const fill = document.createElement('div')
+        fill.className = 'fill'
+        tm.appendChild(fill)
+        icon.appendChild(tm)
+        statusStrip.appendChild(icon)
+      }
+    }
+    // Per-frame in-place refresh of the timer bars + tooltips (cheap).
+    for (let i = 0; i < liveStatuses.length; i++) {
+      const st = liveStatuses[i]!
+      const iconEl = statusStrip.children[i] as HTMLElement | undefined
+      if (!iconEl) continue
+      iconEl.title = `${st.kind} x${st.stacks} (${st.remainingSec.toFixed(1)}s)`
+      const fill = iconEl.querySelector('.fill') as HTMLElement | null
       // Cap at 5 s → 100% for visual display; scales linearly above.
-      const ratio = Math.min(1, total / 5)
-      fill.style.width = `${ratio * 100}%`
-      tm.appendChild(fill)
-      icon.appendChild(tm)
-      statusStrip.appendChild(icon)
+      if (fill) fill.style.width = `${Math.min(1, Math.max(0.1, st.remainingSec) / 5) * 100}%`
     }
 
     // Rebuild CD strip if loadout changed. Colyseus ArraySchema can update in

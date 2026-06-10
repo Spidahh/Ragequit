@@ -10,6 +10,7 @@
 // ---------------------------------------------------------------------------
 import type { ServerHitMessage } from '@ragequit/shared'
 
+import { rawCauseId } from './hitstop.js'
 import type { MatchStats } from './stats-tracker.js'
 
 export interface HitStatsContext {
@@ -53,7 +54,8 @@ export function accumulateHitStats(
     return null
   }
 
-  const isComboKnockup = msg.cause === 'uppercut' || ctx.isAirPunish
+  // The server tags uppercut hits as 'ability:uppercut'; strip the prefix.
+  const isComboKnockup = rawCauseId(msg.cause) === 'uppercut' || ctx.isAirPunish
   const isCombo = msg.cause.startsWith('combo:')
 
   if (ctx.amIAttacker && !ctx.amISelf) {
@@ -62,11 +64,19 @@ export function accumulateHitStats(
     if (isComboKnockup) self.knockups++
     if (isCombo) self.comboProcs++
     if (ctx.victimAirborne) self.knockupConversions++
+    // In a 1v1 the third-party fold below never runs, so mirror the hit onto
+    // the opponent's "taken" column to keep the scoreboard opponent row honest.
+    opponent.damageTaken += msg.damage
     return null
   }
 
   if (ctx.amISelf && !ctx.amIAttacker) {
     self.damageTaken += msg.damage
+    // Mirror: the opponent is the attacker here — credit their dealt/hits/combo.
+    opponent.damageDealt += msg.damage
+    opponent.yourHits++
+    if (isComboKnockup) opponent.knockups++
+    if (isCombo) opponent.comboProcs++
     if (ctx.selfAirborne) opponent.knockupConversions++
     return {
       killer: ctx.attackerName,

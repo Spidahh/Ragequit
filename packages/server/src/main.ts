@@ -1,7 +1,6 @@
 import { timingSafeEqual } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { createServer } from 'node:http'
-import { fileURLToPath } from 'node:url'
 
 // Load .env before anything else so SUPABASE_* vars are available.
 const { config } = await import('dotenv')
@@ -26,15 +25,16 @@ const MONITOR_ENABLED = process.env['COLYSEUS_MONITOR_ENABLED'] === 'true'
 const MONITOR_USER = process.env['COLYSEUS_MONITOR_USER']
 const MONITOR_PASSWORD = process.env['COLYSEUS_MONITOR_PASSWORD']
 
-// Read the balance overrides file at boot. The path is configurable
-// (BALANCE_FILE env), defaulting to the JSON shipped in the shared package.
-// On parse / validation failure we LOG and continue with defaults — refusing
-// to start would break local dev. Production deploy on Fly.io should set
-// BALANCE_FILE to the deployed file path and watch the validation log.
+// Optional runtime balance override. Set BALANCE_FILE to a JSON path to tune
+// ttk/match (ELO K-factor, round counts) without a redeploy; otherwise the
+// compiled defaults are used. There is intentionally NO default path: the
+// source balance.json is not shipped into the production image (only dist is),
+// so a default would silently fail there — and it only mirrors the compiled
+// defaults anyway. On parse/validation failure we LOG and continue with
+// defaults rather than refuse to start.
 function loadBalanceFromDisk(): void {
-  const path =
-    process.env['BALANCE_FILE'] ??
-    fileURLToPath(new URL('../../shared/src/constants/balance.json', import.meta.url))
+  const path = process.env['BALANCE_FILE']
+  if (!path) return
   try {
     const raw = readFileSync(path, 'utf8')
     const parsed = JSON.parse(raw) as Partial<BalanceConfig>
@@ -115,6 +115,10 @@ const httpServer = createServer(app)
 
 const gameServer = new Server({
   transport: new WebSocketTransport({ server: httpServer }),
+  // We own the signal handlers below so we can dispose rooms, flush telemetry
+  // and close the HTTP server in order before exiting. Disable Colyseus's own
+  // auto-registered handler to avoid a double-handler race that exits early.
+  gracefullyShutdown: false,
 })
 
 // Keep one room kind, but never match clients across different modes.
@@ -123,14 +127,35 @@ const gameServer = new Server({
 gameServer.define('game', GameRoom).filterBy(['mode'])
 
 initServerTelemetry()
-process.on('SIGTERM', () => {
-  shutdownServerTelemetry()
-  process.exit(0)
-})
-process.on('SIGINT', () => {
-  shutdownServerTelemetry()
-  process.exit(0)
-})
+
+// Graceful shutdown: Fly.io sends SIGTERM on every deploy and scale-to-zero.
+// Dispose rooms first (runs GameRoom.onDispose → finalize replay + match_ended
+// telemetry), THEN flush buffered PostHog events, THEN close the HTTP server,
+// only then exit. A bounded timeout guarantees we never outlive the platform's
+// kill timeout.
+let shuttingDown = false
+async function gracefulShutdown(signal: string): Promise<void> {
+  if (shuttingDown) return
+  shuttingDown = true
+  console.info(`[ragequit-server] ${signal} received — shutting down gracefully`)
+  const forceExit = setTimeout(() => {
+    console.warn('[ragequit-server] graceful shutdown timed out — forcing exit')
+    process.exit(0)
+  }, 5000)
+  forceExit.unref()
+  try {
+    await gameServer.gracefullyShutdown(false)
+    await shutdownServerTelemetry()
+    await new Promise<void>((resolve) => httpServer.close(() => resolve()))
+  } catch (err) {
+    console.warn(`[ragequit-server] shutdown error: ${(err as Error).message}`)
+  } finally {
+    clearTimeout(forceExit)
+    process.exit(0)
+  }
+}
+process.on('SIGTERM', () => void gracefulShutdown('SIGTERM'))
+process.on('SIGINT', () => void gracefulShutdown('SIGINT'))
 
 httpServer.listen(PORT, () => {
   console.info(`[ragequit-server] listening on http://localhost:${PORT}`)

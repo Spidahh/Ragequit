@@ -141,8 +141,15 @@ export class MeleeSystem {
       const attacker = this.host.state.players.get(swing.attackerId)
       if (!attacker || !attacker.alive) continue
 
+      // Lag-comp must rewind ONLY the attacker's network latency, never the
+      // windup. (now - fromAtTick) spans windup (SWORD_HIT_OFFSET_TICKS) + the
+      // round-trip delay; the windup is the victim's dodge window and must not
+      // be rewound, and including it pins the clamp at its ceiling so real
+      // latency gets zero compensation. Strip the offset, then clamp the pure
+      // network component to the compensation budget.
+      const latencyTicks = now - swing.fromAtTick - SWORD_HIT_OFFSET_TICKS
       const rewindTicks = clamp(
-        now - swing.fromAtTick,
+        latencyTicks,
         0,
         Math.min(LAG_COMP_BUFFER_TICKS, LAG_COMP_MAX_TICKS),
       )

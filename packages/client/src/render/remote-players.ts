@@ -159,6 +159,24 @@ const CC_STATUS_MAX_BADGES = 4
 /** Updates the status icon row in a remote player's nameplate.
  *  Rebuilds the DOM only when the set of active status kinds changes.
  *  Updates countdown text in-place every frame for hard CC. */
+/** Paint the HP fill width + colour and low-HP glow on a remote nameplate. */
+function paintNameplateHp(r: RemoteState, now: number): void {
+  const pct = Math.max(0, Math.min(1, r.hp / r.hpMax))
+  r.hpFill.style.width = `${pct * 100}%`
+  if (pct > 0.55) {
+    r.hpFill.style.background = 'linear-gradient(90deg,#1a8a3a,#2ec850,#70f090)'
+    r.nameplate.style.boxShadow = ''
+  } else if (pct > 0.28) {
+    r.hpFill.style.background = 'linear-gradient(90deg,#a87010,#d4a020,#f0c840)'
+    r.nameplate.style.boxShadow = ''
+  } else {
+    r.hpFill.style.background = 'linear-gradient(90deg,#c82020,#f04040,#ff7070)'
+    const pulse = 0.5 + 0.5 * Math.sin(now * 0.007)
+    const gAlpha = (0.25 + pulse * 0.35).toFixed(2)
+    r.nameplate.style.boxShadow = `0 0 ${10 + pulse * 14}px rgba(220,30,30,${gAlpha}), 0 2px 12px rgba(0,0,0,0.6)`
+  }
+}
+
 function updateStatusRow(
   r: RemoteState,
   statuses: ReadonlyArray<{ kind: string; stacks: number; remainingSec: number }>,
@@ -366,7 +384,12 @@ export function initRemotePlayers({
     scene.remove(r.mesh)
     r.mesh.traverse((child) => {
       if (child instanceof THREE.Mesh) {
-        child.geometry.dispose()
+        // Source meshes SHARE their BufferGeometry with the character cache
+        // (SkeletonUtils.clone), so disposing it would evict the GPU buffers
+        // out from under every other player using the same class. Only outline
+        // meshes own a cloned geometry. Materials are per-instance (toon +
+        // outline), so they are always safe to dispose.
+        if (child.name.endsWith('_outline')) child.geometry.dispose()
         if (Array.isArray(child.material)) child.material.forEach((m) => m.dispose())
         else (child.material as THREE.Material).dispose()
       }
@@ -457,6 +480,7 @@ export function initRemotePlayers({
       if (!players.has(sid)) {
         disposeRemote(r)
         remotePlayers.delete(sid)
+        remoteDamageBlinkUntil.delete(sid) // don't leak blink state across joins
       }
     })
   }
@@ -520,6 +544,9 @@ export function initRemotePlayers({
           const sy = (-npWorld.y * 0.5 + 0.5) * domElement.clientHeight
           r.nameplate.style.transform = `translate3d(${sx.toFixed(1)}px,${sy.toFixed(1)}px,0) translate(-50%,-100%)`
           r.nameplate.style.display = ''
+          // Keep the HP bar honest even when the model is hidden (>40 m).
+          paintNameplateHp(r, now)
+          updateStatusRow(r, r.statuses)
         } else {
           r.nameplate.style.display = 'none'
         }
@@ -598,20 +625,7 @@ export function initRemotePlayers({
         // Use transform instead of left/top to avoid layout reflow (compositor-only)
         r.nameplate.style.transform = `translate3d(${sx.toFixed(1)}px,${sy.toFixed(1)}px,0) translate(-50%,-100%)`
         r.nameplate.style.display = ''
-        const pct = Math.max(0, Math.min(1, r.hp / r.hpMax))
-        r.hpFill.style.width = `${pct * 100}%`
-        if (pct > 0.55) {
-          r.hpFill.style.background = 'linear-gradient(90deg,#1a8a3a,#2ec850,#70f090)'
-          r.nameplate.style.boxShadow = ''
-        } else if (pct > 0.28) {
-          r.hpFill.style.background = 'linear-gradient(90deg,#a87010,#d4a020,#f0c840)'
-          r.nameplate.style.boxShadow = ''
-        } else {
-          r.hpFill.style.background = 'linear-gradient(90deg,#c82020,#f04040,#ff7070)'
-          const pulse = 0.5 + 0.5 * Math.sin(now * 0.007)
-          const gAlpha = (0.25 + pulse * 0.35).toFixed(2)
-          r.nameplate.style.boxShadow = `0 0 ${10 + pulse * 14}px rgba(220,30,30,${gAlpha}), 0 2px 12px rgba(0,0,0,0.6)`
-        }
+        paintNameplateHp(r, now)
         // Update CC status badges above the HP bar.
         updateStatusRow(r, r.statuses)
         // Signature knock-up window cue: flash "✈ AIR" while target is airborne.
@@ -688,6 +702,7 @@ export function initRemotePlayers({
   function clear(): void {
     remotePlayers.forEach((r) => disposeRemote(r))
     remotePlayers.clear()
+    remoteDamageBlinkUntil.clear()
   }
 
   function getWorldPos(sid: string): THREE.Vector3 | null {

@@ -201,6 +201,9 @@ export function initCastDispatcher({
       cancelPlacementPreview()
       inp.rmbPressEdge = false
       inp.rmbReleaseEdge = false
+      // This RMB press was consumed by the cancel — suppress the held-button m2
+      // flag too, or simStep would send m2:true and the server starts a parry.
+      inp.rmbDown = false
     }
 
     if (combatLive && !dead) {
@@ -217,7 +220,9 @@ export function initCastDispatcher({
     // --- Drain queued ability casts (one per tick, max 2 queued) ---------------
     // Capping to 1/tick prevents macro-spam; cap 2 lets a "queue next cast"
     // feel responsive during short windups (standard arena-game practice).
-    if (!combatLive) abilityCastQueue.length = 0
+    // Also flush while dead so slot keys pressed during the respawn wait don't
+    // auto-fire a buffered cast (wasting a cooldown) on the first alive tick.
+    if (!combatLive || dead) abilityCastQueue.length = 0
     if (abilityCastQueue.length > 0 && combatLive && !dead) {
       const id = abilityCastQueue.shift()!
       sendCast(id, schemaTick + 1)

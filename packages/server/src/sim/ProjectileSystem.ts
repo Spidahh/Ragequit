@@ -214,6 +214,7 @@ export class ProjectileSystem {
       onHitStatus: req.onHitStatus,
       velDirX: req.vel.x / reqSpd2D,
       velDirZ: req.vel.z / reqSpd2D,
+      knockbackDistance: req.knockbackDistance,
     })
     if (req.kind === 'bolt' && req.abilityId) {
       const caster = this.host.state.players.get(req.ownerId)

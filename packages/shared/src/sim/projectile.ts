@@ -41,24 +41,6 @@ export function stepProjectile(state: ProjectileState, dtSec: number = TICK_MS /
   state.pos.z += state.vel.z * dtSec
 }
 
-// Static helper — produce the segment start/end given previous pos + current
-// velocity and dt. Keeps the collision layer decoupled from mutation order.
-export function segmentFor(
-  prevPos: Vec3,
-  vel: Vec3,
-  gravityThisStep: number,
-  dtSec: number,
-): { from: Vec3; to: Vec3 } {
-  const from = { x: prevPos.x, y: prevPos.y, z: prevPos.z }
-  // Use midpoint rule for Y to match the semi-implicit step.
-  const to = {
-    x: prevPos.x + vel.x * dtSec,
-    y: prevPos.y + (vel.y - gravityThisStep * dtSec) * dtSec,
-    z: prevPos.z + vel.z * dtSec,
-  }
-  return { from, to }
-}
-
 // Returns the smallest t in [0, 1] along segment (from → to) at which the
 // segment enters the vertical capsule, or null if no hit. Uses closest
 // approach of segment to capsule spine + radius check.

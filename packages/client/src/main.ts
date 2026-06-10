@@ -49,10 +49,11 @@ import * as THREE from 'three'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 
 import { SoundEngine } from './audio/sound-engine.js'
-import { type DeathcamData, type ScoreboardData } from './endgame.js'
+import { type DeathcamData } from './endgame.js'
 import { type ComboState, victimShakeIntensity, COMBO_RESET_MS } from './game/combat-feedback.js'
 import { accumulateHitStats } from './game/hit-stats.js'
 import {
@@ -85,6 +86,7 @@ import { initHitFeedback } from './hud/hit-feedback.js'
 import { initDraggableHud } from './hud/hud-drag.js'
 import { initSelfHud } from './hud/self-hud.js'
 import { initStatusOverlay } from './hud/status-overlay.js'
+import { showTutorialIfFirstTime } from './hud/tutorial.js'
 import { ensureIconSprite, weaponIcon } from './icons.js'
 import { initCastDispatcher } from './input/cast-dispatcher.js'
 import { initGameInput, makeGameInputState } from './input/game-input.js'
@@ -437,10 +439,28 @@ const bloomPass = new UnrealBloomPass(
   0.75, // threshold — only bright emissive gets bloomed
 )
 bloomComposer.addPass(bloomPass)
-// Final composer: full scene render output
+// Final composer: full scene render → additive bloom mix → output. The mix pass
+// adds the bloom composer's result (selective: only emissive layer-1 meshes
+// survive the per-frame black-out) onto the base scene. WITHOUT it the bloom was
+// computed and discarded every frame.
 const finalComposer = new EffectComposer(renderer)
 const finalRenderPass = new RenderPass(scene, camera)
 finalComposer.addPass(finalRenderPass)
+const bloomMixPass = new ShaderPass(
+  new THREE.ShaderMaterial({
+    uniforms: {
+      baseTexture: { value: null },
+      bloomTexture: { value: bloomComposer.renderTarget2.texture },
+    },
+    vertexShader:
+      'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader:
+      'uniform sampler2D baseTexture; uniform sampler2D bloomTexture; varying vec2 vUv; void main() { gl_FragColor = texture2D(baseTexture, vUv) + texture2D(bloomTexture, vUv); }',
+  }),
+  'baseTexture',
+)
+bloomMixPass.needsSwap = true
+finalComposer.addPass(bloomMixPass)
 finalComposer.addPass(new OutputPass())
 
 // Sky-dome hemisphere: neutral/cool so jumping never washes the screen yellow.
@@ -479,16 +499,12 @@ const selfEmissive = initSelfEmissive({
 })
 
 const toonGradient = makeToonGradient()
-// Black material used during bloom selective render pass
+// Black material used during the bloom selective render pass.
 const _blackMat = new THREE.MeshBasicMaterial({ color: 0x000000 })
-// Cache of non-bloom meshes + their materials — built on demand, invalidated
-// when scene objects are added/removed (which is infrequent).
-let _bloomDirty = true
-let _nonBloomEntries: Array<{ mesh: THREE.Mesh; mat: THREE.Material | THREE.Material[] }> = []
-/** Call after adding/removing major scene objects to invalidate the bloom cache. */
-function invalidateBloomCache(): void {
-  _bloomDirty = true
-}
+// Scratch list of meshes darkened during the bloom pass — refilled every frame
+// by traversing the scene, so dynamically added meshes (remote players,
+// projectiles, zones) are always handled and despawned ones never linger.
+const _bloomDarkened: Array<{ mesh: THREE.Mesh; mat: THREE.Material | THREE.Material[] }> = []
 
 // First-person viewmodels are parented to the dedicated viewmodelCamera (not the
 // world camera) so they render in the separate viewmodel pass with their own
@@ -798,6 +814,9 @@ let _matchPreloadPromise: Promise<void> | null = null
 // Reconnect state — tracks if we should attempt a single automatic reconnect
 let _reconnectAttempted = false
 let _reconnectTimer: ReturnType<typeof setTimeout> | null = null
+// Room whose leave() we initiated to show an end screen — its onLeave must NOT
+// bounce to the menu and destroy the scoreboard.
+let _scoreboardLeaveRoom: Room | null = null
 export function getRoomMode(): string {
   return activeRoomMode
 }
@@ -827,6 +846,7 @@ function isMatchPhase(value: unknown): value is ServerMatchPhaseMessage['phase']
 }
 
 function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
+  const prevPhase = currentMatchPhase
   currentMatchPhase = msg.phase
   // Keep matchSM in sync with the Colyseus phase
   matchSM.transition(msg.phase as import('./game/match-state-machine.js').MatchState)
@@ -859,7 +879,14 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
     roundTimer.textContent = ''
     roundTimer.classList.remove('urgent')
   }
-  if (msg.phase === 'lobby' || msg.phase === 'countdown') {
+  // Reset per-match stats only at a real MATCH boundary — NOT on the inter-round
+  // countdown (live → roundEnd → countdown → live), or the end-of-match
+  // scoreboard would reflect only the final round. A match starts at 'lobby' or
+  // a 'countdown' that does NOT follow a round.
+  const isNewMatch =
+    msg.phase === 'lobby' ||
+    (msg.phase === 'countdown' && prevPhase !== 'live' && prevPhase !== 'roundEnd')
+  if (isNewMatch) {
     lastMatchEloDeltas = {}
     selfStats = emptyMatchStats()
     opponentStats = emptyMatchStats()
@@ -1151,7 +1178,12 @@ const menu = initMenu({
   },
   onGraphicsChange: (quality) => {
     const pixelRatioMap = { low: 1.0, med: 1.25, high: 1.5 }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelRatioMap[quality]))
+    const ratio = Math.min(window.devicePixelRatio, pixelRatioMap[quality])
+    renderer.setPixelRatio(ratio)
+    // EffectComposer caches the pixel ratio at construction — push it through
+    // both composers or the quality setting silently never applies on-screen.
+    bloomComposer.setPixelRatio(ratio)
+    finalComposer.setPixelRatio(ratio)
   },
 })
 
@@ -1333,7 +1365,6 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
           def?.effects?.some(
             (e) => e.kind === 'move' && (e as { mode?: string }).mode === 'dash',
           ) ?? false
-        // Play cast sound for self only; remote cast VFX stays driven by replicated events.
         if (msg.casterId === self?.sessionId) {
           soundEngine.playCast(def?.element ?? 'none')
           trackAbilityCast(msg.abilityId, def?.element ?? 'none')
@@ -1341,9 +1372,11 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
           if (def && def.windupSec > 0) castStartedAtMs = performance.now()
           // Play Roll animation on dash abilities.
           if (isDash) selfRollingUntilMs = performance.now() + 400
-        } else if (isDash) {
-          // Trigger roll animation on the remote character that dashed.
-          remotePlayerSystem.triggerRoll(msg.casterId, performance.now() + 400)
+        } else {
+          // Remote caster — spatial cast audio (was silent) + roll for dashes.
+          const pos = remotePlayerSystem.getPlayerWorldPos?.(msg.casterId)
+          if (pos) soundEngine.playRemoteCast(pos.x, pos.y, pos.z, def?.element ?? 'none')
+          if (isDash) remotePlayerSystem.triggerRoll(msg.casterId, performance.now() + 400)
         }
       },
     )
@@ -1391,6 +1424,14 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
 
     joinedRoom.onLeave((code?: number) => {
       if (room && room !== joinedRoom) return
+      // A leave WE initiated to show an end screen keeps the scoreboard up
+      // (room is already null here, so the guard above can't catch it).
+      if (joinedRoom === _scoreboardLeaveRoom) {
+        _scoreboardLeaveRoom = null
+        _reconnectAttempted = false
+        setStatus('offline', 'rgba(200,200,200,0.35)')
+        return
+      }
       // code 4000 = intentional kick/leave; anything else = unexpected drop
       const intentional = code === 4000 || code === 1000
       if (!intentional && !_reconnectAttempted && matchSM.isLive) {
@@ -1402,11 +1443,19 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
         if (_reconnectTimer) clearTimeout(_reconnectTimer)
         _reconnectTimer = setTimeout(async () => {
           serverToast.classList.add('hidden')
+          // Tear down the dropped session (a stale self.sessionId breaks every
+          // identity check); null room so the post-connect check below is true.
+          room = null
+          self = null
+          clearLocalMatchState()
           try {
             await connect(activeRoomMode, false)
-            _reconnectAttempted = false
           } catch {
-            _reconnectAttempted = false
+            /* connect() swallows its own errors; stay defensive anyway. */
+          }
+          _reconnectAttempted = false
+          // connect() never throws on failure, so detect it via room presence.
+          if (!room) {
             setStatus('disconnected', '#e87070')
             returnToMainMenu({ leaveRoom: false, statusText: 'disconnected' })
           }
@@ -1552,8 +1601,9 @@ function onHit(msg: ServerHitMessage): void {
       damageFlash.classList.remove('active')
       // Shake toward attacker.
       const attackerPos = getPlayerWorldPos(msg.attackerId)
+      const rawCause = rawCauseId(msg.cause)
       const shakeIntensity =
-        msg.cause === 'sword_m1' || msg.cause === 'uppercut'
+        rawCause === 'sword_m1' || rawCause === 'uppercut'
           ? Math.min(1.2, msg.damage / 25) // melee hits harder
           : Math.min(1, msg.damage / 30)
       applyDirectionalShake(attackerPos, shakeIntensity)
@@ -1761,7 +1811,6 @@ function clearSelfVisuals(): void {
     scene.remove(selfMesh)
     disposeObject3D(selfMesh)
     selfMesh = null
-    invalidateBloomCache()
   }
   if (selfArc) {
     scene.remove(selfArc)
@@ -1834,67 +1883,6 @@ function clearLocalMatchState(): void {
   clearSelfVisuals()
 }
 
-// -----------------------------------------------------------------------
-// Tutorial HUD — shown once per player on first match entry
-// -----------------------------------------------------------------------
-
-function showTutorialIfFirstTime(): void {
-  if (localStorage.getItem('ragequit.tutorial.done') === 'true') return
-  localStorage.setItem('ragequit.tutorial.done', 'true')
-
-  const TIPS = [
-    { delay: 500, dur: 4500, text: 'WASD per muoverti — SPAZIO per saltare' },
-    { delay: 5500, dur: 4000, text: 'LMB = attacco base — RMB = parata / ricarica' },
-    { delay: 10000, dur: 4500, text: 'E / Q aprono le ruote abilità — 1-8 cast diretto' },
-    { delay: 15000, dur: 4000, text: 'TAB cambia arma — ESC pausa' },
-  ]
-
-  const overlay = document.createElement('div')
-  overlay.id = 'tutorial-overlay'
-  overlay.style.cssText = [
-    'position:fixed',
-    'bottom:120px',
-    'left:50%',
-    'transform:translateX(-50%)',
-    'pointer-events:none',
-    'z-index:500',
-    'display:flex',
-    'flex-direction:column',
-    'align-items:center',
-    'gap:8px',
-  ].join(';')
-  document.body.appendChild(overlay)
-
-  for (const tip of TIPS) {
-    setTimeout(() => {
-      const el = document.createElement('div')
-      el.style.cssText = [
-        'background:rgba(5,8,18,0.88)',
-        'border:1px solid rgba(212,160,74,0.35)',
-        'border-radius:4px',
-        'padding:7px 18px',
-        'font:600 12px/1.3 Rajdhani,ui-monospace,monospace',
-        'color:#d4c0a0',
-        'letter-spacing:.06em',
-        'text-transform:uppercase',
-        'opacity:0',
-        'transition:opacity .35s',
-      ].join(';')
-      el.textContent = tip.text
-      overlay.appendChild(el)
-      requestAnimationFrame(() => {
-        el.style.opacity = '1'
-      })
-      setTimeout(() => {
-        el.style.opacity = '0'
-        setTimeout(() => el.remove(), 400)
-      }, tip.dur - 400)
-    }, tip.delay)
-  }
-
-  // Remove overlay after all tips
-  setTimeout(() => overlay.remove(), 20500)
-}
 function returnToMainMenu(opts: { leaveRoom: boolean; statusText?: string }): void {
   soundEngine.stopArenaAmbient()
   connectSeq++
@@ -1956,67 +1944,27 @@ function returnToTrainingScoreboard(): void {
 
   const isWin = selfStats.kills > opponentStats.kills
 
-  const arenaName = getSchemaMapId()
-  const matchMs = performance.now() - matchStartMs
-
-  const scoreboardData: ScoreboardData = {
-    arena: arenaName.toUpperCase(),
-    matchMs: matchMs > 0 ? matchMs : 120000,
-    rounds: 'PRATICA',
-    league: 'NO ELO',
+  const scoreboardData = buildScoreboardData({
+    selfName,
+    opponentName,
+    selfBuild,
+    oppBuild,
+    selfStats,
+    opponentStats,
+    isWin,
+    arena: getSchemaMapId(),
+    matchMs: performance.now() - matchStartMs,
+    mode: 'training',
     eloBefore: ELO_STARTING,
     eloDelta: 0,
-    winner: isWin
-      ? {
-          name: selfName,
-          build: selfBuild,
-          kills: selfStats.kills,
-          damageDealt: selfStats.damageDealt,
-          damageTaken: selfStats.damageTaken,
-          knockups: `${selfStats.knockupConversions} / ${selfStats.knockupAttempts}`,
-          parries: selfStats.parries,
-          comboProcs: selfStats.comboProcs,
-          abilitiesUsed: selfStats.abilitiesUsed,
-        }
-      : {
-          name: opponentName,
-          build: oppBuild,
-          kills: opponentStats.kills,
-          damageDealt: opponentStats.damageDealt,
-          damageTaken: opponentStats.damageTaken,
-          knockups: `${opponentStats.knockupConversions} / ${opponentStats.knockupAttempts}`,
-          parries: opponentStats.parries,
-          comboProcs: opponentStats.comboProcs,
-          abilitiesUsed: opponentStats.abilitiesUsed,
-        },
-    loser: isWin
-      ? {
-          name: opponentName,
-          build: oppBuild,
-          kills: opponentStats.kills,
-          damageDealt: opponentStats.damageDealt,
-          damageTaken: opponentStats.damageTaken,
-          knockups: `${opponentStats.knockupConversions} / ${opponentStats.knockupAttempts}`,
-          parries: opponentStats.parries,
-          comboProcs: opponentStats.comboProcs,
-          abilitiesUsed: opponentStats.abilitiesUsed,
-        }
-      : {
-          name: selfName,
-          build: selfBuild,
-          kills: selfStats.kills,
-          damageDealt: selfStats.damageDealt,
-          damageTaken: selfStats.damageTaken,
-          knockups: `${selfStats.knockupConversions} / ${selfStats.knockupAttempts}`,
-          parries: selfStats.parries,
-          comboProcs: selfStats.comboProcs,
-          abilitiesUsed: selfStats.abilitiesUsed,
-        },
-  }
+  })
 
   menu.showScoreboard(selfId, scoreboardData)
 
   const leavingRoom = room
+  // Mark this leave as scoreboard-driven so its onLeave keeps the results up
+  // instead of bouncing to the main menu (which destroyed the screen before).
+  _scoreboardLeaveRoom = leavingRoom
   room = null
   activeRoomMode = 'duel_arena'
   self = null
@@ -2056,7 +2004,6 @@ function initSelfIfNeeded(): void {
   }
   selfMesh = makeCharacter(0x3a8fde, toonGradient) // self = blue (standard: I am blue)
   scene.add(selfMesh)
-  invalidateBloomCache()
   loadCharacterGlb(selfMesh, 0x3a8fde, toonGradient, p.classId)
   selfArc = makeSwingArcMesh()
   scene.add(selfArc)
@@ -2130,7 +2077,11 @@ function simStep(): void {
   }
 
   seqCounter += 1
-  const input = sampleInput(airborne, dead)
+  // Block movement while an overlay is open (else a held key keeps walking on
+  // the server behind the pause/settings/loadout menu).
+  const overlayBlockingInput =
+    isOverlayOpen(settingsOverlay) || !loadoutStationHidden() || isPauseMenuOpen()
+  const input = sampleInput(airborne, dead, overlayBlockingInput)
 
   // Build movement caps from the last-known server status state. The schema
   // lags by ~RTT/2 but this is still far more accurate than ignoring caps
@@ -2277,7 +2228,10 @@ let _renderErrorCount = 0
 const _MAX_RENDER_ERRORS = 5
 
 function render(now: number): void {
-  // Always schedule next frame first so a mid-frame error never kills the loop.
+  // Once suspended (too many consecutive errors) actually STOP — don't schedule
+  // another frame or keep re-running the failing inner loop every frame.
+  if (_renderErrorCount >= _MAX_RENDER_ERRORS) return
+  // Schedule next frame first so a mid-frame error never kills the loop.
   requestAnimationFrame(render)
   try {
     _renderInner(now)
@@ -2315,9 +2269,7 @@ function _renderInner(now: number): void {
   if (inMenu) return
 
   // Swap map geometry when the server schema reports a different mapId.
-  // loadMapGeometry returns true only when the map actually changed so we
-  // avoid the full scene traversal (bloom cache rebuild) every frame.
-  if (loadMapGeometry(getSchemaMapId())) invalidateBloomCache()
+  loadMapGeometry(getSchemaMapId())
   placementPreview.update(now)
 
   // Hit-stop flag — particle animation and camera lerp are frozen during it.
@@ -2325,7 +2277,8 @@ function _renderInner(now: number): void {
   const inHitStop = now < hitStopUntilMs || now < victimHitStopUntilMs
   // Brief exposure boost during hit-stop for impactful "crunch" feel.
   const targetExposure = inHitStop ? 1.45 : 1.1
-  renderer.toneMappingExposure += (targetExposure - renderer.toneMappingExposure) * 0.28
+  renderer.toneMappingExposure +=
+    (targetExposure - renderer.toneMappingExposure) * Math.min(1, 16.8 * dt)
 
   animateArena(now, dt, inHitStop)
   // Update 3D audio listener position every frame
@@ -2454,36 +2407,41 @@ function _renderInner(now: number): void {
       lastCastAbilityId = selfSchema.castAbilityId
     }
 
-    // Drive character animations
-    tickCharacterMixer(selfMesh, dt)
     const selfSpeed = Math.hypot(self.sim.vel.x, self.sim.vel.z)
-    setCharAnimState(selfMesh, {
-      moving: selfSpeed > 0.3,
-      speed: selfSpeed,
-      activeWeapon: wSchema,
-      attacking: !!(selfArc?.visible && now < selfArcExpiresAt),
-      attackVariant: selfSchema?.comboIndex ?? 0,
-      airborne,
-      bowCharging:
-        wSchema === 'bow' &&
-        (self.bowChargeStartMs > 0 || (selfSchema?.bowChargeStartTick ?? 0) > 0),
-      casting: !!selfSchema?.casting && selfSchema.castEndsAtTick > tickNow,
-      channeling:
-        !!selfSchema?.casting &&
-        selfSchema.castEndsAtTick > tickNow &&
-        (ABILITY_DEFS[selfSchema.castAbilityId]?.effects?.some((e) => e.kind === 'channel') ??
-          false),
-      alive: !dead,
-      parrying: !!selfSchema?.parrying,
-      hitReact: !dead && now < selfHitReactUntilMs,
-      respawning: now < selfRespawnUntilMs,
-      jumping: !dead && now < selfJumpUntilMs,
-      landing: !dead && now < selfLandUntilMs,
-      rolling: !dead && now < selfRollingUntilMs,
-    })
-    // Procedural shield-block arm raise (TPV sword users) — must run AFTER the
-    // mixer update inside tickCharacterMixer so it isn't overwritten this frame.
-    applyParryArmPose(selfMesh, !dead && !!selfSchema?.parrying, dt)
+    // Drive character animations — skip entirely when the body isn't drawn
+    // (first-person bow/staff): the full 65-bone mixer eval would be wasted on a
+    // model that is never rendered. selfMesh.visible lags one frame, which is
+    // invisible across a weapon swap.
+    if (selfMesh.visible) {
+      tickCharacterMixer(selfMesh, dt)
+      setCharAnimState(selfMesh, {
+        moving: selfSpeed > 0.3,
+        speed: selfSpeed,
+        activeWeapon: wSchema,
+        attacking: !!(selfArc?.visible && now < selfArcExpiresAt),
+        attackVariant: selfSchema?.comboIndex ?? 0,
+        airborne,
+        bowCharging:
+          wSchema === 'bow' &&
+          (self.bowChargeStartMs > 0 || (selfSchema?.bowChargeStartTick ?? 0) > 0),
+        casting: !!selfSchema?.casting && selfSchema.castEndsAtTick > tickNow,
+        channeling:
+          !!selfSchema?.casting &&
+          selfSchema.castEndsAtTick > tickNow &&
+          (ABILITY_DEFS[selfSchema.castAbilityId]?.effects?.some((e) => e.kind === 'channel') ??
+            false),
+        alive: !dead,
+        parrying: !!selfSchema?.parrying,
+        hitReact: !dead && now < selfHitReactUntilMs,
+        respawning: now < selfRespawnUntilMs,
+        jumping: !dead && now < selfJumpUntilMs,
+        landing: !dead && now < selfLandUntilMs,
+        rolling: !dead && now < selfRollingUntilMs,
+      })
+      // Procedural shield-block arm raise (TPV sword users) — must run AFTER the
+      // mixer update inside tickCharacterMixer so it isn't overwritten this frame.
+      applyParryArmPose(selfMesh, !dead && !!selfSchema?.parrying, dt)
+    }
 
     // Follow-light tracks the player's torso level.
     playerLight.position.set(x, y + 0.5 + idleBob, z)
@@ -2503,7 +2461,9 @@ function _renderInner(now: number): void {
     const wBackTarget = cfg.camBack
     const wUpTarget = cfg.camUp
     const wFovTarget = settingsFovBase + cfg.fovDelta(bowChargeRatio)
-    const CAM_LERP = inHitStop ? 0 : 0.12
+    // Frame-rate-independent smoothing (same pattern as the renderPos lerp):
+    // ~0.12/frame at 60 fps, but equal convergence in wall-clock at any refresh.
+    const CAM_LERP = inHitStop ? 0 : Math.min(1, 7.2 * dt)
     camBack += (wBackTarget - camBack) * CAM_LERP
     camUp += (wUpTarget - camUp) * CAM_LERP
     camFovBase += (wFovTarget - camFovBase) * CAM_LERP
@@ -2635,7 +2595,12 @@ function _renderInner(now: number): void {
   remotePlayerSystem.renderFrame(now, camera, renderer.domElement)
 
   const proj = getSchemaProjectiles()
-  if (proj) projectileVfx.renderFrame(proj as Map<string, SchemaProjectile>, now, dbgProj)
+  if (proj)
+    projectileVfx.renderFrame(
+      proj as Map<string, SchemaProjectile>,
+      now,
+      isDebugVisible() ? dbgProj : null,
+    )
 
   impactVfx.update(now)
   deathBurstVfx.update(now)
@@ -2651,7 +2616,7 @@ function _renderInner(now: number): void {
     pingValEl.textContent = ping.toFixed(0)
     pingHud.className = ping < 60 ? 'ingame good' : ping < 120 ? 'ingame ok' : 'ingame bad'
   }
-  if (self) {
+  if (self && isDebugVisible()) {
     dbgPred.textContent = self.lastPredictionDelta.toFixed(3)
     dbgGround.textContent = self.sim.onGround ? 'yes' : 'no'
     dbgGround.style.color = self.sim.onGround ? '#9be39b' : '#e4c05a'
@@ -2662,7 +2627,7 @@ function _renderInner(now: number): void {
   if (inp.optimisticWeapon && selfSchema?.activeWeapon === inp.optimisticWeapon)
     inp.optimisticWeapon = null
   const activeWeapon: Weapon = currentWeaponForInput()
-  dbgWeapon.textContent = activeWeapon
+  if (isDebugVisible()) dbgWeapon.textContent = activeWeapon
   for (const w of WEAPON_IDS) {
     weaponSlots[w].classList.toggle('active', w === activeWeapon)
   }
@@ -2758,28 +2723,20 @@ function _renderInner(now: number): void {
     deathcamData,
   })
 
-  // Two-pass bloom: 1) render emissive-only for bloom, 2) full final scene
-  // Bloom is skipped during hit-stop to save GPU during freeze frames.
+  // Selective bloom: black out non-emissive meshes, render bloom (emissive only),
+  // restore, then finalComposer mixes it in. Traverse every frame so dynamically
+  // added/removed meshes are always handled. Skipped during hit-stop.
   if (!inHitStop) {
-    // Rebuild cached non-bloom mesh list when scene changes
-    if (_bloomDirty) {
-      _nonBloomEntries = []
-      const bloomLayers = new THREE.Layers()
-      bloomLayers.set(1)
-      scene.traverse((obj) => {
-        const m = obj as THREE.Mesh
-        if (!m.isMesh) return
-        if (!m.layers.test(bloomLayers)) {
-          _nonBloomEntries.push({ mesh: m, mat: m.material })
-        }
-      })
-      _bloomDirty = false
-    }
-    // Swap non-bloom meshes to black material
-    for (const e of _nonBloomEntries) e.mesh.material = _blackMat
+    _bloomDarkened.length = 0
+    scene.traverse((obj) => {
+      const m = obj as THREE.Mesh
+      if (m.isMesh && !m.layers.test(BLOOM_LAYER)) {
+        _bloomDarkened.push({ mesh: m, mat: m.material })
+        m.material = _blackMat
+      }
+    })
     bloomComposer.render()
-    // Restore materials
-    for (const e of _nonBloomEntries) e.mesh.material = e.mat
+    for (const e of _bloomDarkened) e.mesh.material = e.mat
     finalComposer.render()
   } else {
     // Composers leave renderer.autoClear=false; force a clean world clear here.

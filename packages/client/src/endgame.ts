@@ -15,6 +15,7 @@ export interface PlayerSummary {
 export interface ScoreboardData {
   arena: string // "RING_NORTH"
   matchMs: number // total match duration (ms)
+  isWin: boolean // local player won the match (drives the WIN/LOSE header)
   rounds: string // "2-1 rounds"
   league: string // "Bronze III"
   winner: PlayerSummary
@@ -43,12 +44,14 @@ export function renderScoreboard(host: HTMLElement, data: ScoreboardData): void 
   const ss = Math.floor((ms % 60_000) / 1000)
   const time = `${String(mm).padStart(2, '0')} : ${String(ss).padStart(2, '0')}`
 
+  const headline = data.isWin ? 'VICTORY' : 'DEFEAT'
+  const outcome = data.isWin ? 'WIN.' : 'LOSE.'
   host.innerHTML = `
-    <div class="scoreboard-shell" id="scoreboard">
+    <div class="scoreboard-shell ${data.isWin ? 'is-win' : 'is-loss'}" id="scoreboard">
       <div class="sb-head">
         <div>
-          <div class="sb-winner">VICTORY · ${escapeHtml(data.arena)}</div>
-          <div class="sb-title">YOU <span class="ele">WIN.</span></div>
+          <div class="sb-winner">${headline} · ${escapeHtml(data.arena)}</div>
+          <div class="sb-title">YOU <span class="ele">${outcome}</span></div>
         </div>
         <div class="sb-meta">
           <b>${time}</b>
@@ -68,9 +71,7 @@ export function renderScoreboard(host: HTMLElement, data: ScoreboardData): void 
           → <b>${data.eloBefore + data.eloDelta}</b>
         </div>
         <div class="sb-actions">
-          <span class="sb-chip primary">SPC · NEXT MATCH</span>
-          <span class="sb-chip">L · LOADOUT</span>
-          <span class="sb-chip">ESC · MENU</span>
+          <span class="sb-chip primary">SPC / ESC · MENU</span>
         </div>
       </div>
     </div>

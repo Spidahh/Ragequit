@@ -116,7 +116,11 @@ export function clearWeaponGroup(wg: THREE.Group): void {
     const c = wg.children[0]!
     c.traverse((node) => {
       if (!(node instanceof THREE.Mesh)) return
-      node.geometry?.dispose()
+      // Weapon meshes are clones that SHARE geometry with the weapon cache;
+      // disposing it would evict the buffers under every other player holding
+      // the same weapon. Only outline meshes own a cloned geometry. Materials
+      // are per-instance, so dispose those always.
+      if (node.name.endsWith('_outline')) node.geometry?.dispose()
       const m = node.material
       if (Array.isArray(m)) m.forEach((x) => (x as THREE.Material).dispose())
       else (m as THREE.Material | undefined)?.dispose()

@@ -35,12 +35,14 @@ describe('buildScoreboardData', () => {
     expect(d.league).toBe('RANKED')
     expect(d.rounds).toBe('3 - 1 kill')
     expect(d.eloDelta).toBe(18)
+    expect(d.isWin).toBe(true)
   })
 
   it('puts opponent in winner slot on a loss', () => {
     const d = buildScoreboardData(params({ isWin: false }))
     expect(d.winner.name).toBe('YOU')
     expect(d.loser.name).toBe('ME')
+    expect(d.isWin).toBe(false)
   })
 
   it('training mode uses practice labels and zero elo', () => {

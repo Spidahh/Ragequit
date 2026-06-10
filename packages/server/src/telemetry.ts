@@ -9,8 +9,10 @@ export function initServerTelemetry(): void {
   client = new PostHog(KEY, { host: 'https://eu.i.posthog.com', flushAt: 20, flushInterval: 10000 })
 }
 
-export function shutdownServerTelemetry(): void {
-  void client?.shutdown()
+// Returns the flush promise so callers (graceful shutdown) can AWAIT the
+// buffered events being sent before the process exits.
+export function shutdownServerTelemetry(): Promise<void> {
+  return client?.shutdown() ?? Promise.resolve()
 }
 
 function track(event: string, properties: Record<string, unknown>): void {

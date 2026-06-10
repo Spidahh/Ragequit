@@ -34,7 +34,9 @@ export function createFpvStaticViewmodel(): FpvStaticViewmodel {
       const child = root.children[0]!
       child.traverse((node) => {
         if (!(node instanceof THREE.Mesh)) return
-        node.geometry.dispose()
+        // The viewmodel is a clone that SHARES geometry with the weapon cache;
+        // only outline meshes own a cloned geometry. Materials are per-instance.
+        if (node.name.endsWith('_outline')) node.geometry.dispose()
         const material = node.material
         if (Array.isArray(material)) material.forEach((mat) => mat.dispose())
         else material.dispose()

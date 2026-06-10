@@ -32,8 +32,6 @@ import {
   STAFF_M1_MANA_COST,
   STAFF_M1_SPEED_MPS,
   CURSE_OUTGOING_DAMAGE_MULT,
-  KNOCKUP_AIRBORNE_MIN_SEC,
-  KNOCKUP_AIRBORNE_MAX_SEC,
   STAMINA_MAX,
   STAMINA_REGEN_PER_SEC_IDLE,
   STAMINA_REGEN_PER_SEC_MOVING,
@@ -51,6 +49,7 @@ import {
   directionFromYawPitch,
   makePlayerSimState,
   simulatePlayer,
+  uppercutBallisticAirtimeSec,
   uppercutInitialVy,
   type ClientCastMessage,
   type ClientChargeReleaseMessage,
@@ -119,6 +118,8 @@ import {
   trackPlayerConnected,
   trackPlayerDisconnected,
 } from '../telemetry.js'
+
+import { makePendingDamageBridge } from './pending-damage-bridge.js'
 
 // GameRoom - three weapons (sword / bow / staff), parry, projectiles.
 //
@@ -281,6 +282,8 @@ export class GameRoom extends Room<GameState> {
     this.onMessage<ClientSwingMessage>(MessageTypes.Swing, (client, message) => {
       if (!this.gateRate(client, 'swing')) return
       if (!this.canAcceptCombatAction()) return
+      // Reject crafted packets: a non-finite yaw poisons the cone direction.
+      if (!Number.isFinite(message.yaw)) return
       const queue = this.swingQueues.get(client.sessionId)
       if (!queue) return
       if (queue.length < GameRoom.MAX_SWING_QUEUE) queue.push(message)
@@ -289,6 +292,19 @@ export class GameRoom extends Room<GameState> {
     this.onMessage<ClientCastMessage>(MessageTypes.Cast, (client, message) => {
       if (!this.gateRate(client, 'cast')) return
       if (!this.canAcceptCombatAction()) return
+      // Reject crafted packets: non-finite aim/target poisons projectile origin,
+      // velocity and zone placement.
+      if (message.targetYaw !== undefined && !Number.isFinite(message.targetYaw)) return
+      if (message.targetPitch !== undefined && !Number.isFinite(message.targetPitch)) return
+      if (
+        message.targetPoint &&
+        !(
+          Number.isFinite(message.targetPoint.x) &&
+          Number.isFinite(message.targetPoint.y) &&
+          Number.isFinite(message.targetPoint.z)
+        )
+      )
+        return
       const queue = this.castQueues.get(client.sessionId)
       if (!queue) return
       if (queue.length < GameRoom.MAX_CAST_QUEUE) queue.push(message)
@@ -309,12 +325,16 @@ export class GameRoom extends Room<GameState> {
     this.onMessage<ClientChargeReleaseMessage>(MessageTypes.ChargeRelease, (client, message) => {
       if (!this.gateRate(client, 'charge')) return
       if (!this.canAcceptCombatAction()) return
+      // Reject crafted packets: non-finite yaw/pitch poisons arrow direction.
+      if (!Number.isFinite(message.yaw) || !Number.isFinite(message.pitch)) return
       this.handleChargeRelease(client.sessionId, message)
     })
 
     this.onMessage<ClientFireStaffMessage>(MessageTypes.FireStaff, (client, message) => {
       if (!this.gateRate(client, 'fireStaff')) return
       if (!this.canAcceptCombatAction()) return
+      // Reject crafted packets: non-finite yaw/pitch poisons bolt direction.
+      if (!Number.isFinite(message.yaw) || !Number.isFinite(message.pitch)) return
       this.handleFireStaff(client.sessionId, message)
     })
 
@@ -339,7 +359,7 @@ export class GameRoom extends Room<GameState> {
 
     // Instantiate status runtime and ability engine.
     // Bridge maps the engine's {amount, element, ...} shape into PendingDamage.
-    const pendingDamageBridge = makePendingDamageBridge(this.damageQueue)
+    const pendingDamageBridge = makePendingDamageBridge(() => this.damageQueue)
     this.statuses = new StatusRuntime({
       state: this.state,
       pendingDamage: pendingDamageBridge,
@@ -847,18 +867,23 @@ export class GameRoom extends Room<GameState> {
       const msg = queue.shift()!
       if (msg.seq <= lastSeq) continue
 
+      // Sanitize client-supplied yaw: a non-finite (NaN/Infinity) value would
+      // poison cos/sin → velocity → position and replicate NaN coords to every
+      // client. Fall back to the last-known yaw. (moveX/moveZ are NaN-guarded by
+      // clamp().)
+      const safeYaw = Number.isFinite(msg.yaw) ? msg.yaw : player.transform.yaw
       const input: SimInput = dead
         ? {
             moveX: 0,
             moveZ: 0,
-            yaw: msg.yaw,
+            yaw: safeYaw,
             jump: false,
             jumpHold: false,
           }
         : {
             moveX: clamp(msg.moveX, -1, 1),
             moveZ: clamp(msg.moveZ, -1, 1),
-            yaw: msg.yaw,
+            yaw: safeYaw,
             jump: !!msg.jump, // client already does edge detection
             jumpHold: !!msg.jumpHold,
           }
@@ -1852,62 +1877,20 @@ export class GameRoom extends Room<GameState> {
     player.vx = 0
     player.vz = 0
     player.onGround = false
-    const clampedSec = Math.max(
-      KNOCKUP_AIRBORNE_MIN_SEC,
-      Math.min(KNOCKUP_AIRBORNE_MAX_SEC, airborneSec),
-    )
-    player.airborneUntilTick = this.state.tick + Math.max(1, Math.round(clampedSec * TICK_RATE_HZ))
+    // The launch velocity is fixed by uppercutInitialVy() (~0.8 s ballistic
+    // airtime, 2 m apex) — the established feel shared by every knockup. Derive
+    // the replicated airborne flag from that REAL airtime so grounded-cast
+    // gating and the post-land immunity window agree with the physics, instead
+    // of expiring early. (A fixed-velocity launch can't honour the registry's
+    // per-ability airborneSec, so it's intentionally not used here —
+    // differentiating airtime would be a balance change, not a bug fix.)
+    void airborneSec
+    const airtimeSec = uppercutBallisticAirtimeSec()
+    player.airborneUntilTick = this.state.tick + Math.max(1, Math.round(airtimeSec * TICK_RATE_HZ))
   }
 }
 
 // --- Helpers ----------------------------------------------------------------
-
-// Bridge from the engine's push-shape into the room's PendingDamage queue.
-function makePendingDamageBridge(target: PendingDamage[]): {
-  push: (entry: {
-    attackerId: string
-    victimId: string
-    amount: number
-    element: string
-    cause: string
-    canParry: boolean
-    lifestealFraction?: number
-    onDamageStatus?: {
-      status: StatusKind
-      durationSec: number
-      stacks?: number
-      slowFraction?: number
-    }
-  }) => number
-  length: number
-} {
-  return {
-    get length() {
-      return target.length
-    },
-    push(entry) {
-      target.push({
-        attackerId: entry.attackerId,
-        victimId: entry.victimId,
-        damage: entry.amount,
-        knockup: false,
-        cause: entry.cause,
-        canParry: entry.canParry,
-        element: entry.element ?? '',
-        lifestealFraction: entry.lifestealFraction,
-        onDamageStatus: entry.onDamageStatus
-          ? {
-              kind: entry.onDamageStatus.status,
-              durationSec: entry.onDamageStatus.durationSec,
-              stacks: entry.onDamageStatus.stacks ?? 1,
-              slowFraction: entry.onDamageStatus.slowFraction,
-            }
-          : undefined,
-      })
-      return target.length
-    },
-  }
-}
 
 function clamp(v: number, lo: number, hi: number): number {
   if (Number.isNaN(v)) return 0

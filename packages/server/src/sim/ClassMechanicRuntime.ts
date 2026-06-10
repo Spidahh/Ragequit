@@ -12,7 +12,10 @@ const FURY_HITS_PER_STACK = 3
 const MOMENTUM_MAX = 100
 const MOMENTUM_GAIN_PER_SEC = 12
 export const MOMENTUM_BOW_BONUS_THRESHOLD = 60
-export const MOMENTUM_BOW_CHARGE_FAST_SEC = 1.2
+// Full-charge time once Momentum >= threshold. MUST be below the base
+// BOW_CHARGE_FULL_SEC (0.65 s) or the passive would SLOW the charge instead of
+// speeding it. 0.45 s ≈ 30% faster full charge as the momentum reward.
+export const MOMENTUM_BOW_CHARGE_FAST_SEC = 0.45
 const MOMENTUM_MAGIC_CDR_FRAC = 0.15
 
 const RISONANZA_WINDOW_TICKS = Math.round(2.5 * TICK_RATE_HZ)

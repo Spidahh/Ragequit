@@ -8,7 +8,9 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Cancel superseded PR-validation runs, but NEVER cancel a push to main —
+  # that would abort an in-flight Fly.io / Cloudflare deploy mid-release.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   validate:

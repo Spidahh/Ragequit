@@ -212,6 +212,13 @@ export class ImpactPool {
     }
   }
 
+  // Pre-allocated temporaries to avoid per-instance, per-frame Matrix4/Quaternion/
+  // Vector3 allocation in setMatrix (called for 3 layers × every live impact).
+  private readonly _tmpMat = new THREE.Matrix4()
+  private readonly _tmpQuat = new THREE.Quaternion()
+  private readonly _tmpAxis = new THREE.Vector3(0, 1, 0)
+  private readonly _tmpScale = new THREE.Vector3()
+
   private setMatrix(
     im: THREE.InstancedMesh,
     slot: number,
@@ -221,12 +228,10 @@ export class ImpactPool {
     sz: number,
     angle = 0,
   ): void {
-    const matrix = new THREE.Matrix4().compose(
-      pos,
-      new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle),
-      new THREE.Vector3(sx, sy, sz),
-    )
-    im.setMatrixAt(slot, matrix)
+    this._tmpQuat.setFromAxisAngle(this._tmpAxis, angle)
+    this._tmpScale.set(sx, sy, sz)
+    this._tmpMat.compose(pos, this._tmpQuat, this._tmpScale)
+    im.setMatrixAt(slot, this._tmpMat)
   }
 
   private setColor(

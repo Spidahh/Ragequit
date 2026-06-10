@@ -52,7 +52,7 @@ export interface GameInputController {
   engageCanvasInput: () => void
   disengageCanvasInput: () => void
   requestArenaPointerLock: () => void
-  sampleInput: (airborne: boolean, dead: boolean) => SimInput
+  sampleInput: (airborne: boolean, dead: boolean, blocked?: boolean) => SimInput
 }
 
 export interface GameInputOptions {
@@ -492,10 +492,16 @@ export function initGameInput(
 
   addEventListener('blur', () => {
     onClear()
+    // onClear clears keys, so the wheel's keyup-close would never fire — close it
+    // here or a wheel held at blur stays stuck open.
+    radialWheels.close(false)
   })
 
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) onClear()
+    if (document.hidden) {
+      onClear()
+      radialWheels.close(false)
+    }
   })
 
   // ── Scroll wheel ─────────────────────────────────────────────────────────
@@ -526,8 +532,11 @@ export function initGameInput(
 
   // ── sampleInput ───────────────────────────────────────────────────────────
 
-  function sampleInput(airborne: boolean, dead: boolean): SimInput {
-    if (dead) {
+  function sampleInput(airborne: boolean, dead: boolean, blocked = false): SimInput {
+    // `blocked` is true while a pause / settings / loadout overlay is open: keys
+    // held when the overlay opened are still in state.keys, so movement would
+    // otherwise keep driving the character on the server, invisibly. Zero it.
+    if (dead || blocked) {
       return { moveX: 0, moveZ: 0, yaw: state.mouseYaw, jump: false, jumpHold: false }
     }
     const forward =

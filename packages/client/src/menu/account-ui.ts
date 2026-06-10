@@ -232,7 +232,12 @@ export function createAccountUi(deps: AccountUiDeps): AccountUi {
 
     if (avatarEl) avatarEl.textContent = initialName[0] ?? '?'
 
-    if (nameInput && !email) {
+    // Attach the edit listeners ONCE — initPlayerProfile runs on every auth
+    // event, and #pc-display-name is a persistent node, so re-binding here
+    // leaked a new set of input/change/blur handlers (and debounce timers) per
+    // login/logout/signup.
+    if (nameInput && !email && nameInput.dataset['nameListenersBound'] !== '1') {
+      nameInput.dataset['nameListenersBound'] = '1'
       let saveTimer: ReturnType<typeof setTimeout> | null = null
       const saveImmediately = () => {
         const val = nameInput.value.trim().toUpperCase()

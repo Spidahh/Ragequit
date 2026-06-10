@@ -9,7 +9,10 @@ import * as THREE from 'three'
 
 import { makeToonGradient } from './render/factories.js'
 
-export const CAPSULE_HEIGHT_M = 2.0
+// Mirror the shared collision capsule (1.8 m) so the ground-contact shadow sits
+// at the model's feet — the model scale + camera both use the shared constants,
+// and the old local 2.0 sank the shadow ~8.5 cm below the floor.
+export const CAPSULE_HEIGHT_M = 1.8
 export const CAPSULE_RADIUS_M = 0.4
 
 /** Element colors used by character emissive and trim materials. */

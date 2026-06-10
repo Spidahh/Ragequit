@@ -26,7 +26,7 @@ export class DeathBurst {
   // Translate far below ground instead of scale(0) — degenerate zero-scale matrices
   // can produce one-pixel rasterization artifacts on some GPU drivers.
   private readonly hiddenMat = new THREE.Matrix4().makeTranslation(0, -9999, 0)
-  private readonly bursts: Burst[] = []
+  private readonly bursts: (Burst | undefined)[] = []
   private nextBurstIdx = 0
   // Pre-allocated temporaries to avoid per-frame Matrix4/Vector3/Quaternion allocation.
   private readonly _tmpPos = new THREE.Vector3()
@@ -97,13 +97,17 @@ export class DeathBurst {
   update(now: number): void {
     let matDirty = false
 
-    for (const burst of this.bursts) {
+    for (let idx = 0; idx < this.bursts.length; idx++) {
+      const burst = this.bursts[idx]
       if (!burst) continue
       const age = now - burst.startMs
       if (age >= BURST_LIFE_MS) {
         for (let i = 0; i < PARTICLES_PER_BURST; i++) {
           this.mesh.setMatrixAt(burst.baseSlot + i, this.hiddenMat)
         }
+        // Remove the finished burst so it isn't re-hidden (and the instance
+        // matrix re-uploaded) every subsequent frame for the rest of the session.
+        this.bursts[idx] = undefined
         matDirty = true
         continue
       }

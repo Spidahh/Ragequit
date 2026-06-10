@@ -12,10 +12,9 @@ export const SWORD_M1_RANGE_M = 1.8 as const
 export const SWORD_M1_CONE_HALF_ANGLE_RAD = Math.PI / 4
 export const SWORD_M1_DAMAGE = [5, 5, 8] as const
 export const SWORD_M1_COST_STAMINA = 8 as const
-// Combo chain window — next swing must start within this many seconds of the
-// previous swing's start to continue the chain (0.3 s per design doc).
-export const SWORD_M1_CHAIN_WINDOW_SEC = 0.3 as const
-// Inactivity timeout that resets the combo counter to 0.
+// Inactivity timeout that resets the combo counter to 0. (This is the only
+// combo window: a swing within this gap continues the chain, otherwise it
+// restarts at index 0 — see advanceSwordCombo.)
 export const SWORD_M1_COMBO_RESET_SEC = 1.0 as const
 // When during the 0.4 s swing the hit-check fires (fraction of swing duration).
 // 0.5 puts the hitbox active at the peak of the arc.
@@ -57,7 +56,7 @@ export const WEAPON_IDS = ['sword', 'bow', 'staff'] as const
 export type WeaponId = (typeof WEAPON_IDS)[number]
 
 // --- Bow M1 ----------------------------------------------------------------
-// Charge 0.3 s minimum → 4 dmg. Full charge 2.0 s → 22 dmg. Linear scaling.
+// Charge 0.05 s minimum → 4 dmg. Full charge 0.65 s → 22 dmg. Linear scaling.
 // Projectile velocity linear from 35 m/s (min) to 60 m/s (full). Gravity arc:
 // a mild drop so aim at medium range must compensate slightly. Charge cancels
 // on damage taken. No stamina / mana cost.
@@ -79,7 +78,7 @@ export const BOW_EFFECTIVE_RANGE_MIN_M = 18 as const
 export const BOW_EFFECTIVE_RANGE_FULL_M = 40 as const
 
 // --- Staff M1 ---------------------------------------------------------------
-// 2 bolts/s (0.5 s cadence), 8 dmg, 5 mana, 50 m/s near-flat. Despawn at 30 m.
+// 2.5 bolts/s (0.4 s cadence), 8 dmg, 2 mana, 75 m/s near-flat. Despawn at 50 m.
 
 export const STAFF_M1_CADENCE_SEC = 0.4 as const // slight rate up: 2→2.5 bolts/s
 export const STAFF_M1_DAMAGE = 8 as const

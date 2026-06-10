@@ -13,12 +13,6 @@ export const TTK_MAX_SEC = 30 as const
 // Global cooldown between ability casts (not applied to M1 basic attacks).
 export const GCD_SEC = 0.3 as const
 
-// Knockup airborne duration bounds (ability-specific, falls in this range).
-// Min aligns with the 0.5 s value used by all 7 knockup abilities in the
-// registry. The server clamps airborneSec to [MIN, MAX] in applyKnockupToPlayer.
-export const KNOCKUP_AIRBORNE_MIN_SEC = 0.5 as const
-export const KNOCKUP_AIRBORNE_MAX_SEC = 1.0 as const
-
 // Knockup immunity window after landing — a second knockup inside this window
 // does not re-launch the target.
 export const KNOCKUP_IMMUNITY_AFTER_LAND_SEC = 2 as const

@@ -174,6 +174,16 @@ function _installCharacterModel(
       continue
     child.visible = false
     charGroup.remove(child)
+    // Dispose the replaced model's per-instance resources (toon materials +
+    // cloned outline geometry/materials). Source geometry is SHARED with the
+    // character cache, so it is intentionally NOT disposed here.
+    child.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return
+      if (node.name.endsWith('_outline')) node.geometry.dispose()
+      const m = node.material
+      if (Array.isArray(m)) m.forEach((x) => (x as THREE.Material).dispose())
+      else (m as THREE.Material | undefined)?.dispose()
+    })
   }
 
   charGroup.add(model)
@@ -192,8 +202,12 @@ function _installCharacterModel(
   }
 
   // --- Toon outlines (skip hidden base meshes to avoid black fragments) ---
+  // Outline ONLY the new model's meshes. The weaponGroup already carries its own
+  // outlines from applyWeaponProp, and the shield outlines itself — traversing
+  // the whole charGroup re-outlined the weapon on every (re)install (double
+  // outlines + leaked clones).
   const outlinePairs: { mesh: THREE.Mesh; outline: THREE.Mesh }[] = []
-  charGroup.traverse((child) => {
+  model.traverse((child) => {
     if (!(child instanceof THREE.Mesh)) return
     if (!child.visible) return // skip hidden base body meshes
     if (child.name.endsWith('_outline')) return

@@ -55,6 +55,9 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
   // ── Arena visual group containing all custom decorative fight-league assets ──
   const arenaVisualGroup = new THREE.Group()
   scene.add(arenaVisualGroup)
+  // Cache fetched GLTF/bin responses by URL so the shared prop files (torches,
+  // barrels, banners) are fetched + parsed once instead of per spawn entry.
+  THREE.Cache.enabled = true
   const gltfLoader = new GLTFLoader()
 
   // ── Permanent coliseum shell (gladiators_arena.glb) ──────────────────────
@@ -381,11 +384,17 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
     if (mapId === activeMapId) return false
     activeMapId = mapId
 
-    // Clean up inactive box meshes
+    // Clean up inactive box meshes — traverse so each box's outline child
+    // (its own cloned geometry + ShaderMaterial) is disposed too, not leaked.
     for (const m of mapBoxMeshes) {
       scene.remove(m)
-      m.geometry.dispose()
-      ;(m.material as THREE.Material).dispose()
+      m.traverse((node) => {
+        if (!(node instanceof THREE.Mesh)) return
+        node.geometry.dispose()
+        const mat = node.material
+        if (Array.isArray(mat)) mat.forEach((x) => (x as THREE.Material).dispose())
+        else (mat as THREE.Material).dispose()
+      })
     }
     mapBoxMeshes.length = 0
 
@@ -432,7 +441,8 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
         const yIndex = i * 3 + 1
         const yVal = paArr[yIndex]
         if (yVal !== undefined) {
-          const nextY = yVal + dt * 0.003
+          // Gentle ambient updraft (~0.1 m/s); wraps back to the floor at 15 m.
+          const nextY = yVal + dt * 0.1
           paArr[yIndex] = nextY > 15 ? 0.1 : nextY
         }
       }

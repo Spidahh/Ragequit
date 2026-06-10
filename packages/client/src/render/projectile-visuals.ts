@@ -221,7 +221,11 @@ export interface ProjectileVisualsController {
   onSpawned: (msg: ServerProjectileSpawnedMessage) => void
   onExpired: (msg: ServerProjectileExpiredMessage) => void
   clear: () => void
-  renderFrame: (proj: Map<string, SchemaProjectile>, now: number, dbgProj: HTMLElement) => void
+  renderFrame: (
+    proj: Map<string, SchemaProjectile>,
+    now: number,
+    dbgProj: HTMLElement | null,
+  ) => void
 }
 
 export function initProjectileVisuals({
@@ -301,11 +305,16 @@ export function initProjectileVisuals({
     projectileVisuals.clear()
   }
 
+  let _lastFrameMs = 0
   function renderFrame(
     proj: Map<string, SchemaProjectile>,
     now: number,
-    dbgProj: HTMLElement,
+    dbgProj: HTMLElement | null,
   ): void {
+    // Frame-time multiplier (1.0 at 60 fps) so spin speeds are refresh-rate
+    // independent — incremental rotations would otherwise run 2.4× faster at 144 Hz.
+    const dt60 = _lastFrameMs > 0 ? Math.min(3, (now - _lastFrameMs) / 16.667) : 1
+    _lastFrameMs = now
     proj.forEach((p, id) => {
       let vis = projectileVisuals.get(id)
       if (!vis) {
@@ -346,35 +355,35 @@ export function initProjectileVisuals({
 
         // Organic swirling rotation and scale modulation on crossed planes
         if (vis.style === 'fire') {
-          vis.object.rotation.z += 0.09
+          vis.object.rotation.z += 0.09 * dt60
           if (child1) {
             const f = now * 0.035
             child1.scale.setScalar(1.0 + 0.08 * Math.sin(f))
           }
         } else if (vis.style === 'ice') {
-          vis.object.rotation.z += 0.04
+          vis.object.rotation.z += 0.04 * dt60
           if (child1) {
             child1.scale.setScalar(1.0 + 0.05 * Math.sin(now * 0.02))
           }
         } else if (vis.style === 'lightning') {
-          vis.object.rotation.z += 0.22
+          vis.object.rotation.z += 0.22 * dt60
           if (child1) {
             const jit = 0.85 + 0.3 * Math.random()
             child1.scale.set(jit, 1.0, jit)
           }
         } else if (vis.style === 'dark') {
-          vis.object.rotation.z -= 0.05
+          vis.object.rotation.z -= 0.05 * dt60
           if (child1) {
             const ds = 0.95 + 0.12 * Math.sin(now * 0.025)
             child1.scale.setScalar(ds)
           }
         } else if (vis.style === 'nature') {
-          vis.object.rotation.z += 0.035
+          vis.object.rotation.z += 0.035 * dt60
           if (child1) {
             child1.scale.setScalar(1.0 + 0.06 * Math.sin(now * 0.018))
           }
         } else {
-          vis.object.rotation.z += 0.045
+          vis.object.rotation.z += 0.045 * dt60
           if (child1) {
             child1.scale.setScalar(1.0 + 0.06 * Math.sin(now * 0.015))
           }
@@ -394,7 +403,7 @@ export function initProjectileVisuals({
         projectileVisuals.delete(id)
       }
     })
-    dbgProj.textContent = String(projectileVisuals.size)
+    if (dbgProj) dbgProj.textContent = String(projectileVisuals.size)
   }
 
   return { onSpawned, onExpired, clear, renderFrame }

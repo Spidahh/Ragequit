@@ -12,6 +12,8 @@ interface ZoneVisual {
   spawnedAtMs: number
   /** seconds before the zone becomes active; 0 = immediately armed */
   armDelaySec: number
+  /** wall barrier (box) vs circular AoE — drives opacity + spin animation. */
+  isWall: boolean
 }
 
 export interface ZoneVisualsOptions {
@@ -99,6 +101,7 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
         element: msg.element,
         spawnedAtMs: performance.now(),
         armDelaySec: msg.armDelaySec,
+        isWall: true,
       })
       return
     } else {
@@ -170,6 +173,7 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
         element: msg.element,
         spawnedAtMs: performance.now(),
         armDelaySec: msg.armDelaySec,
+        isWall: false,
       })
       return
     }
@@ -213,7 +217,12 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
     zoneVisuals.clear()
   }
 
+  let _lastFrameMs = 0
   function animateFrame(now: number): void {
+    // Frame-time multiplier (1.0 at 60 fps) so spin speeds are refresh-rate
+    // independent (incremental rotation runs 2.4× faster at 144 Hz otherwise).
+    const dt60 = _lastFrameMs > 0 ? Math.min(3, (now - _lastFrameMs) / 16.667) : 1
+    _lastFrameMs = now
     zoneVisuals.forEach((vis) => {
       const isFireOrLightning = vis.element === 'fire' || vis.element === 'lightning'
       const freq = isFireOrLightning ? 0.007 : 0.0035
@@ -227,20 +236,26 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
       const opacityScale = isArmed ? 1.0 : 0.3 + 0.25 * Math.sin(now * 0.003)
 
       const mat = vis.mesh.material as THREE.MeshBasicMaterial
-      if ('opacity' in mat) mat.opacity = (0.18 + pulse * 0.18) * opacityScale
-      vis.mesh.rotation.y += isFireOrLightning ? 0.008 : 0.004
+      if (vis.isWall) {
+        // Solid glowing barrier — keep near its authored opacity and don't spin
+        // (a wall has a fixed yaw). Circles get the animated low opacity below.
+        if ('opacity' in mat) mat.opacity = (0.7 + pulse * 0.15) * opacityScale
+      } else {
+        if ('opacity' in mat) mat.opacity = (0.18 + pulse * 0.18) * opacityScale
+        vis.mesh.rotation.y += (isFireOrLightning ? 0.008 : 0.004) * dt60
+      }
 
       if (vis.extra) {
         const eMat = vis.extra.material as THREE.MeshBasicMaterial
         if ('opacity' in eMat) eMat.opacity = (0.52 + pulse * 0.28) * opacityScale
 
         // Keep the floor decal moving without changing the gameplay radius.
-        vis.extra.rotation.y += vis.element === 'dark' ? -0.006 : 0.004
+        if (!vis.isWall) vis.extra.rotation.y += (vis.element === 'dark' ? -0.006 : 0.004) * dt60
       }
       if (vis.accent) {
         const aMat = vis.accent.material as THREE.MeshBasicMaterial
         if ('opacity' in aMat) aMat.opacity = (0.18 + pulse * 0.2) * opacityScale
-        vis.accent.rotation.y += vis.element === 'dark' ? -0.012 : 0.008
+        vis.accent.rotation.y += (vis.element === 'dark' ? -0.012 : 0.008) * dt60
         if (vis.element === 'ice') vis.accent.scale.setScalar(1.0 + pulse * 0.04)
         else if (vis.element === 'nature')
           vis.accent.scale.set(1.0 + pulse * 0.06, 1, 1.0 + pulse * 0.06)
