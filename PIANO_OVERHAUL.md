@@ -22,11 +22,15 @@ codice morto, de-bloatare gli asset, modernizzare la pipeline, fixare bug e cose
   - `public/arena/props/Banner_1.gltf+.bin` (superseded da banner_patternA_red)
   - (`human-character.ts` + `characters/human/*.fbx` NON erano su main — solo su feat/fpv)
 
-- [ ] **W2 — Pipeline asset moderna (leva massima: ~110MB → ~20MB)**
-  - step build-time gltf-transform: KTX2/Basis su tutte le texture + Draco/meshopt geometria
-  - wiring `KTX2Loader` + `DRACOLoader`/`MeshoptDecoder` nei loader client
-  - right-size texture per ruolo (1024² body, 512² trim/normal)
-  - verifica visiva (preview harness) prima del push
+- [x] **W2a — De-bloat texture mai renderizzate (−67MB, rischio zero, fatto)**
+  - SCOPERTA: il materiale toon (`_makeToonMaterial`) tiene SOLO baseColor; normal/ORM/
+    roughness vengono scaricate e buttate. Erano ~67MB di download sprecato.
+  - `classify-textures.mjs` (analisi data-driven dai gltf) + `shrink-unused-maps.mjs`
+    (sharp → 64²). 20 mappe: 67.5MB → 0.15MB. Nessun gltf edit, nessun cambio visivo.
+  - public/ 135MB → 68MB.
+- [ ] **W2b — Compressione del resto (visivo: serve preview verify)**
+  - downscale baseColor 2048→1024 (renderizzate, cambio lieve) · KTX2/Basis · Draco/meshopt
+  - strip pulito delle mappe inutili dai gltf (gltf-transform) come versione definitiva
 
 - [ ] **W3 — Validator esteso = rete di sicurezza**
   - orfani asset = errore CI · texture over-budget = errore · copertura animazioni (~18 stati) gate

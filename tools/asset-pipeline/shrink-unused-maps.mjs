@@ -1,0 +1,82 @@
+// shrink-unused-maps.mjs — De-bloat textures the runtime never renders.
+//
+// The client converts every loaded material to MeshToonMaterial, which keeps
+// ONLY the baseColor (`.map`); normal / metallicRoughness / occlusion maps are
+// dropped (characters.ts _makeToonMaterial; arena.ts disposes them). Those maps
+// are therefore downloaded + decoded then discarded — pure transfer waste.
+//
+// This script parses each .gltf, finds every image used ONLY by non-baseColor
+// material slots, and downscales it to TARGET×TARGET. The file stays a valid PNG
+// at the same path (GLTFLoader still loads it, toon still ignores it), so there
+// is NO gltf edit and NO visual change — just a ~99% smaller download. git is the
+// backup. Re-runnable (idempotent: already-small files are skipped).
+//
+// Usage: node tools/asset-pipeline/shrink-unused-maps.mjs <dir> [<dir> ...]
+import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { join } from 'node:path'
+import sharp from 'sharp'
+
+const TARGET = 64
+const dirs = process.argv.slice(2)
+if (dirs.length === 0) {
+  console.error('usage: node shrink-unused-maps.mjs <dir> [<dir> ...]')
+  process.exit(1)
+}
+
+// uri -> { baseColor:bool, otherOnly:bool, dir }
+const usage = new Map()
+for (const dir of dirs) {
+  for (const f of readdirSync(dir).filter((f) => f.endsWith('.gltf'))) {
+    const g = JSON.parse(readFileSync(join(dir, f), 'utf8'))
+    const images = g.images ?? []
+    const textures = g.textures ?? []
+    const uriOf = (i) => (i?.index != null ? images[textures[i.index]?.source]?.uri : null)
+    for (const m of g.materials ?? []) {
+      const pbr = m.pbrMetallicRoughness ?? {}
+      const base = uriOf(pbr.baseColorTexture)
+      const others = [pbr.metallicRoughnessTexture, m.normalTexture, m.occlusionTexture]
+        .map(uriOf)
+        .filter(Boolean)
+      if (base) {
+        const e = usage.get(base) ?? { dir, baseColor: false }
+        e.baseColor = true
+        e.dir = dir
+        usage.set(base, e)
+      }
+      for (const u of others) {
+        const e = usage.get(u) ?? { dir, baseColor: false }
+        e.dir = dir
+        usage.set(u, e)
+      }
+    }
+  }
+}
+
+const targets = [...usage.entries()].filter(([, e]) => !e.baseColor)
+let before = 0
+let after = 0
+let shrunk = 0
+for (const [uri, e] of targets) {
+  const path = join(e.dir, uri)
+  let sz
+  try {
+    sz = statSync(path).size
+  } catch {
+    continue
+  }
+  before += sz
+  const meta = await sharp(path).metadata()
+  if ((meta.width ?? 0) <= TARGET && (meta.height ?? 0) <= TARGET) {
+    after += sz
+    continue // already tiny — idempotent
+  }
+  const buf = await sharp(path).resize(TARGET, TARGET, { fit: 'fill' }).png({ compressionLevel: 9 }).toBuffer()
+  const { writeFileSync } = await import('node:fs')
+  writeFileSync(path, buf)
+  after += buf.length
+  shrunk++
+  console.log(`  ${String(Math.round(sz / 1024)).padStart(6)} KB -> ${String(Math.round(buf.length / 1024)).padStart(4)} KB  ${uri}`)
+}
+console.log(
+  `\nShrunk ${shrunk} unused-by-toon maps: ${(before / 1024 / 1024).toFixed(1)} MB -> ${(after / 1024 / 1024).toFixed(2)} MB (saved ${((before - after) / 1024 / 1024).toFixed(1)} MB)`,
+)
