@@ -110,9 +110,11 @@ await page
   .catch(() => {})
 // captureGL polls until the arena/characters actually render (coverage floor).
 await captureGL('match')
-await page.keyboard.down('w')
-await wait(1600)
-await page.keyboard.up('w')
+// Strafe right for the second frame — stays inside the lit pit (walking forward
+// marches into the dark gate tunnel and yields a near-black frame).
+await page.keyboard.down('d')
+await wait(1200)
+await page.keyboard.up('d')
 await wait(900)
 await captureGL('match2', { minCoverage: 0.3 })
 

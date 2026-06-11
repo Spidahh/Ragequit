@@ -120,6 +120,7 @@ import {
 import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
 import { createFpvBow } from './render/fpv-bow.js'
 import { createFpvStaticViewmodel } from './render/fpv-static-viewmodel.js'
+import { createGradePass } from './render/grade-pass.js'
 import { initPlacementPreview } from './render/placement-preview.js'
 import { initProjectileVisuals, type SchemaProjectile } from './render/projectile-visuals.js'
 import { initRemotePlayers, type RemotePlayerSchema } from './render/remote-players.js'
@@ -469,6 +470,10 @@ const bloomMixPass = new ShaderPass(
 )
 bloomMixPass.needsSwap = true
 finalComposer.addPass(bloomMixPass)
+// Cinematic grade in linear HDR (vignette, punch, split-tone, dither) BEFORE the
+// OutputPass tone-maps + encodes sRGB — correct order, no double-decode. See
+// render/grade-pass.ts.
+finalComposer.addPass(createGradePass())
 finalComposer.addPass(new OutputPass())
 
 // Sky-dome hemisphere: neutral/cool so jumping never washes the screen yellow.

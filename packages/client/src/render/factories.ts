@@ -4,20 +4,25 @@ import * as THREE from 'three'
 import { VfxTextures } from './vfx-textures.js'
 
 export function makeToonGradient(): THREE.DataTexture {
-  const steps = 2
+  // 3-band cel ramp. A flat 2-band ramp (shadow→lit) leaves big areas of a single
+  // shade, which reads cheap on the arena's large untextured surfaces. A mid band
+  // gives forms a rounded terminator — more dimension — while keeping a crisp,
+  // stylized look. Shadows carry a faint cool tint (reads as ambient sky-fill);
+  // the lit band is pure white so each material's own colour comes through clean.
+  const bands = [
+    [104, 104, 122], // shadow — soft cool slate (brighter than pure-dark = less muddy)
+    [182, 180, 188], // mid — readable half-light, the new roundness
+    [255, 255, 255], // lit — full illumination
+  ]
+  const steps = bands.length
   const data = new Uint8Array(steps * 4)
-
-  // Shadow band: moody slate dark shade
-  data[0] = 80
-  data[1] = 80
-  data[2] = 96
-  data[3] = 255
-
-  // Lit band: full illumination highlights
-  data[4] = 255
-  data[5] = 255
-  data[6] = 255
-  data[7] = 255
+  for (let i = 0; i < steps; i++) {
+    const [r, g, b] = bands[i]!
+    data[i * 4] = r!
+    data[i * 4 + 1] = g!
+    data[i * 4 + 2] = b!
+    data[i * 4 + 3] = 255
+  }
 
   const tex = new THREE.DataTexture(data, steps, 1, THREE.RGBAFormat)
   tex.minFilter = THREE.NearestFilter

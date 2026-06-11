@@ -4,6 +4,8 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 
 import { createOutlineMesh } from '../render/outlines.js'
 
+import { makeArenaFloorTexture } from './arena-floor-texture.js'
+
 // ─────────────────────────────────────────────────────────────────────────────
 // VERTICAL COORDINATE SYSTEM (read before touching any *.position.y here)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -205,9 +207,16 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
   // Sand fighting floor — sits a hair below GROUND_Y so character feet (≈y=0)
   // always render cleanly ON TOP of it instead of clipping through. Radius 27 m
   // reaches the coliseum wall base so there is no dark moat around the pit.
+  // Tournament-floor map (sand grain + boundary rings + central crest) replaces the
+  // flat single-colour disc. White base colour lets the baked texture colours show
+  // through (MeshToonMaterial samples map × color).
   const sandFloor = new THREE.Mesh(
     new THREE.CircleGeometry(SAND_RADIUS, 64),
-    new THREE.MeshToonMaterial({ color: 0x8a7040, gradientMap: toonGradient }),
+    new THREE.MeshToonMaterial({
+      color: 0xffffff,
+      map: makeArenaFloorTexture(),
+      gradientMap: toonGradient,
+    }),
   )
   sandFloor.rotation.x = -Math.PI / 2
   sandFloor.position.y = -0.04
