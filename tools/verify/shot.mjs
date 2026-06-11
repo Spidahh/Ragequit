@@ -34,14 +34,18 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, dev
 // Fresh profile → no saved loadout → match-entry routes to the Loadout Forge. Seed the
 // "configured" flag (and skip the tutorial) so training launches straight into the arena.
 // Class/ability slots fall back to sensible defaults when unset.
-await page.addInitScript(() => {
+// Optional class seed (SHOT_CLASS=mage|archer|hybrid|…) so we can capture each
+// weapon's first-person viewmodel; defaults to the saved/'hybrid' loadout.
+const seedClass = process.env['SHOT_CLASS'] ?? ''
+await page.addInitScript((cls) => {
   try {
     localStorage.setItem('ragequit.profile.configured', 'true')
     localStorage.setItem('ragequit.tutorial.done', 'true')
+    if (cls) localStorage.setItem('ragequit.loadout.classId', cls)
   } catch {
     /* storage optional */
   }
-})
+}, seedClass)
 page.on('pageerror', (e) => errors.push(String(e)))
 page.on('console', (m) => {
   if (m.type() === 'error') errors.push(m.text())
@@ -117,6 +121,26 @@ await wait(1200)
 await page.keyboard.up('d')
 await wait(900)
 await captureGL('match2', { minCoverage: 0.3 })
+
+// Fire the equipped weapon forward (the spawn faces the arena centre / the bot) so
+// we can SEE projectiles, muzzle flash and impacts. Pointer lock is unavailable
+// headless, but mouse button events on the canvas still drive attacks. Charge then
+// release, and grab a few frames across the projectile's flight.
+if (process.env['SHOT_FIRE'] === '1') {
+  const cv = await page.$('canvas')
+  const box = (await cv?.boundingBox()) ?? { x: 640, y: 400, width: 1280, height: 800 }
+  const cx = box.x + box.width / 2
+  const cy = box.y + box.height / 2
+  await page.mouse.move(cx, cy)
+  await page.mouse.down()
+  await wait(900) // charge (bow draws; instant-cast weapons fire on press)
+  await captureGL('charge', { minCoverage: 0.2, timeout: 2000 })
+  await page.mouse.up()
+  for (let i = 1; i <= 4; i++) {
+    await wait(130)
+    await captureGL(`cast${i}`, { minCoverage: 0.2, timeout: 1500 })
+  }
+}
 
 if (errors.length) {
   console.log('PAGE ERRORS (first 12):')

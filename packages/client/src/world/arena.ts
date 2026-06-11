@@ -5,6 +5,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { createOutlineMesh } from '../render/outlines.js'
 
 import { makeArenaFloorTexture } from './arena-floor-texture.js'
+import { getStoneTexture } from './stone-texture.js'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // VERTICAL COORDINATE SYSTEM (read before touching any *.position.y here)
@@ -38,9 +39,16 @@ function makeBoxMesh(box: AABB, color: number, toonGradient: THREE.DataTexture):
   const sx = box.maxX - box.minX
   const sy = box.maxY - box.minY
   const sz = box.maxZ - box.minZ
+  // Carved-stone map: a greyscale ashlar texture (map × color keeps the height tint)
+  // so cover blocks read as cut masonry, not flat plastic cubes. Per-box texture
+  // clone with a size-scaled repeat keeps the block course ~2 m regardless of box
+  // dimensions (clones share the canvas image, so no extra GPU upload cost).
+  const stone = getStoneTexture().clone()
+  stone.needsUpdate = true
+  stone.repeat.set(Math.max(1, Math.round(sx * 0.5)), Math.max(1, Math.round(sy * 0.5)))
   const m = new THREE.Mesh(
     new THREE.BoxGeometry(sx, sy, sz),
-    new THREE.MeshToonMaterial({ color, gradientMap: toonGradient }),
+    new THREE.MeshToonMaterial({ color, map: stone, gradientMap: toonGradient }),
   )
   m.position.set((box.minX + box.maxX) / 2, (box.minY + box.maxY) / 2, (box.minZ + box.maxZ) / 2)
   m.castShadow = true
@@ -436,8 +444,11 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
     // rather than grey-green under the scene's cool hemisphere light.
     for (const b of map.boxes) {
       const height = b.maxY - b.minY
-      // Tall pillars: bright warm gold. Mid walls: amber. Low covers: dark sand.
-      const color = height > 2.5 ? 0xd4a040 : height > 1.4 ? 0xb07830 : 0x8a5c28
+      // Tall pillars: bright warm gold. Mid walls: amber. Low covers: warm sand.
+      // Tints are brightened to compensate for the greyscale stone map (≈0.6×) so
+      // the masonry reads without the low cover going near-black (gameplay
+      // readability — cover must stay visible).
+      const color = height > 2.5 ? 0xe6bf68 : height > 1.4 ? 0xcf9a52 : 0xb5854a
       const m = makeBoxMesh(b, color, toonGradient)
       scene.add(m)
       mapBoxMeshes.push(m)
