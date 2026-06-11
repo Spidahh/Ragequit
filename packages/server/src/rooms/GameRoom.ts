@@ -1263,12 +1263,17 @@ export class GameRoom extends Room<GameState> {
       sid,
       indexOfSid(this.state.players, sid),
     )
-    const spawn = this.activeMap.spawns[spawnIndex]!
+    let spawn = this.activeMap.spawns[spawnIndex]!
+    // Test Room: re-apply the spread row on respawn (single map spawn would stack all).
+    const isTestBot = this.difficulty === 'test' && this.bots.has(sid)
+    if (isTestBot) spawn = testDummySpawn(spawn, Number(sid.replace('bot-', '')), CLASS_IDS.length)
+    else if (this.difficulty === 'test') spawn = testPlayerSpawn(spawn)
     const now = this.state.tick
 
     player.transform.x = spawn.x
     player.transform.y = spawn.y
     player.transform.z = spawn.z
+    if (this.difficulty === 'test') player.transform.yaw = isTestBot ? Math.PI : 0
     player.vx = 0
     player.vy = 0
     player.vz = 0
