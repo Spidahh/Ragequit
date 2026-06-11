@@ -94,7 +94,9 @@ export class BotController {
     // keeps applying gravity and they rest on the floor, but they never move or
     // fight. (A bot that sends NO input is never integrated → hangs mid-air.)
     if (this.difficulty === 'test') {
-      this.host.sendInput(this.botId, 0, 0, 0, false, false)
+      // Face the player (yaw = PI → +z, where the Test Room puts the human) so the
+      // row of dummies shows its FRONT/skins, not its back. No movement/attack.
+      this.host.sendInput(this.botId, 0, 0, Math.PI, false, false)
       return
     }
     const self = this.host.getSelf(this.botId)
