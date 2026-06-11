@@ -14,6 +14,39 @@ Arena PvP da browser, prima persona / mezza-terza, combattimento medievale-fanta
 Colyseus (server). Camera MISTA: spada = 3ª persona (corpo visibile), arco/staff = 1ª
 persona (viewmodel) — vedi `render/weapon-view.ts`.
 
+## 1.5 VINCOLI DURI & FONTE ASSET (regole non negoziabili)
+
+- **SOLO asset GRATIS.** Niente pacchetti a pagamento (Synty/KitBash3D/Megascans = NO,
+  anche se più belli). Una ricerca a 6 agenti ha confermato: non esiste un ecosistema
+  gratis, coerente E realistico esterno → la via è la **libreria curata dall'utente**.
+- **TUTTE le tecnologie + hosting GRATIS** (oggi: Three.js + Colyseus; Fly.io +
+  Cloudflare Pages, tier gratuiti).
+- **FONTE ASSET PRIMARIA = `E:/GIOCHI/ASSET_GRAFICA`** — l'utente la aggiorna spesso; ha
+  un suo `_INVENTARIO.md`. Usare un asset SOLO se è davvero utile **e migliore** di
+  quello già nel gioco.
+- **RIG STANDARD = Mixamo** (uno scheletro). Ogni skin + animazione si conforma; skin
+  non-Mixamo → auto-rig su Mixamo o scartare.
+- **Cosa c'è in ASSET_GRAFICA** (2026-06):
+  - PERSONAGGI/CHARACTERS: `Knight_Met.glb` (Mixamo, 14 anim → **TANK pronto drop-in**),
+    `pbr_shadowkin_mage_rigged.glb`, `lightning_mage_free_download.glb` (statico/sporco),
+    `shadowflame_samurai.glb` (rig CC, 0 anim → conformare), `armored_guard_knight_rig.glb`.
+  - PERSONAGGI/MOBS: drago (52 anim), **Gwyn Lord of Cinder** (boss Dark Souls), zombie (Mixamo).
+  - PERSONAGGI/ANIMATION: **204 FBX Mixamo** (idle/run/strafe/attack/…) + cast da mago + UAL.
+  - PERSONAGGI/ARMI: KayKit FantasyWeapons + **RPGWeapons_Free** + archi/bastoni/braccia-FP.
+  - mappe: KayKit Dungeon Remastered, **Fantasy Props MegaKit**, Modular Village, Free
+    Modular, `gladiators_arena.glb`.
+  - AUDIO: 9 pack spell per elemento. PARTICELLE: Kenney. icone (106). menu (ritratti classi + logo).
+  - ⚠️ Alcuni item SONO cartoon (KayKit) → l'utente li rifiuta: valutare ognuno contro
+    il target dark-gritty-realistico; tenere i realistici (Knight_Met, Gwyn, drago,
+    RPGWeapons, dungeon/props realistici), scartare i cartoon.
+
+## 1.6 VISIONE DEL GIOCO (cosa vuole l'utente — DA COMPLETARE con lui)
+
+> Da riempire con "le mille cose" già dette nei mesi. Seed attuale:
+> arena PvP dark-fantasy realistica, 4 classi, melee + magie per elemento (audio già
+> pronti), mob/boss (drago, Gwyn), prima persona / mezza-terza. **TODO: l'utente deve
+> dettare qui regole/gameplay/feeling che ancora non ho registrato.**
+
 ## 2. Architettura & sistemi (mappa — NON ri-scoprirla ogni volta)
 
 - **Monorepo** pnpm: `packages/{client,server,shared}`. `@ragequit/shared` va buildato
@@ -79,14 +112,33 @@ come Amid Evil/Hexen/Lunacid vivono di **luce+mood+materiali**, non di poligoni 
 
 (scudo) e R6 (font menu) e lo skeleton condiviso (R2).
 
-### 5B. OVERHAUL TOTALE DEGLI ASSET (la richiesta vera) — DA DEFINIRE
+### 5B. OVERHAUL TOTALE DEGLI ASSET (la richiesta vera)
 
-Sostituire TUTTA la grafica principale in un unico stile dark-gritty-realistico.
-**In ricerca ora** (workflow `ragequit-art-overhaul-plan`): quali ecosistemi di asset
-coerenti esistono davvero (gratis/a pagamento), per personaggi+arena+armi+props+VFX+UI,
-integrabili in Three.js. Quando la ricerca finisce → qui va: lo style-bible, la decisione
-di sourcing (gratis vs a pagamento vs asset forniti dall'utente), il manifesto asset,
-l'ordine d'esecuzione. **L'unica domanda da sbloccare**: quale via per gli asset/budget.
+**Sourcing DECISO**: tutto dalla libreria gratuita **`ASSET_GRAFICA`** (vedi §1.5),
+standard **rig Mixamo**. Niente a pagamento. Sostituire TUTTA la grafica principale in
+un unico stile **dark-gritty-realistico** (refs §4), scartando i pezzi cartoon.
+
+**Manifesto asset (mappa categoria → fonte):**
+
+- **Personaggi** (rig Mixamo, mont. clip dalle 204 anim):
+  - Tank = `Knight_Met.glb` (pronto). Mago = `pbr_shadowkin_mage_rigged.glb` (rigged) o
+    conformare `lightning_mage`. Ibrido = `shadowflame_samurai.glb` (conformare a Mixamo).
+    Arciere = scegliere/conformare una skin Mixamo (o assemblato Quaternius solo se nulla di meglio).
+  - Mob/boss = zombie (Mixamo), drago, Gwyn.
+- **Arena/ambiente** = dungeon/props realistici (Fantasy Props MegaKit / dungeon realistico),
+  illuminati dark+torce. NON KayKit cartoon.
+- **Armi** = RPGWeapons_Free / staff realistici / archi. **VFX** = Kenney + additive.
+  **Audio** = i 9 pack per elemento. **Icone/Menu** = `icone/` + ritratti classi.
+
+**Esecuzione (ordine, senza lasciare il gioco metà-vecchio):**
+
+1. Renderer bloccato su PBR realistico + illuminazione dark/torce (§ atmosfera — già impostata).
+2. **Pipeline personaggio Mixamo**: caricatore single-GLB Mixamo + libreria 204 clip →
+   sostituisce il sistema Frankenstein a layer. Tank=Knight come primo drop-in verificabile.
+3. Arena/ambiente realistico al posto del coliseum toon.
+4. Armi/props realistici. 5. VFX/audio per elemento. 6. HUD/menu + font.
+
+Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fase 2).**
 
 ## 6. LOG DECISIONI & FEEDBACK (cronologico — non perdere il contesto)
 
@@ -97,6 +149,13 @@ l'ordine d'esecuzione. **L'unica domanda da sbloccare**: quale via per gli asset
 - Riferimenti = §4 (dark gritty realistico medievale-fantasy).
 - Lamentela di metodo: smettere di ri-scoprire tutto e dimenticare → questo file +
   la memoria persistente sono la soluzione (vedi memoria `working-method-persistent-plan`).
+- **SOLO asset gratis; TUTTO (tech + hosting) gratis.** Fonte asset = `E:/GIOCHI/ASSET_GRAFICA`
+  (curata dall'utente, aggiornata spesso) — usare un asset solo se migliore dell'attuale.
+- Confermato: NON esiste ecosistema gratis-coerente-realistico esterno → si usa la
+  libreria dell'utente, rig Mixamo standard. Il realistico a pagamento (KitBash/Synty)
+  è ESCLUSO dalla regola "solo gratis".
+- ⚠️ DA REGISTRARE QUI: "le mille cose" (visione/gameplay/regole) che l'utente ha già
+  detto nei mesi — §1.6 è ancora incompleta, va riempita con lui.
 
 ## 7. Metodo di lavoro (professionale)
 
