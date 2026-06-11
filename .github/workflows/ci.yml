@@ -123,4 +123,8 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy packages/client/dist --project-name=ragequit
+          # Force npm to install/run wrangler. Without this the action infers
+          # pnpm from the lockfile and runs `pnpm add wrangler` — which fails in
+          # this pnpm workspace with ERR_PNPM_ADDING_TO_ROOT (needs -w at root).
+          packageManager: npm
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
