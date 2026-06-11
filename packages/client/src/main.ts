@@ -47,6 +47,7 @@ import {
 import { Client, type Room } from 'colyseus.js'
 import * as THREE from 'three'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
@@ -475,6 +476,13 @@ finalComposer.addPass(bloomMixPass)
 // render/grade-pass.ts.
 finalComposer.addPass(createGradePass())
 finalComposer.addPass(new OutputPass())
+// Ground-contact ambient occlusion (GTAO) right after the scene render — soft
+// contact shadows where the cover, props, characters and walls meet, the single
+// biggest "rendered, not flat" upgrade. Inserted before the bloom mix so the AO
+// darkening doesn't eat emissive glow.
+const gtaoPass = new GTAOPass(scene, camera, window.innerWidth, window.innerHeight)
+gtaoPass.blendIntensity = 1.2
+finalComposer.insertPass(gtaoPass, 1)
 
 // Sky-dome hemisphere: softened toward neutral (was a saturated sky-blue that
 // tinted the warm sandstone olive at grazing angles) while a warm ground bounce
