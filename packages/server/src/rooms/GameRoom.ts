@@ -120,7 +120,7 @@ import {
 } from '../telemetry.js'
 
 import { makePendingDamageBridge } from './pending-damage-bridge.js'
-import { testDummySpawn, testPlayerSpawn, testRoomMaxClients } from './test-room.js'
+import { resolveMapId, testDummySpawn, testPlayerSpawn, testRoomMaxClients } from './test-room.js'
 
 // GameRoom - three weapons (sword / bow / staff), parry, projectiles.
 //
@@ -247,13 +247,7 @@ export class GameRoom extends Room<GameState> {
     // Resolve map and mode from options. Defaults: duel_arena for 1v1/training,
     // gladiators_arena for 5v5/ffa, blockout for explicit 'blockout' or unknown.
     const resolvedMode = options.mode ?? 'duel_arena'
-    const resolvedMapId =
-      options.mapId ??
-      (resolvedMode === '5v5' || resolvedMode === 'ffa'
-        ? 'gladiators_arena'
-        : resolvedMode === 'blockout'
-          ? 'blockout'
-          : 'duel_arena')
+    const resolvedMapId = resolveMapId(resolvedMode, options.mapId, this.difficulty)
     this.activeMap = getMap(resolvedMapId)
     this.state.mapId = resolvedMapId
     this.state.mode = resolvedMode
@@ -524,6 +518,7 @@ export class GameRoom extends Room<GameState> {
     player.transform.x = spawn.x
     player.transform.y = spawn.y
     player.transform.z = spawn.z
+    if (this.difficulty === 'test') player.transform.yaw = Math.PI // face the player (+z)
     player.invulnUntilTick = this.state.tick + SPAWN_INVULN_TICKS
 
     // Dynamically assign bot class based on bot index

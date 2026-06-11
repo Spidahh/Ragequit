@@ -136,11 +136,21 @@ export const GLADIATORS_ARENA: StaticMap = {
   spawns: G_SPAWNS as Vec3[],
 }
 
+// test_room — empty, bare arena for the Test Room: NO cover boxes, flat ground,
+// one player spawn at +z. GameRoom lines the 4 class dummies up in a row in front.
+const TEST_SPAWN_Y = GROUND_Y + CAPSULE_HALF_HEIGHT_M + 0.01
+export const TEST_ROOM_MAP: StaticMap = {
+  boxes: [] as AABB[],
+  groundY: GROUND_Y,
+  spawns: [{ x: 0, y: TEST_SPAWN_Y, z: 8 }] as Vec3[],
+}
+
 // Map registry. Server picks via room option or match mode.
 export const MAPS = {
   blockout: STATIC_MAP,
   duel_arena: DUEL_ARENA,
   gladiators_arena: GLADIATORS_ARENA,
+  test_room: TEST_ROOM_MAP,
 } as const
 
 export type MapId = keyof typeof MAPS

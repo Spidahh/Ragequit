@@ -16,12 +16,24 @@ export function testDummySpawn<T extends { x: number; z: number }>(
   classCount: number,
 ): T {
   const slot = botNum - (classCount - 1) / 2
-  // z=8.5 sits in the clear strip NORTH of duel_arena's z=7 cover wall, between it
-  // and the player (z=12), so nothing occludes the row.
-  return { ...base, x: slot * 2.4, z: 8.5 }
+  // A tight ground row at z=0, in front of the player (z=8) on the empty test_room map.
+  return { ...base, x: slot * 2.2, z: 0 }
 }
 
-/** The human stands a few metres back from the dummy row, facing it (yaw set by caller). */
+/** The human stands a few metres back (z=8) from the dummy row, facing it (yaw set by caller). */
 export function testPlayerSpawn<T extends { x: number; z: number }>(base: T): T {
-  return { ...base, x: 0, z: 12 }
+  return { ...base, x: 0, z: 8 }
+}
+
+/** Map id for a room: the empty `test_room` for the Test Room, else mode/option default. */
+export function resolveMapId(
+  mode: string,
+  optionMapId: string | undefined,
+  difficulty: string,
+): string {
+  if (mode === 'training' && difficulty === 'test') return 'test_room'
+  if (optionMapId) return optionMapId
+  if (mode === '5v5' || mode === 'ffa') return 'gladiators_arena'
+  if (mode === 'blockout') return 'blockout'
+  return 'duel_arena'
 }

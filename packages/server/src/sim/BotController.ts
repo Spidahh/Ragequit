@@ -93,12 +93,9 @@ export class BotController {
     // Send a neutral grounded input (no move/jump/attack) every tick so the sim
     // keeps applying gravity and they rest on the floor, but they never move or
     // fight. (A bot that sends NO input is never integrated → hangs mid-air.)
-    if (this.difficulty === 'test') {
-      // Face the player (yaw = PI → +z, where the Test Room puts the human) so the
-      // row of dummies shows its FRONT/skins, not its back. No movement/attack.
-      this.host.sendInput(this.botId, 0, 0, Math.PI, false, false)
-      return
-    }
+    // Test Room dummies are frozen targets: send NO input at all, so they never
+    // move, turn, or attack. Their facing toward the player is set once at spawn.
+    if (this.difficulty === 'test') return
     const self = this.host.getSelf(this.botId)
     if (!self || !self.alive) return
     const enemy = this.host.getOpponent(this.botId)
