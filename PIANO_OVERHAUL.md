@@ -2,21 +2,28 @@
 
 ## STATO FINALE (sessione notturna autonoma)
 
-**8 commit su `main`, tutti gate-verdi e deployati in prod. Gioco verificato LIVE
-end-to-end col preview harness (client+server).** Riepilogo:
+**14 commit su `main`, tutti gate-verdi e deployati in prod. Gioco verificato LIVE
+end-to-end col preview harness (client+server), incl. QA in combattimento.** Riepilogo:
 
-- **Asset: public/ 135MB → 65MB (−52%)** rimuovendo tutto ciò che il runtime scarta:
-  il materiale toon tiene solo baseColor (`.map`); l'arena renderizza a colore piatto
-  (nessun `map:`). Tutte le normal/ORM (character+arena) e le arena-baseColor → 64².
-  Guardia CI `check:assets` impedisce il ritorno del bloat. La character-baseColor
-  (18MB, pelle visibile) e la UI restano (renderizzate).
+- **Asset: public/ 135MB → 47.5MB (−65%)** — modernizzazione completa:
+  - rimosso tutto ciò che il runtime scarta: il toon tiene solo baseColor (`.map`),
+    l'arena renderizza a colore piatto (nessun `map:`). Tutte le normal/ORM
+    (character+arena) e le arena-baseColor → 64² (−70MB).
+  - **WebP**: UI (logo/sfondo/card → −10.6MB), character-baseColor lossless (−5.2MB,
+    URI gltf riscritte, **nessun cambio visivo**), 53 ability-icon lossless (−1.3MB).
+  - Guardia CI `check:assets` impedisce il ritorno del bloat normal/ORM.
 - **Codice morto + sistema duplicato rimossi** (knip-verificato): 7 `record*` di
   stats-tracker (duplicato di hit-stats), 4 funzioni combat-feedback, markBloom/
   computeImpactKick, iconMarkup, trackLoadoutSaved, scene-builder.ts, tool duplicato.
 - **2 feature scollegate ricollegate**: setHitStop (freeze nemico) + triggerWeaponRecoil.
-- **Limite verifica**: lo screenshot del 3D in loop non si cattura headless (serve
-  Playwright+SwiftShader); verifica via health-signal (LIVE, no errori, GL sano).
-  Compressione di character-baseColor/UI (rendered) DEFERRED → serve l'occhio umano.
+- **QA live**: match LIVE con bot in combattimento per ~12s → zero warning/errori oltre
+  al Supabase no-DB atteso. Personaggi/UI/icone WebP caricano senza errori (verificato img+gltf).
+- **Limite verifica**: lo screenshot del 3D-in-loop non si cattura headless (serve
+  Playwright+SwiftShader); ho usato health-signal (LIVE, no errori, GL sano) + screenshot
+  DOM/menu (funzionano) + check `naturalWidth>0` sulle immagini.
+- **Restano (diminishing/serve occhio umano)**: WebP _lossy_ q90 della baseColor (~5MB in
+  più, impercettibile ma non verificabile headless), KTX2/Draco (serve build+verifica
+  visiva), strip texture embedded in UAL1/fpv_bow.glb.
 
 ---
 
