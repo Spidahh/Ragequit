@@ -66,8 +66,9 @@ async function grab(name) {
 }
 
 const style = process.env['STYLE'] ?? 'toon'
+const raw = process.env['RAW'] ? `&raw=${process.env['RAW']}` : ''
 async function shot(name, q) {
-  await page.goto(`${base}?class=${klass}&weapon=${weapon}&parry=${parry}&style=${style}&${q}`, {
+  await page.goto(`${base}?class=${klass}&weapon=${weapon}&parry=${parry}&style=${style}${raw}&${q}`, {
     waitUntil: 'load',
     timeout: 30000,
   })

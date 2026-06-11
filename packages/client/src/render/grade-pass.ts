@@ -77,11 +77,13 @@ export function createGradePass(opts: GradeOptions = {}): ShaderPass {
     new THREE.ShaderMaterial({
       uniforms: {
         tDiffuse: { value: null },
-        uVignette: { value: opts.vignette ?? 0.42 },
-        uSaturation: { value: opts.saturation ?? 1.12 },
-        uContrast: { value: opts.contrast ?? 0.12 },
-        uWarmth: { value: opts.warmth ?? 0.18 },
-        uGrain: { value: opts.grain ?? 0.006 },
+        // Gritty dark-fantasy grade (Vermintide / Amid Evil): desaturated, punchy
+        // contrast, a heavy vignette closing the frame to gloom, and film grain.
+        uVignette: { value: opts.vignette ?? 0.66 },
+        uSaturation: { value: opts.saturation ?? 0.82 },
+        uContrast: { value: opts.contrast ?? 0.2 },
+        uWarmth: { value: opts.warmth ?? 0.06 },
+        uGrain: { value: opts.grain ?? 0.016 },
       },
       vertexShader: VERTEX_SHADER,
       fragmentShader: FRAGMENT_SHADER,

@@ -6,6 +6,7 @@
 // URL params: ?class=tank|archer|mage|hybrid  &weapon=sword|bow|staff  &parry=1
 //             &team=self|enemy  &view=full|head  &yaw=<radians>
 import * as THREE from 'three'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 
 import {
   applyParryArmPose,
@@ -57,14 +58,51 @@ const rim = new THREE.DirectionalLight(0x6a86d8, 0.6)
 rim.position.set(-3, 2, -3)
 scene.add(rim)
 
+// RAW mode: load an arbitrary GLB straight (no game pipeline) to evaluate a NEW
+// asset pack before integrating it — plays its own first animation, frames the body.
+const rawUrl = params.get('raw')
+let rawMixer: THREE.AnimationMixer | null = null
+if (rawUrl) {
+  new GLTFLoader().load(rawUrl, (gltf) => {
+    const m = gltf.scene
+    m.rotation.y = yaw
+    scene.add(m)
+    m.traverse((o) => {
+      const mesh = o as THREE.Mesh
+      if (mesh.isMesh) mesh.castShadow = true
+    })
+    // Auto-frame the model whatever its native scale/anchor.
+    const box = new THREE.Box3().setFromObject(m)
+    const size = box.getSize(new THREE.Vector3())
+    const center = box.getCenter(new THREE.Vector3())
+    const h = Math.max(size.y, 0.5)
+    if (view === 'head') {
+      camera.position.set(0, box.max.y - h * 0.12, h * 0.7)
+      camera.lookAt(0, box.max.y - h * 0.12, center.z)
+    } else {
+      camera.position.set(0, center.y + h * 0.05, h * 2.6)
+      camera.lookAt(0, center.y, center.z)
+    }
+    if (gltf.animations.length) {
+      rawMixer = new THREE.AnimationMixer(m)
+      // Prefer an idle-ish clip if present, else the first.
+      const idle = gltf.animations.find((a) => /idle/i.test(a.name)) ?? gltf.animations[0]!
+      rawMixer.clipAction(idle).play()
+    }
+    ;(globalThis as Record<string, unknown>)['__rawClips'] = gltf.animations.map((a) => a.name)
+  })
+}
+
 const toon = makeToonGradient()
 const char = makeCharacter(team, toon)
-loadCharacterGlb(char, team, toon, classId)
-applyWeaponProp(char, weapon, toon)
-// Yaw the whole anchor so the FRONT (face) turns toward the camera (the inner
-// model carries a 180° game-convention yaw; PI here cancels it).
-char.rotation.y = yaw
-scene.add(char)
+if (!rawUrl) {
+  loadCharacterGlb(char, team, toon, classId)
+  applyWeaponProp(char, weapon, toon)
+  // Yaw the whole anchor so the FRONT (face) turns toward the camera (the inner
+  // model carries a 180° game-convention yaw; PI here cancels it).
+  char.rotation.y = yaw
+  scene.add(char)
+}
 // Dev handle so the verify harness can traverse the loaded model.
 ;(globalThis as Record<string, unknown>)['__inspectChar'] = char
 
@@ -109,11 +147,15 @@ let elapsed = 0
 function loop(): void {
   const dt = clock.getDelta()
   elapsed += dt
-  if (!styled && elapsed > 1.0) applyStyle()
-  tickCharacterMixer(char, dt)
-  setCharAnimState(char, { moving: false, alive: true, activeWeapon: weapon, parrying: parry })
-  setParryShieldState(char, parry, false, performance.now())
-  applyParryArmPose(char, parry, dt)
+  if (rawUrl) {
+    if (rawMixer) rawMixer.update(dt)
+  } else {
+    if (!styled && elapsed > 1.0) applyStyle()
+    tickCharacterMixer(char, dt)
+    setCharAnimState(char, { moving: false, alive: true, activeWeapon: weapon, parrying: parry })
+    setParryShieldState(char, parry, false, performance.now())
+    applyParryArmPose(char, parry, dt)
+  }
   renderer.render(scene, camera)
   // Signal the screenshot harness once the model has had time to load + settle.
   if (elapsed > 1.5) document.body.dataset['ready'] = '1'

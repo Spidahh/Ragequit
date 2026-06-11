@@ -199,24 +199,27 @@ export function applyWeaponProp(
       clearWeaponGroup(wg)
 
       const model = scene.clone() as THREE.Group
-      const gradMap = (charGroup.userData['toonGradient'] as THREE.DataTexture) || null
 
       model.traverse((child) => {
         if (!(child instanceof THREE.Mesh)) return
         child.castShadow = true
         child.frustumCulled = false
 
-        const makeWeaponMat = (m: THREE.Material): THREE.MeshToonMaterial => {
+        // PBR to match the characters that hold these — metal blades/heads read
+        // with real specular instead of flat toon. Glowing parts (orbs/glyphs)
+        // stay emissive for bloom.
+        const makeWeaponMat = (m: THREE.Material): THREE.MeshStandardMaterial => {
           const src = m as THREE.MeshStandardMaterial | THREE.MeshToonMaterial | undefined
           const hasMap = !!(src && 'map' in src && src.map && !(src.map instanceof Function))
           const color = src?.color?.clone() ?? new THREE.Color(0xffffff)
           const n = child.name.toLowerCase()
           const isGlowing =
             n.includes('glow') || n.includes('glyph') || n.includes('orb') || n.includes('element')
-          return new THREE.MeshToonMaterial({
+          return new THREE.MeshStandardMaterial({
             color: isGlowing ? new THREE.Color(elementHex) : color,
             map: hasMap ? (src as THREE.MeshStandardMaterial).map : null,
-            gradientMap: gradMap,
+            roughness: isGlowing ? 0.3 : 0.5,
+            metalness: isGlowing ? 0.0 : 0.35,
             side: THREE.DoubleSide,
             emissive: isGlowing ? new THREE.Color(elementHex) : new THREE.Color(0x000000),
             emissiveIntensity: isGlowing ? 0.8 : 0.0,
@@ -254,7 +257,7 @@ export function applyWeaponProp(
 }
 
 /** Load the shield model and attach it inside charGroup's shieldGroup. */
-export function applyShieldProp(charGroup: THREE.Group, toonGradient?: THREE.DataTexture): void {
+export function applyShieldProp(charGroup: THREE.Group, _toonGradient?: THREE.DataTexture): void {
   const sg = charGroup.userData['shieldGroup'] as THREE.Group | undefined
   if (!sg) return
 
@@ -263,22 +266,21 @@ export function applyShieldProp(charGroup: THREE.Group, toonGradient?: THREE.Dat
   fetchWeaponGlb('shield')
     .then((scene) => {
       const model = scene.clone() as THREE.Group
-      const gradMap =
-        toonGradient || (charGroup.userData['toonGradient'] as THREE.DataTexture) || null
 
       model.traverse((child) => {
         if (!(child instanceof THREE.Mesh)) return
         child.castShadow = true
         child.frustumCulled = false
 
-        const makeShieldMat = (m: THREE.Material): THREE.MeshToonMaterial => {
+        const makeShieldMat = (m: THREE.Material): THREE.MeshStandardMaterial => {
           const src = m as THREE.MeshStandardMaterial | THREE.MeshToonMaterial | undefined
           const hasMap = !!(src && 'map' in src && src.map && !(src.map instanceof Function))
           const color = src?.color?.clone() ?? new THREE.Color(0xffffff)
-          return new THREE.MeshToonMaterial({
+          return new THREE.MeshStandardMaterial({
             color,
             map: hasMap ? (src as THREE.MeshStandardMaterial).map : null,
-            gradientMap: gradMap,
+            roughness: 0.68,
+            metalness: 0.12,
             side: THREE.DoubleSide,
           })
         }

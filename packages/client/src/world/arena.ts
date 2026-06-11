@@ -133,8 +133,9 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
     const x = Math.cos(a) * TORCH_RING_R
     const z = Math.sin(a) * TORCH_RING_R
 
-    // PointLight: orange flicker
-    const torch = new THREE.PointLight(0xff8832, 0.9, 22, 2)
+    // PointLight: orange flicker — boosted to be the DOMINANT light in the now-dark
+    // arena, throwing long warm pools across the stone (dark-fantasy torchlight).
+    const torch = new THREE.PointLight(0xff7521, 2.2, 30, 2)
     torch.position.set(x, 5.0, z)
     torch.layers.enable(1) // bloom-eligible
     arenaVisualGroup.add(torch)
@@ -493,7 +494,7 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
         const torch = torchLights[i]!
         const flicker =
           0.7 + 0.3 * Math.sin(now * 0.0047 + i * 1.618) + 0.08 * Math.sin(now * 0.019 + i * 2.4)
-        torch.intensity = 0.85 * flicker
+        torch.intensity = 2.2 * flicker
         // Flame sprite breathes with its light: vertical scale + opacity track the
         // flicker so the brazier visibly licks up and down.
         const flame = torchFlames[i]

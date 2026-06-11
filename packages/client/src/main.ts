@@ -405,11 +405,13 @@ nameplateContainer.style.cssText =
 app.appendChild(nameplateContainer)
 
 const scene = new THREE.Scene()
-// Background + fog match the sky dome's warm dusk horizon so the arena wall
-// tops blend into atmosphere rather than a hard black void. Lower density
-// keeps the coliseum walls (~25 m) clearly readable.
-scene.background = new THREE.Color(0x241e26)
-scene.fog = new THREE.FogExp2(0x2a2230, 0.011)
+// DARK, GRITTY ATMOSPHERE (Vermintide / Amid Evil / Dark Messiah direction): a
+// near-black cold void with THICK fog so the arena dissolves into oppressive gloom
+// and the torches read as pools of warm light cutting the dark — not a bright,
+// clean, readable space. Density is high; readability comes from the torch pools +
+// the key light on combatants, not from flat ambient.
+scene.background = new THREE.Color(0x07080c)
+scene.fog = new THREE.FogExp2(0x090a10, 0.038)
 
 const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 400)
 
@@ -487,12 +489,12 @@ const gtaoPass = new GTAOPass(scene, camera, window.innerWidth, window.innerHeig
 gtaoPass.blendIntensity = 1.2
 finalComposer.insertPass(gtaoPass, 1)
 
-// Sky-dome hemisphere: softened toward neutral (was a saturated sky-blue that
-// tinted the warm sandstone olive at grazing angles) while a warm ground bounce
-// keeps the pit from going cold. Still cool enough that jumping never washes yellow.
-scene.add(new THREE.HemisphereLight(0xd6dcea, 0x2a2436, 1.15))
-// Key light — neutral, not golden; gameplay readability beats warm ambience.
-const dir = new THREE.DirectionalLight(0xf0f6ff, 1.15)
+// Dungeon ambient — VERY low, cold. The scene lives in darkness; light comes from
+// the torches, not a flat fill. (Gritty dark-fantasy direction.)
+scene.add(new THREE.HemisphereLight(0x141820, 0x05060a, 0.4))
+// Key light — a dim, cold moon. Just enough to carve silhouettes and cast shadows;
+// the warm torches are meant to dominate the readable light.
+const dir = new THREE.DirectionalLight(0x8893ad, 0.5)
 dir.position.set(12, 28, 14)
 dir.castShadow = true
 dir.shadow.mapSize.width = 2048
@@ -508,18 +510,17 @@ scene.add(dir)
 // Fill / rim light — soft moonlight blue from the opposite side for readable
 // silhouettes. (A cyan/teal rim turned the warm sandstone walls visibly green at
 // grazing angles; moonlight blue reads as the night sky's fill and stays neutral.)
-const rim = new THREE.DirectionalLight(0x6a86d8, 0.5)
+const rim = new THREE.DirectionalLight(0x3c4768, 0.35)
 rim.position.set(-12, 8, -14)
 scene.add(rim)
-// Ground bounce — warm amber fill simulating light reflecting off the sand
-// floor. Kept low-radius and modest so it warms the lower body / nearby cover
-// without hazing the whole screen when the camera is elevated (jumping).
-const bounce = new THREE.PointLight(0xffb060, 0.14, 22, 2)
+// Ground bounce — warm ember glow off the floor, a touch stronger now that the
+// scene is dark so the lower arena stays grounded in firelight.
+const bounce = new THREE.PointLight(0xff7a30, 0.22, 24, 2)
 bounce.position.set(0, 0.4, 0)
 scene.add(bounce)
-// Player follow-light — soft blue-white halo around the self character,
-// giving ground and nearby objects contact-shadow depth.
-const playerLight = new THREE.PointLight(0xaaccff, 0.45, 8, 2)
+// Player follow-light — a warm torch-like personal pool so the fighter and the
+// ground around them stay readable in the gloom (you carry the light with you).
+const playerLight = new THREE.PointLight(0xffb070, 0.7, 9, 2)
 scene.add(playerLight)
 const selfEmissive = initSelfEmissive({
   getSelfMesh: () => selfMesh,
