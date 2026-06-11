@@ -60,6 +60,6 @@ This file contains only current locked decisions.
 ## UI / Visual
 
 - The only live UI CSS is `packages/client/public/game-ui.css`.
-- Menu and Loadout use static UI background `packages/client/public/ui/sfondo.png`
+- Menu and Loadout use static UI background `packages/client/public/ui/sfondo.webp`
   and must not show the live arena canvas behind them.
 - Only approved runtime assets belong in the repository.

@@ -44,9 +44,9 @@ assunzioni precedenti come autorita.
 - Loading screen: `src/preloader.ts` gestisce il preload degli asset prima dell'arena.
   Chiamare `preloadMatchAssets(classId)` quando si entra in una room.
 - Asset esistenti chiave:
-  - `packages/client/public/ui/ragequit-logo-full.png`
-  - `packages/client/public/ui/ragequit-logo-small.png`
-  - `packages/client/public/ui/sfondo.png`
+  - `packages/client/public/ui/ragequit-logo-full.webp`
+  - `packages/client/public/ui/ragequit-logo-small.webp`
+  - `packages/client/public/ui/sfondo.webp`
   - `packages/client/public/icons-sprite.svg`
   - `packages/client/public/arena/gladiators_arena.glb`
   - `packages/client/public/characters/UAL1_Standard.glb` (animazioni — non rimuovere)
@@ -136,7 +136,7 @@ Se una modifica rompe o ignora anche solo uno dei sistemi collegati, la soluzion
 - Menu, Loadout, Pause, Settings e HUD devono sembrare UI di gioco, non pagine
   HTML.
 - I bottoni mode-tile del menu iniziale (1v1, FFA, Training) usano
-  `packages/client/public/ui/frame_but.png` come cornice grafica viva.
+  `packages/client/public/ui/frame_but.webp` come cornice grafica viva.
   Il forge-tile (Loadout) non usa cornice per ora.
 - Menu e Loadout Forge non devono mostrare il canvas arena live dietro:
   nascondono il canvas con `body.main-menu-active` / `body.loadout-active` e

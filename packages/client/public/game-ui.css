@@ -214,7 +214,7 @@ button.locked {
   background:
     linear-gradient(90deg, rgba(2, 4, 9, 0.96) 0%, rgba(2, 4, 9, 0.78) 43%, rgba(2, 4, 9, 0.5) 100%),
     linear-gradient(180deg, rgba(2, 4, 9, 0.16), rgba(2, 4, 9, 0.76)),
-    url("/ui/sfondo.png") center / cover no-repeat;
+    url("/ui/sfondo.webp") center / cover no-repeat;
 }
 
 #main-menu::before,
@@ -309,14 +309,14 @@ button.locked {
 .mode-tile {
   background:
     linear-gradient(180deg, rgba(6, 8, 14, 0.45) 0%, rgba(6, 8, 14, 0.38) 100%),
-    url("/ui/frame_but.png") center / 100% 100% no-repeat;
+    url("/ui/frame_but.webp") center / 100% 100% no-repeat;
   border-color: rgba(180, 140, 80, 0.55);
 }
 
 .mode-tile:hover {
   background:
     linear-gradient(180deg, rgba(6, 8, 14, 0.22) 0%, rgba(6, 8, 14, 0.18) 100%),
-    url("/ui/frame_but.png") center / 100% 100% no-repeat;
+    url("/ui/frame_but.webp") center / 100% 100% no-repeat;
   border-color: rgba(255, 210, 96, 0.8);
 }
 
@@ -674,7 +674,7 @@ button.locked {
   background:
     linear-gradient(90deg, rgba(4, 6, 11, 0.98), rgba(4, 6, 11, 0.9) 44%, rgba(4, 6, 11, 0.78)),
     linear-gradient(180deg, rgba(4, 6, 11, 0.22), rgba(4, 6, 11, 0.8)),
-    url("/ui/sfondo.png") center / cover no-repeat;
+    url("/ui/sfondo.webp") center / cover no-repeat;
 }
 
 #loadout-station.hidden {

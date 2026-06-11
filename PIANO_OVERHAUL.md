@@ -1,8 +1,10 @@
 # PIANO OVERHAUL AUTONOMO — RAGEQUIT
 
 ## STATO FINALE (sessione notturna autonoma)
+
 **8 commit su `main`, tutti gate-verdi e deployati in prod. Gioco verificato LIVE
 end-to-end col preview harness (client+server).** Riepilogo:
+
 - **Asset: public/ 135MB → 65MB (−52%)** rimuovendo tutto ciò che il runtime scarta:
   il materiale toon tiene solo baseColor (`.map`); l'arena renderizza a colore piatto
   (nessun `map:`). Tutte le normal/ORM (character+arena) e le arena-baseColor → 64².
@@ -17,7 +19,6 @@ end-to-end col preview harness (client+server).** Riepilogo:
   Compressione di character-baseColor/UI (rendered) DEFERRED → serve l'occhio umano.
 
 ---
-
 
 Lavoro autonomo (utente che dorme, pieni poteri). Regola: **`main` sempre verde** —
 ogni ondata passa `pnpm check` (typecheck + budget + lint + prettier + content + 257 test)

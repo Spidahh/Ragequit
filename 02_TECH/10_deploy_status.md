@@ -55,8 +55,8 @@ Per la lista completa vedi `01_DESIGN/10_tech_assets.md`.
 
 | Path                                                   | Contenuto                                                            |
 | ------------------------------------------------------ | -------------------------------------------------------------------- |
-| `packages/client/public/ui/ragequit-logo-full.png`     | Logo principale                                                      |
-| `packages/client/public/ui/ragequit-logo-small.png`    | Logo small                                                           |
+| `packages/client/public/ui/ragequit-logo-full.webp`    | Logo principale                                                      |
+| `packages/client/public/ui/ragequit-logo-small.webp`   | Logo small                                                           |
 | `packages/client/public/icons-sprite.svg`              | SVG sprite icone (~45 KB)                                            |
 | `packages/client/public/arena/gladiators_arena.glb`    | Arena 3D (~171 KB)                                                   |
 | `packages/client/public/characters/UAL1_Standard.glb`  | Animazioni (NON rimuovere)                                           |

@@ -91,16 +91,16 @@ Sorgente: Kenney Particle Pack CC0 (transparent PNG), convertite con boost lumin
 
 ### UI
 
-| Path                                | Contenuto               |
-| ----------------------------------- | ----------------------- |
-| `public/ui/ragequit-logo-full.png`  | Logo principale         |
-| `public/ui/ragequit-logo-small.png` | Favicon / logo small    |
-| `public/ui/sfondo.png`              | Sfondo menu             |
-| `public/ui/classes/archer.png`      | Immagine classe Arciere |
-| `public/ui/classes/mage.png`        | Immagine classe Mago    |
-| `public/ui/classes/tank.png`        | Immagine classe Tank    |
-| `public/ui/classes/hybrid.png`      | Immagine classe Ibrido  |
-| `public/icons-sprite.svg`           | SVG sprite icone UI     |
+| Path                                 | Contenuto               |
+| ------------------------------------ | ----------------------- |
+| `public/ui/ragequit-logo-full.webp`  | Logo principale         |
+| `public/ui/ragequit-logo-small.webp` | Favicon / logo small    |
+| `public/ui/sfondo.webp`              | Sfondo menu             |
+| `public/ui/classes/archer.webp`      | Immagine classe Arciere |
+| `public/ui/classes/mage.webp`        | Immagine classe Mago    |
+| `public/ui/classes/tank.webp`        | Immagine classe Tank    |
+| `public/ui/classes/hybrid.webp`      | Immagine classe Ibrido  |
+| `public/icons-sprite.svg`            | SVG sprite icone UI     |
 
 ### Ability Icons
 
