@@ -370,7 +370,14 @@ const statusOverlay = initStatusOverlay({
 
 VfxTextures.init()
 
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false })
+// preserveDrawingBuffer only when the screenshot harness asks (?capture) — it lets
+// gl.readPixels() grab the rendered frame headlessly; off in prod (small GPU cost).
+const renderer = new THREE.WebGLRenderer({
+  antialias: true,
+  alpha: false,
+  preserveDrawingBuffer:
+    typeof location !== 'undefined' && new URLSearchParams(location.search).has('capture'),
+})
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
 renderer.setSize(window.innerWidth, window.innerHeight)
 renderer.setClearColor(0x141c28, 1)

@@ -26,6 +26,7 @@
     "check:budget": "node tools/check-file-budget.mjs",
     "check:assets": "node tools/asset-pipeline/shrink-unused-maps.mjs --check packages/client/public/characters && node tools/asset-pipeline/shrink-unused-maps.mjs --check --all packages/client/public/arena/props",
     "check": "pnpm typecheck && pnpm check:budget && pnpm check:assets && pnpm lint && pnpm format:check && pnpm validate:content && pnpm test",
+    "verify:shot": "node tools/verify/shot.mjs",
     "clean": "node tools/clean.mjs"
   },
   "pnpm": {
@@ -43,6 +44,7 @@
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^9.0.0",
     "eslint-plugin-import": "^2.30.0",
+    "playwright": "^1.60.0",
     "prettier": "^3.3.0",
     "sharp": "^0.34.5",
     "tsx": "^4.19.0",
