@@ -18,13 +18,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -46,13 +46,13 @@ jobs:
     needs: validate
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -75,7 +75,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Deploy to Fly.io
         uses: superfly/flyctl-actions/setup-flyctl@master
@@ -94,13 +94,13 @@ jobs:
       contents: read
       deployments: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -118,10 +118,9 @@ jobs:
           VITE_SERVER_URL: ${{ secrets.VITE_SERVER_URL }}
 
       - name: Publish to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: ragequit
-          directory: packages/client/dist
+          command: pages deploy packages/client/dist --project-name=ragequit
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
