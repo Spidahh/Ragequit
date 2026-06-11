@@ -140,6 +140,13 @@ if (process.env['SHOT_FIRE'] === '1') {
     await wait(130)
     await captureGL(`cast${i}`, { minCoverage: 0.2, timeout: 1500 })
   }
+  // Tap ability hotbar slots (Digit1-4) — most class spells are bound here, not
+  // LMB — and grab a frame shortly after each so we catch the bolt/VFX in flight.
+  for (const key of ['Digit1', 'Digit2', 'Digit3', 'Digit4']) {
+    await page.keyboard.press(key)
+    await wait(120)
+    await captureGL(`ability-${key}`, { minCoverage: 0.2, timeout: 1500 })
+  }
 }
 
 if (errors.length) {

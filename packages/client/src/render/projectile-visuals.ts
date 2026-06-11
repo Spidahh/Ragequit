@@ -176,6 +176,12 @@ function makeProjectileObject(
     const p2 = new THREE.Mesh(geo, mat)
     p2.rotation.y = Math.PI / 2
     group.add(p2)
+
+    // Spell bolts join the bloom layer so the selective UnrealBloom pass wraps
+    // them in an energy halo — the single biggest "this is magic" juice for the
+    // cost of a layer flag. (Physical arrows stay off the bloom layer.)
+    p1.layers.enable(1)
+    p2.layers.enable(1)
   }
 
   return { object: group, style }
@@ -208,6 +214,8 @@ function makeTrailLine(style: ProjectileStyle): THREE.Line {
   })
   const line = new THREE.Line(geo, mat)
   line.frustumCulled = false
+  // Spell trails bloom too (arrow trails stay crisp/unbloomed).
+  if (style !== 'arrow') line.layers.enable(1)
   return line
 }
 
