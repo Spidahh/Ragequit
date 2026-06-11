@@ -13,6 +13,16 @@ export const CAPSULE_RADIUS_M = 0.4 as const
 export const CAPSULE_HALF_WIDTH_M = CAPSULE_RADIUS_M
 export const CAPSULE_HALF_HEIGHT_M = CAPSULE_HEIGHT_M / 2
 
+// SINGLE SOURCE OF TRUTH for how tall a RENDERED character is, in meters.
+// The visual model is scaled to exactly this height; the camera eye-height,
+// nameplate/cast-ring anchors and muzzle offsets must all derive from it so the
+// model, the collision capsule and the camera stay co-registered. Kept a hair
+// above the 1.8 m capsule for a slightly heroic stature WITHOUT desyncing the
+// camera. NEVER scale the model in isolation again (a lone 1.45× multiplier on
+// the model — with the camera still trusting 1.8 m — is what made enemies read as
+// giants and the player as a dwarf).
+export const CHARACTER_RENDER_HEIGHT_M = 1.9 as const
+
 // Ground plane Y (world floor).
 export const GROUND_Y = 0 as const
 

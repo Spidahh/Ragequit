@@ -7,7 +7,7 @@
 //   character-animation.ts — animation state machine
 //   character-weapons.ts   — weapon prop loading and grip
 // ---------------------------------------------------------------------------
-import { CAPSULE_HALF_HEIGHT_M, CAPSULE_HEIGHT_M } from '@ragequit/shared'
+import { CAPSULE_HALF_HEIGHT_M, CHARACTER_RENDER_HEIGHT_M } from '@ragequit/shared'
 import * as THREE from 'three'
 
 import { makeCharacter as makeCharacterAnchor, type CharacterOpts } from '../character.js'
@@ -102,9 +102,13 @@ function _installCharacterModel(
   }
 
   // --- Scale and position ---
+  // Scale the model so its measured height equals CHARACTER_RENDER_HEIGHT_M — the
+  // ONE shared render-height the camera/nameplates also derive from. (Previously a
+  // lone × 1.45 fudge made bodies 2.61 m tall while the camera still framed a 1.8 m
+  // world, so enemies loomed and the player felt like a dwarf.)
   const nativeBox = _measureRenderableBox(model)
   const nativeHeight = _validBoxHeight(nativeBox)
-  const targetScale = (CAPSULE_HEIGHT_M / nativeHeight) * 1.45
+  const targetScale = CHARACTER_RENDER_HEIGHT_M / nativeHeight
   model.scale.setScalar(targetScale)
   model.rotation.y = Math.PI // face forward (game convention)
   const scaledBox = _measureRenderableBox(model)

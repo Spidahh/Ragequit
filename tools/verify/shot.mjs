@@ -114,6 +114,23 @@ await page
   .catch(() => {})
 // captureGL polls until the arena/characters actually render (coverage floor).
 await captureGL('match')
+// Full composited frame (3D + DOM HUD overlay) — readPixels only sees the WebGL
+// canvas, so HUD bars/crosshair/nameplates need a real page screenshot. May be slow
+// under the render loop; bounded + best-effort.
+await page
+  .screenshot({ path: path.join(outDir, `${prefix}-hud.png`), timeout: 8000 })
+  .then(() => console.log(`  saved .verify/${prefix}-hud.png (DOM+3D)`))
+  .catch(() => console.log('  [hud] page.screenshot timed out'))
+// Shield/parry evidence — hold RMB so the parry shield viewmodel shows.
+if (process.env['SHOT_PARRY'] === '1') {
+  await page.mouse.down({ button: 'right' })
+  await wait(700)
+  await captureGL('parry', { minCoverage: 0.2, timeout: 2000 })
+  await page
+    .screenshot({ path: path.join(outDir, `${prefix}-parry-hud.png`), timeout: 8000 })
+    .catch(() => {})
+  await page.mouse.up({ button: 'right' })
+}
 // Strafe right for the second frame — stays inside the lit pit (walking forward
 // marches into the dark gate tunnel and yields a near-black frame).
 await page.keyboard.down('d')
@@ -148,6 +165,14 @@ if (process.env['SHOT_FIRE'] === '1') {
     await captureGL(`ability-${key}`, { minCoverage: 0.2, timeout: 1500 })
   }
 }
+
+// Final composited frame, late enough that the "entering arena" overlay is gone —
+// the real in-match HUD (bars, crosshair, hotbar, nameplates) over the 3D.
+await wait(1200)
+await page
+  .screenshot({ path: path.join(outDir, `${prefix}-final-hud.png`), timeout: 8000 })
+  .then(() => console.log(`  saved .verify/${prefix}-final-hud.png (DOM+3D)`))
+  .catch(() => console.log('  [final-hud] page.screenshot timed out'))
 
 if (errors.length) {
   console.log('PAGE ERRORS (first 12):')
