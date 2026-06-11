@@ -476,8 +476,10 @@ finalComposer.addPass(bloomMixPass)
 finalComposer.addPass(createGradePass())
 finalComposer.addPass(new OutputPass())
 
-// Sky-dome hemisphere: neutral/cool so jumping never washes the screen yellow.
-scene.add(new THREE.HemisphereLight(0xc4d8ff, 0x182238, 1.2))
+// Sky-dome hemisphere: softened toward neutral (was a saturated sky-blue that
+// tinted the warm sandstone olive at grazing angles) while a warm ground bounce
+// keeps the pit from going cold. Still cool enough that jumping never washes yellow.
+scene.add(new THREE.HemisphereLight(0xd6dcea, 0x2a2436, 1.15))
 // Key light — neutral, not golden; gameplay readability beats warm ambience.
 const dir = new THREE.DirectionalLight(0xf0f6ff, 1.15)
 dir.position.set(12, 28, 14)
@@ -492,8 +494,10 @@ dir.shadow.camera.top = 40
 dir.shadow.camera.bottom = -40
 dir.shadow.bias = -0.0008
 scene.add(dir)
-// Fill / rim light — cool teal from opposite side for readable silhouettes.
-const rim = new THREE.DirectionalLight(0x40c8ff, 0.55)
+// Fill / rim light — soft moonlight blue from the opposite side for readable
+// silhouettes. (A cyan/teal rim turned the warm sandstone walls visibly green at
+// grazing angles; moonlight blue reads as the night sky's fill and stays neutral.)
+const rim = new THREE.DirectionalLight(0x6a86d8, 0.5)
 rim.position.set(-12, 8, -14)
 scene.add(rim)
 // Ground bounce — warm amber fill simulating light reflecting off the sand

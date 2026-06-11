@@ -248,9 +248,28 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
       uniform float offset;
       uniform float exponent;
       varying vec3 vWorldPosition;
+
+      float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
       void main() {
+        vec3 dir = normalize(vWorldPosition);
         float h = normalize(vWorldPosition + vec3(0.0, offset, 0.0)).y;
-        gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+        vec3 col = mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0));
+
+        // Starfield — only in the upper sky, fading toward the horizon haze.
+        float up = smoothstep(0.04, 0.5, dir.y);
+        vec2 cell = floor(dir.xz * 170.0 + dir.y * 50.0);
+        float star = smoothstep(0.987, 1.0, hash(cell)) * up;
+        star += smoothstep(0.9975, 1.0, hash(cell + 19.0)) * up * 1.6; // rare bright ones
+        col += vec3(0.88, 0.91, 1.0) * star;
+
+        // Moon — a soft disc high in the sky with a faint cool halo.
+        vec3 moonDir = normalize(vec3(0.34, 0.5, -0.8));
+        float d = distance(dir, moonDir);
+        col += vec3(1.0, 0.96, 0.85) * smoothstep(0.082, 0.066, d);
+        col += vec3(0.55, 0.66, 1.0) * smoothstep(0.34, 0.0, d) * 0.1;
+
+        gl_FragColor = vec4(col, 1.0);
       }
     `,
     depthWrite: false,
