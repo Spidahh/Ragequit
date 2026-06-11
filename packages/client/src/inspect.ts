@@ -68,11 +68,48 @@ scene.add(char)
 // Dev handle so the verify harness can traverse the loaded model.
 ;(globalThis as Record<string, unknown>)['__inspectChar'] = char
 
+// Style experiment: 'toon' (current), 'pbr' (real painted textures under smooth
+// PBR shading — uses the assets as authored), 'flat' (clean flat-lit colour).
+// Swapped once after the async model lands.
+const style = params.get('style') ?? 'toon'
+let styled = false
+function applyStyle(): void {
+  const model = char.userData['charModel'] as THREE.Object3D | undefined
+  if (!model || style === 'toon') {
+    styled = true
+    return
+  }
+  model.traverse((o) => {
+    const mesh = o as THREE.Mesh
+    if (!mesh.isMesh || mesh.name.endsWith('_outline')) return
+    const cur = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as
+      | THREE.MeshToonMaterial
+      | undefined
+    const map = cur?.map ?? null
+    const baseColor = map ? new THREE.Color(0xffffff) : (cur?.color ?? new THREE.Color(0x888888))
+    const clip = cur?.clippingPlanes ?? null
+    if (style === 'pbr') {
+      mesh.material = new THREE.MeshStandardMaterial({
+        map,
+        color: baseColor,
+        roughness: 0.72,
+        metalness: 0.04,
+        clippingPlanes: clip,
+        side: THREE.DoubleSide,
+      })
+    } else {
+      mesh.material = new THREE.MeshBasicMaterial({ map, color: baseColor, clippingPlanes: clip })
+    }
+  })
+  styled = true
+}
+
 const clock = new THREE.Clock()
 let elapsed = 0
 function loop(): void {
   const dt = clock.getDelta()
   elapsed += dt
+  if (!styled && elapsed > 1.0) applyStyle()
   tickCharacterMixer(char, dt)
   setCharAnimState(char, { moving: false, alive: true, activeWeapon: weapon, parrying: parry })
   setParryShieldState(char, parry, false, performance.now())

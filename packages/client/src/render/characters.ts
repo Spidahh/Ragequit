@@ -54,23 +54,30 @@ function _validBoxHeight(box: THREE.Box3): number {
   return Number.isFinite(h) && h > 0.1 ? h : _CHAR_GLB_FALLBACK_HEIGHT
 }
 
+// Character material. The class assets ship DETAILED painted baseColor textures
+// (2048², plus normal/ORM) — they are PBR models. The old custom 3-band toon ramp
+// (+ team-color emissive wash + heavy black outline) threw that quality away and
+// made expensive assets read as flat plastic. We now render them as the PBR models
+// they are: smooth MeshStandard shading on the painted albedo, which looks like a
+// produced stylized hero (Valorant/Fortnite/Overwatch tier). Team identity moves to
+// a thin team-coloured outline (see _installCharacterModel). `_toonGradient` is kept
+// in the signature for call-site compatibility but no longer used.
 function _makeToonMaterial(
   source: THREE.Material | undefined,
   teamColor: number,
-  toonGradient: THREE.DataTexture,
-): THREE.MeshToonMaterial {
+  _toonGradient: THREE.DataTexture,
+): THREE.MeshStandardMaterial {
   const src = source as THREE.MeshStandardMaterial | THREE.MeshToonMaterial | undefined
   const hasMap = !!(src && 'map' in src && src.map)
   const color = hasMap
     ? (src?.color?.clone() ?? new THREE.Color(0xffffff))
     : new THREE.Color(teamColor)
-  return new THREE.MeshToonMaterial({
+  return new THREE.MeshStandardMaterial({
     color,
     map: hasMap ? (src as THREE.MeshStandardMaterial).map : null,
-    gradientMap: toonGradient,
+    roughness: 0.72,
+    metalness: 0.05,
     side: THREE.DoubleSide,
-    emissive: hasMap ? new THREE.Color(teamColor) : new THREE.Color(0x000000),
-    emissiveIntensity: hasMap ? 0.08 : 0.0,
     alphaTest: src?.alphaTest ?? 0,
     transparent: src?.transparent ?? false,
     opacity: src?.opacity ?? 1,
@@ -124,7 +131,7 @@ function _installCharacterModel(
   charGroup.userData['headClipOffset'] = -CAPSULE_HALF_HEIGHT_M + CHARACTER_RENDER_HEIGHT_M * 0.8
 
   // --- Apply toon materials to ALL meshes (visible and hidden alike) ---
-  const glbMaterials: THREE.MeshToonMaterial[] = []
+  const glbMaterials: THREE.MeshStandardMaterial[] = []
   let renderableMeshes = 0
   let skinnedMeshes = 0
   model.traverse((child) => {
@@ -249,7 +256,10 @@ function _installCharacterModel(
       child.name.toLowerCase().includes('dagger') ||
       child.name.toLowerCase().includes('staff') ||
       child.name.toLowerCase().includes('bow')
-    const outline = createOutlineMesh(child, isWeaponMesh ? 0.016 : 0.012, 0x0a0a0f)
+    // Thin TEAM-COLOURED rim instead of a heavy black ink line: it reads as a clean
+    // hero-shooter silhouette AND carries faction identity (self blue / enemy red),
+    // which the flat textures alone can't (both teams share the same skins).
+    const outline = createOutlineMesh(child, isWeaponMesh ? 0.01 : 0.008, teamColor)
     outlinePairs.push({ mesh: child, outline })
   })
   for (const { mesh, outline } of outlinePairs) mesh.parent?.add(outline)

@@ -60,12 +60,14 @@ async function grab(name) {
     console.log(`  [${name}] no canvas`)
     return
   }
-  writeFileSync(path.join(outDir, `insp-${klass}-${name}.png`), Buffer.from(dataUrl.split(',')[1], 'base64'))
-  console.log(`  saved .verify/insp-${klass}-${name}.png`)
+  const sfx = (process.env['STYLE'] ?? 'toon') === 'toon' ? '' : `-${process.env['STYLE']}`
+  writeFileSync(path.join(outDir, `insp-${klass}${sfx}-${name}.png`), Buffer.from(dataUrl.split(',')[1], 'base64'))
+  console.log(`  saved .verify/insp-${klass}${sfx}-${name}.png`)
 }
 
+const style = process.env['STYLE'] ?? 'toon'
 async function shot(name, q) {
-  await page.goto(`${base}?class=${klass}&weapon=${weapon}&parry=${parry}&${q}`, {
+  await page.goto(`${base}?class=${klass}&weapon=${weapon}&parry=${parry}&style=${style}&${q}`, {
     waitUntil: 'load',
     timeout: 30000,
   })
