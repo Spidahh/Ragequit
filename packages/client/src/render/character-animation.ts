@@ -225,7 +225,18 @@ export function tickCharacterMixer(charGroup: THREE.Group, deltaS: number): void
 
   // Clamp delta to 100 ms to avoid large jumps after a tab-switch.
   store.mixer.update(Math.min(deltaS, 0.1))
+
+  // Keep the base body's head-only clip plane at the character's neck line. The
+  // plane is world-space (normal +Y); it clips everything below neckWorldY so only
+  // the FullBody head/face survives while the outfit provides the body.
+  const clip = charGroup.userData['headClipPlane'] as THREE.Plane | undefined
+  if (clip) {
+    const offset = (charGroup.userData['headClipOffset'] as number) ?? 1.4
+    clip.constant = -(charGroup.getWorldPosition(_clipTmp).y + offset)
+  }
 }
+
+const _clipTmp = new THREE.Vector3()
 
 /** Drive the animation state machine based on current gameplay state. */
 export function setCharAnimState(charGroup: THREE.Group, state: CharAnimState): void {

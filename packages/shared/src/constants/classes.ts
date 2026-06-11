@@ -57,7 +57,9 @@ export const TARGET_CLASS_DEFS = {
       base: 'Superhero_Male_FullBody',
       outfit: 'Male_Ranger',
       hair: 'Hair_Buzzed',
-      accessories: ['Male_Ranger_Head_Hood', 'Male_Ranger_Acc_Pauldron'],
+      // The hood already ships INSIDE Male_Ranger.gltf — listing it again here
+      // attached a second coincident hood shell that z-fought. Keep only the pauldron.
+      accessories: ['Male_Ranger_Acc_Pauldron'],
     },
   },
   archer: {
@@ -71,7 +73,8 @@ export const TARGET_CLASS_DEFS = {
       base: 'Superhero_Female_FullBody',
       outfit: 'Female_Ranger',
       hair: 'Hair_Buns',
-      accessories: ['Female_Ranger_Head_Hood'],
+      // Hood ships inside Female_Ranger.gltf; the duplicate accessory z-fought.
+      accessories: [],
     },
   },
   mage: {

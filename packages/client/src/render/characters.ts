@@ -114,6 +114,15 @@ function _installCharacterModel(
   const scaledBox = _measureRenderableBox(model)
   model.position.y = -CAPSULE_HALF_HEIGHT_M - scaledBox.min.y
 
+  // Head-only clip for the FullBody base. The base supplies the FACE (head skin +
+  // eyes + eyebrows), but its muscular body is wider than the outfit and pokes
+  // through the clothes. A world-space horizontal plane clips the base to keep only
+  // the head; the outfit provides the clothed body. Its height tracks the character
+  // each frame (tickCharacterMixer) from the world Y + this offset (neck line).
+  const headClip = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
+  charGroup.userData['headClipPlane'] = headClip
+  charGroup.userData['headClipOffset'] = -CAPSULE_HALF_HEIGHT_M + CHARACTER_RENDER_HEIGHT_M * 0.8
+
   // --- Apply toon materials to ALL meshes (visible and hidden alike) ---
   const glbMaterials: THREE.MeshToonMaterial[] = []
   let renderableMeshes = 0
@@ -124,16 +133,17 @@ function _installCharacterModel(
     if (child instanceof THREE.SkinnedMesh) skinnedMeshes++
     child.frustumCulled = false
     child.castShadow = true
+    // Base-layer skinned meshes (no outfit/hair tag) are the FullBody body+head —
+    // clip them to head-only so the body never pokes through the outfit.
+    const isBase = child instanceof THREE.SkinnedMesh && !child.userData['layerTag']
     const source = child.material
-    if (Array.isArray(source)) {
-      const mats = source.map((m) => _makeToonMaterial(m, teamColor, toonGradient))
-      child.material = mats
-      glbMaterials.push(...mats)
-    } else {
-      const mat = _makeToonMaterial(source, teamColor, toonGradient)
-      child.material = mat
-      glbMaterials.push(mat)
-    }
+    const mats = (Array.isArray(source) ? source : [source]).map((m) => {
+      const mat = _makeToonMaterial(m, teamColor, toonGradient)
+      if (isBase) mat.clippingPlanes = [headClip]
+      return mat
+    })
+    child.material = Array.isArray(source) ? mats : mats[0]!
+    glbMaterials.push(...mats)
   })
 
   if (renderableMeshes === 0 || skinnedMeshes === 0 || glbMaterials.length === 0) {
@@ -215,6 +225,10 @@ function _installCharacterModel(
     if (!(child instanceof THREE.Mesh)) return
     if (!child.visible) return // skip hidden base body meshes
     if (child.name.endsWith('_outline')) return
+    // Base head (FullBody) meshes are head-only-clipped and carry the face — an
+    // inverted-hull outline would draw the clipped body's silhouette and the fixed
+    // thickness swallows the tiny eye/brow meshes. The outfit supplies the outline.
+    if (child instanceof THREE.SkinnedMesh && !child.userData['layerTag']) return
 
     // Skip parry shield children
     let p = child.parent

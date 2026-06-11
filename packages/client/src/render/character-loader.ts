@@ -259,28 +259,28 @@ export async function buildCharacterModel(classId: string): Promise<{
   }
 
   // --- Head visibility rule ---
-  // If the outfit has a head/hood mesh it covers the FullBody face entirely.
-  // In that case hide all base meshes to eliminate z-fighting.
-  // If the outfit has no head piece (Peasant outfits) the FullBody face is the
-  // character's actual face — keep it visible.
-  let outfitCoversHead = false
+  // The base FullBody carries the character's FACE (head skin + eyes + eyebrows).
+  // Only a CLOSED helmet/hat fully encloses the head — in that case hide the base
+  // so nothing pokes through. An open hood/cowl (the Ranger classes) leaves the
+  // face exposed, so the base MUST stay visible or the hood is empty ("no faces").
+  // Peasant classes have no head piece at all → base also stays visible.
+  // (The outfit's own body meshes sit just outside the base body with a negative
+  // polygonOffset, so the clothed silhouette wins over the base skin underneath.)
+  let outfitFullyEnclosesHead = false
   model.traverse((child) => {
     if (!(child instanceof THREE.SkinnedMesh)) return
     if (child.userData['layerTag'] !== 'outfit') return
     const n = child.name.toLowerCase()
-    if (n.includes('head') || n.includes('hood') || n.includes('helmet') || n.includes('hat'))
-      outfitCoversHead = true
+    if (n.includes('helmet') || n.includes('hat')) outfitFullyEnclosesHead = true
   })
 
-  if (outfitCoversHead) {
-    // Hood/helmet present → hide ALL FullBody base meshes (no z-fighting under hood).
+  if (outfitFullyEnclosesHead) {
     model.traverse((child) => {
       if (!(child instanceof THREE.SkinnedMesh)) return
       if (child.userData['layerTag']) return // outfit/hair layers stay visible
       child.visible = false
     })
   }
-  // else: FullBody meshes stay visible (face + eyebrows + eyes shown for Mage/Hybrid)
 
   return { model, clips }
 }

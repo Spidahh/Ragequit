@@ -383,6 +383,9 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
 renderer.setSize(window.innerWidth, window.innerHeight)
 renderer.setClearColor(0x141c28, 1)
+// Lets character materials clip the FullBody base to head-only (the base supplies
+// the face; the outfit supplies the clothed body) — see render/characters.ts.
+renderer.localClippingEnabled = true
 // Shadow maps — PCFSoft gives smooth shadow edges at low perf cost.
 renderer.shadowMap.enabled = true
 renderer.shadowMap.type = THREE.PCFSoftShadowMap
