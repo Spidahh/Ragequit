@@ -109,8 +109,12 @@ export class ParrySystem {
     } else if (player.parryIsHold) {
       this.emit(sid, 'holdEnd', now)
     } else {
-      // Released after tap window without having converted to hold — still
-      // treat as tap end (but tick loop should already have emitted it).
+      // Released the same tick the window expired, before tick() converted it to
+      // hold: still a completed tap, so burn stamina + CD like the tap case above
+      // (closes a 1-tick free-parry bypass).
+      player.stamina = Math.max(0, player.stamina - PARRY_TAP_COST_STAMINA)
+      this.host.syncSimStamina(sid, player.stamina)
+      player.parryCooldownReadyAtTick = now + PARRY_TAP_COOLDOWN_TICKS
       this.emit(sid, 'tapEnd', now)
     }
 

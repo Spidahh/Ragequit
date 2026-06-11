@@ -120,6 +120,7 @@ import {
 } from '../telemetry.js'
 
 import { makePendingDamageBridge } from './pending-damage-bridge.js'
+import { testDummySpawn, testPlayerSpawn, testRoomMaxClients } from './test-room.js'
 
 // GameRoom - three weapons (sword / bow / staff), parry, projectiles.
 //
@@ -198,7 +199,7 @@ export class GameRoom extends Room<GameState> {
   // In-process bots for TTK calibration / training mode.
   private readonly bots = new Map<string, BotController>()
   private botSpawnAtMatchStart = Number(process.env['BOTS'] ?? 0)
-  private difficulty: 'novice' | 'competent' | 'master' = 'competent'
+  private difficulty: 'novice' | 'competent' | 'master' | 'test' = 'competent'
   // Active map — set from room options in onCreate; defaults to blockout.
   private activeMap: StaticMap = STATIC_MAP
   // Track per-player kill count + match start for TTK logging.
@@ -237,7 +238,7 @@ export class GameRoom extends Room<GameState> {
       mode?: string
       mapId?: string
       botFill?: boolean
-      difficulty?: 'novice' | 'competent' | 'master'
+      difficulty?: 'novice' | 'competent' | 'master' | 'test'
     } = {},
   ): void {
     this.setState(new GameState())
@@ -263,6 +264,11 @@ export class GameRoom extends Room<GameState> {
 
     if (resolvedMode === 'training' || options.botFill === true) {
       this.botSpawnAtMatchStart = Math.max(1, this.botSpawnAtMatchStart)
+    }
+
+    if (resolvedMode === 'training' && this.difficulty === 'test') {
+      this.maxClients = testRoomMaxClients(this.maxClients, CLASS_IDS.length)
+      this.botSpawnAtMatchStart = CLASS_IDS.length
     }
 
     // In FFA / 5v5, cap bots so at least 1 human slot stays open.
@@ -513,7 +519,8 @@ export class GameRoom extends Room<GameState> {
     player.team = ''
 
     const spawnIndex = this.state.players.size % this.activeMap.spawns.length
-    const spawn = this.activeMap.spawns[spawnIndex]!
+    let spawn = this.activeMap.spawns[spawnIndex]!
+    if (this.difficulty === 'test') spawn = testDummySpawn(spawn, botNum, CLASS_IDS.length)
     player.transform.x = spawn.x
     player.transform.y = spawn.y
     player.transform.z = spawn.z
@@ -633,10 +640,12 @@ export class GameRoom extends Room<GameState> {
     player.userId = verifiedUserId
 
     const spawnIndex = this.state.players.size % this.activeMap.spawns.length
-    const spawn = this.activeMap.spawns[spawnIndex]!
+    let spawn = this.activeMap.spawns[spawnIndex]!
+    if (this.difficulty === 'test') spawn = testPlayerSpawn(spawn)
     player.transform.x = spawn.x
     player.transform.y = spawn.y
     player.transform.z = spawn.z
+    if (this.difficulty === 'test') player.transform.yaw = 0
     player.invulnUntilTick = this.state.tick + SPAWN_INVULN_TICKS
 
     // Load persisted loadout if user is authenticated; otherwise use defaults.

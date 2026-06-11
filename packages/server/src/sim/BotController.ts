@@ -79,7 +79,7 @@ export class BotController {
     private readonly host: BotHostFns,
     private readonly tickRef: () => number,
     private readonly loadout: readonly string[],
-    private readonly difficulty: 'novice' | 'competent' | 'master' = 'competent',
+    private readonly difficulty: 'novice' | 'competent' | 'master' | 'test' = 'competent',
   ) {
     this.rng = mulberry32(hashStringToSeed(botId))
   }
@@ -89,6 +89,14 @@ export class BotController {
     // tester can inspect the player/arena without being attacked. No effect in
     // production (env var unset).
     if (process.env['BOT_PASSIVE'] === '1') return
+    // Test Room dummies stand idle — one per class for inspecting + testing on.
+    // Send a neutral grounded input (no move/jump/attack) every tick so the sim
+    // keeps applying gravity and they rest on the floor, but they never move or
+    // fight. (A bot that sends NO input is never integrated → hangs mid-air.)
+    if (this.difficulty === 'test') {
+      this.host.sendInput(this.botId, 0, 0, 0, false, false)
+      return
+    }
     const self = this.host.getSelf(this.botId)
     if (!self || !self.alive) return
     const enemy = this.host.getOpponent(this.botId)

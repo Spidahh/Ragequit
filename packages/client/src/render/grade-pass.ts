@@ -9,7 +9,8 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
 // OutputPass. Every op below is therefore HDR-safe (monotonic, no crush of
 // values > 1 from bloom or the bright sky).
 //
-//   • Saturation  — a small boost makes the toon palette read richer.
+//   • Saturation  — held below 1 so the world stays desaturated/grounded, but
+//     high enough (0.92, per STILE.md) that the element-coded magic still sings.
 //   • Contrast    — a linear stretch about mid-grey adds punch.
 //   • Split-tone  — shadows drift cool, highlights warm (classic teal/amber).
 //   • Vignette    — darkens the frame edges, focusing the eye on the fight.
@@ -80,7 +81,7 @@ export function createGradePass(opts: GradeOptions = {}): ShaderPass {
         // Gritty dark-fantasy grade (Vermintide / Amid Evil): desaturated, punchy
         // contrast, a heavy vignette closing the frame to gloom, and film grain.
         uVignette: { value: opts.vignette ?? 0.66 },
-        uSaturation: { value: opts.saturation ?? 0.82 },
+        uSaturation: { value: opts.saturation ?? 0.92 },
         uContrast: { value: opts.contrast ?? 0.2 },
         uWarmth: { value: opts.warmth ?? 0.06 },
         uGrain: { value: opts.grain ?? 0.016 },

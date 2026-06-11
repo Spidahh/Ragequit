@@ -70,7 +70,7 @@ export interface MenuApi {
 export function initMenu(handlers: {
   onPlay: () => void
   onFfa: () => void
-  onTraining: (difficulty: 'novice' | 'competent' | 'master') => void
+  onTraining: (difficulty: 'novice' | 'competent' | 'master' | 'test') => void
   onLoadout: () => void
   onScoreboardBack: () => void
   onFovChange: (fov: number) => void
@@ -115,7 +115,7 @@ export function initMenu(handlers: {
     ?.addEventListener('click', () => handlers.onTraining('competent'))
   document
     .getElementById('menu-train-master')
-    ?.addEventListener('click', () => handlers.onTraining('master'))
+    ?.addEventListener('click', () => handlers.onTraining('test'))
 
   document.getElementById('menu-loadout')?.addEventListener('click', () => handlers.onLoadout())
   // Delegated click listener on scoreboard to support dynamic scoreboard templates

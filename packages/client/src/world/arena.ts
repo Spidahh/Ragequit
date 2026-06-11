@@ -2,7 +2,6 @@ import { getMap, type AABB } from '@ragequit/shared'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 
-import { createOutlineMesh } from '../render/outlines.js'
 import { VfxTextures } from '../render/vfx-textures.js'
 
 import { makeArenaFloorTexture } from './arena-floor-texture.js'
@@ -36,7 +35,7 @@ export interface ArenaObjects {
 // pokes through the sloped spectator seating and appears "halfway up the arena".
 const SAND_RADIUS = 16.5
 
-function makeBoxMesh(box: AABB, color: number, toonGradient: THREE.DataTexture): THREE.Mesh {
+function makeBoxMesh(box: AABB, color: number): THREE.Mesh {
   const sx = box.maxX - box.minX
   const sy = box.maxY - box.minY
   const sz = box.maxZ - box.minZ
@@ -49,20 +48,18 @@ function makeBoxMesh(box: AABB, color: number, toonGradient: THREE.DataTexture):
   stone.repeat.set(Math.max(1, Math.round(sx * 0.5)), Math.max(1, Math.round(sy * 0.5)))
   const m = new THREE.Mesh(
     new THREE.BoxGeometry(sx, sy, sz),
-    new THREE.MeshToonMaterial({ color, map: stone, gradientMap: toonGradient }),
+    // PBR carved stone (STILE.md §2): the greyscale ashlar map tints the warm
+    // colour; high roughness, non-metal. No toon ramp, no black outline.
+    new THREE.MeshStandardMaterial({ color, map: stone, roughness: 0.9, metalness: 0.0 }),
   )
   m.position.set((box.minX + box.maxX) / 2, (box.minY + box.maxY) / 2, (box.minZ + box.maxZ) / 2)
   m.castShadow = true
   m.receiveShadow = true
 
-  // Outline border
-  const outline = createOutlineMesh(m, 0.024, 0x050508)
-  m.add(outline)
-
   return m
 }
 
-export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture): ArenaObjects {
+export function buildArena(scene: THREE.Scene, _toonGradient: THREE.DataTexture): ArenaObjects {
   // ── Arena visual group containing all custom decorative fight-league assets ──
   const arenaVisualGroup = new THREE.Group()
   scene.add(arenaVisualGroup)
@@ -86,33 +83,34 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
       // knees) we drop the whole model by 1 m so its terrace floor lands on
       // GROUND_Y = 0 — exactly where the sand disc and characters' feet are.
       model.position.y = -1.0
-      // Collect outlines during traversal, attach AFTER — adding a child mesh
-      // mid-traverse causes infinite recursion (outline-of-outline).
-      const outlines: Array<{ mesh: THREE.Mesh; outline: THREE.Mesh }> = []
       model.traverse((child) => {
         if (!(child instanceof THREE.Mesh)) return
         child.castShadow = true
         child.receiveShadow = true
         const nodeName = child.name.toLowerCase()
         const isFlag = nodeName.includes('flag')
-        // Apply explicit warm sandstone tones rather than the GLB material colour —
-        // the original material is olive-grey which reads green under the scene's
-        // cool hemisphere light. Warm sand/stone colours fight the blue tint.
+        // PBR sandstone (STILE.md §2): keep the GLB's normal/roughness detail but
+        // override the olive-grey albedo with warm stone tones so it doesn't read
+        // green under the cool hemisphere light. High roughness, non-metal.
+        const src = child.material as THREE.MeshStandardMaterial | undefined
         const stoneColor = nodeName.includes('door')
           ? new THREE.Color(0x8a6a40)
           : isFlag
             ? new THREE.Color(0x993322)
             : new THREE.Color(0xc0a060) // main arena sandstone
-        child.material = new THREE.MeshToonMaterial({
+        child.material = new THREE.MeshStandardMaterial({
           color: stoneColor,
-          gradientMap: toonGradient,
+          map: src?.map ?? null,
+          normalMap: src?.normalMap ?? null,
+          roughnessMap: src?.roughnessMap ?? null,
+          aoMap: src?.aoMap ?? null,
+          roughness: 0.9,
+          metalness: 0.0,
           side: THREE.DoubleSide,
           emissive: isFlag ? new THREE.Color(0x330800) : new THREE.Color(0x000000),
           emissiveIntensity: isFlag ? 0.3 : 0.0,
         })
-        outlines.push({ mesh: child, outline: createOutlineMesh(child, 0.02, 0x050508) })
       })
-      for (const { mesh, outline } of outlines) mesh.add(outline)
       arenaVisualGroup.add(model)
     },
     undefined,
@@ -135,7 +133,7 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
 
     // PointLight: orange flicker — boosted to be the DOMINANT light in the now-dark
     // arena, throwing long warm pools across the stone (dark-fantasy torchlight).
-    const torch = new THREE.PointLight(0xff7521, 2.2, 30, 2)
+    const torch = new THREE.PointLight(0xff7521, 18, 30, 2)
     torch.position.set(x, 5.0, z)
     torch.layers.enable(1) // bloom-eligible
     arenaVisualGroup.add(torch)
@@ -172,26 +170,23 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
         model.traverse((child) => {
           if (!(child instanceof THREE.Mesh)) return
           child.castShadow = true
-          // Convert to MeshToonMaterial — extract base color from source material
-          const srcMat = child.material as THREE.MeshStandardMaterial | undefined
-          const baseColor = srcMat?.color?.clone() ?? new THREE.Color(0xb87030)
-          // Add warm emissive glow for the torch metal (hot metal look)
+          // Keep the GLB's authored PBR material (BaseColor+Normal+ORM) — STILE.md
+          // §2: dark iron reads from its roughness/metal maps under the torch light.
+          // Only add the hot-metal emissive on the fire bowl, and gate bloom to it.
+          const mat = child.material as THREE.MeshStandardMaterial | undefined
           const isFireBowl =
             child.name.toLowerCase().includes('bowl') ||
             child.name.toLowerCase().includes('fire') ||
             child.name.toLowerCase().includes('flame') ||
             child.name.toLowerCase().includes('top')
-          child.material = new THREE.MeshToonMaterial({
-            color: baseColor,
-            gradientMap: toonGradient,
-            emissive: isFireBowl ? new THREE.Color(0xff6020) : new THREE.Color(0x000000),
-            emissiveIntensity: isFireBowl ? 0.6 : 0.0,
-          })
-          child.layers.enable(1) // bloom-eligible (glows)
-          // Dispose ORM/normal textures — MeshToonMaterial doesn't use them
-          if (srcMat?.roughnessMap) srcMat.roughnessMap.dispose()
-          if (srcMat?.normalMap) srcMat.normalMap.dispose()
-          if (srcMat?.metalnessMap) srcMat.metalnessMap.dispose()
+          if (mat) {
+            mat.envMapIntensity = 1.1
+            if (isFireBowl) {
+              mat.emissive = new THREE.Color(0xff6020)
+              mat.emissiveIntensity = 0.6
+              child.layers.enable(1) // bloom-eligible (glows)
+            }
+          }
         })
         arenaVisualGroup.add(model)
       },
@@ -242,13 +237,16 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
   // reaches the coliseum wall base so there is no dark moat around the pit.
   // Tournament-floor map (sand grain + boundary rings + central crest) replaces the
   // flat single-colour disc. White base colour lets the baked texture colours show
-  // through (MeshToonMaterial samples map × color).
+  // through (MeshStandardMaterial samples map × color).
   const sandFloor = new THREE.Mesh(
     new THREE.CircleGeometry(SAND_RADIUS, 64),
-    new THREE.MeshToonMaterial({
+    // PBR sand floor (STILE.md §2): white base lets the baked floor texture show
+    // through; very high roughness, non-metal. No toon ramp.
+    new THREE.MeshStandardMaterial({
       color: 0xffffff,
       map: makeArenaFloorTexture(),
-      gradientMap: toonGradient,
+      roughness: 0.95,
+      metalness: 0.0,
     }),
   )
   sandFloor.rotation.x = -Math.PI / 2
@@ -407,30 +405,20 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
           model.rotation.set(...s.rot)
           model.scale.setScalar(s.scale)
 
-          // Collect outlines during traversal, attach AFTER — adding a child
-          // mesh mid-traverse causes infinite recursion (outline-of-outline).
-          const propOutlines: Array<{ mesh: THREE.Mesh; outline: THREE.Mesh }> = []
           model.traverse((child) => {
             if (child instanceof THREE.Mesh) {
               child.castShadow = true
               child.receiveShadow = true
-
-              const src = child.material as
-                | THREE.MeshStandardMaterial
-                | THREE.MeshToonMaterial
-                | undefined
-              const color = src?.color?.clone() ?? new THREE.Color(0xffffff)
-
-              child.material = new THREE.MeshToonMaterial({
-                color,
-                gradientMap: toonGradient,
-                side: THREE.DoubleSide,
-              })
-
-              propOutlines.push({ mesh: child, outline: createOutlineMesh(child, 0.016, 0x050508) })
+              // Keep the GLB prop's authored PBR material (crates/barrels ship
+              // BaseColor+Normal+ORM) — STILE.md §2. Just ensure double-sided.
+              // No toon ramp, no black outline.
+              const mat = child.material as THREE.MeshStandardMaterial | undefined
+              if (mat) {
+                mat.side = THREE.DoubleSide
+                mat.envMapIntensity = 1.1
+              }
             }
           })
-          for (const { mesh, outline } of propOutlines) mesh.add(outline)
           arenaPropsGroup.add(model)
         },
         undefined,
@@ -445,8 +433,8 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
     if (mapId === activeMapId) return false
     activeMapId = mapId
 
-    // Clean up inactive box meshes — traverse so each box's outline child
-    // (its own cloned geometry + ShaderMaterial) is disposed too, not leaked.
+    // Clean up inactive box meshes — traverse and dispose each mesh's geometry
+    // and material so nothing leaks when the map switches.
     for (const m of mapBoxMeshes) {
       scene.remove(m)
       m.traverse((node) => {
@@ -474,7 +462,7 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
       // the masonry reads without the low cover going near-black (gameplay
       // readability — cover must stay visible).
       const color = height > 2.5 ? 0xe6bf68 : height > 1.4 ? 0xcf9a52 : 0xb5854a
-      const m = makeBoxMesh(b, color, toonGradient)
+      const m = makeBoxMesh(b, color)
       scene.add(m)
       mapBoxMeshes.push(m)
     }
@@ -494,7 +482,7 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
         const torch = torchLights[i]!
         const flicker =
           0.7 + 0.3 * Math.sin(now * 0.0047 + i * 1.618) + 0.08 * Math.sin(now * 0.019 + i * 2.4)
-        torch.intensity = 2.2 * flicker
+        torch.intensity = 18 * flicker
         // Flame sprite breathes with its light: vertical scale + opacity track the
         // flicker so the brazier visibly licks up and down.
         const flame = torchFlames[i]

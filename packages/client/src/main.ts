@@ -118,6 +118,7 @@ import {
   applyParryArmPose,
   triggerWeaponRecoil,
 } from './render/characters.js'
+import { installArenaEnvironment } from './render/environment.js'
 import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
 import { createFpvBow } from './render/fpv-bow.js'
 import { createFpvStaticViewmodel } from './render/fpv-static-viewmodel.js'
@@ -391,7 +392,7 @@ renderer.shadowMap.enabled = true
 renderer.shadowMap.type = THREE.PCFSoftShadowMap
 // ACES filmic tone mapping makes the scene colours pop without over-exposing.
 renderer.toneMapping = THREE.ACESFilmicToneMapping
-renderer.toneMappingExposure = 1.1
+renderer.toneMappingExposure = 1.3
 renderer.domElement.tabIndex = 0
 renderer.domElement.style.outline = 'none'
 app.appendChild(renderer.domElement)
@@ -411,7 +412,11 @@ const scene = new THREE.Scene()
 // clean, readable space. Density is high; readability comes from the torch pools +
 // the key light on combatants, not from flat ambient.
 scene.background = new THREE.Color(0x07080c)
-scene.fog = new THREE.FogExp2(0x090a10, 0.038)
+scene.fog = new THREE.FogExp2(0x121622, 0.007)
+
+// PBR image-based lighting — without it MeshStandard metals go black and stone reads
+// flat-dark. Dark on-palette night env map; see render/environment.ts.
+installArenaEnvironment(scene, renderer)
 
 const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 400)
 
@@ -491,10 +496,10 @@ finalComposer.insertPass(gtaoPass, 1)
 
 // Dungeon ambient — VERY low, cold. The scene lives in darkness; light comes from
 // the torches, not a flat fill. (Gritty dark-fantasy direction.)
-scene.add(new THREE.HemisphereLight(0x141820, 0x05060a, 0.4))
+scene.add(new THREE.HemisphereLight(0x9aa6c8, 0x6a5a3c, 3.4))
 // Key light — a dim, cold moon. Just enough to carve silhouettes and cast shadows;
 // the warm torches are meant to dominate the readable light.
-const dir = new THREE.DirectionalLight(0x8893ad, 0.5)
+const dir = new THREE.DirectionalLight(0x9aa6c4, 1.7)
 dir.position.set(12, 28, 14)
 dir.castShadow = true
 dir.shadow.mapSize.width = 2048

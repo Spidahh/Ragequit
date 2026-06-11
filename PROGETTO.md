@@ -156,6 +156,71 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
   è ESCLUSO dalla regola "solo gratis".
 - ⚠️ DA REGISTRARE QUI: "le mille cose" (visione/gameplay/regole) che l'utente ha già
   detto nei mesi — §1.6 è ancora incompleta, va riempita con lui.
+- **2026-06-11 — STILE DECISO E BLOCCATO.** Fine del ri-decidere lo stile a ogni sessione.
+  Calcolato dai giochi di riferimento e **ancorato ai valori reali del codice** (scoperto: lo
+  stile è già ~85% implementato in `main.ts`/`grade-pass.ts`/`arena.ts`). Spec completa con
+  valori = **`STILE.md`** (palette hex, materiali PBR, luci, post, VFX, camera, HUD, gate).
+  - **Decisione unica:** ~75% realistico (PBR materico desaturato, mondo grounded
+    Mordhau/Vermintide/Darkfall) + **un solo strato iper-saturo: la magia element-coded additiva**
+    (Mirage/Spellbreak) = l'unica cosa luminosa nel nero torch-lit. Fork ~55% toon-ramp = RIFIUTATO
+    (l'utente odia il tinteggiato piatto).
+  - **Valori confermati e bloccati** (non si ritoccano): hemisphere 0.4, key dir `#8893ad` 0.5,
+    rim `#3c4768` 0.35, torce `#ff7521` 2.2/30, exposure ACES 1.1, GTAO 1.2, fog `#090a10` 0.038,
+    FOV 90 / viewmodel 58, 5 hue elemento in `ELEMENT_COLOR`.
+  - **Correzioni che ne derivano (TODO visivo, mio = value-tuning):** (1) grade saturation
+    0.82→0.92; (2) togliere outline toon residui in `arena.ts`; (3) spell core emissive 3–5 +
+    dynamic point-light per proiettile + trail 13fps; (4) dust motes torch-proximity + god-ray
+    billboard economici.
+- **2026-06-11 — ARENA convertita TOON → PBR (fatto, da rivedere live).** Scoperta: TUTTA l'arena
+  (`world/arena.ts`: cover, shell colosseo, props, pavimento) era `MeshToonMaterial` + gradient toon
+  - outline neri, e **scartava le texture normal/ORM** ("MeshToonMaterial doesn't use them") → mondo
+    piatto/finto. = la causa concreta del "sembra cartone".
+  * FATTO: tutti i materiali arena → `MeshStandardMaterial` (pietra/sabbia rough .9/.95 metal 0;
+    props/torce mantengono il materiale PBR del GLB con normal+ORM riattivati); rimossi gradient toon
+    e tutti gli `createOutlineMesh(...0x050508)`. grade saturation 0.82→0.92.
+  * FATTO: aggiunto **environment map PMREM** (gradiente equirect dark on-palette) — senza IBL il PBR
+    rende nero. Le luci erano tarate sul toon (che illumina gratis) → ri-bilanciate per il PBR reale.
+  * CAUSA "niente luci" (feedback utente): le **torce erano `PointLight` intensità 2.2 con decay 2** =
+    fisicamente debolissime (cadono come 1/d²), illuminavano ~1m; il centro arena (~16m) restava nero.
+    Il toon lo mascherava. **Valori luce finali (verificati headless, forward+pavimento leggibili):**
+    torce `0xff7521` **intensità 18** (era 2.2) range 30 decay 2; hemisphere `0x7c8cb2/0x4a3a24` **@2.0**
+    (era `0x141820/0x05060a` @0.4); key dir `0x8893ad` **@1.0** (era 0.5); `environmentIntensity` **2.6**;
+    fog `FogExp2` **0.015** (era 0.038). Risultato: colosseo arenaria caldo + pozze torce + ombre reali +
+    cielo notte, dark ma leggibile, PBR (non più cartone).
+  * DA FARE: l'utente guarda live (`http://localhost:5173`, ricarica) e conferma il livello luce; poi
+    si committa. NON ancora su `main` (push = deploy prod). Allineare `STILE.md §3/§5` a questi valori.
+- **2026-06-11 — STILE arena RIVISTO: "è un'arena, non un dungeon".** Feedback utente: era troppo scura.
+  Rialzata e resa chiara/leggibile (verificato sulla GPU dell'utente via estensione Chrome): exposure 1.3,
+  hemisphere `0x9aa6c8/0x6a5a3c` @3.4, key `0x9aa6c4` @1.7, torce intensità 18, env 3.0, fog 0.007. Lo
+  STILE.md "dark dungeon" va corretto in "arena torch-lit chiara e leggibile" (mood gritty, NON cupo-buio).
+- **2026-06-11 — STANZA TEST aggiunta (feature).** La 3ª difficoltà allenamento ("Maestro") è ora **"Stanza
+  Test"** (`difficulty: 'test'`): spawna **4 dummy fermi, uno per ogni classe** (Tank/Arciere/Mago/Ibrido,
+  preset+arma corretti), il player spawna **davanti** rivolto verso di loro, in arena con cover come elementi
+  di test. File: `server/rooms/GameRoom.ts` (maxClients=5, botSpawnAtMatchStart=4, posizioni in fila + spawn
+  player), `server/sim/BotController.ts` (`'test'` = input neutro fermo), `client/menu.ts` + `index.html`
+  (pulsante "🧪 Stanza Test"). Verificato sulla GPU (4 dummy, player li guarda). Typecheck server+client OK.
+  - POLISH da fare: badge "✈ AIR" appare per errore sui dummy fermi (sono a terra — falso positivo client su
+    player perfettamente immobili); rifinire la fila/occlusione cover; valutare invuln/respawn dei dummy.
+  - VERIFY: pipeline GPU = estensione Chrome `?capture=1` → JS clicca menu → screenshot CDP (funziona col
+    preserveDrawingBuffer di `?capture`; senza va in timeout sul render-loop).
+- **2026-06-11 — AUDIT TOTALE (8 dimensioni, multi-agente + verifica avversariale).** 65 candidati → 28
+  "confermati". LEZIONE: l'audit ha **falsi positivi** (anche dopo la verifica) — ogni fix va ri-letto sul
+  codice prima di applicarlo, altrimenti introduce regressioni.
+  - APPLICATI (verificati a mano, sicuri): **[8]** ParrySystem — il ramo `else` di `release()` non bruciava
+    stamina/CD su una race di 1 tick = parry gratis → ora addebita (no doppio-addebito). **[21]** tolto
+    `passWithNoTests:true` da client+server vitest (cancello bugiardo; entrambi hanno test). Import-order
+    auto-fix. STILE.md §3/§5 allineato ai valori luce nuovi (arena chiara).
+  - FALSI POSITIVI (SKIP, motivo): **[0]** "onGround spingendo in su" — è l'atterraggio SOPRA le casse, il
+    codice è giusto, il fix proposto romperebbe lo stare sulle coperture. **[11]–[15]** "luci troppo alte vs
+    spec" — la mia illuminazione è richiesta dall'utente (arena, non dungeon), lo spec era vecchio. **[16]**
+    "pulsante Master manda 'test'" — è la Stanza Test, intenzionale. **[19]** Life Drain `breakOnDamage` — è
+    il mini-malus DOCUMENTATO (design). **[20]** fallback maxima — difensiva, scatta solo con classId invalido.
+  - DA FARE (bug veri ma da verificare/valutare con cura, prossimi giri): **[9]** Fury Surge slow applicato
+    prima del parry (leak); **[27]** doppi `Math.round` sul danno (precisione); **[5]** bow M1 a costo 0 (se
+    sono davvero M1, aggiungere stamina); **[1]/[4]** codice morto knockup in `drainDamage` (valutare se
+    cablarlo o rimuoverlo); **[2]** `clamp` NaN→0 (rischioso, valutare); **[22]–[26]** scrivere i test mancanti
+    (MeleeSystem/ParrySystem/ClassMechanic/Zone/Projectile) — da fare con un workflow dedicato.
+  - Lista completa difetti (confermati + 36 medium/low) nel task output dell'audit `wbxpn7b7i`.
 
 ## 7. Metodo di lavoro (professionale)
 
