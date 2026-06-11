@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 
 import { createOutlineMesh } from '../render/outlines.js'
+import { VfxTextures } from '../render/vfx-textures.js'
 
 import { makeArenaFloorTexture } from './arena-floor-texture.js'
 import { getStoneTexture } from './stone-texture.js'
@@ -120,8 +121,12 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
 
   // ── Torch lights + 3D torch models ringing the coliseum wall ──
   // Placed just inside the arena wall so they wash warm light across the pit.
-  const TORCH_RING_R = 20
+  // Just inside the pit's barrier wall (~16.7 m) so the braziers sit ON the visible
+  // inner wall face and read from the floor — at the old r=20 they were buried in
+  // the wall and never seen.
+  const TORCH_RING_R = 16
   const torchLights: THREE.PointLight[] = []
+  const torchFlames: THREE.Sprite[] = []
   for (let i = 0; i < 8; i += 2) {
     // 4 torch lights around the wall
     const a = (i / 8) * Math.PI * 2 + Math.PI / 8
@@ -130,19 +135,38 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
 
     // PointLight: orange flicker
     const torch = new THREE.PointLight(0xff8832, 0.9, 22, 2)
-    torch.position.set(x, 6.5, z)
+    torch.position.set(x, 5.0, z)
     torch.layers.enable(1) // bloom-eligible
     arenaVisualGroup.add(torch)
     torchLights.push(torch)
+
+    // Visible flame — an additive, camera-facing sprite at the bowl so the torch
+    // reads as a lit brazier (the light alone had no source). Bloom-eligible, and
+    // flickered in lock-step with its PointLight in animateArena.
+    const flame = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: VfxTextures.fire,
+        color: 0xff7a20,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        transparent: true,
+        opacity: 0.9,
+      }),
+    )
+    flame.position.set(x, 4.7, z)
+    flame.scale.set(0.85, 1.35, 1)
+    flame.layers.enable(1)
+    arenaVisualGroup.add(flame)
+    torchFlames.push(flame)
 
     // 3D torch model (Torch_Metal.gltf)
     gltfLoader.load(
       '/arena/props/Torch_Metal.gltf',
       (gltf) => {
         const model = gltf.scene.clone()
-        model.position.set(x, 5.6, z)
+        model.position.set(x, 3.7, z)
         model.rotation.y = -a // face inward toward arena
-        model.scale.setScalar(0.8)
+        model.scale.setScalar(0.6)
 
         model.traverse((child) => {
           if (!(child instanceof THREE.Mesh)) return
@@ -470,6 +494,13 @@ export function buildArena(scene: THREE.Scene, toonGradient: THREE.DataTexture):
         const flicker =
           0.7 + 0.3 * Math.sin(now * 0.0047 + i * 1.618) + 0.08 * Math.sin(now * 0.019 + i * 2.4)
         torch.intensity = 0.85 * flicker
+        // Flame sprite breathes with its light: vertical scale + opacity track the
+        // flicker so the brazier visibly licks up and down.
+        const flame = torchFlames[i]
+        if (flame) {
+          flame.scale.set(0.8 + flicker * 0.1, 1.2 + flicker * 0.35, 1)
+          ;(flame.material as THREE.SpriteMaterial).opacity = 0.7 + flicker * 0.25
+        }
       }
     }
 
