@@ -1,5 +1,35 @@
 # PIANO OVERHAUL AUTONOMO — RAGEQUIT
 
+## UPLIFT VISIVO "TRIPLA-A" (sessione 06-11, in corso)
+
+**Sbloccato il collo di bottiglia: ora VEDO il gioco headless.** `tools/verify/shot.mjs`
+(`pnpm verify:shot`) — Playwright + Chromium SwiftShader + `gl.readPixels()` cattura frame
+3D reali in-match (la rAF mandava in timeout `page.screenshot`). Seeda il profilo configurato,
+`SHOT_CLASS=` per arma, `SHOT_FIRE=1` per proiettili/spell. **Gotcha: dopo ogni edit a main.ts
+serve restart del dev-server vite** (HMR sull'entry → scena nera).
+
+5 ondate visive, tutte verificate headless + gate-verdi su `main`:
+
+1. **Grade cinematografico + ramp toon 3 bande + pavimento torneo** — `render/grade-pass.ts`
+   (vignette/contrasto filmico/split-tone/dither in lineare HDR prima di OutputPass); ramp
+   2→3 bande dà forma alle pareti; `world/arena-floor-texture.ts` (grana, anelli, raggi,
+   stemma centrale) → il pit ha uno scopo.
+2. **Cielo notturno (stelle + luna) + rim lunare + ambiente caldo** — shader sky con starfield
+   e luna alonata; rim ciano→blu-luna (toglieva il verde al sandstone); emisferica
+   meno-blu (il sandstone non vira più olive di taglio).
+3. **Cover in pietra scolpita** — `world/stone-texture.ts` (ashlar greyscale × tint per-altezza):
+   le casse-cubo piatte ora sono muratura.
+4. **Spell in bloom** — proiettili magici + trail sul layer bloom → alone energetico
+   (frecce fisiche restano nitide). Verificato: fireball mage = orbita luminosa.
+5. **Bracieri accesi** — le 4 torce (luce+modello+fiamma sprite additiva flicker) spostate
+   sulla faccia interna della parete (r 20→16): fuoco visibile nell'arena.
+
+**Direzione confermata**: arena gladiatoria notturna torch-lit (tipo Hades), pulita e
+leggibile (competitive), NON buio-cinematografico. **TODO grossi rimasti** (alto valore, ma
+rischiosi/non-verificabili headless o design): modelli arma migliori (arco/staff sono rozzi),
+mappe più grandi/professionali, char 3ª persona, animazioni, bilanciamento, muzzle/impact juice.
+Pareti del colosseo: tentata texture pietra → scartata (UV del GLB stirano/scuriscono).
+
 ## STATO FINALE (sessione notturna autonoma)
 
 **14 commit su `main`, tutti gate-verdi e deployati in prod. Gioco verificato LIVE
