@@ -76,11 +76,11 @@ console.info(`ability registry: ${defs.length} abilities, ${seenIds.size} unique
 
 // --- Ability icons ----------------------------------------------------------
 
-const abilityIconPngIds = new Set<string>()
+const abilityIconIds = new Set<string>()
 for (const def of defs) {
-  const path = `packages/client/public/ability-icons/${def.id}.png`
-  if (existsSync(path)) abilityIconPngIds.add(def.id)
-  else fail(`icons: missing PNG for ability '${def.id}'`)
+  const path = `packages/client/public/ability-icons/${def.id}.webp`
+  if (existsSync(path)) abilityIconIds.add(def.id)
+  else fail(`icons: missing WebP for ability '${def.id}'`)
 }
 
 const iconSprite = readFileSync('packages/client/public/icons-sprite.svg', 'utf8')
@@ -91,7 +91,7 @@ const staleAbilitySymbols = Array.from(
 for (const iconId of staleAbilitySymbols) {
   fail(`icons: stale ability SVG symbol '${iconId}'`)
 }
-console.info(`ability icons: ${abilityIconPngIds.size} PNG files checked`)
+console.info(`ability icons: ${abilityIconIds.size} WebP files checked`)
 
 // --- Balance config ---------------------------------------------------------
 

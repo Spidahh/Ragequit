@@ -29,7 +29,7 @@ export function makeIcon(kind: IconKind, id: string, size = 32): SVGElement {
 }
 
 export function abilityIconPath(id: string): string {
-  return `${ABILITY_ICON_BASE}/${encodeURIComponent(id)}.png`
+  return `${ABILITY_ICON_BASE}/${encodeURIComponent(id)}.webp`
 }
 
 export function abilityIcon(id: string, size = 32): HTMLImageElement {
