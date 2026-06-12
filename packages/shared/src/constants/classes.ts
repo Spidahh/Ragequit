@@ -69,39 +69,12 @@ export const TARGET_CLASS_DEFS = {
     weapons: ['sword', 'bow'],
     recoveryId: 'brace_recovery',
     visuals: {
-      // Tank = Knight_Met (Mixamo "Paladin J Nordstrom") — scale fixed via
-      // tools/verify/normalize-glb.mjs (Knight_Met_norm.glb renders perfectly standalone).
-      // STILL DISABLED: this rig stores a COLLAPSED rest mesh that only un-collapses via
-      // skinning, and the game's character install pipeline doesn't expand it (bones pose
-      // correctly — props on bones render — but the skinned body stays collapsed/invisible;
-      // works in the standalone inspector RAW path). Needs a cleanly-authored 1:1 character
-      // Scaffolding wired (mixamoGlb + _installSingleGlbModel + Knight_Met_norm.glb) but
-      // DISABLED: this specific rig authors the body mesh COLLAPSED (formed only by the
-      // skeleton at runtime) and its multi-bone skin will not deform through the game's
-      // install pipeline (renders perfectly in the standalone inspector RAW path; single-
-      // bone meshes like sword/shield work, multi-bone body collapses). Exhaustively
-      // isolated: scale/clone/position/mixer/clips/translation/attached+detached bind —
-      // none fix it. Needs a cleanly-authored 1:1 character (non-collapsed rest mesh).
-      // Single-GLB scaffolding (mixamoGlb + _installSingleGlbModel + retargeting) is
-      // wired and PROVEN with a clean Mixamo asset (Soldier_norm renders + animates).
-      // DISABLED here: the library's realistic medieval models are either broken
-      // (Knight_Met collapsed mesh) or static (medieval_knight = 1-frame poses), and
-      // retargeting the Mixamo lib onto the Tripo rig produces ineffective clips (rest-
-      // pose mismatch). Needs a clean Mixamo-rigged realistic char OR better retargeting.
-      // (Retargeting now transfers motion after the bone-name colon fix, but the
-      // Tripo↔Mixamo rest-pose difference garbles the result — needs rest-pose
-      // Tank = bestione: medieval plate knight (Tripo rig — same skeleton naming as
-      // Character Creator minus the CC_Base_ prefix, so the CC clips apply directly
-      // after prefix-strip remapping in the loader).
-      mixamoGlb: 'medieval_knight',
-      ccAnims: {
-        Idle: '/characters/anims/AS_Mage_Powerup_Light_01_CC.fbx',
-        Attacking_Idle: '/characters/anims/AS_Mage_Powerup_Light_01_CC.fbx',
-        Dagger_Attack: '/characters/anims/AS_Mage_Ability_Disk_Throw_CC.fbx',
-        Dagger_Attack2: '/characters/anims/AS_Mage_Ability_SuperBlast_High_EXT_CC.fbx',
-        Parry_Block: '/characters/anims/AS_Mage_Elemental_Air_Conjure_01_CC.fbx',
-        Respawn: '/characters/anims/AS_Mage_Ability_Spell_HighRtLight_02_CC.fbx',
-      },
+      // ⚠️ REALISTIC CHARACTER (medieval_knight + CC clips) DISABLED FOR GAMEPLAY:
+      // the free CC clips are mage casts only — NO run/walk/death — so in a live
+      // match the model slides around frozen ("models that don't move"). A playable
+      // class must be COMPLETE. Re-enable `mixamoGlb`+`ccAnims` once CC-family
+      // locomotion clips exist in /characters/anims (e.g. ActorCore free pack).
+      // mixamoGlb: 'medieval_knight',
       base: 'Superhero_Male_FullBody',
       outfit: 'Male_Ranger',
       hair: 'Hair_Buzzed',
@@ -133,19 +106,9 @@ export const TARGET_CLASS_DEFS = {
     weapons: ['staff'],
     recoveryId: 'arcane_rebind',
     visuals: {
-      // Mago = shadowkin (realistic hooded sorcerer, CC rig, real rest mesh, scale
-      // baked 1:1). Animated by DIRECT application of the CC-rig MageCollection
-      // clips (same skeleton family — no retargeting). Locomotion clips are still
-      // missing from the free samples; states fall back via the anim state machine.
-      mixamoGlb: 'shadowkin_mage_norm',
-      ccAnims: {
-        Idle: '/characters/anims/AS_Mage_Powerup_Light_01_CC.fbx',
-        Attacking_Idle: '/characters/anims/AS_Mage_Powerup_Light_01_CC.fbx',
-        Staff_Cast: '/characters/anims/AS_Mage_Elemental_Fire_Volley_01_CC.fbx',
-        Channel: '/characters/anims/AS_Mage_Elemental_Air_Conjure_01_CC.fbx',
-        Dagger_Attack: '/characters/anims/AS_Mage_Ability_Disk_Throw_CC.fbx',
-        Respawn: '/characters/anims/AS_Mage_Ability_Spell_HighRtLight_02_CC.fbx',
-      },
+      // ⚠️ Realistic shadowkin mage DISABLED for gameplay (no locomotion clips —
+      // see the tank note). Re-enable once CC run/walk/death clips exist.
+      // mixamoGlb: 'shadowkin_mage_norm',
       base: 'Superhero_Male_FullBody',
       outfit: 'Male_Peasant',
       hair: 'Hair_Long',
@@ -160,17 +123,9 @@ export const TARGET_CLASS_DEFS = {
     weapons: ['sword', 'bow', 'staff'],
     recoveryId: 'adaptive_mend',
     visuals: {
-      // Ibrido = shadowflame samurai (realistic CC rig, real rest mesh, scale baked
-      // 1:1). Same direct CC-clip application as the mage.
-      mixamoGlb: 'shadowflame_samurai_norm',
-      ccAnims: {
-        Idle: '/characters/anims/AS_Mage_Powerup_Light_01_CC.fbx',
-        Attacking_Idle: '/characters/anims/AS_Mage_Powerup_Light_01_CC.fbx',
-        Dagger_Attack: '/characters/anims/AS_Mage_Ability_Disk_Throw_CC.fbx',
-        Staff_Cast: '/characters/anims/AS_Mage_Elemental_Fire_Volley_01_CC.fbx',
-        Channel: '/characters/anims/AS_Mage_Elemental_Air_Conjure_01_CC.fbx',
-        Respawn: '/characters/anims/AS_Mage_Ability_Spell_HighRtLight_02_CC.fbx',
-      },
+      // ⚠️ Realistic shadowflame samurai DISABLED for gameplay (no locomotion
+      // clips — see the tank note). Re-enable once CC run/walk/death clips exist.
+      // mixamoGlb: 'shadowflame_samurai_norm',
       base: 'Superhero_Female_FullBody',
       outfit: 'Female_Peasant',
       hair: 'Hair_SimpleParted',

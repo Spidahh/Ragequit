@@ -50,8 +50,8 @@ const _weaponGripConfig: Record<string, Record<'sword' | 'bow' | 'staff', Weapon
     },
     staff: {
       position: [0.015, -0.02, -0.01],
-      rotation: [Math.PI / 2, -0.14, Math.PI / 2],
-      scale: 0.46,
+      rotation: [Math.PI / 2, 0, 0],
+      scale: 0.56,
     },
   },
   mage: {
@@ -63,8 +63,8 @@ const _weaponGripConfig: Record<string, Record<'sword' | 'bow' | 'staff', Weapon
     },
     staff: {
       position: [0.015, -0.015, -0.01],
-      rotation: [Math.PI / 2, -0.14, Math.PI / 2],
-      scale: 0.46,
+      rotation: [Math.PI / 2, 0, 0],
+      scale: 0.56,
     },
   },
   archer: {
@@ -76,8 +76,8 @@ const _weaponGripConfig: Record<string, Record<'sword' | 'bow' | 'staff', Weapon
     },
     staff: {
       position: [0.01, -0.015, -0.01],
-      rotation: [Math.PI / 2, -0.14, Math.PI / 2],
-      scale: 0.42,
+      rotation: [Math.PI / 2, 0, 0],
+      scale: 0.52,
     },
   },
   hybrid: {
@@ -89,8 +89,8 @@ const _weaponGripConfig: Record<string, Record<'sword' | 'bow' | 'staff', Weapon
     },
     staff: {
       position: [0.01, -0.015, -0.01],
-      rotation: [Math.PI / 2, -0.14, Math.PI / 2],
-      scale: 0.42,
+      rotation: [Math.PI / 2, 0, 0],
+      scale: 0.52,
     },
   },
 }

@@ -227,16 +227,32 @@ export function tickCharacterMixer(charGroup: THREE.Group, deltaS: number): void
   store.mixer.update(Math.min(deltaS, 0.1))
 
   // Keep the base body's head-only clip plane at the character's neck line. The
-  // plane is world-space (normal +Y); it clips everything below neckWorldY so only
-  // the FullBody head/face survives while the outfit provides the body.
+  // plane is world-space (normal +Y); it clips everything below the neck so only
+  // the FullBody head/face survives while the outfit provides the body. It must
+  // FOLLOW the head bone — a fixed height decapitates crouched poses (run lean,
+  // death on the ground).
   const clip = charGroup.userData['headClipPlane'] as THREE.Plane | undefined
   if (clip) {
-    const offset = (charGroup.userData['headClipOffset'] as number) ?? 1.4
-    clip.constant = -(charGroup.getWorldPosition(_clipTmp).y + offset)
+    const headBone = charGroup.userData['headBone'] as THREE.Object3D | undefined
+    if (headBone) {
+      // Follow the head bone's position AND orientation: the plane cuts at the
+      // neck perpendicular to the head's up-axis, so the face survives in ANY
+      // pose (upright run, lying death) while the base body stays hidden.
+      headBone.getWorldPosition(_clipTmp)
+      headBone.getWorldQuaternion(_clipQTmp)
+      _clipNTmp.set(0, 1, 0).applyQuaternion(_clipQTmp).normalize()
+      clip.setFromNormalAndCoplanarPoint(_clipNTmp, _clipTmp.addScaledVector(_clipNTmp, -0.12))
+    } else {
+      clip.normal.set(0, 1, 0)
+      const offset = (charGroup.userData['headClipOffset'] as number) ?? 1.4
+      clip.constant = -(charGroup.getWorldPosition(_clipTmp).y + offset)
+    }
   }
 }
 
 const _clipTmp = new THREE.Vector3()
+const _clipNTmp = new THREE.Vector3()
+const _clipQTmp = new THREE.Quaternion()
 
 /** Drive the animation state machine based on current gameplay state. */
 export function setCharAnimState(charGroup: THREE.Group, state: CharAnimState): void {

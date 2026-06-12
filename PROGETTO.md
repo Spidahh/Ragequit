@@ -435,21 +435,42 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
      procedurale con swell lento (brown noise + LFO), zero file, dentro il master gain (volume/mute ok).
      Spostati lì anche `playSwap`/`playStatus` (estrazione per il file-budget di sound-engine/main).
   4. Gate pieno verde (244 test) → commit + push su `main`.
+
+- **2026-06-12 — ROUND 3 (feedback live: «errori ovunque, modelli che non si muovono, posizionati male»).**
+  CAUSA #0 del feedback precedente «tutto uguale»: l'utente giocava su **:5173 servito da una WORKTREE VECCHIA**
+  (dazzling-lumiere) e il repo principale era sul branch superato → ora :5173 = client NUOVO di questa worktree,
+  repo principale allineato a `origin/main` (file sciolti salvati in `.backup-untracked/`). LEZIONE: prima di
+  qualsiasi verifica utente, controllare COSA serve la sua porta.
+  1. **REVERT personaggi realistici dal gameplay** (decisione di completezza): le clip CC free sono solo cast →
+     in partita i 3 realistici SCIVOLANO senza animazione di corsa/morte = ingiocabili («modelli che non si
+     muovono»). `mixamoGlb`/`ccAnims` COMMENTATI per tank/mage/hybrid → il gioco torna ai 4 modulari COMPLETI
+     (tutte le anim) e distinti (CLASS_BUILD breadth+tinte). Le 4 classi realistiche tornano quando ci saranno
+     clip CC di locomotion (ActorCore free, serve account utente). Tutto il codice/asset resta pronto.
+  2. **AUDIT sistematico** (8 idle class×weapon + run/attack/death forzati con animshot) → 2 bug VERI trovati:
+     - **DECAPITAZIONE in pose basse** (corsa china, morte a terra): il piano head-clip era ad ALTEZZA FISSA →
+       la testa scendeva sotto e spariva. FIX in 2 passi: (a) il piano segue l'OSSO della testa (`headBone` in
+       userData); (b) segue anche l'ORIENTAMENTO (normale = asse-Y dell'osso, `setFromNormalAndCoplanarPoint`)
+       perché da sdraiati il piano orizzontale non tagliava più nulla e la pelle base bucava i vestiti.
+       Verificato: corsa con viso ✓, morte con viso e vestiti puliti ✓.
+     - **STAFF "da lancia"**: grip orizzontale all'indietro → da davanti un moncone all'anca. FIX: rotazione
+       verticale (come la spada) + scala 0.46/0.42→0.56/0.52 su tutte le classi. (Tentata inclinazione extra:
+       peggio, revertita — il diagonale a tutta lunghezza è il meglio del KayKit staff.)
+  3. Verificato in-match su :5173 (bot in affondo animato, 0 errori). Gate verde → ship su main.
      ⛔ REGOLA dall'utente: **NON inventare i dettagli da solo, si decide INSIEME.** Le scelte di
      STILE e ASSET sono **sue**; io faccio analisi, propongo, eseguo. (Questo è il piano che mi ha
      scritto «20 volte»; ora è registrato — non va più ridetto.)
      **Obiettivo:** rifare **TUTTA** la grafica in **UNO stile coerente** — personaggi, arena, armi,
      braccia, props, VFX, HUD **e i MENU**. La camera/atmosfera è secondaria: il problema è mesh/asset/UI.
      **PROCESSO (la prossima sessione esegue QUESTO, in ordine, con l'utente che decide):**
-  5. **ANALISI** completa della grafica attuale + di cosa è rotto (skin tutte uguali = frankenstein a
+  4. **ANALISI** completa della grafica attuale + di cosa è rotto (skin tutte uguali = frankenstein a
      layer; armi girate/scudo storto = grip a mano; braccia FP a caso; font menu su Arila; VFX piatte).
-  6. **DECIDERE INSIEME LO STILE per TUTTO il gioco** (mondo 3D **e** menu/HUD) — **UNA via sola**.
+  5. **DECIDERE INSIEME LO STILE per TUTTO il gioco** (mondo 3D **e** menu/HUD) — **UNA via sola**.
      `STILE.md` esiste ma copre il 3D e l'ho deciso io → va **ri-validato con l'utente** ed esteso a
      menu/UI. Proporgli 2-3 vie concrete (con riferimenti), **lui sceglie UNA**.
-  7. **STUDIARE `E:/GIOCHI/ASSET_GRAFICA` a fondo** (ha `_INVENTARIO.md`): elencare **SOLO** ciò che è
+  6. **STUDIARE `E:/GIOCHI/ASSET_GRAFICA` a fondo** (ha `_INVENTARIO.md`): elencare **SOLO** ciò che è
      **davvero utile e funzionale** allo stile scelto; scartare il resto (incluso il cartoon che odia).
-  8. **SCARICARE il mancante FREE** online (Sketchfab/Quaternius/Mixamo/Poly Haven/ambientCG/font CC0).
-  9. **INTEGRARE tutto coerente**, verificando (log+logica + l'utente guarda dal vivo).
+  7. **SCARICARE il mancante FREE** online (Sketchfab/Quaternius/Mixamo/Poly Haven/ambientCG/font CC0).
+  8. **INTEGRARE tutto coerente**, verificando (log+logica + l'utente guarda dal vivo).
      **REGOLE DURE:** solo asset/tech/hosting **GRATIS**; rig **Mixamo**; **gioco completo, niente tagli**;
      valori numerici = compito MIO; **scelte di stile/asset = decise dall'UTENTE**.
      **AREE da sistemare** (lo scope; i dettagli si fissano ai punti 2-3 con l'utente): personaggi/skin

@@ -181,6 +181,18 @@ function _installCharacterModel(
     headClip = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
     charGroup.userData['headClipPlane'] = headClip
     charGroup.userData['headClipOffset'] = -CAPSULE_HALF_HEIGHT_M + CHARACTER_RENDER_HEIGHT_M * 0.8
+    // Track the HEAD BONE so the clip plane follows animation. With a fixed
+    // height the head dips BELOW the plane in crouched poses (run lean, death
+    // on the ground) and the character renders decapitated.
+    let headBone: THREE.Object3D | null = null
+    model.traverse((o) => {
+      if (headBone || !(o as THREE.Bone).isBone) return
+      const n = o.name.toLowerCase()
+      if (n === 'head' || (n.includes('head') && !n.includes('top') && !n.includes('end'))) {
+        headBone = o
+      }
+    })
+    charGroup.userData['headBone'] = headBone
   }
 
   // --- Materials ---
