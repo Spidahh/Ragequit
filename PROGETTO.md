@@ -43,12 +43,8 @@ persona (viewmodel) — vedi `render/weapon-view.ts`.
     il target dark-gritty-realistico; tenere i realistici (Knight_Met, Gwyn, drago,
     RPGWeapons, dungeon/props realistici), scartare i cartoon.
 
-## 1.6 VISIONE DEL GIOCO (cosa vuole l'utente — DA COMPLETARE con lui)
-
-> Da riempire con "le mille cose" già dette nei mesi. Seed attuale:
-> arena PvP dark-fantasy realistica, 4 classi, melee + magie per elemento (audio già
-> pronti), mob/boss (drago, Gwyn), prima persona / mezza-terza. **TODO: l'utente deve
-> dettare qui regole/gameplay/feeling che ancora non ho registrato.**
+> Il design del gioco (vision, classi, combat, abilità, modalità) è nei doc `01_DESIGN/`
+> (rivisti con l'utente in `REVISIONE.md`). Non duplicarlo qui.
 
 ## 2. Architettura & sistemi (mappa — NON ri-scoprirla ogni volta)
 
