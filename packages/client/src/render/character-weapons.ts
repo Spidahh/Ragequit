@@ -335,7 +335,11 @@ export function updateShieldAttachment(charGroup: THREE.Group): void {
   // sword is equipped — a true sword-and-board look. On parry it swings up into
   // a forward blocking stance; otherwise it rests along the forearm.
   if (sg.parent !== leftHand) leftHand.add(sg)
-  const scale = classId === 'tank' ? 0.72 : 0.6
+  // Single-GLB realistic models sit at ~1.0 model scale vs ~0.66 for the modular
+  // rigs, and the shield inherits it through the hand bone — compensate, or the
+  // shield doubles in size on realistic characters.
+  const isSingleGlb = !!model.userData['singleGlb']
+  const scale = (classId === 'tank' ? 0.7 : 0.55) * (isSingleGlb ? 0.45 : 1)
   sg.scale.setScalar(scale)
 
   // shield_A is modelled upright (long axis +Y, broad face ±Z), so it needs NO

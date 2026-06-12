@@ -364,7 +364,42 @@ export function findBone(model: THREE.Object3D, name: string): THREE.Object3D | 
     const found = model.getObjectByName(s)
     if (found) return found
   }
-  return null
+  // Fuzzy fallback for realistic rigs (CC "CC_Base_L_Hand_31", Tripo "L_Hand"):
+  // exact lookups miss because of prefixes and GLB-export numeric suffixes.
+  // Compare canonical side+part keys instead (lhand, rupperarm, hips, …).
+  const want = _canonBone(name)
+  if (!want) return null
+  let hit: THREE.Object3D | null = null
+  model.traverse((o) => {
+    if (hit || !(o as THREE.Bone).isBone) return
+    if (_canonBone(o.name) === want) hit = o
+  })
+  return hit
+}
+
+/** side+part canonical key for humanoid bones across naming conventions. */
+function _canonBone(raw: string): string | null {
+  const n = raw
+    .toLowerCase()
+    .replace(/^mixamorig:?/, '')
+    .replace(/^cc_base_/, '')
+    .replace(/_\d+$/, '')
+  const side = /(^|_)l(_|$)|left/.test(n) ? 'l' : /(^|_)r(_|$)|right/.test(n) ? 'r' : ''
+  // Order matters: 'forearm' must be tested before the generic 'arm'.
+  const part = n.includes('hand')
+    ? 'hand'
+    : n.includes('forearm') || n.includes('lowerarm')
+      ? 'lowerarm'
+      : n.includes('upperarm') || /(^|_)arm($|_)/.test(n)
+        ? 'upperarm'
+        : n.includes('shoulder') || n.includes('clavicle')
+          ? 'clavicle'
+          : n.includes('hip') || n.includes('pelvis')
+            ? 'hips'
+            : null
+  if (!part) return null
+  if (part === 'hips') return 'hips'
+  return side ? side + part : null
 }
 
 // ---------------------------------------------------------------------------

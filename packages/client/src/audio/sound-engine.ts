@@ -511,6 +511,11 @@ export class SoundEngine {
     osc.stop(ac.currentTime + 0.8)
   }
 
+  /** Audio graph access for companion modules (audio/ambience.ts). */
+  graph(): { ac: AudioContext; out: AudioNode; muted: boolean } {
+    return { ac: this.ac, out: this.out, muted: this._muted }
+  }
+
   /** Short upward frequency sweep — jump. */
   playJump(): void {
     if (this._muted) return
@@ -529,29 +534,6 @@ export class SoundEngine {
     osc.stop(ac.currentTime + 0.14)
   }
 
-  /** Mechanical click — weapon swap. */
-  playSwap(): void {
-    if (this._muted) return
-    const ac = this.ac,
-      out = this.out
-    const len = Math.floor(ac.sampleRate * 0.028)
-    const buf = ac.createBuffer(1, len, ac.sampleRate)
-    const d = buf.getChannelData(0)
-    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (len * 0.22))
-    const src = ac.createBufferSource()
-    src.buffer = buf
-    const filt = ac.createBiquadFilter()
-    filt.type = 'highpass'
-    filt.frequency.value = 1100
-    const gain = ac.createGain()
-    gain.gain.value = 0.3
-    src.connect(filt)
-    filt.connect(gain)
-    gain.connect(out)
-    this._pitch(src)
-    src.start()
-  }
-
   /** Metallic ring — parry / block. */
   playParry(): void {
     if (this._muted) return
@@ -567,30 +549,6 @@ export class SoundEngine {
     gain.connect(out)
     osc.start()
     osc.stop(ac.currentTime + 0.42)
-  }
-
-  /** Short tone — status applied notification. */
-  playStatus(element = 'none'): void {
-    if (this._muted) return
-    const ac = this.ac,
-      out = this.out
-    const osc = ac.createOscillator()
-    const gain = ac.createGain()
-    osc.type = 'sine'
-    const freqByElement: Record<string, number> = {
-      fire: 440,
-      ice: 900,
-      lightning: 1200,
-      dark: 220,
-      nature: 550,
-    }
-    osc.frequency.value = freqByElement[element] ?? 360
-    gain.gain.setValueAtTime(0.18, ac.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.18)
-    osc.connect(gain)
-    gain.connect(out)
-    osc.start()
-    osc.stop(ac.currentTime + 0.2)
   }
 
   // ─── Spatial audio ───────────────────────────────────────────────────────

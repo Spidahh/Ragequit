@@ -411,27 +411,51 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
      realistici = BLOCCATA su clip CC** (ActorCore ne ha 32 gratis ma serve account/browser → unico passo
      dell'utente); nel frattempo corsa/morte fanno fallback su Idle (coerente, non rotto).
   5. Gate pieno verde → **commit + push su `main` (= deploy prod)**.
+
+- **2026-06-12 — ROUND 2 (feedback utente: scudo storto · mappe da rifare · QoL "sembra primitivo").**
+  1. **SCUDO/BRACCIO RISOLTO.** Cause trovate coi dati (diag Playwright su `__inspectChar`): (a) `findBone`
+     non conosceva i nomi CC/Tripo → sui realistici lo scudo finiva sul fallback e il MODELLO single-GLB non
+     chiamava mai `applyShieldProp` → gruppo scudo VUOTO (meshCount 0); (b) posa-parata additiva troppo
+     estrema (braccio slogato); (c) scala scudo doppia sui realistici (model scale ~1.0 vs ~0.66 modulare).
+     FIX: **fuzzy bone-match canonico** in `findBone` (`_canonBone`: side+part, gestisce `CC_Base_L_Hand_31`/
+     `L_Hand`/`mixamorig:LeftHand`); `applyShieldProp` nel path single-GLB; costanti parata ammorbidite
+     (Z −0.8, X 0.42, gomito 0.95); scala scudo ×0.45 sui single-GLB. Verificato: knight para con scudo al
+     braccio, archer in guardia plausibile.
+  2. **MAPPE RIFATTE (level-design vero, principi arena-PvP).** `duel_arena` = "Court of Pillars": slab
+     centrale bassa vault-abile, 2 pilastri-orbita grassi E/W (melee dance), corsie z=±5 interrotte da
+     pilastri snelli (no shooting-gallery per gli archi), L-wall di protezione a ogni spawn, 2 power-flank
+     rialzati con step (rischio/ricompensa). `gladiators_arena` = "Ruined Bastion": keep centrale con DUE
+     approcci a gradini (la power position si conquista), rovine a taglie/posizioni irregolari (simmetria
+     180°, niente effetto-griglia), muri sfalsati off-cardinal, pocket-crate fra le zone, piattaforme angolo
+     ad altezze diverse (2.6/3.4 in coppie diagonali). Validator + 203 test server verdi; verificato in-match
+     (muro-spawn in muratura visibile davanti al giocatore).
+  3. **QoL AUDIO (il gap vero del "primitivo"):** il gioco aveva GIÀ popup-danno/hitmarker/kill-feed/20+ SFX
+     procedurali (audit fatto) — mancavano **passi** e **ambiente**. Nuovo `audio/ambience.ts`: footstep
+     stride-driven (uno scuff ogni ~2.1 m a terra, pitch variato, guard anti-teleport) + **wind-bed loop**
+     procedurale con swell lento (brown noise + LFO), zero file, dentro il master gain (volume/mute ok).
+     Spostati lì anche `playSwap`/`playStatus` (estrazione per il file-budget di sound-engine/main).
+  4. Gate pieno verde (244 test) → commit + push su `main`.
      ⛔ REGOLA dall'utente: **NON inventare i dettagli da solo, si decide INSIEME.** Le scelte di
      STILE e ASSET sono **sue**; io faccio analisi, propongo, eseguo. (Questo è il piano che mi ha
      scritto «20 volte»; ora è registrato — non va più ridetto.)
      **Obiettivo:** rifare **TUTTA** la grafica in **UNO stile coerente** — personaggi, arena, armi,
      braccia, props, VFX, HUD **e i MENU**. La camera/atmosfera è secondaria: il problema è mesh/asset/UI.
      **PROCESSO (la prossima sessione esegue QUESTO, in ordine, con l'utente che decide):**
-  6. **ANALISI** completa della grafica attuale + di cosa è rotto (skin tutte uguali = frankenstein a
+  5. **ANALISI** completa della grafica attuale + di cosa è rotto (skin tutte uguali = frankenstein a
      layer; armi girate/scudo storto = grip a mano; braccia FP a caso; font menu su Arila; VFX piatte).
-  7. **DECIDERE INSIEME LO STILE per TUTTO il gioco** (mondo 3D **e** menu/HUD) — **UNA via sola**.
+  6. **DECIDERE INSIEME LO STILE per TUTTO il gioco** (mondo 3D **e** menu/HUD) — **UNA via sola**.
      `STILE.md` esiste ma copre il 3D e l'ho deciso io → va **ri-validato con l'utente** ed esteso a
      menu/UI. Proporgli 2-3 vie concrete (con riferimenti), **lui sceglie UNA**.
-  8. **STUDIARE `E:/GIOCHI/ASSET_GRAFICA` a fondo** (ha `_INVENTARIO.md`): elencare **SOLO** ciò che è
+  7. **STUDIARE `E:/GIOCHI/ASSET_GRAFICA` a fondo** (ha `_INVENTARIO.md`): elencare **SOLO** ciò che è
      **davvero utile e funzionale** allo stile scelto; scartare il resto (incluso il cartoon che odia).
-  9. **SCARICARE il mancante FREE** online (Sketchfab/Quaternius/Mixamo/Poly Haven/ambientCG/font CC0).
-  10. **INTEGRARE tutto coerente**, verificando (log+logica + l'utente guarda dal vivo).
-      **REGOLE DURE:** solo asset/tech/hosting **GRATIS**; rig **Mixamo**; **gioco completo, niente tagli**;
-      valori numerici = compito MIO; **scelte di stile/asset = decise dall'UTENTE**.
-      **AREE da sistemare** (lo scope; i dettagli si fissano ai punti 2-3 con l'utente): personaggi/skin
-      (4 classi DISTINTE, oggi frankenstein in `render/character-loader.ts`) · armi+grip (R3) · braccia 1ª
-      persona · spell/VFX (`render/projectile-visuals.ts`) · menu/HUD/font (`menu.ts`,`public/game-ui.css`,`hud/*`).
-      **FATTO finora:** SOLO arena (PBR+luce). Tutto il resto è da fare con questo processo, deciso con lui.
+  8. **SCARICARE il mancante FREE** online (Sketchfab/Quaternius/Mixamo/Poly Haven/ambientCG/font CC0).
+  9. **INTEGRARE tutto coerente**, verificando (log+logica + l'utente guarda dal vivo).
+     **REGOLE DURE:** solo asset/tech/hosting **GRATIS**; rig **Mixamo**; **gioco completo, niente tagli**;
+     valori numerici = compito MIO; **scelte di stile/asset = decise dall'UTENTE**.
+     **AREE da sistemare** (lo scope; i dettagli si fissano ai punti 2-3 con l'utente): personaggi/skin
+     (4 classi DISTINTE, oggi frankenstein in `render/character-loader.ts`) · armi+grip (R3) · braccia 1ª
+     persona · spell/VFX (`render/projectile-visuals.ts`) · menu/HUD/font (`menu.ts`,`public/game-ui.css`,`hud/*`).
+     **FATTO finora:** SOLO arena (PBR+luce). Tutto il resto è da fare con questo processo, deciso con lui.
 
 ## 7. Metodo di lavoro (professionale)
 

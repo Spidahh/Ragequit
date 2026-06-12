@@ -53,6 +53,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 
+import { playStatus, playSwap, tickFootsteps } from './audio/ambience.js'
 import { SoundEngine } from './audio/sound-engine.js'
 import { type DeathcamData } from './endgame.js'
 import { type ComboState, victimShakeIntensity, COMBO_RESET_MS } from './game/combat-feedback.js'
@@ -364,7 +365,7 @@ initTelemetry()
 const _supabaseAuthReady = initSupabaseAuth()
 const statusOverlay = initStatusOverlay({
   getSelfId: () => self?.sessionId,
-  playStatus: (el) => soundEngine.playStatus(el),
+  playStatus: (el) => playStatus(soundEngine, el),
 })
 
 // -----------------------------------------------------------------------
@@ -1831,7 +1832,7 @@ function onWeaponSwapped(msg: ServerWeaponSwappedMessage): void {
     self.bowChargeStartMs = 0
     self.bowChargeServerAcked = false
   }
-  soundEngine.playSwap()
+  playSwap(soundEngine)
 
   // Flash the new weapon slot to signal the swap was accepted by the server.
   const slot = weaponSlots[msg.weapon]
@@ -2144,10 +2145,9 @@ function simStep(): void {
     castLocked: capsFromStatus.castLocked,
   }
 
-  // Jump sound — fire exactly once per jump edge (not every tick).
-  if (input.jump) soundEngine.playJump()
-
   simulatePlayer(self.sim, input, DT, getMap(getActiveMapId() || 'blockout'), caps)
+  // Movement audio: jump + stride footsteps + ambient wind (audio/ambience.ts).
+  tickFootsteps(soundEngine, self.sim.pos.x, self.sim.pos.z, self.sim.onGround, dead, input.jump)
 
   self.pending.push({ seq: seqCounter, input, dt: DT, caps })
   if (self.pending.length > 240) self.pending.splice(0, self.pending.length - 240)

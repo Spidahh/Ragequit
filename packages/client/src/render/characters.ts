@@ -445,8 +445,11 @@ function _installSingleGlbModel(
     // Blade along the hand's bone axis (down at rest), tip away from the wrist.
     wg.position.set(0, 0.08, 0.02)
     wg.rotation.set(0, 0, Math.PI)
-    wg.scale.setScalar(0.4)
+    wg.scale.setScalar(0.3)
   }
+
+  // Physical off-hand shield (sword-and-board) — same as the modular installer.
+  applyShieldProp(charGroup)
 
   const store = initMixerStore(
     model,
@@ -602,9 +605,9 @@ export function setParryShieldState(
 // Tuning constants for the procedural block pose (left arm raises the shield).
 // The skeleton has no dedicated block clip, so we additively rotate the left
 // arm bones AFTER the mixer writes the idle pose each frame.
-const PARRY_UPPERARM_Z = -1.15 // lift the upper arm up/across the chest
-const PARRY_UPPERARM_X = 0.55 // bring it forward, in front of the torso
-const PARRY_LOWERARM_Z = 1.35 // bend the elbow so the shield rises to face level
+const PARRY_UPPERARM_Z = -0.8 // lift the upper arm up/across the chest
+const PARRY_UPPERARM_X = 0.42 // bring it forward, in front of the torso
+const PARRY_LOWERARM_Z = 0.95 // bend the elbow so the shield rises to guard height
 
 /**
  * Procedurally raise the left (shield) arm into a blocking stance while
