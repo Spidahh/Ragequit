@@ -37,6 +37,22 @@ interface ProjectileVisual {
   lastAt: number
   kind: ProjectileKind
   style: ProjectileStyle
+  hasLight: boolean
+}
+
+// STILE §7 layer 5 — dynamic point-light per spell bolt so the magic actually
+// lights the stone. Pooled: at most this many concurrent lights (perf budget);
+// extra simultaneous bolts simply skip the light.
+const MAX_PROJECTILE_LIGHTS = 6
+let _activeProjectileLights = 0
+
+function _attachProjectileLight(group: THREE.Object3D, color: number): boolean {
+  if (_activeProjectileLights >= MAX_PROJECTILE_LIGHTS) return false
+  const light = new THREE.PointLight(color, 7, 7, 2)
+  light.castShadow = false
+  group.add(light)
+  _activeProjectileLights++
+  return true
 }
 
 function projectileStyle(kind: ProjectileKind, element?: string): ProjectileStyle {
@@ -248,6 +264,7 @@ export function initProjectileVisuals({
     const kind: ProjectileKind = msg.kind === 'bolt' ? 'bolt' : 'arrow'
     const { object, style } = makeProjectileObject(kind, msg.element)
     object.position.set(msg.origin.x, msg.origin.y, msg.origin.z)
+    const hasLight = style !== 'arrow' && _attachProjectileLight(object, projectileColor(style))
     const trail = makeTrailLine(style)
     scene.add(object)
     scene.add(trail)
@@ -266,10 +283,12 @@ export function initProjectileVisuals({
       lastAt: performance.now(),
       kind,
       style,
+      hasLight,
     })
   }
 
   function disposeVisual(vis: ProjectileVisual): void {
+    if (vis.hasLight) _activeProjectileLights = Math.max(0, _activeProjectileLights - 1)
     scene.remove(vis.object)
     scene.remove(vis.trail)
     disposeObject(vis.object)
@@ -329,6 +348,7 @@ export function initProjectileVisuals({
         const kind: ProjectileKind = p.kind === 'bolt' ? 'bolt' : 'arrow'
         const { object, style } = makeProjectileObject(kind, p.element)
         object.position.set(p.x, p.y, p.z)
+        const hasLight = style !== 'arrow' && _attachProjectileLight(object, projectileColor(style))
         const trail = makeTrailLine(style)
         scene.add(object)
         scene.add(trail)
@@ -347,6 +367,7 @@ export function initProjectileVisuals({
           lastAt: now,
           kind,
           style,
+          hasLight,
         }
         projectileVisuals.set(id, vis)
       }

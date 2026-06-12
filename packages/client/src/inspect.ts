@@ -50,13 +50,17 @@ if (view === 'head') {
 }
 
 // Lights mirror the in-game world rig so the inspector matches what players see.
-scene.add(new THREE.HemisphereLight(0xd6dcea, 0x2a2436, 1.15))
-const key = new THREE.DirectionalLight(0xf0f6ff, 1.4)
+// (Brighter than the in-match rig so dark assets like plate armour read clearly.)
+scene.add(new THREE.HemisphereLight(0xd6dcea, 0x2a2436, 2.3))
+const key = new THREE.DirectionalLight(0xf0f6ff, 2.7)
 key.position.set(3, 5, 4)
 scene.add(key)
-const rim = new THREE.DirectionalLight(0x6a86d8, 0.6)
+const rim = new THREE.DirectionalLight(0x6a86d8, 1.1)
 rim.position.set(-3, 2, -3)
 scene.add(rim)
+const fill = new THREE.DirectionalLight(0xfff0e0, 1.0)
+fill.position.set(-2, 3, 5)
+scene.add(fill)
 
 // RAW mode: load an arbitrary GLB straight (no game pipeline) to evaluate a NEW
 // asset pack before integrating it — plays its own first animation, frames the body.
@@ -152,7 +156,16 @@ function loop(): void {
   } else {
     if (!styled && elapsed > 1.0) applyStyle()
     tickCharacterMixer(char, dt)
-    setCharAnimState(char, { moving: false, alive: true, activeWeapon: weapon, parrying: parry })
+    // Dev: &anim=run|death|attack forces a state so non-idle clips can be verified.
+    const force = params.get('anim')
+    setCharAnimState(char, {
+      moving: force === 'run',
+      speed: force === 'run' ? 6 : undefined,
+      alive: force !== 'death',
+      attacking: force === 'attack',
+      activeWeapon: weapon,
+      parrying: parry,
+    })
     setParryShieldState(char, parry, false, performance.now())
     applyParryArmPose(char, parry, dt)
   }

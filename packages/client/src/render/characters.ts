@@ -33,6 +33,17 @@ export { fetchWeaponGlb, applyWeaponProp, makeCastRing } from './character-weapo
 
 const _CHAR_GLB_FALLBACK_HEIGHT = 2.856
 
+// Per-class BUILD — distinct silhouette + colour identity within the shared modular
+// base (same gameplay render height). `breadth` widens X/Z only: the Tank reads as a
+// broad armoured "bestione", the Mage/Archer slimmer. `accent`+`tint` give each class
+// a strong faction hue on the outfit cloth.
+const CLASS_BUILD: Record<string, { breadth: number; accent: number; tint: number }> = {
+  tank: { breadth: 1.32, accent: 0x4a4f5a, tint: 0.85 }, // very broad, gunmetal bestione
+  archer: { breadth: 0.9, accent: 0x2f7d2a, tint: 0.84 }, // slim, vivid forest green
+  mage: { breadth: 0.96, accent: 0x6a2fc0, tint: 0.86 }, // arcane violet wizard
+  hybrid: { breadth: 1.06, accent: 0xb83020, tint: 0.84 }, // crimson, mid build
+}
+
 function _measureRenderableBox(root: THREE.Object3D): THREE.Box3 {
   const box = new THREE.Box3()
   root.updateMatrixWorld(true)
@@ -52,6 +63,25 @@ function _measureRenderableBox(root: THREE.Object3D): THREE.Box3 {
 function _validBoxHeight(box: THREE.Box3): number {
   const h = box.getSize(new THREE.Vector3()).y
   return Number.isFinite(h) && h > 0.1 ? h : _CHAR_GLB_FALLBACK_HEIGHT
+}
+
+const _tmpV = new THREE.Vector3()
+
+// Skinning-aware size for single-GLB Mixamo characters. Their mesh geometry bbox is
+// tiny (verts authored near origin) — the real human size lives in the SKELETON, so
+// `_measureRenderableBox` mis-reads them and they scale to the fallback (invisible
+// off-frame). Measure the spread of bone world-positions instead.
+function _measureBoneBox(root: THREE.Object3D): THREE.Box3 | null {
+  const box = new THREE.Box3()
+  let found = false
+  root.updateMatrixWorld(true)
+  root.traverse((o) => {
+    if ((o as THREE.Bone).isBone) {
+      box.expandByPoint(o.getWorldPosition(_tmpV))
+      found = true
+    }
+  })
+  return found && !box.isEmpty() ? box : null
 }
 
 // Character material. The class assets ship DETAILED painted baseColor textures
@@ -113,24 +143,47 @@ function _installCharacterModel(
   // ONE shared render-height the camera/nameplates also derive from. (Previously a
   // lone × 1.45 fudge made bodies 2.61 m tall while the camera still framed a 1.8 m
   // world, so enemies loomed and the player felt like a dwarf.)
-  const nativeBox = _measureRenderableBox(model)
-  const nativeHeight = _validBoxHeight(nativeBox)
-  const targetScale = CHARACTER_RENDER_HEIGHT_M / nativeHeight
-  model.scale.setScalar(targetScale)
+  const isSingleGlb = !!model.userData['singleGlb']
   model.rotation.y = Math.PI // face forward (game convention)
-  const scaledBox = _measureRenderableBox(model)
-  model.position.y = -CAPSULE_HALF_HEIGHT_M - scaledBox.min.y
+  if (isSingleGlb) {
+    // NOTE: this single-GLB path is wired but currently UNUSED (no class sets
+    // `mixamoGlb`). Knight_Met collapses here because it ships at 1/100 scale in a
+    // "knight" node: post-load scaling breaks three.js 'attached' skinning (the skin
+    // collapses while bone-attached props still render). Fix = normalise the GLB to
+    // 1:1 offline, then re-enable. Size/place from the skeleton (bone world positions).
+    model.scale.setScalar(1)
+    model.updateMatrixWorld(true)
+    const bb = _measureBoneBox(model)
+    const footY = bb ? bb.min.y : 0
+    model.position.y = -CAPSULE_HALF_HEIGHT_M - footY - 0.02
+  } else {
+    const nativeBox = _measureRenderableBox(model)
+    const nativeHeight = _validBoxHeight(nativeBox)
+    model.scale.setScalar(CHARACTER_RENDER_HEIGHT_M / nativeHeight)
+    // Per-class BUILD: same render height (gameplay-locked) but distinct silhouette —
+    // the Tank reads as a broad "bestione", the others slimmer. Breadth on X/Z only.
+    const build = CLASS_BUILD[(charGroup.userData['loadedClassId'] as string) ?? '']
+    if (build) {
+      model.scale.x *= build.breadth
+      model.scale.z *= build.breadth
+    }
+    const scaledBox = _measureRenderableBox(model)
+    model.position.y = -CAPSULE_HALF_HEIGHT_M - scaledBox.min.y
+  }
 
-  // Head-only clip for the FullBody base. The base supplies the FACE (head skin +
-  // eyes + eyebrows), but its muscular body is wider than the outfit and pokes
-  // through the clothes. A world-space horizontal plane clips the base to keep only
-  // the head; the outfit provides the clothed body. Its height tracks the character
-  // each frame (tickCharacterMixer) from the world Y + this offset (neck line).
-  const headClip = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
-  charGroup.userData['headClipPlane'] = headClip
-  charGroup.userData['headClipOffset'] = -CAPSULE_HALF_HEIGHT_M + CHARACTER_RENDER_HEIGHT_M * 0.8
+  // Single-GLB Mixamo characters (Tank = Knight_Met) are ONE rigged model: they keep
+  // their authored PBR materials (albedo + normal + ORM) and are NOT head-clipped.
+  // The head-only clip below exists solely for the layered base/outfit system, where
+  // the FullBody base supplies just the face and its body must be hidden under the
+  // outfit. Applying it to a single GLB would slice the whole body off at the neck.
+  let headClip: THREE.Plane | null = null
+  if (!isSingleGlb) {
+    headClip = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
+    charGroup.userData['headClipPlane'] = headClip
+    charGroup.userData['headClipOffset'] = -CAPSULE_HALF_HEIGHT_M + CHARACTER_RENDER_HEIGHT_M * 0.8
+  }
 
-  // --- Apply toon materials to ALL meshes (visible and hidden alike) ---
+  // --- Materials ---
   const glbMaterials: THREE.MeshStandardMaterial[] = []
   let renderableMeshes = 0
   let skinnedMeshes = 0
@@ -140,13 +193,22 @@ function _installCharacterModel(
     if (child instanceof THREE.SkinnedMesh) skinnedMeshes++
     child.frustumCulled = false
     child.castShadow = true
+    if (isSingleGlb) {
+      // Keep the model's own PBR materials; just register any MeshStandardMaterial
+      // so status-effect tints (hp pulse / shield / haste) can still reach it.
+      const src = child.material
+      for (const m of Array.isArray(src) ? src : [src]) {
+        if (m instanceof THREE.MeshStandardMaterial) glbMaterials.push(m)
+      }
+      return
+    }
     // Base-layer skinned meshes (no outfit/hair tag) are the FullBody body+head —
     // clip them to head-only so the body never pokes through the outfit.
     const isBase = child instanceof THREE.SkinnedMesh && !child.userData['layerTag']
     const source = child.material
     const mats = (Array.isArray(source) ? source : [source]).map((m) => {
       const mat = _makeToonMaterial(m, teamColor, toonGradient)
-      if (isBase) mat.clippingPlanes = [headClip]
+      if (isBase && headClip) mat.clippingPlanes = [headClip]
       return mat
     })
     child.material = Array.isArray(source) ? mats : mats[0]!
@@ -173,6 +235,21 @@ function _installCharacterModel(
   charGroup.userData['armorMat'] = glbMaterials[0]
   charGroup.userData['glbMaterials'] = glbMaterials
   charGroup.userData['toonGradient'] = toonGradient
+
+  // Per-class colour identity on the outfit cloth — the modular pack only has two
+  // outfit types (Ranger/Peasant), so a strong per-class hue makes the 4 classes read
+  // as distinct factions at a glance (steel tank / green ranger / violet mage / crimson).
+  const build = CLASS_BUILD[(charGroup.userData['loadedClassId'] as string) ?? '']
+  if (build) {
+    const accent = new THREE.Color(build.accent)
+    model.traverse((child) => {
+      if (!(child instanceof THREE.SkinnedMesh) || child.userData['layerTag'] !== 'outfit') return
+      for (const m of Array.isArray(child.material) ? child.material : [child.material]) {
+        const mm = m as THREE.MeshStandardMaterial
+        if (mm?.color) mm.color.lerp(accent, build.tint)
+      }
+    })
+  }
 
   const rightHand = findBone(model, 'RightHand')
   const wg = charGroup.userData['weaponGroup'] as THREE.Group | undefined
@@ -278,6 +355,109 @@ function _installCharacterModel(
 }
 
 // ---------------------------------------------------------------------------
+// Dedicated installer for single-GLB realistic characters (e.g. Tank = Knight).
+// Mirrors the standalone inspector RAW path (which renders this rig perfectly):
+// keep the model's own materials, NO head-clip / layer / outline machinery. Built
+// minimal first to isolate why the modular installer leaves the skinned body
+// collapsed. TEMP: no scale/position/weapon yet.
+// ---------------------------------------------------------------------------
+function _installSingleGlbModel(
+  charGroup: THREE.Group,
+  model: THREE.Group,
+  clipsByName: Partial<Record<string, THREE.AnimationClip>>,
+): void {
+  if (charGroup.userData['disposed'] as boolean) return
+
+  const oldStore = charGroup.userData['mixerStore'] as MixerStore | undefined
+  if (oldStore) {
+    oldStore.mixer.stopAllAction()
+    const oldModel = charGroup.userData['charModel'] as THREE.Object3D | undefined
+    if (oldModel) oldStore.mixer.uncacheRoot(oldModel)
+    delete charGroup.userData['mixerStore']
+  }
+
+  // Per-asset material brightness lift — the Tripo medieval knight is vertex-coloured
+  // and authored very dark; multiplying material.color brightens the vertex colours.
+  const GLB_BRIGHTNESS: Record<string, number> = { medieval_knight: 1.55 }
+  const glbFile = (model.userData['singleGlbFile'] as string) ?? ''
+  const lift = GLB_BRIGHTNESS[glbFile] ?? 1
+
+  // Register the model's real materials so status flashes (hp pulse / shield /
+  // damage blink in self-emissive.ts & remote-players.ts) reach realistic chars too.
+  const glbMaterials: THREE.MeshStandardMaterial[] = []
+  model.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return
+    child.castShadow = true
+    child.frustumCulled = false
+    for (const m of Array.isArray(child.material) ? child.material : [child.material]) {
+      const mm = m as THREE.MeshStandardMaterial
+      if (lift !== 1 && mm?.color) mm.color.multiplyScalar(lift)
+      if (mm instanceof THREE.MeshStandardMaterial) glbMaterials.push(mm)
+    }
+  })
+  charGroup.userData['glbMaterials'] = glbMaterials
+
+  // Face forward + scale to render height + feet to ground.
+  model.rotation.y = Math.PI
+  model.scale.setScalar(1)
+  model.updateMatrixWorld(true)
+  const boneBox0 = _measureBoneBox(model)
+  const boneH = boneBox0 ? boneBox0.getSize(_tmpV).y : 0
+  const nativeHeight = boneH > 0.1 ? boneH * 1.12 : _CHAR_GLB_FALLBACK_HEIGHT
+  model.scale.setScalar(CHARACTER_RENDER_HEIGHT_M / nativeHeight)
+  model.updateMatrixWorld(true)
+  const boneBox1 = _measureBoneBox(model)
+  const footY = boneBox1 ? boneBox1.min.y : 0
+  model.position.y = -CAPSULE_HALF_HEIGHT_M - footY - CHARACTER_RENDER_HEIGHT_M * 0.04
+
+  // Remove the procedural placeholder; keep weapon/shield/parry/model/shadow.
+  const wg = charGroup.userData['weaponGroup'] as THREE.Group | undefined
+  const sg = charGroup.userData['shieldGroup'] as THREE.Group | undefined
+  const shield = charGroup.userData['parryShield'] as THREE.Group | undefined
+  for (const child of [...charGroup.children]) {
+    if (
+      child === wg ||
+      child === sg ||
+      child === shield ||
+      child === model ||
+      child.name === 'shadow'
+    )
+      continue
+    child.visible = false
+    charGroup.remove(child)
+  }
+
+  charGroup.add(model)
+  charGroup.userData['charModel'] = model
+
+  // Attach the game's weaponGroup to the rig's right hand (CC/Tripo bone naming:
+  // CC_Base_R_Hand_xx / R_Hand; GLB exports add numeric suffixes → fuzzy match).
+  let rightHand: THREE.Bone | null = null
+  model.traverse((o) => {
+    if (rightHand || !(o as THREE.Bone).isBone) return
+    const stripped = o.name.replace(/_\d+$/, '')
+    if (/^(CC_Base_)?R_Hand$/i.test(stripped) || /^(mixamorig:?)?RightHand$/i.test(stripped)) {
+      rightHand = o as THREE.Bone
+    }
+  })
+  if (rightHand && wg) {
+    ;(rightHand as THREE.Bone).add(wg)
+    // Blade along the hand's bone axis (down at rest), tip away from the wrist.
+    wg.position.set(0, 0.08, 0.02)
+    wg.rotation.set(0, 0, Math.PI)
+    wg.scale.setScalar(0.4)
+  }
+
+  const store = initMixerStore(
+    model,
+    clipsByName as Partial<
+      Record<import('./character-animation.js').AnimName, THREE.AnimationClip>
+    >,
+  )
+  charGroup.userData['mixerStore'] = store
+}
+
+// ---------------------------------------------------------------------------
 // Public: load character GLB for a given charGroup
 // ---------------------------------------------------------------------------
 
@@ -305,14 +485,18 @@ export function loadCharacterGlb(
       }
       if (charGroup.userData['disposed'] as boolean) return
 
-      _installCharacterModel(
-        charGroup,
-        model,
-        clips,
-        teamColor,
-        toonGradient,
-        `${resolvedClass} GLTF`,
-      )
+      if (model.userData['singleGlb']) {
+        _installSingleGlbModel(charGroup, model, clips)
+      } else {
+        _installCharacterModel(
+          charGroup,
+          model,
+          clips,
+          teamColor,
+          toonGradient,
+          `${resolvedClass} GLTF`,
+        )
+      }
     })
     .catch((err) => {
       console.error('[characters] Failed to load character:', err)

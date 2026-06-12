@@ -31,7 +31,6 @@ import {
   STAFF_M1_LIFETIME_SEC,
   STAFF_M1_MANA_COST,
   STAFF_M1_SPEED_MPS,
-  CURSE_OUTGOING_DAMAGE_MULT,
   STAMINA_MAX,
   STAMINA_REGEN_PER_SEC_IDLE,
   STAMINA_REGEN_PER_SEC_MOVING,
@@ -92,12 +91,11 @@ import {
   spellImpactPushDistance,
   impactPushDirection,
 } from '../sim/combat-geometry.js'
+import { applyOutgoingDamageModifiers } from '../sim/damage-modifiers.js'
 import {
   AbilityEngine,
   BotController,
   ClassMechanicRuntime,
-  FLOW_DAMAGE_BONUS_FRAC,
-  FURY_SURGE_DAMAGE_BONUS,
   MatchManager,
   MeleeSystem,
   ParrySystem,
@@ -152,16 +150,6 @@ const STAFF_LIFETIME_TICKS = Math.max(1, Math.round(STAFF_M1_LIFETIME_SEC * TICK
 const PROJECTILE_SPAWN_FORWARD_OFFSET_M = 0.8
 // Eye/muzzle height above capsule centre. Must match the client FPS camera.
 const PROJECTILE_SPAWN_Y_OFFSET_M = PROJECTILE_MUZZLE_Y_OFFSET_M
-
-// Melee ability ids — used in drainDamage to gate Fury damage bonuses.
-const MELEE_ABILITY_IDS = new Set([
-  'uppercut',
-  'whirlwind',
-  'gap_closer',
-  'bleed_strike',
-  'guard_break',
-  'rending_dash',
-])
 
 export class GameRoom extends Room<GameState> {
   override maxClients = Number(process.env['MAX_CLIENTS'] ?? 2)
@@ -1030,33 +1018,15 @@ export class GameRoom extends Room<GameState> {
       // Parry absorbs / reduces whenever the protection state is active. Air
       // displacement is pressure, not an implicit parry shutdown.
       let didParry = false
-      let applied = d.damage
-      // Curse of Weakness: attacker's outgoing damage is reduced.
-      if (attacker && this.statuses.hasStatus(attacker, 'curse')) {
-        applied = Math.round(applied * CURSE_OUTGOING_DAMAGE_MULT)
-      }
-      // Class mechanic damage modifiers.
-      if (attacker) {
-        // Ability causes are prefixed: 'ability:uppercut'. Strip the prefix before
-        // checking the set (sword_m1 is a raw cause with no prefix).
-        const rawCause = d.cause.startsWith('ability:') ? d.cause.slice(8) : d.cause
-        const isMeleeHit = rawCause === 'sword_m1' || MELEE_ABILITY_IDS.has(rawCause)
-        if (isMeleeHit) {
-          // Fury stack bonus: +8% per stack for Tank melee hits.
-          const furyMult = this.mechanics.getMeleeDamageMult(attacker)
-          if (furyMult > 1) applied = Math.round(applied * furyMult)
-          // Fury surge: +40% burst on next melee hit after 5 stacks consumed.
-          if (this.mechanics.consumeSurge(attacker)) {
-            applied = Math.round(applied * (1 + FURY_SURGE_DAMAGE_BONUS))
-            // Brief stagger: apply a 0.3 s slow as a lightweight stagger proxy.
-            this.statuses.applyToPlayer(d.victimId, 'slow', 0.3, 1, d.attackerId, 0.5)
-          }
-        }
-        // Flow +20% damage on the flow-amplified cast's first hit.
-        if (d.cause !== 'sword_m1' && this.mechanics.consumeFlowDamagePending(d.attackerId)) {
-          applied = Math.round(applied * (1 + FLOW_DAMAGE_BONUS_FRAC))
-        }
-      }
+      // Curse / Fury / Flow outgoing-damage modifiers (sim/damage-modifiers.ts).
+      let applied = applyOutgoingDamageModifiers(
+        { statuses: this.statuses, mechanics: this.mechanics },
+        d.damage,
+        d.cause,
+        attacker,
+        d.attackerId,
+        d.victimId,
+      )
       if (d.canParry && victim.parrying) {
         const before = applied
         applied = applyParryReduction(
