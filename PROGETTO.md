@@ -221,6 +221,20 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
     cablarlo o rimuoverlo); **[2]** `clamp` NaN→0 (rischioso, valutare); **[22]–[26]** scrivere i test mancanti
     (MeleeSystem/ParrySystem/ClassMechanic/Zone/Projectile) — da fare con un workflow dedicato.
   - Lista completa difetti (confermati + 36 medium/low) nel task output dell'audit `wbxpn7b7i`.
+- **2026-06-12 — STANZA TEST completata (rifatta da zero su richiesta).** Iter: side-by-side → a terra non
+  sulle casse → mappa vuota + fila davanti → fermi immobili → distanti. Stato finale: mappa dedicata
+  **`test_room` VUOTA** (0 casse); **4 dummy una per classe, fermi immobili** (BotController: nessun input),
+  in **fila a terra distanziata 4 m** (x = -6/-2/2/6, z=0), **davanti al player** (z=8) e rivolti verso di lui.
+  - LEZIONE chiave: la disposizione va applicata in **TUTTI e 3** i punti di posizionamento —
+    `spawnBot` (spawn iniziale), `onJoin` (player), e **`respawn`** (chiamato da `resetAllPlayersForRound`
+    a inizio round, usava lo spawn unico → impilava tutti). Mancava il respawn = bug "tutti nello stesso punto".
+  - Bloccato da `rooms/test-room.test.ts` (regressione impossibile). Verifica = **logica + log server**, NON
+    screenshot (il gioco va in pausa senza pointer-lock → l'headless cattura il menu di pausa).
+- **2026-06-12 — Commit pushati su `main` (prod) questa sessione:** arena PBR+luce, Stanza Test, fix parry,
+  `passWithNoTests` tolto, estrazioni god-file, **+80 test** sistemi critici, redo Stanza Test (mappa vuota +
+  dummy fermi/distanti/respawn-fix) + test che la blocca. Gate verde a ogni push.
+  - PROSSIMI (coda, in ordine di valore, da fare con l'utente che guarda dal vivo): VFX magie "pop" (STILE §7);
+    bug visibili R6 font / R3 scudo; refactor combat rimandati [9]/[27]; dust-motes + god-ray (STILE §5).
 
 ## 7. Metodo di lavoro (professionale)
 
