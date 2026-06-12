@@ -239,24 +239,28 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
   - PROSSIMI (coda, in ordine di valore, da fare con l'utente che guarda dal vivo): VFX magie "pop" (STILE §7);
     bug visibili R6 font / R3 scudo; refactor combat rimandati [9]/[27]; dust-motes + god-ray (STILE §5).
 
-- **2026-06-12 — ROADMAP GRAFICA (LA priorità vera dell'utente — la grafica PRINCIPALE è ancora ROTTA).**
-  Stato onesto: **DECISO** lo stile (`STILE.md`) e **FATTA** solo l'arena (PBR+luce). **NON fatti** (ancora
-  il vecchio sistema, è quello che l'utente vede rotto): personaggi, armi, braccia FP, menu/HUD, spell/VFX.
-  Esecuzione in ordine (ogni fase: raccogli+verifica asset da `ASSET_MANIFEST.md` → integra → verifica
-  log/inspect + l'utente guarda dal vivo). **NON spostare la camera/atmosfera, è la mesh/asset il problema.**
-  - **FASE A — PERSONAGGI / SKIN (fix "tutte uguali" + "braccia a cazzo").** Sostituire il **frankenstein a
-    layer** (`render/character-loader.ts`: Superhero base + outfit + hair + boneInverses diversi → clipping +
-    skin simili) con **4 GLB distinti, uno per classe**, tutti conformati al **rig Mixamo** (animazioni
-    condivise). Tank=`Knight_Met.glb` (pronto), Mago=`pbr_shadowkin_mage_rigged.glb`, Ibrido=
-    `shadowflame_samurai.glb`, Arciere=skin realistica da scegliere. Ognuno **visivamente diverso**.
-  - **FASE B — ARMI + grip (fix "armi girate male", scudo storto = R3).** Attaccare ogni arma al **socket/bone
-    di presa reale** con orientamento per-arma corretto (non offset a mano). Usare i GLB realistici
-    (`ARMI/sword_kit`, `bow_kit`, staff, ecc.). File: `render/character-weapons.ts`, `weapon-view.ts`.
-  - **FASE C — BRACCIA 1ª PERSONA (viewmodel)** (`render/*` fpv): braccia+arma credibili, non attaccate a caso.
-  - **FASE D — SPELL / VFX "pop"** (`render/projectile-visuals.ts`, STILE §7): core emissivo 3–5 + glow +
-    trail 13fps + dynamic point-light per proiettile, element-coded (i 5 colori in `ELEMENT_COLOR`).
-  - **FASE E — MENU / HUD / FONT** (R6: i font menu non caricano → Arial): caricare i webfont + ristilare
-    HUD/menu su `STILE.md` (pergamena/ferro, dark gritty). File: `menu.ts`, `public/game-ui.css`, `hud/*`.
+- **2026-06-12 — PIANO GRAFICA TOTALE (il PROCESSO che l'utente ha ripetuto, NON dettagli decisi da me).**
+  ⛔ REGOLA dall'utente: **NON inventare i dettagli da solo, si decide INSIEME.** Le scelte di
+  STILE e ASSET sono **sue**; io faccio analisi, propongo, eseguo. (Questo è il piano che mi ha
+  scritto «20 volte»; ora è registrato — non va più ridetto.)
+  **Obiettivo:** rifare **TUTTA** la grafica in **UNO stile coerente** — personaggi, arena, armi,
+  braccia, props, VFX, HUD **e i MENU**. La camera/atmosfera è secondaria: il problema è mesh/asset/UI.
+  **PROCESSO (la prossima sessione esegue QUESTO, in ordine, con l'utente che decide):**
+  1. **ANALISI** completa della grafica attuale + di cosa è rotto (skin tutte uguali = frankenstein a
+     layer; armi girate/scudo storto = grip a mano; braccia FP a caso; font menu su Arila; VFX piatte).
+  2. **DECIDERE INSIEME LO STILE per TUTTO il gioco** (mondo 3D **e** menu/HUD) — **UNA via sola**.
+     `STILE.md` esiste ma copre il 3D e l'ho deciso io → va **ri-validato con l'utente** ed esteso a
+     menu/UI. Proporgli 2-3 vie concrete (con riferimenti), **lui sceglie UNA**.
+  3. **STUDIARE `E:/GIOCHI/ASSET_GRAFICA` a fondo** (ha `_INVENTARIO.md`): elencare **SOLO** ciò che è
+     **davvero utile e funzionale** allo stile scelto; scartare il resto (incluso il cartoon che odia).
+  4. **SCARICARE il mancante FREE** online (Sketchfab/Quaternius/Mixamo/Poly Haven/ambientCG/font CC0).
+  5. **INTEGRARE tutto coerente**, verificando (log+logica + l'utente guarda dal vivo).
+     **REGOLE DURE:** solo asset/tech/hosting **GRATIS**; rig **Mixamo**; **gioco completo, niente tagli**;
+     valori numerici = compito MIO; **scelte di stile/asset = decise dall'UTENTE**.
+     **AREE da sistemare** (lo scope; i dettagli si fissano ai punti 2-3 con l'utente): personaggi/skin
+     (4 classi DISTINTE, oggi frankenstein in `render/character-loader.ts`) · armi+grip (R3) · braccia 1ª
+     persona · spell/VFX (`render/projectile-visuals.ts`) · menu/HUD/font (`menu.ts`,`public/game-ui.css`,`hud/*`).
+     **FATTO finora:** SOLO arena (PBR+luce). Tutto il resto è da fare con questo processo, deciso con lui.
 
 ## 7. Metodo di lavoro (professionale)
 
