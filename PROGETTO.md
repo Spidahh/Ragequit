@@ -10,6 +10,25 @@
 
 ---
 
+## ⭐ PIANO ATTIVO #1 — RIFARE TUTTA LA GRAFICA (parole dell'utente, NON ridiscutere)
+
+Scritto una volta per non farselo ripetere mai più. Si esegue IN QUEST'ORDINE:
+
+1. **ANALISI** di tutta la grafica attuale: cosa c'è e cosa è rotto.
+2. **PIANO + UNA VIA**: decidere **uno stile** che deve avere **TUTTO il gioco** — personaggi,
+   arena, armi, props, VFX, HUD **E i MENU**. _Io propongo le vie (con riferimenti); **sceglie l'UTENTE**._
+3. Deciso lo stile → **guardare cosa c'è in `E:/GIOCHI/ASSET_GRAFICA`**, studiarlo tutto, tenere
+   **SOLO le cose davvero funzionali e utili** a quello stile (scartare il resto, incluso il cartoon).
+4. Il **resto si scarica online, FREE** (Sketchfab/Quaternius/Mixamo/Poly Haven/CC0…).
+5. **INTEGRARE** tutto in modo coerente, verificando.
+
+**Regole dure:** solo GRATIS (asset+tech+hosting) · rig **Mixamo** · gioco **COMPLETO, niente tagli** ·
+**stile/asset = li decide l'UTENTE** · valori numerici = li metto io.
+Dettaglio aree/file nel log (§6). Come verificare senza perdere tempo → `SVILUPPO.md`.
+**Fatto finora: SOLO l'arena (PBR+luce). Tutto il resto della grafica è da fare con questo piano.**
+
+---
+
 ## 1. Cos'è il gioco
 
 Arena PvP da browser, prima persona / mezza-terza, combattimento medievale-fantasy
