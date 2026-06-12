@@ -239,6 +239,25 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
   - PROSSIMI (coda, in ordine di valore, da fare con l'utente che guarda dal vivo): VFX magie "pop" (STILE §7);
     bug visibili R6 font / R3 scudo; refactor combat rimandati [9]/[27]; dust-motes + god-ray (STILE §5).
 
+- **2026-06-12 — ROADMAP GRAFICA (LA priorità vera dell'utente — la grafica PRINCIPALE è ancora ROTTA).**
+  Stato onesto: **DECISO** lo stile (`STILE.md`) e **FATTA** solo l'arena (PBR+luce). **NON fatti** (ancora
+  il vecchio sistema, è quello che l'utente vede rotto): personaggi, armi, braccia FP, menu/HUD, spell/VFX.
+  Esecuzione in ordine (ogni fase: raccogli+verifica asset da `ASSET_MANIFEST.md` → integra → verifica
+  log/inspect + l'utente guarda dal vivo). **NON spostare la camera/atmosfera, è la mesh/asset il problema.**
+  - **FASE A — PERSONAGGI / SKIN (fix "tutte uguali" + "braccia a cazzo").** Sostituire il **frankenstein a
+    layer** (`render/character-loader.ts`: Superhero base + outfit + hair + boneInverses diversi → clipping +
+    skin simili) con **4 GLB distinti, uno per classe**, tutti conformati al **rig Mixamo** (animazioni
+    condivise). Tank=`Knight_Met.glb` (pronto), Mago=`pbr_shadowkin_mage_rigged.glb`, Ibrido=
+    `shadowflame_samurai.glb`, Arciere=skin realistica da scegliere. Ognuno **visivamente diverso**.
+  - **FASE B — ARMI + grip (fix "armi girate male", scudo storto = R3).** Attaccare ogni arma al **socket/bone
+    di presa reale** con orientamento per-arma corretto (non offset a mano). Usare i GLB realistici
+    (`ARMI/sword_kit`, `bow_kit`, staff, ecc.). File: `render/character-weapons.ts`, `weapon-view.ts`.
+  - **FASE C — BRACCIA 1ª PERSONA (viewmodel)** (`render/*` fpv): braccia+arma credibili, non attaccate a caso.
+  - **FASE D — SPELL / VFX "pop"** (`render/projectile-visuals.ts`, STILE §7): core emissivo 3–5 + glow +
+    trail 13fps + dynamic point-light per proiettile, element-coded (i 5 colori in `ELEMENT_COLOR`).
+  - **FASE E — MENU / HUD / FONT** (R6: i font menu non caricano → Arial): caricare i webfont + ristilare
+    HUD/menu su `STILE.md` (pergamena/ferro, dark gritty). File: `menu.ts`, `public/game-ui.css`, `hud/*`.
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.
