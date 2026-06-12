@@ -347,14 +347,14 @@ export function buildArena(scene: THREE.Scene, _toonGradient: THREE.DataTexture)
 
     // 1. Mount banners on the inside face of the coliseum wall (~21 m ring).
     //    Y=4.5 sits mid-wall after the +1 m GLB offset, clearly visible from the pit.
-    const BANNER_RING_R = 21
+    const BANNER_RING_R = 21 * ARENA_SHELL_SCALE // hug the (scaled) coliseum wall
     for (let i = 0; i < 8; i++) {
       const a = (i / 8) * Math.PI * 2 + Math.PI / 8
       const x = Math.cos(a) * BANNER_RING_R
       const z = Math.sin(a) * BANNER_RING_R
       spawns.push({
         type: 'banner',
-        pos: [x, 4.5, z],
+        pos: [x, 4.5 * ARENA_SHELL_SCALE, z], // wall-band height scales with the shell
         rot: [0, -a - Math.PI / 2, 0], // face toward arena center
         scale: 1.0,
       })

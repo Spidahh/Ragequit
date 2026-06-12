@@ -240,6 +240,7 @@ export function initRemotePlayers({
   getSelfTeam,
 }: RemotePlayersOptions): RemotePlayersController {
   const remotePlayers = new Map<string, RemoteState>()
+  ;(globalThis as Record<string, unknown>)['__remotes'] = remotePlayers // verify-harness diag
   const remoteDamageBlinkUntil = new Map<string, number>()
   let _prevFrameNow = 0 // used to compute real frame delta for AnimationMixer
 

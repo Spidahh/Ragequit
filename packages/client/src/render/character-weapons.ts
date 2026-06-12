@@ -349,13 +349,15 @@ export function updateShieldAttachment(charGroup: THREE.Group): void {
   // X-tip — the old Math.PI/2 X laid it flat. Stand it vertical on the forearm;
   // angle the broad face outward at rest, turn it forward on parry.
   // Forearm-local placement: bone origin is the elbow, +Y runs toward the wrist.
-  // Sit the shield mid-forearm, broad face outward; turn it forward on parry.
+  // shield_A's broad face is ±Z in its own space — yaw it ~90° so that face lies
+  // ALONG the forearm (facing outward like a strapped buckler) instead of
+  // hanging crosswise, and keep it tight against the arm.
   if (isParrying) {
-    sg.position.set(-0.03, 0.14, 0.05)
-    sg.rotation.set(0, 0.45, 0)
+    sg.position.set(-0.02, 0.12, 0.03)
+    sg.rotation.set(0, -Math.PI / 2 + 0.35, 0)
   } else {
-    sg.position.set(-0.04, 0.12, 0.0)
-    sg.rotation.set(0, -0.15, 0.04)
+    sg.position.set(-0.02, 0.1, 0.0)
+    sg.rotation.set(0, -Math.PI / 2, 0.04)
   }
 }
 

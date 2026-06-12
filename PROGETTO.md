@@ -479,27 +479,44 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
   5. **ARENA ×1.5**: `ARENA_SHELL_SCALE = 1.5` (conchiglia GLB, sabbia, offset-y del pavimento, anello torce
      scalano insieme — il pit passa da r≈16.7 a r≈25); layout mappe ALLARGATI (centri ×1.3 duel / ×1.45 FFA
      via `dbox`/`gbox`, le misure dei blocchi restano), spawn fuori (±14.3 duel, ±23 FFA). Verificata in-match:
-     campo visibilmente ampio. Gate verde (244 test) → ship. Le scelte di
+     campo visibilmente ampio. Gate verde (244 test) → ship.
+
+- **2026-06-13 — ROUND 5 (l'utente: «vai nella STANZA TEST e controlla, armi dei nemici messe male»).**
+  METODO NUOVO ancora: `tools/verify/testroom.mjs` — entra nella Stanza Test (il banco di prova dell'utente),
+  aspetta il load dei GLB (12 s — al primo scatto i dummy erano ancora placeholder dorati!), fotografa la fila,
+  **zooma su ogni dummy** (sharp crop) e DIAGNOSTICA via `__remotes` (genitore/posizione di weaponGroup e
+  shieldGroup per ogni remoto). Trovati e risolti:
+  1. **SCUDO dei remoti "pannello fluttuante"**: ancorato sì all'avambraccio, ma ruotato con la faccia larga
+     avanti/dietro (di profilo = lastra sospesa) e scostato dal braccio. FIX: yaw **−90°** (faccia borchiata in
+     FUORI lungo il braccio — prima prova a +90° mostrava il RETRO con la maniglia), stretto al braccio
+     (pos −0.02/0.10/0). Verificato a zoom: buckler da braccio vero, fronte visibile.
+  2. **STENDARDI A MEZZ'ARIA**: l'anello bandiere era a raggio FISSO 21 (muro vecchio) e quota 4.5 — con la
+     conchiglia ×1.5 il muro è a ~31 → bandiere appese al nulla dentro il pit. FIX: `BANNER_RING_R` e quota
+     scalano con `ARENA_SHELL_SCALE`. LEZIONE GENERALE: OGNI decorazione a raggio/quota fissa va legata alla
+     scala della conchiglia (torce ✓, bandiere ✓ — controllare eventuali future).
+  3. Diagnostica remoti: arma in `hand_r` ✓ per tutte le classi; scudo visibile solo per sword ✓.
+     Stanza Test finale: dummy armati corretti, bandiere sui muri, niente oggetti volanti. Gate verde → ship.
+     Le scelte di
      STILE e ASSET sono **sue**; io faccio analisi, propongo, eseguo. (Questo è il piano che mi ha
      scritto «20 volte»; ora è registrato — non va più ridetto.)
      **Obiettivo:** rifare **TUTTA** la grafica in **UNO stile coerente** — personaggi, arena, armi,
      braccia, props, VFX, HUD **e i MENU**. La camera/atmosfera è secondaria: il problema è mesh/asset/UI.
      **PROCESSO (la prossima sessione esegue QUESTO, in ordine, con l'utente che decide):**
-  6. **ANALISI** completa della grafica attuale + di cosa è rotto (skin tutte uguali = frankenstein a
+  4. **ANALISI** completa della grafica attuale + di cosa è rotto (skin tutte uguali = frankenstein a
      layer; armi girate/scudo storto = grip a mano; braccia FP a caso; font menu su Arila; VFX piatte).
-  7. **DECIDERE INSIEME LO STILE per TUTTO il gioco** (mondo 3D **e** menu/HUD) — **UNA via sola**.
+  5. **DECIDERE INSIEME LO STILE per TUTTO il gioco** (mondo 3D **e** menu/HUD) — **UNA via sola**.
      `STILE.md` esiste ma copre il 3D e l'ho deciso io → va **ri-validato con l'utente** ed esteso a
      menu/UI. Proporgli 2-3 vie concrete (con riferimenti), **lui sceglie UNA**.
-  8. **STUDIARE `E:/GIOCHI/ASSET_GRAFICA` a fondo** (ha `_INVENTARIO.md`): elencare **SOLO** ciò che è
+  6. **STUDIARE `E:/GIOCHI/ASSET_GRAFICA` a fondo** (ha `_INVENTARIO.md`): elencare **SOLO** ciò che è
      **davvero utile e funzionale** allo stile scelto; scartare il resto (incluso il cartoon che odia).
-  9. **SCARICARE il mancante FREE** online (Sketchfab/Quaternius/Mixamo/Poly Haven/ambientCG/font CC0).
-  10. **INTEGRARE tutto coerente**, verificando (log+logica + l'utente guarda dal vivo).
-      **REGOLE DURE:** solo asset/tech/hosting **GRATIS**; rig **Mixamo**; **gioco completo, niente tagli**;
-      valori numerici = compito MIO; **scelte di stile/asset = decise dall'UTENTE**.
-      **AREE da sistemare** (lo scope; i dettagli si fissano ai punti 2-3 con l'utente): personaggi/skin
-      (4 classi DISTINTE, oggi frankenstein in `render/character-loader.ts`) · armi+grip (R3) · braccia 1ª
-      persona · spell/VFX (`render/projectile-visuals.ts`) · menu/HUD/font (`menu.ts`,`public/game-ui.css`,`hud/*`).
-      **FATTO finora:** SOLO arena (PBR+luce). Tutto il resto è da fare con questo processo, deciso con lui.
+  7. **SCARICARE il mancante FREE** online (Sketchfab/Quaternius/Mixamo/Poly Haven/ambientCG/font CC0).
+  8. **INTEGRARE tutto coerente**, verificando (log+logica + l'utente guarda dal vivo).
+     **REGOLE DURE:** solo asset/tech/hosting **GRATIS**; rig **Mixamo**; **gioco completo, niente tagli**;
+     valori numerici = compito MIO; **scelte di stile/asset = decise dall'UTENTE**.
+     **AREE da sistemare** (lo scope; i dettagli si fissano ai punti 2-3 con l'utente): personaggi/skin
+     (4 classi DISTINTE, oggi frankenstein in `render/character-loader.ts`) · armi+grip (R3) · braccia 1ª
+     persona · spell/VFX (`render/projectile-visuals.ts`) · menu/HUD/font (`menu.ts`,`public/game-ui.css`,`hud/*`).
+     **FATTO finora:** SOLO arena (PBR+luce). Tutto il resto è da fare con questo processo, deciso con lui.
 
 ## 7. Metodo di lavoro (professionale)
 
