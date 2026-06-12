@@ -37,23 +37,48 @@ interface ProjectileVisual {
   lastAt: number
   kind: ProjectileKind
   style: ProjectileStyle
-  hasLight: boolean
+  light: THREE.PointLight | null
 }
 
-// STILE §7 layer 5 — dynamic point-light per spell bolt so the magic actually
-// lights the stone. Pooled: at most this many concurrent lights (perf budget);
-// extra simultaneous bolts simply skip the light.
+// STILE §7 layer 5 — per-spell-bolt point light so the magic lights the stone.
+// CRITICAL: the pool is FIXED and added to the scene ONCE — adding/removing
+// lights at runtime changes the scene light count and forces three.js to
+// recompile EVERY shader program (a multi-second hitch right as a fight
+// starts). Idle pool lights stay in the scene at intensity 0.
 const MAX_PROJECTILE_LIGHTS = 6
-let _activeProjectileLights = 0
 
-function _attachProjectileLight(group: THREE.Object3D, color: number): boolean {
-  if (_activeProjectileLights >= MAX_PROJECTILE_LIGHTS) return false
-  const light = new THREE.PointLight(color, 7, 7, 2)
-  light.castShadow = false
-  group.add(light)
-  _activeProjectileLights++
-  return true
+class _LightPool {
+  private pool: THREE.PointLight[] = []
+  private free: THREE.PointLight[] = []
+
+  init(scene: THREE.Scene): void {
+    if (this.pool.length > 0) return
+    for (let i = 0; i < MAX_PROJECTILE_LIGHTS; i++) {
+      const l = new THREE.PointLight(0xffffff, 0, 7, 2)
+      l.castShadow = false
+      l.visible = true // keep in the lighting pass — intensity 0 when unused
+      scene.add(l)
+      this.pool.push(l)
+      this.free.push(l)
+    }
+  }
+
+  acquire(color: number): THREE.PointLight | null {
+    const l = this.free.pop()
+    if (!l) return null
+    l.color.setHex(color)
+    l.intensity = 7
+    return l
+  }
+
+  release(l: THREE.PointLight | null): void {
+    if (!l) return
+    l.intensity = 0
+    this.free.push(l)
+  }
 }
+
+const _lightPool = new _LightPool()
 
 function projectileStyle(kind: ProjectileKind, element?: string): ProjectileStyle {
   if (kind === 'arrow') return 'arrow'
@@ -258,13 +283,43 @@ export function initProjectileVisuals({
   zoneColorForElement,
 }: ProjectileVisualsOptions): ProjectileVisualsController {
   const projectileVisuals = new Map<string, ProjectileVisual>()
+  _lightPool.init(scene)
+
+  // Shader warm-up: one hidden-below-ground projectile per style + one impact,
+  // permanently in the scene. Their materials therefore compile during match
+  // load instead of on the FIRST cast mid-fight (which froze the game for the
+  // full program-link time, seconds on weak GPUs).
+  {
+    const warm = new THREE.Group()
+    warm.position.set(0, -120, 0)
+    const styles: ('arrow' | 'fire' | 'ice' | 'lightning' | 'dark' | 'nature')[] = [
+      'arrow',
+      'fire',
+      'ice',
+      'lightning',
+      'dark',
+      'nature',
+    ]
+    for (let i = 0; i < styles.length; i++) {
+      const kind: ProjectileKind = styles[i] === 'arrow' ? 'arrow' : 'bolt'
+      const { object } = makeProjectileObject(kind, styles[i])
+      object.position.set(i * 2, 0, 0)
+      warm.add(object)
+      const trail = makeTrailLine(styles[i] as ProjectileStyle)
+      trail.position.set(i * 2, 0, 0)
+      warm.add(trail)
+    }
+    scene.add(warm)
+    spawnImpact(new THREE.Vector3(0, -120, 5), 0xff6a2a, 'magic')
+  }
 
   function onSpawned(msg: ServerProjectileSpawnedMessage): void {
     if (projectileVisuals.has(msg.id)) return
     const kind: ProjectileKind = msg.kind === 'bolt' ? 'bolt' : 'arrow'
     const { object, style } = makeProjectileObject(kind, msg.element)
     object.position.set(msg.origin.x, msg.origin.y, msg.origin.z)
-    const hasLight = style !== 'arrow' && _attachProjectileLight(object, projectileColor(style))
+    const light = style !== 'arrow' ? _lightPool.acquire(projectileColor(style)) : null
+    if (light) light.position.copy(object.position)
     const trail = makeTrailLine(style)
     scene.add(object)
     scene.add(trail)
@@ -283,12 +338,13 @@ export function initProjectileVisuals({
       lastAt: performance.now(),
       kind,
       style,
-      hasLight,
+      light,
     })
   }
 
   function disposeVisual(vis: ProjectileVisual): void {
-    if (vis.hasLight) _activeProjectileLights = Math.max(0, _activeProjectileLights - 1)
+    _lightPool.release(vis.light)
+    vis.light = null
     scene.remove(vis.object)
     scene.remove(vis.trail)
     disposeObject(vis.object)
@@ -348,7 +404,8 @@ export function initProjectileVisuals({
         const kind: ProjectileKind = p.kind === 'bolt' ? 'bolt' : 'arrow'
         const { object, style } = makeProjectileObject(kind, p.element)
         object.position.set(p.x, p.y, p.z)
-        const hasLight = style !== 'arrow' && _attachProjectileLight(object, projectileColor(style))
+        const light = style !== 'arrow' ? _lightPool.acquire(projectileColor(style)) : null
+        if (light) light.position.copy(object.position)
         const trail = makeTrailLine(style)
         scene.add(object)
         scene.add(trail)
@@ -367,11 +424,12 @@ export function initProjectileVisuals({
           lastAt: now,
           kind,
           style,
-          hasLight,
+          light,
         }
         projectileVisuals.set(id, vis)
       }
       vis.object.position.set(p.x, p.y, p.z)
+      if (vis.light) vis.light.position.set(p.x, p.y, p.z)
       const sp = Math.hypot(p.vx, p.vy, p.vz)
       if (sp > 0.01) {
         vis.object.lookAt(p.x + p.vx, p.y + p.vy, p.z + p.vz)

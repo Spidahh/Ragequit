@@ -456,27 +456,50 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
        verticale (come la spada) + scala 0.46/0.42→0.56/0.52 su tutte le classi. (Tentata inclinazione extra:
        peggio, revertita — il diagonale a tutta lunghezza è il meglio del KayKit staff.)
   3. Verificato in-match su :5173 (bot in affondo animato, 0 errori). Gate verde → ship su main.
-     ⛔ REGOLA dall'utente: **NON inventare i dettagli da solo, si decide INSIEME.** Le scelte di
+
+- **2026-06-12 — ROUND 4 (feedback: arena piccola/fatta male · anim non partono sempre · scudo/braccio ·
+  arco storto · «si blocca tutto») — METODO NUOVO: sonda interattiva, non più screenshot statici.**
+  Costruito `tools/verify/probe.mjs`: GIOCA davvero ~25 s (corre, mira, attacca, riattacca, abilità, Tab-swap,
+  parata, salto) registrando errori console, **rAF-gap >150 ms** (rilevatore "si blocca") e **conteggio
+  programmi shader** (`__renderer` esposto). Risultati e fix:
+  1. **FREEZE = compilazione shader in-fight (2 cause, 2 fix).** (a) Le PointLight dei proiettili venivano
+     aggiunte/rimosse a runtime → ogni spawn cambiava il light-count e three ricompilava TUTTI gli shader.
+     → **pool FISSO di 6 luci sempre in scena** (intensity 0 da ferme, acquire/release, posizione sincronizzata
+     al proiettile). (b) Materiali di proiettili/trail/impatti compilavano alla PRIMA magia → **warm-up**: un
+     proiettile per elemento + un impatto permanenti a y=−120 → compilano nel load. + `render/shader-warmup.ts`:
+     `renderer.compile` del pass viewmodel a 4/12/22/35 s (copre i GLB che arrivano al join). Probe: programmi
+     stabili durante il play (53→55 prima del tuning sweep).
+  2. **ANIM CHE NON RIPARTONO**: `_crossfade` usciva se `current===next` → due colpi IDENTICI consecutivi
+     (arco→arco, staff→staff) non ri-triggeravano la clip (restava clampata sull'ultimo frame). FIX: se il
+     one-shot richiesto è già current ma l'azione è FINITA → `reset()+play()` (Death escluso).
+  3. **SCUDO**: ancorato all'**AVAMBRACCIO** (lowerarm_l) invece che alla mano — la mano ruota a ogni
+     micro-movimento e lo scudo "ballava" anche da idle. Posizionamento metà-avambraccio, guardia verificata.
+  4. **ARCO FPV storto/enorme** (riempiva mezzo schermo di traverso — confermato a screenshot): riposizionato
+     `VM_POSITION (0.02,-0.44,-0.5)` scala 0.26→**0.2** → basso-sinistra, freccia verso il mirino.
+  5. **ARENA ×1.5**: `ARENA_SHELL_SCALE = 1.5` (conchiglia GLB, sabbia, offset-y del pavimento, anello torce
+     scalano insieme — il pit passa da r≈16.7 a r≈25); layout mappe ALLARGATI (centri ×1.3 duel / ×1.45 FFA
+     via `dbox`/`gbox`, le misure dei blocchi restano), spawn fuori (±14.3 duel, ±23 FFA). Verificata in-match:
+     campo visibilmente ampio. Gate verde (244 test) → ship. Le scelte di
      STILE e ASSET sono **sue**; io faccio analisi, propongo, eseguo. (Questo è il piano che mi ha
      scritto «20 volte»; ora è registrato — non va più ridetto.)
      **Obiettivo:** rifare **TUTTA** la grafica in **UNO stile coerente** — personaggi, arena, armi,
      braccia, props, VFX, HUD **e i MENU**. La camera/atmosfera è secondaria: il problema è mesh/asset/UI.
      **PROCESSO (la prossima sessione esegue QUESTO, in ordine, con l'utente che decide):**
-  4. **ANALISI** completa della grafica attuale + di cosa è rotto (skin tutte uguali = frankenstein a
+  6. **ANALISI** completa della grafica attuale + di cosa è rotto (skin tutte uguali = frankenstein a
      layer; armi girate/scudo storto = grip a mano; braccia FP a caso; font menu su Arila; VFX piatte).
-  5. **DECIDERE INSIEME LO STILE per TUTTO il gioco** (mondo 3D **e** menu/HUD) — **UNA via sola**.
+  7. **DECIDERE INSIEME LO STILE per TUTTO il gioco** (mondo 3D **e** menu/HUD) — **UNA via sola**.
      `STILE.md` esiste ma copre il 3D e l'ho deciso io → va **ri-validato con l'utente** ed esteso a
      menu/UI. Proporgli 2-3 vie concrete (con riferimenti), **lui sceglie UNA**.
-  6. **STUDIARE `E:/GIOCHI/ASSET_GRAFICA` a fondo** (ha `_INVENTARIO.md`): elencare **SOLO** ciò che è
+  8. **STUDIARE `E:/GIOCHI/ASSET_GRAFICA` a fondo** (ha `_INVENTARIO.md`): elencare **SOLO** ciò che è
      **davvero utile e funzionale** allo stile scelto; scartare il resto (incluso il cartoon che odia).
-  7. **SCARICARE il mancante FREE** online (Sketchfab/Quaternius/Mixamo/Poly Haven/ambientCG/font CC0).
-  8. **INTEGRARE tutto coerente**, verificando (log+logica + l'utente guarda dal vivo).
-     **REGOLE DURE:** solo asset/tech/hosting **GRATIS**; rig **Mixamo**; **gioco completo, niente tagli**;
-     valori numerici = compito MIO; **scelte di stile/asset = decise dall'UTENTE**.
-     **AREE da sistemare** (lo scope; i dettagli si fissano ai punti 2-3 con l'utente): personaggi/skin
-     (4 classi DISTINTE, oggi frankenstein in `render/character-loader.ts`) · armi+grip (R3) · braccia 1ª
-     persona · spell/VFX (`render/projectile-visuals.ts`) · menu/HUD/font (`menu.ts`,`public/game-ui.css`,`hud/*`).
-     **FATTO finora:** SOLO arena (PBR+luce). Tutto il resto è da fare con questo processo, deciso con lui.
+  9. **SCARICARE il mancante FREE** online (Sketchfab/Quaternius/Mixamo/Poly Haven/ambientCG/font CC0).
+  10. **INTEGRARE tutto coerente**, verificando (log+logica + l'utente guarda dal vivo).
+      **REGOLE DURE:** solo asset/tech/hosting **GRATIS**; rig **Mixamo**; **gioco completo, niente tagli**;
+      valori numerici = compito MIO; **scelte di stile/asset = decise dall'UTENTE**.
+      **AREE da sistemare** (lo scope; i dettagli si fissano ai punti 2-3 con l'utente): personaggi/skin
+      (4 classi DISTINTE, oggi frankenstein in `render/character-loader.ts`) · armi+grip (R3) · braccia 1ª
+      persona · spell/VFX (`render/projectile-visuals.ts`) · menu/HUD/font (`menu.ts`,`public/game-ui.css`,`hud/*`).
+      **FATTO finora:** SOLO arena (PBR+luce). Tutto il resto è da fare con questo processo, deciso con lui.
 
 ## 7. Metodo di lavoro (professionale)
 

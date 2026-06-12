@@ -94,26 +94,39 @@ export interface MixerStore {
 // Internal helpers
 // ---------------------------------------------------------------------------
 
+const _ONE_SHOTS = new Set<AnimName>([
+  'Dagger_Attack',
+  'Dagger_Attack2',
+  'Death',
+  'Punch',
+  'Jump',
+  'Land',
+  'Bow_Release',
+  'Staff_Cast',
+  'Respawn',
+  'RecieveHit',
+  'RecieveHit_Attacking',
+  'Roll',
+])
+
 function _crossfade(store: MixerStore, next: AnimName, fadeSec: number): void {
-  if (store.current === next) return
+  if (store.current === next) {
+    // Re-trigger: consecutive IDENTICAL one-shot requests (bow shot → bow shot,
+    // staff cast → staff cast) land here because the state never changes — the
+    // finished clamped action must replay or "the animation doesn't fire".
+    const cur = store.actions[next]
+    if (cur && _ONE_SHOTS.has(next) && next !== 'Death' && !cur.isRunning()) {
+      cur.reset()
+      cur.play()
+    }
+    return
+  }
   const from = store.actions[store.current]
   const to = store.actions[next]
   if (!to) return
   store.current = next
   to.reset()
-  const isOneShot =
-    next === 'Dagger_Attack' ||
-    next === 'Dagger_Attack2' ||
-    next === 'Death' ||
-    next === 'Punch' ||
-    next === 'Jump' ||
-    next === 'Land' ||
-    next === 'Bow_Release' ||
-    next === 'Staff_Cast' ||
-    next === 'Respawn' ||
-    next === 'RecieveHit' ||
-    next === 'RecieveHit_Attacking' ||
-    next === 'Roll'
+  const isOneShot = _ONE_SHOTS.has(next)
   if (isOneShot) {
     to.setLoop(THREE.LoopOnce, 1)
     to.clampWhenFinished = true

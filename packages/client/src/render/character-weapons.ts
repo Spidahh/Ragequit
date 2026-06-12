@@ -328,13 +328,16 @@ export function updateShieldAttachment(charGroup: THREE.Group): void {
   sg.visible = true
 
   const classId = ((charGroup.userData['loadedClassId'] as string) || 'hybrid').toLowerCase()
-  const leftHand = findBone(model, 'LeftHand')
-  if (!leftHand) return
+  // Strap the shield to the FOREARM, not the hand: the hand bone twirls with
+  // every idle/swing micro-motion, so a hand-strapped shield dances around. The
+  // forearm is the realistic strap point and far more stable.
+  const anchor = findBone(model, 'lowerarm_l') ?? findBone(model, 'LeftHand')
+  if (!anchor) return
 
-  // The physical shield is ALWAYS carried in the off-hand (left hand) while a
-  // sword is equipped — a true sword-and-board look. On parry it swings up into
-  // a forward blocking stance; otherwise it rests along the forearm.
-  if (sg.parent !== leftHand) leftHand.add(sg)
+  // The physical shield is ALWAYS carried on the off-arm while a sword is
+  // equipped — a true sword-and-board look. On parry it swings up into a
+  // forward blocking stance; otherwise it rests along the forearm.
+  if (sg.parent !== anchor) anchor.add(sg)
   // Single-GLB realistic models sit at ~1.0 model scale vs ~0.66 for the modular
   // rigs, and the shield inherits it through the hand bone — compensate, or the
   // shield doubles in size on realistic characters.
@@ -345,14 +348,14 @@ export function updateShieldAttachment(charGroup: THREE.Group): void {
   // shield_A is modelled upright (long axis +Y, broad face ±Z), so it needs NO
   // X-tip — the old Math.PI/2 X laid it flat. Stand it vertical on the forearm;
   // angle the broad face outward at rest, turn it forward on parry.
+  // Forearm-local placement: bone origin is the elbow, +Y runs toward the wrist.
+  // Sit the shield mid-forearm, broad face outward; turn it forward on parry.
   if (isParrying) {
-    // Blocking stance — face turned forward, raised in front of the body.
-    sg.position.set(-0.02, 0.05, 0.06)
-    sg.rotation.set(0, 0.4, 0)
+    sg.position.set(-0.03, 0.14, 0.05)
+    sg.rotation.set(0, 0.45, 0)
   } else {
-    // Resting stance — carried vertically on the forearm, face angled outward.
-    sg.position.set(-0.03, 0.04, 0.0)
-    sg.rotation.set(0, -0.2, 0.05)
+    sg.position.set(-0.04, 0.12, 0.0)
+    sg.rotation.set(0, -0.15, 0.04)
   }
 }
 

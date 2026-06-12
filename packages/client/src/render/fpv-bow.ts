@@ -21,9 +21,9 @@ const BOW_GLB = '/weapons/animated_fps_bow.glb'
 // geometry is authored far from its origin (Sketchfab FBX nesting), so these
 // values frame the skinned arms+bow, not a centred mesh — re-tune via screenshots
 // if the GLB is ever replaced.
-const VM_POSITION = new THREE.Vector3(-0.02, -0.46, -0.5)
+const VM_POSITION = new THREE.Vector3(0.02, -0.44, -0.5)
 const VM_ROTATION = new THREE.Euler(0, 0, 0.14)
-const VM_SCALE = 0.26
+const VM_SCALE = 0.2
 
 // The rig's relaxed clips (idle/walk/run) hold the bow edge-on — realistic for an
 // archer at rest, but it reads as a thin sliver in first person. We fix it with a

@@ -33,7 +33,10 @@ export interface ArenaObjects {
 // Sand floor radius — fills the gladiator PIT, bounded by the coliseum's inner
 // barrier wall at radius ~16.7 m. Must NOT exceed it, or the flat sand plane
 // pokes through the sloped spectator seating and appears "halfway up the arena".
-const SAND_RADIUS = 16.5
+// Whole-shell scale — widens the native pit (inner wall r≈16.7) to r≈25 so the
+// enlarged maps fit. Sand radius tracks it (must stay inside the barrier wall).
+const ARENA_SHELL_SCALE = 1.5
+const SAND_RADIUS = 16.5 * ARENA_SHELL_SCALE
 
 function makeBoxMesh(box: AABB, color: number): THREE.Mesh {
   const sx = box.maxX - box.minX
@@ -77,12 +80,16 @@ export function buildArena(scene: THREE.Scene, _toonGradient: THREE.DataTexture)
     '/arena/gladiators_arena.glb',
     (gltf) => {
       const model = gltf.scene
+      // Arena ×1.5: the native pit (inner wall at r≈16.7) was cramped for ranged
+      // play. Uniform scale widens the fighting pit to r≈25 to match the enlarged
+      // gameplay maps; the floor-band drop (local +1, see below) scales with it.
+      model.scale.setScalar(ARENA_SHELL_SCALE)
       // The coliseum's arena/terrace FLOOR surface is at local Y = +1 (a wide
       // horizontal band, radius 16.7–26.8). To make players stand level with
       // that floor (instead of in a 1 m-deep pit where the floor reaches their
-      // knees) we drop the whole model by 1 m so its terrace floor lands on
-      // GROUND_Y = 0 — exactly where the sand disc and characters' feet are.
-      model.position.y = -1.0
+      // knees) we drop the whole model by 1 m (scaled) so its terrace floor
+      // lands on GROUND_Y = 0 — where the sand disc and characters' feet are.
+      model.position.y = -1.0 * ARENA_SHELL_SCALE
       model.traverse((child) => {
         if (!(child instanceof THREE.Mesh)) return
         child.castShadow = true
@@ -122,7 +129,7 @@ export function buildArena(scene: THREE.Scene, _toonGradient: THREE.DataTexture)
   // Just inside the pit's barrier wall (~16.7 m) so the braziers sit ON the visible
   // inner wall face and read from the floor — at the old r=20 they were buried in
   // the wall and never seen.
-  const TORCH_RING_R = 16
+  const TORCH_RING_R = 16 * ARENA_SHELL_SCALE
   const torchLights: THREE.PointLight[] = []
   const torchFlames: THREE.Sprite[] = []
   for (let i = 0; i < 8; i += 2) {

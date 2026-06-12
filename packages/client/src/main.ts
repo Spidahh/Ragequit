@@ -128,6 +128,7 @@ import { initPlacementPreview } from './render/placement-preview.js'
 import { initProjectileVisuals, type SchemaProjectile } from './render/projectile-visuals.js'
 import { initRemotePlayers, type RemotePlayerSchema } from './render/remote-players.js'
 import { initSelfEmissive, STATUS_EMISSIVE } from './render/self-emissive.js'
+import { scheduleViewmodelPrecompile } from './render/shader-warmup.js'
 import { VfxTextures } from './render/vfx-textures.js'
 import { getWeaponView } from './render/weapon-view.js'
 import { initZoneVisuals, zoneColorForElement } from './render/zone-visuals.js'
@@ -385,8 +386,8 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
 renderer.setSize(window.innerWidth, window.innerHeight)
 renderer.setClearColor(0x141c28, 1)
-// Lets character materials clip the FullBody base to head-only (the base supplies
-// the face; the outfit supplies the clothed body) — see render/characters.ts.
+;(globalThis as Record<string, unknown>)['__renderer'] = renderer // verify-harness diag
+// Head-only clip of the FullBody base (face from base, body from outfit) — characters.ts.
 renderer.localClippingEnabled = true
 // Shadow maps — PCFSoft gives smooth shadow edges at low perf cost.
 renderer.shadowMap.enabled = true
@@ -437,10 +438,10 @@ const viewmodelCamera = new THREE.PerspectiveCamera(
   10,
 )
 viewmodelScene.add(viewmodelCamera)
-// The viewmodel scene has its own lights (the world's lights live in `scene`).
-// Hemisphere fill matches the world's ambient so the weapon isn't dark; the
+// Viewmodel scene has its own lights: hemisphere fill ≈ world ambient; the
 // per-weapon key light (fpvKeyLight) is added to viewmodelCamera below.
 viewmodelScene.add(new THREE.HemisphereLight(0xc4d8ff, 0x182238, 1.2))
+scheduleViewmodelPrecompile(renderer, viewmodelScene, viewmodelCamera)
 
 // -----------------------------------------------------------------------
 // Post-processing: selective bloom on emissive elements
@@ -2146,7 +2147,6 @@ function simStep(): void {
   }
 
   simulatePlayer(self.sim, input, DT, getMap(getActiveMapId() || 'blockout'), caps)
-  // Movement audio: jump + stride footsteps + ambient wind (audio/ambience.ts).
   tickFootsteps(soundEngine, self.sim.pos.x, self.sim.pos.z, self.sim.onGround, dead, input.jump)
 
   self.pending.push({ seq: seqCounter, input, dt: DT, caps })

@@ -50,6 +50,19 @@ export const STATIC_MAP: StaticMap = {
 // are addressable by id so server config can pick one based on the
 // match mode (1v1 → duel_arena, 5v5/FFA → gladiators_arena).
 
+// Arena ×1.5 (client shell scale): the playable pit widened from r≈16.7 to
+// r≈25. Map layouts spread accordingly — box CENTRES scale, box SIZES stay,
+// so the same cover pieces sit in a roomier field (more lanes, longer bow
+// sightlines, real flank routes).
+const DUEL_SPREAD = 1.3
+const FFA_SPREAD = 1.45
+function dbox(cx: number, cy: number, cz: number, sx: number, sy: number, sz: number): AABB {
+  return box(cx * DUEL_SPREAD, cy, cz * DUEL_SPREAD, sx, sy, sz)
+}
+function gbox(cx: number, cy: number, cz: number, sx: number, sy: number, sz: number): AABB {
+  return box(cx * FFA_SPREAD, cy, cz * FFA_SPREAD, sx, sy, sz)
+}
+
 // duel_arena — "Court of Pillars", 1v1. Designed around classic duel-map flow
 // (Quake/Mordhau yards): two FAT orbit pillars to strafe-fight around, a low
 // vaultable centre slab that breaks the spawn-to-spawn sightline without
@@ -57,37 +70,37 @@ export const STATIC_MAP: StaticMap = {
 // at each spawn so nobody gets opening-volley'd. Z-mirror symmetric (fair).
 const DUEL_BOXES: readonly AABB[] = [
   // Centre slab — low (1.0 m): jump-overable, blocks the naked centre lane.
-  box(0, 0.5, 0, 5, 1, 2.4),
+  dbox(0, 0.5, 0, 5, 1, 2.4),
   // Orbit anchors — two fat pillars east/west of centre. The melee dance floor:
   // wide enough to break LOS, close enough to orbit around.
-  box(5, 2, 0, 1.8, 4, 1.8),
-  box(-5, 2, 0, 1.8, 4, 1.8),
+  dbox(5, 2, 0, 1.8, 4, 1.8),
+  dbox(-5, 2, 0, 1.8, 4, 1.8),
   // Lane breakers — slim pillars interrupting the long z=±5 bow lanes (a caster
   // gets sightlines but never a full-length shooting gallery).
-  box(2.5, 1.8, 5, 1, 3.6, 1),
-  box(-2.5, 1.8, 5, 1, 3.6, 1),
-  box(2.5, 1.8, -5, 1, 3.6, 1),
-  box(-2.5, 1.8, -5, 1, 3.6, 1),
+  dbox(2.5, 1.8, 5, 1, 3.6, 1),
+  dbox(-2.5, 1.8, 5, 1, 3.6, 1),
+  dbox(2.5, 1.8, -5, 1, 3.6, 1),
+  dbox(-2.5, 1.8, -5, 1, 3.6, 1),
   // Spawn protection — L-walls: a broad wall + a side stub at each spawn so
   // the opening trade can't happen before first movement.
-  box(0, 0.7, 9, 4.2, 1.4, 0.6),
-  box(2.4, 0.7, 9.8, 0.6, 1.4, 2),
-  box(0, 0.7, -9, 4.2, 1.4, 0.6),
-  box(-2.4, 0.7, -9.8, 0.6, 1.4, 2),
+  dbox(0, 0.7, 9, 4.2, 1.4, 0.6),
+  dbox(2.4, 0.7, 9.8, 0.6, 1.4, 2),
+  dbox(0, 0.7, -9, 4.2, 1.4, 0.6),
+  dbox(-2.4, 0.7, -9.8, 0.6, 1.4, 2),
   // Power flanks — raised platforms on the east/west edges with a step box:
   // height advantage over the lanes, but exposed from both lanes (risk/reward).
-  box(9, 1.3, 0, 2.6, 2.6, 3.2),
-  box(7.2, 0.55, 2.2, 1.2, 1.1, 1.2), // step up (jump from step → platform)
-  box(-9, 1.3, 0, 2.6, 2.6, 3.2),
-  box(-7.2, 0.55, -2.2, 1.2, 1.1, 1.2),
+  dbox(9, 1.3, 0, 2.6, 2.6, 3.2),
+  dbox(7.2, 0.55, 2.2, 1.2, 1.1, 1.2), // step up (jump from step → platform)
+  dbox(-9, 1.3, 0, 2.6, 2.6, 3.2),
+  dbox(-7.2, 0.55, -2.2, 1.2, 1.1, 1.2),
   // Pocket crates — small mid-field covers for staggered approaches.
-  box(3.4, 0.55, 2.2, 1.1, 1.1, 1.1),
-  box(-3.4, 0.55, -2.2, 1.1, 1.1, 1.1),
+  dbox(3.4, 0.55, 2.2, 1.1, 1.1, 1.1),
+  dbox(-3.4, 0.55, -2.2, 1.1, 1.1, 1.1),
 ]
 const P_ABOVE_BOX = GROUND_Y + CAPSULE_HALF_HEIGHT_M + 0.01 // ground spawn
 const DUEL_SPAWNS: readonly Vec3[] = [
-  { x: 0, y: P_ABOVE_BOX, z: 11 },
-  { x: 0, y: P_ABOVE_BOX, z: -11 },
+  { x: 0, y: P_ABOVE_BOX, z: 14.3 },
+  { x: 0, y: P_ABOVE_BOX, z: -14.3 },
 ]
 export const DUEL_ARENA: StaticMap = {
   boxes: DUEL_BOXES as AABB[],
@@ -103,59 +116,59 @@ export const DUEL_ARENA: StaticMap = {
 // symmetric: fair without feeling like a grid.
 const G_BOXES: readonly AABB[] = [
   // — Central keep: tower + two step approaches (N and S) + flanking stubs.
-  box(0, 2, 0, 3.2, 4, 3.2),
-  box(0, 0.6, 3, 2, 1.2, 1.6), // south step (jump: step → keep roof)
-  box(0, 1.25, 2.2, 2, 2.5, 0.6), // mid step
-  box(0, 0.6, -3, 2, 1.2, 1.6), // north step
-  box(0, 1.25, -2.2, 2, 2.5, 0.6),
+  gbox(0, 2, 0, 3.2, 4, 3.2),
+  gbox(0, 0.6, 3, 2, 1.2, 1.6), // south step (jump: step → keep roof)
+  gbox(0, 1.25, 2.2, 2, 2.5, 0.6), // mid step
+  gbox(0, 0.6, -3, 2, 1.2, 1.6), // north step
+  gbox(0, 1.25, -2.2, 2, 2.5, 0.6),
   // — Broken ruin pillars: irregular sizes & off-grid placement (180° pairs).
-  box(6, 2.1, 2.5, 1.4, 4.2, 1.4),
-  box(-6, 2.1, -2.5, 1.4, 4.2, 1.4),
-  box(3.5, 1.6, -6.5, 1.1, 3.2, 1.1),
-  box(-3.5, 1.6, 6.5, 1.1, 3.2, 1.1),
-  box(8.5, 1.3, -4, 1.0, 2.6, 1.0),
-  box(-8.5, 1.3, 4, 1.0, 2.6, 1.0),
+  gbox(6, 2.1, 2.5, 1.4, 4.2, 1.4),
+  gbox(-6, 2.1, -2.5, 1.4, 4.2, 1.4),
+  gbox(3.5, 1.6, -6.5, 1.1, 3.2, 1.1),
+  gbox(-3.5, 1.6, 6.5, 1.1, 3.2, 1.1),
+  gbox(8.5, 1.3, -4, 1.0, 2.6, 1.0),
+  gbox(-8.5, 1.3, 4, 1.0, 2.6, 1.0),
   // — Staggered mid-ring walls: different lengths, off-cardinal (no naked lanes).
-  box(-3, 0.9, 9.5, 5, 1.8, 0.8),
-  box(3, 0.9, -9.5, 5, 1.8, 0.8),
-  box(10, 0.9, 6, 0.8, 1.8, 4.5),
-  box(-10, 0.9, -6, 0.8, 1.8, 4.5),
-  box(11, 0.7, -1.5, 0.7, 1.4, 3),
-  box(-11, 0.7, 1.5, 0.7, 1.4, 3),
+  gbox(-3, 0.9, 9.5, 5, 1.8, 0.8),
+  gbox(3, 0.9, -9.5, 5, 1.8, 0.8),
+  gbox(10, 0.9, 6, 0.8, 1.8, 4.5),
+  gbox(-10, 0.9, -6, 0.8, 1.8, 4.5),
+  gbox(11, 0.7, -1.5, 0.7, 1.4, 3),
+  gbox(-11, 0.7, 1.5, 0.7, 1.4, 3),
   // — Pocket crates between zones (stagger approaches, vault spots).
-  box(4.5, 0.55, 4.5, 1.2, 1.1, 1.2),
-  box(-4.5, 0.55, -4.5, 1.2, 1.1, 1.2),
-  box(7.5, 0.55, 9, 1.1, 1.1, 1.1),
-  box(-7.5, 0.55, -9, 1.1, 1.1, 1.1),
+  gbox(4.5, 0.55, 4.5, 1.2, 1.1, 1.2),
+  gbox(-4.5, 0.55, -4.5, 1.2, 1.1, 1.2),
+  gbox(7.5, 0.55, 9, 1.1, 1.1, 1.1),
+  gbox(-7.5, 0.55, -9, 1.1, 1.1, 1.1),
   // — Corner platforms: varied heights in diagonal pairs (2.6 m vs 3.4 m), each
   //   with a step box. High pair sees further but is harder to take.
-  box(12, 1.3, 12, 4, 2.6, 4),
-  box(-12, 1.3, -12, 4, 2.6, 4),
-  box(12, 1.7, -12, 4, 3.4, 4),
-  box(-12, 1.7, 12, 4, 3.4, 4),
-  box(9.5, 0.6, 12, 1, 1.2, 3),
-  box(-9.5, 0.6, -12, 1, 1.2, 3),
-  box(12, 0.85, -9.3, 3, 1.7, 1), // taller platforms get a taller step
-  box(-12, 0.85, 9.3, 3, 1.7, 1),
+  gbox(12, 1.3, 12, 4, 2.6, 4),
+  gbox(-12, 1.3, -12, 4, 2.6, 4),
+  gbox(12, 1.7, -12, 4, 3.4, 4),
+  gbox(-12, 1.7, 12, 4, 3.4, 4),
+  gbox(9.5, 0.6, 12, 1, 1.2, 3),
+  gbox(-9.5, 0.6, -12, 1, 1.2, 3),
+  gbox(12, 0.85, -9.3, 3, 1.7, 1), // taller platforms get a taller step
+  gbox(-12, 0.85, 9.3, 3, 1.7, 1),
   // — Perimeter half-walls: keep fights inside, break sniper lines.
-  box(17, 1, 0, 0.6, 2, 10),
-  box(-17, 1, 0, 0.6, 2, 10),
-  box(0, 1, 17, 10, 2, 0.6),
-  box(0, 1, -17, 10, 2, 0.6),
+  gbox(17, 1, 0, 0.6, 2, 10),
+  gbox(-17, 1, 0, 0.6, 2, 10),
+  gbox(0, 1, 17, 10, 2, 0.6),
+  gbox(0, 1, -17, 10, 2, 0.6),
 ]
 const G_LOW_TOP_Y = 2.6 + CAPSULE_HALF_HEIGHT_M + 0.01 // low corner platforms
 const G_SPAWN_Y = GROUND_Y + CAPSULE_HALF_HEIGHT_M + 0.01
 const G_SPAWNS: readonly Vec3[] = [
-  { x: 16, y: G_SPAWN_Y, z: 0 },
-  { x: -16, y: G_SPAWN_Y, z: 0 },
-  { x: 0, y: G_SPAWN_Y, z: 16 },
-  { x: 0, y: G_SPAWN_Y, z: -16 },
-  { x: 12, y: G_LOW_TOP_Y, z: 12 },
-  { x: -12, y: G_LOW_TOP_Y, z: -12 },
-  { x: 14, y: G_SPAWN_Y, z: -14 },
-  { x: -14, y: G_SPAWN_Y, z: 14 },
-  { x: 8, y: G_SPAWN_Y, z: -8 },
-  { x: -8, y: G_SPAWN_Y, z: 8 },
+  { x: 23, y: G_SPAWN_Y, z: 0 },
+  { x: -23, y: G_SPAWN_Y, z: 0 },
+  { x: 0, y: G_SPAWN_Y, z: 23 },
+  { x: 0, y: G_SPAWN_Y, z: -23 },
+  { x: 17.4, y: G_LOW_TOP_Y, z: 17.4 },
+  { x: -17.4, y: G_LOW_TOP_Y, z: -17.4 },
+  { x: 20.3, y: G_SPAWN_Y, z: -20.3 },
+  { x: -20.3, y: G_SPAWN_Y, z: 20.3 },
+  { x: 11.6, y: G_SPAWN_Y, z: -11.6 },
+  { x: -11.6, y: G_SPAWN_Y, z: 11.6 },
 ]
 export const GLADIATORS_ARENA: StaticMap = {
   boxes: G_BOXES as AABB[],
