@@ -4,6 +4,9 @@
 > sessione e si AGGIORNA man mano. Quando l'utente dà un feedback, il piano qui dentro
 > si **modifica** e si annota nel log — **non si butta via e non si ricomincia**.
 > Niente modifiche sparse a caso: si lavorano le fasi del piano in ordine.
+>
+> **Per sviluppare/verificare/modificare senza perdere tempo → leggi `SVILUPPO.md`** (come si gira,
+> come si VERIFICA con log+logica e NON con gli screenshot, le trappole, le ricette di modifica).
 
 ---
 
