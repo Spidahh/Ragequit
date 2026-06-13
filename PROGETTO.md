@@ -551,27 +551,29 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
     clip); viewmodel senza grade-pass (budget main.ts + render non banale); grip single-GLB (codice morto,
     si ritara in-engine al riabilitare i realistici); shader-warmup ancorato al page-load (micro-stall
     one-shot). Tutti annotati; si fanno col modello/asset giusto o con l'utente che guarda dal vivo.
-    Le scelte di
-    STILE e ASSET sono **sue**; io faccio analisi, propongo, eseguo. (Questo è il piano che mi ha
-    scritto «20 volte»; ora è registrato — non va più ridetto.)
-    **Obiettivo:** rifare **TUTTA** la grafica in **UNO stile coerente** — personaggi, arena, armi,
-    braccia, props, VFX, HUD **e i MENU**. La camera/atmosfera è secondaria: il problema è mesh/asset/UI.
-    **PROCESSO (la prossima sessione esegue QUESTO, in ordine, con l'utente che decide):**
-  4. **ANALISI** completa della grafica attuale + di cosa è rotto (skin tutte uguali = frankenstein a
-     layer; armi girate/scudo storto = grip a mano; braccia FP a caso; font menu su Arila; VFX piatte).
-  5. **DECIDERE INSIEME LO STILE per TUTTO il gioco** (mondo 3D **e** menu/HUD) — **UNA via sola**.
-     `STILE.md` esiste ma copre il 3D e l'ho deciso io → va **ri-validato con l'utente** ed esteso a
-     menu/UI. Proporgli 2-3 vie concrete (con riferimenti), **lui sceglie UNA**.
-  6. **STUDIARE `E:/GIOCHI/ASSET_GRAFICA` a fondo** (ha `_INVENTARIO.md`): elencare **SOLO** ciò che è
-     **davvero utile e funzionale** allo stile scelto; scartare il resto (incluso il cartoon che odia).
-  7. **SCARICARE il mancante FREE** online (Sketchfab/Quaternius/Mixamo/Poly Haven/ambientCG/font CC0).
-  8. **INTEGRARE tutto coerente**, verificando (log+logica + l'utente guarda dal vivo).
-     **REGOLE DURE:** solo asset/tech/hosting **GRATIS**; rig **Mixamo**; **gioco completo, niente tagli**;
-     valori numerici = compito MIO; **scelte di stile/asset = decise dall'UTENTE**.
-     **AREE da sistemare** (lo scope; i dettagli si fissano ai punti 2-3 con l'utente): personaggi/skin
-     (4 classi DISTINTE, oggi frankenstein in `render/character-loader.ts`) · armi+grip (R3) · braccia 1ª
-     persona · spell/VFX (`render/projectile-visuals.ts`) · menu/HUD/font (`menu.ts`,`public/game-ui.css`,`hud/*`).
-     **FATTO finora:** SOLO arena (PBR+luce). Tutto il resto è da fare con questo processo, deciso con lui.
+
+- **2026-06-13 — GAP ANALYSIS «cosa manca» (richiesta utente). 9 agenti: intento (doc) ↔ realtà (codice/
+  asset). 98 gap → roadmap priorizzata verificata sul codice in `COMPLETEZZA.md`** (BLOCCANTI/IMPORTANTI/
+  POLISH + nota grafica + ordine consigliato). Verdetto: «ottimo fight, scheletro di gioco» — finito solo
+  l'arena (PBR+luci); restano personaggi/armi cartoon (PIANO #1), niente musica/audio-file, 5v5+matchmaking
+  irraggiungibili, progressione/leaderboard/cosmetici assenti. `COMPLETEZZA.md` è la mappa-stato; questo file
+  resta il piano operativo. Prossimi passi sicuri (ordine §1): bot-fill FFA, gate WebGL, surface errore-connessione.
+  Le scelte di
+  STILE e ASSET sono **sue**; io faccio analisi, propongo, eseguo. (Questo è il piano che mi ha
+  scritto «20 volte»; ora è registrato — non va più ridetto.)
+  **Obiettivo:** rifare **TUTTA** la grafica in **UNO stile coerente** — personaggi, arena, armi,
+  braccia, props, VFX, HUD **e i MENU**. La camera/atmosfera è secondaria: il problema è mesh/asset/UI.
+  **PROCESSO (la prossima sessione esegue QUESTO, in ordine, con l'utente che decide):** 4. **ANALISI** completa della grafica attuale + di cosa è rotto (skin tutte uguali = frankenstein a
+  layer; armi girate/scudo storto = grip a mano; braccia FP a caso; font menu su Arila; VFX piatte). 5. **DECIDERE INSIEME LO STILE per TUTTO il gioco** (mondo 3D **e** menu/HUD) — **UNA via sola**.
+  `STILE.md` esiste ma copre il 3D e l'ho deciso io → va **ri-validato con l'utente** ed esteso a
+  menu/UI. Proporgli 2-3 vie concrete (con riferimenti), **lui sceglie UNA**. 6. **STUDIARE `E:/GIOCHI/ASSET_GRAFICA` a fondo** (ha `_INVENTARIO.md`): elencare **SOLO** ciò che è
+  **davvero utile e funzionale** allo stile scelto; scartare il resto (incluso il cartoon che odia). 7. **SCARICARE il mancante FREE** online (Sketchfab/Quaternius/Mixamo/Poly Haven/ambientCG/font CC0). 8. **INTEGRARE tutto coerente**, verificando (log+logica + l'utente guarda dal vivo).
+  **REGOLE DURE:** solo asset/tech/hosting **GRATIS**; rig **Mixamo**; **gioco completo, niente tagli**;
+  valori numerici = compito MIO; **scelte di stile/asset = decise dall'UTENTE**.
+  **AREE da sistemare** (lo scope; i dettagli si fissano ai punti 2-3 con l'utente): personaggi/skin
+  (4 classi DISTINTE, oggi frankenstein in `render/character-loader.ts`) · armi+grip (R3) · braccia 1ª
+  persona · spell/VFX (`render/projectile-visuals.ts`) · menu/HUD/font (`menu.ts`,`public/game-ui.css`,`hud/*`).
+  **FATTO finora:** SOLO arena (PBR+luce). Tutto il resto è da fare con questo processo, deciso con lui.
 
 ## 7. Metodo di lavoro (professionale)
 
