@@ -30,6 +30,7 @@ export interface RemotePlayerSchema {
   casting: boolean
   castEndsAtTick: number
   invulnUntilTick: number
+  lastRangedReleaseTick?: number
   parrying?: boolean
   parryIsHold?: boolean
   onGround?: boolean
@@ -58,6 +59,8 @@ interface RemoteState {
   arc: THREE.Mesh
   arcExpiresAt: number
   lastSwingStartTick: number
+  lastRangedReleaseTick: number
+  rangedReleaseUntilMs: number
   castRing: THREE.Mesh
   nameplate: HTMLDivElement
   hpFill: HTMLDivElement
@@ -350,6 +353,8 @@ export function initRemotePlayers({
       arc,
       arcExpiresAt: 0,
       lastSwingStartTick: 0,
+      lastRangedReleaseTick: 0,
+      rangedReleaseUntilMs: 0,
       castRing,
       nameplate,
       hpFill,
@@ -455,6 +460,14 @@ export function initRemotePlayers({
       r.comboIndex = p.comboIndex ?? 0
       r.parrying = !!p.parrying
       r.parryIsHold = !!p.parryIsHold
+      // Ranged shoot: edge-detect a new bow-release / staff-fire (set server-side
+      // only when a projectile actually spawned) and open a short window so the
+      // remote plays Bow_Release / Staff_Cast — the sword arc only covers melee.
+      const rangedTick = p.lastRangedReleaseTick ?? 0
+      if (rangedTick > 0 && rangedTick !== r.lastRangedReleaseTick) {
+        r.lastRangedReleaseTick = rangedTick
+        r.rangedReleaseUntilMs = now + 220
+      }
       // Jump / land animation transitions from server onGround field.
       if (p.alive) {
         const isOnGround = p.onGround !== false // default true when field absent
@@ -594,11 +607,13 @@ export function initRemotePlayers({
         moving,
         speed: remoteSpeed,
         activeWeapon: r.activeWeapon,
-        attacking: r.arc.visible && now < r.arcExpiresAt,
+        attacking:
+          (r.arc.visible && now < r.arcExpiresAt) ||
+          (r.activeWeapon === 'bow' && now < r.rangedReleaseUntilMs),
         attackVariant: r.comboIndex,
         airborne: r.airborne,
         bowCharging: r.bowCharging,
-        casting: r.casting,
+        casting: r.casting || (r.activeWeapon === 'staff' && now < r.rangedReleaseUntilMs),
         channeling: r.channeling,
         alive: r.alive,
         parrying: r.parrying,

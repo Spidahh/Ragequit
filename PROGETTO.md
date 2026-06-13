@@ -533,6 +533,24 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
     perf live. (3) **anim di tiro arco/staff sui remoti** [HIGH]: nessuna clip di rilascio/cast (serve campo
     schema `lastRangedReleaseTick` + verifica). (4) staff FP senza braccia, orb staff mai tinto (heuristica
     nome mai matcha i KayKit), combo spada = stessa clip, viewmodel senza grade-pass, grip single-GLB latente.
+  - **AGGIORNAMENTO STESSA SESSIONE — l'utente: «fai tutto senza fermarti» + «sempre main».** Risolti in
+    autonomia, gate verde (341 test), e **PUSHATO su `main` (deploy prod)**:
+    - (1) **breadth DISATTIVATO** (scelta utente): il modello torna a scala UNIFORME → armi/scudo non più
+      deformati; identità di classe via outfit/capelli/accessori + tinta accent. `CLASS_BUILD.breadth`
+      rimosso del tutto (commento-guardia «non reintrodurre»).
+    - (2) **flash post-FX hit-stop RISOLTO**: durante l'hit-stop si compositano comunque GTAO/grade/vignette
+      via `finalComposer.render()` (si salta SOLO il darken bloom per-frame, riusando il target precedente) →
+      niente più pop a ogni colpo. (Accorcia anche `main.ts` → rientra nel budget.)
+    - (3) **anim di tiro remoti RISOLTA**: nuovo campo schema `Player.lastRangedReleaseTick` (settato solo
+      quando freccia/dardo nasce davvero in `handleChargeRelease`/`handleFireStaff`); il client edge-detecta
+      il cambio e apre una finestra 220 ms → `Bow_Release` (via `attacking`) / `Staff_Cast` (via `casting`)
+      sui nemici. hitReact/parry mantengono la priorità; nessun falso trigger su tap/cancel.
+  - **RESTANO (LOW, bloccati da ASSET o tuning live — non sono bug di codice da fixare alla cieca):** staff FP
+    senza braccia (serve un GLB braccia) + sway idle; orb staff element-tint (il KayKit staff è una mesh
+    unica, servirebbe una mesh-tip emissiva da posizionare a vista); varietà clip combo spada (serve una 2ª
+    clip); viewmodel senza grade-pass (budget main.ts + render non banale); grip single-GLB (codice morto,
+    si ritara in-engine al riabilitare i realistici); shader-warmup ancorato al page-load (micro-stall
+    one-shot). Tutti annotati; si fanno col modello/asset giusto o con l'utente che guarda dal vivo.
     Le scelte di
     STILE e ASSET sono **sue**; io faccio analisi, propongo, eseguo. (Questo è il piano che mi ha
     scritto «20 volte»; ora è registrato — non va più ridetto.)

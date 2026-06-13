@@ -51,6 +51,10 @@ export class Player extends Schema {
   @type('number') comboIndex: number = 0
   @type('number') swingEndsAtTick: number = 0
   @type('number') lastSwingStartTick: number = 0
+  // Tick of the last bow-release / staff-fire (only set when a projectile actually
+  // spawned). Remotes edge-detect a change to play Bow_Release / Staff_Cast — the
+  // sword arc covers melee, but ranged shots had no replicated shoot trigger.
+  @type('number') lastRangedReleaseTick: number = 0
 
   // Uppercut cooldown mirrored from abilityCooldowns['uppercut'] for HUD compatibility.
   @type('number') uppercutReadyAtTick: number = 0

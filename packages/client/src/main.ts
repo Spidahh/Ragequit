@@ -2780,12 +2780,12 @@ function _renderInner(now: number): void {
     })
     bloomComposer.render()
     for (const e of _bloomDarkened) e.mesh.material = e.mat
-    finalComposer.render()
-  } else {
-    // Composers leave renderer.autoClear=false; force a clean world clear here.
-    renderer.autoClear = true
-    renderer.render(scene, camera)
   }
+  // ALWAYS composite through finalComposer so GTAO + grade + vignette + bloom-mix
+  // stay applied. During hit-stop we skip ONLY the per-frame bloom darken/render
+  // above (reusing the prior bloom target), so the graded look stays continuous
+  // instead of popping to a bare un-graded render for the freeze's 1-2 frames.
+  finalComposer.render()
   // First-person viewmodel pass: the world (colour + depth) is already on screen.
   // Clear ONLY the depth buffer and draw the weapon on top in its own scene, so it
   // never clips into walls. autoClear=false keeps the world colour we just drew.

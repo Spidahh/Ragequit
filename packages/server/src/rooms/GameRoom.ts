@@ -1460,6 +1460,7 @@ export class GameRoom extends Room<GameState> {
       lifetimeTicks: BOW_LIFETIME_TICKS,
       spawnedAtTick: this.state.tick,
     })
+    player.lastRangedReleaseTick = this.state.tick
   }
 
   private handleFireStaff(sid: string, msg: ClientFireStaffMessage): void {
@@ -1516,6 +1517,7 @@ export class GameRoom extends Room<GameState> {
       lifetimeTicks: STAFF_LIFETIME_TICKS,
       spawnedAtTick: now,
     })
+    player.lastRangedReleaseTick = now
   }
 
   // Loadout handler: validates class-aware slot ids, then clears cooldowns and statuses.
