@@ -33,15 +33,17 @@ export { fetchWeaponGlb, applyWeaponProp, makeCastRing } from './character-weapo
 
 const _CHAR_GLB_FALLBACK_HEIGHT = 2.856
 
-// Per-class BUILD — distinct silhouette + colour identity within the shared modular
-// base (same gameplay render height). `breadth` widens X/Z only: the Tank reads as a
-// broad armoured "bestione", the Mage/Archer slimmer. `accent`+`tint` give each class
-// a strong faction hue on the outfit cloth.
-const CLASS_BUILD: Record<string, { breadth: number; accent: number; tint: number }> = {
-  tank: { breadth: 1.32, accent: 0x4a4f5a, tint: 0.85 }, // very broad, gunmetal bestione
-  archer: { breadth: 0.9, accent: 0x2f7d2a, tint: 0.84 }, // slim, vivid forest green
-  mage: { breadth: 0.96, accent: 0x6a2fc0, tint: 0.86 }, // arcane violet wizard
-  hybrid: { breadth: 1.06, accent: 0xb83020, tint: 0.84 }, // crimson, mid build
+// Per-class colour identity within the shared modular base (same gameplay render
+// height). `accent`+`tint` give each class a strong faction hue on the outfit cloth.
+// NOTE: a per-class `breadth` (X/Z body widening) was REMOVED — a non-uniform model
+// scale leaks through the hand/forearm bone into the held weapon + shield socket and
+// skewed them (worst on the Tank). Class silhouette now comes from outfit/hair/
+// accessories + tint, never from scaling the armature. Do NOT reintroduce breadth.
+const CLASS_BUILD: Record<string, { accent: number; tint: number }> = {
+  tank: { accent: 0x4a4f5a, tint: 0.85 }, // gunmetal bestione
+  archer: { accent: 0x2f7d2a, tint: 0.84 }, // vivid forest green
+  mage: { accent: 0x6a2fc0, tint: 0.86 }, // arcane violet wizard
+  hybrid: { accent: 0xb83020, tint: 0.84 }, // crimson, mid build
 }
 
 function _measureRenderableBox(root: THREE.Object3D): THREE.Box3 {
@@ -160,13 +162,9 @@ function _installCharacterModel(
     const nativeBox = _measureRenderableBox(model)
     const nativeHeight = _validBoxHeight(nativeBox)
     model.scale.setScalar(CHARACTER_RENDER_HEIGHT_M / nativeHeight)
-    // Per-class BUILD: same render height (gameplay-locked) but distinct silhouette —
-    // the Tank reads as a broad "bestione", the others slimmer. Breadth on X/Z only.
-    const build = CLASS_BUILD[(charGroup.userData['loadedClassId'] as string) ?? '']
-    if (build) {
-      model.scale.x *= build.breadth
-      model.scale.z *= build.breadth
-    }
+    // UNIFORM scale only — no per-class X/Z breadth. A non-uniform armature scale
+    // leaks into the hand-bone-attached weapon/shield and skews them; class identity
+    // is conveyed by outfit/hair/accessories + tint instead (see CLASS_BUILD).
     const scaledBox = _measureRenderableBox(model)
     model.position.y = -CAPSULE_HALF_HEIGHT_M - scaledBox.min.y
   }
