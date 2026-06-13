@@ -74,6 +74,9 @@ export const TARGET_CLASS_DEFS = {
       // match the model slides around frozen ("models that don't move"). A playable
       // class must be COMPLETE. Re-enable `mixamoGlb`+`ccAnims` once CC-family
       // locomotion clips exist in /characters/anims (e.g. ActorCore free pack).
+      // The GLBs + CC clips were moved OUT of the shipped bundle to
+      // packages/client/character-sources/ (medieval_knight.glb, shadowflame_samurai_norm.glb,
+      // shadowkin_mage_norm.glb, anims/) — copy them back into public/characters/ when re-enabling.
       // mixamoGlb: 'medieval_knight',
       base: 'Superhero_Male_FullBody',
       outfit: 'Male_Ranger',

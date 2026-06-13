@@ -264,6 +264,13 @@ export class MatchManager {
       if (sid !== winnerId) loserId = sid
     })
     if (!winnerId || !loserId) return none
+    // No ELO on a draw. With bestWins seeded at -1 the first-iterated player
+    // "wins" at 0 > -1 even when NO round was won (all ties), and any equal-wins
+    // endpoint reached at the round cap (1-1, 2-2) is also a draw — award ELO
+    // only when one player STRICTLY leads on round wins.
+    const winnerWins = this.host.state.roundWins.get(winnerId) ?? 0
+    const loserWins = this.host.state.roundWins.get(loserId) ?? 0
+    if (winnerWins <= loserWins) return none
     const rW = this.ratingFor(winnerId)
     const rL = this.ratingFor(loserId)
     const exW = 1 / (1 + Math.pow(10, (rL - rW) / 400))

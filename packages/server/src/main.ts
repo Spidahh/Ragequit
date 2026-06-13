@@ -121,10 +121,14 @@ const gameServer = new Server({
   gracefullyShutdown: false,
 })
 
-// Keep one room kind, but never match clients across different modes.
-// Without this, `joinOrCreate('game', { mode: 'training' })` could reuse an
-// existing duel room and training would wait in lobby without its bot.
-gameServer.define('game', GameRoom).filterBy(['mode'])
+// Keep one room kind, but never match clients across different modes OR
+// training difficulties. Without 'mode', `joinOrCreate('game', { mode: 'training' })`
+// could reuse a duel room. Without 'difficulty', two players who pick DIFFERENT
+// training difficulties both request mode='training' and get bucketed together —
+// the second silently inherits the first creator's difficulty (and, for 'test',
+// the wrong map/maxClients). Non-training modes leave difficulty undefined, which
+// all bucket together, so this only splits the training tiers.
+gameServer.define('game', GameRoom).filterBy(['mode', 'difficulty'])
 
 initServerTelemetry()
 

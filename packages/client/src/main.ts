@@ -840,6 +840,7 @@ let selfArc: THREE.Mesh | null = null
 let selfArcExpiresAt = 0
 let selfLastWeapon = ''
 let activeRoomMode = 'duel_arena'
+let lastConnectMode = 'duel_arena' // original UI mode (e.g. training_master) for reconnect; activeRoomMode is the resolved one
 // Schema accessors — exported for use by sub-modules via createSchemaAccessors(getRoom)
 // The functions below (getSchemaPlayers, etc.) are wrappers kept in main.ts for
 // backward compat; the typed versions live in game/schema-helpers.ts.
@@ -1279,13 +1280,12 @@ const { engageCanvasInput, requestArenaPointerLock, sampleInput } = gameInput
 
 async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void> {
   const seq = ++connectSeq
+  lastConnectMode = mode // full UI mode so a reconnect replays the exact difficulty
   setStatus('connecting', '#e4c05a')
   try {
     const client = new Client(SERVER_URL)
     const token = await getAccessToken().catch(() => null)
-    // botFill=true → server spawns a bot opponent at match start.
-    // 1v1 always gets a bot (no matchmaking yet). Training: server handles bot
-    // via mode check. FFA: no bots — it's a multiplayer free-for-all.
+    // botFill=true → server spawns a bot (duel only; training/FFA bots handled server-side).
     let resolvedMode = mode
     let difficulty = 'competent'
     if (mode.startsWith('training_')) {
@@ -1485,7 +1485,7 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
           self = null
           clearLocalMatchState()
           try {
-            await connect(activeRoomMode, false)
+            await connect(lastConnectMode, false) // original UI mode, not resolved activeRoomMode → keeps difficulty
           } catch {
             /* connect() swallows its own errors; stay defensive anyway. */
           }

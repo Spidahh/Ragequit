@@ -31,6 +31,7 @@ export interface RemotePlayerSchema {
   castEndsAtTick: number
   invulnUntilTick: number
   parrying?: boolean
+  parryIsHold?: boolean
   onGround?: boolean
   castAbilityId?: string
   statuses: ReadonlyArray<{ kind: string; stacks: number; remainingSec: number }>
@@ -85,6 +86,7 @@ interface RemoteState {
   comboIndex: number
   deathStartedAt: number
   parrying: boolean
+  parryIsHold: boolean
   prevX: number
   prevZ: number
   /** Timestamp until which the hit-react animation should play. */
@@ -369,6 +371,7 @@ export function initRemotePlayers({
       comboIndex: 0,
       deathStartedAt: 0,
       parrying: false,
+      parryIsHold: false,
       prevX: p.transform.x,
       prevZ: p.transform.z,
       hitReactUntilMs: 0,
@@ -451,6 +454,7 @@ export function initRemotePlayers({
         (ABILITY_DEFS[p.castAbilityId ?? '']?.effects?.some((e) => e.kind === 'channel') ?? false)
       r.comboIndex = p.comboIndex ?? 0
       r.parrying = !!p.parrying
+      r.parryIsHold = !!p.parryIsHold
       // Jump / land animation transitions from server onGround field.
       if (p.alive) {
         const isOnGround = p.onGround !== false // default true when field absent
@@ -604,7 +608,7 @@ export function initRemotePlayers({
         landing: now < r.landUntilMs,
         rolling: now < r.rollUntilMs,
       })
-      setParryShieldState(r.mesh, r.parrying, false, now)
+      setParryShieldState(r.mesh, r.parrying, r.parryIsHold, now)
       applyParryArmPose(r.mesh, r.parrying, animDt)
       let dyaw = b.yaw - a.yaw
       if (dyaw > Math.PI) dyaw -= 2 * Math.PI

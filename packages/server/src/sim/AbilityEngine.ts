@@ -722,27 +722,14 @@ export class AbilityEngine {
         : directionFromYawPitch(target.yaw, 0)
     const dx = dir.x * e.distance
     const dz = dir.z * e.distance
-    if (this.host.resolveDisplacement) {
-      const resolved = this.host.resolveDisplacement(caster, dx, dz, !!e.cancelOnCollision)
-      caster.transform.x = resolved.x
-      caster.transform.z = resolved.z
-      return
-    }
-    if (e.mode === 'teleport' || !e.cancelOnCollision) {
-      caster.transform.x += dx
-      caster.transform.z += dz
-      return
-    }
-    // Dash with naive cancel-on-collision: try in 0.5 m steps and stop on
-    // entering any static AABB.
-    const steps = Math.max(2, Math.round(e.distance * 2))
-    for (let i = 1; i <= steps; i++) {
-      const t = i / steps
-      const nx = caster.transform.x + dx * t
-      const nz = caster.transform.z + dz * t
-      caster.transform.x = nx
-      caster.transform.z = nz
-    }
+    // The room ALWAYS supplies a collision-aware resolver (GameRoom wires it
+    // unconditionally). Require it: never move the caster without collision —
+    // the former fallback advanced the caster through geometry with no AABB
+    // test, which would phase a dash straight through walls.
+    if (!this.host.resolveDisplacement) return
+    const resolved = this.host.resolveDisplacement(caster, dx, dz, !!e.cancelOnCollision)
+    caster.transform.x = resolved.x
+    caster.transform.z = resolved.z
   }
 
   // Active channels — driven each tick from `tickWindups` (we reuse the

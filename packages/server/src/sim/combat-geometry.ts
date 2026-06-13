@@ -10,7 +10,7 @@ import {
   getAbilitySlotFamily,
   segmentVsAabb,
   directionFromYawPitch,
-  PLAYER_CAPSULE_RADIUS_M,
+  CAPSULE_HALF_WIDTH_M,
   PLAYER_CAPSULE_HEIGHT_M,
   type StaticMap,
 } from '@ragequit/shared'
@@ -31,9 +31,17 @@ export function pointInsideWall(dx: number, dz: number, yaw: number, width: numb
   return Math.abs(perp) <= 0.6 && Math.abs(along) <= width / 2
 }
 
-/** Does a player capsule at (x,y,z) overlap any static box (2D footprint + Y span)? */
+/**
+ * Does a player capsule at (x,y,z) overlap any static box (2D footprint + Y span)?
+ * Uses the player's MOVEMENT footprint (CAPSULE_HALF_WIDTH_M = 0.4), the same
+ * radius resolveCapsuleVsBox uses for walking — NOT the wider projectile-hit
+ * radius (PLAYER_CAPSULE_RADIUS_M = 0.65). This is the self-collision test for
+ * dash/knockback displacement, so it must stop the body exactly where walking
+ * would; using the inflated projectile radius made dashes halt ~0.25 m short of
+ * walls the player could otherwise walk right up to.
+ */
 export function isCapsuleBlocked2D(boxes: Boxes, x: number, y: number, z: number): boolean {
-  const r = PLAYER_CAPSULE_RADIUS_M
+  const r = CAPSULE_HALF_WIDTH_M
   const minY = y - PLAYER_CAPSULE_HEIGHT_M / 2
   const maxY = y + PLAYER_CAPSULE_HEIGHT_M / 2
   for (const box of boxes) {

@@ -60,9 +60,7 @@ for (const dir of dirs) {
 
 // Default: only maps the toon material discards (normal/ORM/occlusion). With
 // --all: every referenced texture (the dir is flat-shaded, no map kept at all).
-const targets = ALL
-  ? [...usage.entries()]
-  : [...usage.entries()].filter(([, e]) => !e.baseColor)
+const targets = ALL ? [...usage.entries()] : [...usage.entries()].filter(([, e]) => !e.baseColor)
 
 if (CHECK) {
   // CI guard: fail if any toon-discarded map is bigger than the budget — keeps
@@ -73,18 +71,37 @@ if (CHECK) {
     try {
       const meta = await sharp(path).metadata()
       if ((meta.width ?? 0) > TARGET || (meta.height ?? 0) > TARGET) {
-        offenders.push(`${uri} (${meta.width}x${meta.height}, ${Math.round(statSync(path).size / 1024)} KB)`)
+        offenders.push(
+          `${uri} (${meta.width}x${meta.height}, ${Math.round(statSync(path).size / 1024)} KB)`,
+        )
       }
     } catch {
       /* missing file — referenced-but-absent is a different validator's job */
     }
   }
+  // Orphan detection (--all dirs only): an image file on disk that NO .gltf
+  // references is pure dead weight the size loop above can't see (it only walks
+  // textures wired into a material slot). This is the hole that let ~16 MB of
+  // unused 2048px trim PNGs ship. Scoped to --all dirs (flat-shaded prop bundles);
+  // the character dir carries referenced helper textures we don't want to misflag.
+  if (ALL) {
+    const IMG = /\.(png|jpe?g|webp)$/i
+    const referenced = new Set([...usage.keys()].map((u) => u.split('/').pop()))
+    for (const dir of dirs) {
+      for (const f of readdirSync(dir)) {
+        if (!IMG.test(f)) continue
+        if (!referenced.has(f)) offenders.push(`${f} (orphan: referenced by no .gltf in ${dir})`)
+      }
+    }
+  }
   if (offenders.length) {
-    console.error(`✗ ${offenders.length} toon-discarded map(s) exceed ${TARGET}px budget (run shrink-unused-maps.mjs):`)
+    console.error(
+      `✗ ${offenders.length} asset(s) over budget or orphaned (run shrink-unused-maps.mjs):`,
+    )
     for (const o of offenders) console.error(`  - ${o}`)
     process.exit(1)
   }
-  console.log(`✓ all toon-discarded maps within ${TARGET}px budget (${targets.length} checked)`)
+  console.log(`✓ all maps within ${TARGET}px budget + no orphans (${targets.length} checked)`)
   process.exit(0)
 }
 
@@ -105,12 +122,17 @@ for (const [uri, e] of targets) {
     after += sz
     continue // already tiny — idempotent
   }
-  const buf = await sharp(path).resize(TARGET, TARGET, { fit: 'fill' }).png({ compressionLevel: 9 }).toBuffer()
+  const buf = await sharp(path)
+    .resize(TARGET, TARGET, { fit: 'fill' })
+    .png({ compressionLevel: 9 })
+    .toBuffer()
   const { writeFileSync } = await import('node:fs')
   writeFileSync(path, buf)
   after += buf.length
   shrunk++
-  console.log(`  ${String(Math.round(sz / 1024)).padStart(6)} KB -> ${String(Math.round(buf.length / 1024)).padStart(4)} KB  ${uri}`)
+  console.log(
+    `  ${String(Math.round(sz / 1024)).padStart(6)} KB -> ${String(Math.round(buf.length / 1024)).padStart(4)} KB  ${uri}`,
+  )
 }
 console.log(
   `\nShrunk ${shrunk} unused-by-toon maps: ${(before / 1024 / 1024).toFixed(1)} MB -> ${(after / 1024 / 1024).toFixed(2)} MB (saved ${((before - after) / 1024 / 1024).toFixed(1)} MB)`,

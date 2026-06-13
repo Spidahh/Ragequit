@@ -78,6 +78,8 @@ packages/client/public/arena/props/Crate_Wooden.glb
 scratch/
 sandbox/
 .continuerules
+# Cline tool artifact (a multi-MB recursive tree dump, regenerated locally — not source)
+.clinerules
 .claude/
 
 # Legacy material — not for git

@@ -232,12 +232,20 @@ export function applyWeaponProp(
 
       wg.add(model)
 
-      // Apply grip — repositions the weaponGroup so the blade sits correctly in hand.
-      const classId = (charGroup.userData['loadedClassId'] as string) || 'hybrid'
-      const grip = getWeaponGrip(weaponId, classId)
-      wg.position.set(...grip.position)
-      wg.rotation.set(...grip.rotation)
-      wg.scale.setScalar(grip.scale)
+      // Apply grip — repositions the weaponGroup so the blade sits correctly in
+      // hand. Grip values are HAND-BONE-LOCAL, so only apply them once wg has been
+      // re-parented onto the hand bone by _installCharacterModel. If the small
+      // weapon GLB resolves BEFORE the larger character model installs, wg is
+      // still a child of the charGroup ROOT; writing the tiny hand-local offsets
+      // there would shrink + misplace the weapon at the body origin for a few
+      // frames. Install re-applies the grip after re-parenting, so skipping is safe.
+      if (wg.parent && wg.parent !== charGroup) {
+        const classId = (charGroup.userData['loadedClassId'] as string) || 'hybrid'
+        const grip = getWeaponGrip(weaponId, classId)
+        wg.position.set(...grip.position)
+        wg.rotation.set(...grip.rotation)
+        wg.scale.setScalar(grip.scale)
+      }
 
       // Toon outlines for weapon meshes.
       const outlines: { mesh: THREE.Mesh; outline: THREE.Mesh }[] = []
@@ -261,10 +269,18 @@ export function applyShieldProp(charGroup: THREE.Group, _toonGradient?: THREE.Da
   const sg = charGroup.userData['shieldGroup'] as THREE.Group | undefined
   if (!sg) return
 
+  // Monotonic token guards against the async race: on rapid class re-selection
+  // two applyShieldProp loads can be in flight; without this both resolve and
+  // sg.add(model), stacking two shields (the late add was never cleared) and
+  // leaking the first's materials. Mirrors applyWeaponProp's activeWeaponProp guard.
+  const token = ((charGroup.userData['shieldLoadToken'] as number) ?? 0) + 1
+  charGroup.userData['shieldLoadToken'] = token
   clearWeaponGroup(sg)
 
   fetchWeaponGlb('shield')
     .then((scene) => {
+      if (charGroup.userData['shieldLoadToken'] !== token) return
+      clearWeaponGroup(sg)
       const model = scene.clone() as THREE.Group
 
       model.traverse((child) => {

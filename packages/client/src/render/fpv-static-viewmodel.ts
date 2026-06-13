@@ -100,16 +100,21 @@ export function createFpvStaticViewmodel(): FpvStaticViewmodel {
           }
         })
 
-        // Outlines keep weapon silhouettes readable in dark arenas.
-        const outlines: THREE.Mesh[] = []
+        // Outlines keep weapon silhouettes readable in dark arenas. Collect
+        // {mesh, outline} pairs and attach each outline to its SOURCE mesh's
+        // parent — `outline.parent` is null on a fresh createOutlineMesh, so the
+        // old `outline.parent?.add(outline)` was a no-op that left the staff/sword
+        // viewmodel with no outline AND leaked the cloned geometry every rebuild
+        // (clear() only disposes outlines that actually live under root).
+        const outlinePairs: { mesh: THREE.Mesh; outline: THREE.Mesh }[] = []
         model.traverse((child) => {
           if (child instanceof THREE.Mesh && !child.name.endsWith('_outline')) {
             const outline = createOutlineMesh(child, 0.016, 0x0a0a0f)
             outline.frustumCulled = false
-            outlines.push(outline)
+            outlinePairs.push({ mesh: child, outline })
           }
         })
-        for (const outline of outlines) outline.parent?.add(outline)
+        for (const { mesh, outline } of outlinePairs) mesh.parent?.add(outline)
 
         // Per-weapon first-person placement (tuned for the 58° viewmodel camera).
         if (weapon === 'sword') {

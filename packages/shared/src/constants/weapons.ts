@@ -92,7 +92,10 @@ export const STAFF_M1_LIFETIME_SEC = STAFF_M1_MAX_RANGE_M / STAFF_M1_SPEED_MPS
 
 // --- Projectile collision ---------------------------------------------------
 // Players are approximated as vertical capsules for projectile intersection.
-// Values kept in sync with the kinematic controller's capsule dimensions.
+// HEIGHT matches the kinematic controller (CAPSULE_HEIGHT_M = 1.8). RADIUS does
+// NOT: it is INTENTIONALLY wider than the movement footprint (world.ts
+// CAPSULE_RADIUS_M = 0.4) so projectiles register reliably — a feel pad, not a
+// sync. Self-collision (movement/dash) must use the 0.4 footprint, not this.
 export const PLAYER_CAPSULE_RADIUS_M = 0.65 as const // 0.5→0.65: larger hitbox, projectiles feel better
 export const PLAYER_CAPSULE_HEIGHT_M = 1.8 as const
 // Offset from replicated capsule centre to the first-person eye / projectile

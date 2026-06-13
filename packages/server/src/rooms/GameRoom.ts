@@ -270,8 +270,9 @@ export class GameRoom extends Room<GameState> {
     this.onMessage<ClientSwingMessage>(MessageTypes.Swing, (client, message) => {
       if (!this.gateRate(client, 'swing')) return
       if (!this.canAcceptCombatAction()) return
-      // Reject crafted packets: a non-finite yaw poisons the cone direction.
-      if (!Number.isFinite(message.yaw)) return
+      // Reject crafted packets: a non-finite yaw poisons the cone direction, and
+      // a non-finite atTick poisons the lag-comp rewind (NaN → live-position fallback).
+      if (!Number.isFinite(message.yaw) || !Number.isFinite(message.atTick)) return
       const queue = this.swingQueues.get(client.sessionId)
       if (!queue) return
       if (queue.length < GameRoom.MAX_SWING_QUEUE) queue.push(message)
@@ -339,6 +340,11 @@ export class GameRoom extends Room<GameState> {
     })
 
     this.onMessage(MessageTypes.Heartbeat, (client, message: { clientTime: number }) => {
+      // Gate like every other channel: an ungated handler that does per-message
+      // work (alloc + serialize a PongAck) is a flood/amplification surface.
+      if (!this.gateRate(client, 'heartbeat')) return
+      // A crafted non-finite clientTime would poison the client's ping calc.
+      if (!Number.isFinite(message?.clientTime)) return
       client.send(MessageTypes.PongAck, {
         clientTime: message.clientTime,
         serverTime: Date.now(),
@@ -888,9 +894,12 @@ export class GameRoom extends Room<GameState> {
       if (msg.m2 !== undefined) lastM2 = !!msg.m2
     }
 
-    // Parry edge detection for bots (and any client that sends m2 on the input message).
-    // Human players send ParryPress/ParryRelease as separate messages; bots piggyback on m2.
-    if (!dead && lastM2 !== undefined) {
+    // Parry edge detection for BOTS ONLY: bots have no ParryPress/ParryRelease
+    // messages and drive parry via the m2 input flag. Humans send the dedicated
+    // edge messages, and they ALSO populate m2 every tick — driving both paths
+    // for a human races the two against each other and emits phantom
+    // AbilityFailed('cooldown')/tapStart when the buffered m2 trails a release.
+    if (!dead && lastM2 !== undefined && this.bots.has(sid)) {
       if (lastM2 && !player.parrying) this.parry.press(sid)
       else if (!lastM2 && player.parrying) this.parry.release(sid)
     }
@@ -1009,15 +1018,21 @@ export class GameRoom extends Room<GameState> {
       if (this.statuses.hasStatus(victim, 'invulnerable')) continue
 
       // Air punish: victim already airborne from an EARLIER tick's knockup (a
-      // follow-up hit). The `now > start` guard excludes the LAUNCHING hit of
-      // both melee (d.knockup block below) and ability knockups (applied in the
-      // engine before this drain) — their knockup starts this same tick.
+      // follow-up hit). The `now > start` guard excludes the LAUNCHING hit:
+      // all knockups are applied via applyKnockupToPlayer (uppercut/eruption/
+      // arc_lift/frost_pillar are abilities, resolved in the engine before this
+      // drain) and set airborneUntilTick to start this same tick.
       const victimWasAirborne =
         now < victim.airborneUntilTick && now > victim.airborneUntilTick - UPPERCUT_AIRBORNE_TICKS
 
       // Parry absorbs / reduces whenever the protection state is active. Air
       // displacement is pressure, not an implicit parry shutdown.
       let didParry = false
+      // A TAP parry (not hold) is a 100% block. Gate the consuming outgoing
+      // modifiers so a perfect block does not burn the attacker's once-per-5
+      // Fury Surge / Flow for zero damage, nor apply the surge stagger-slow to
+      // a defender who blocked cleanly. Hold parry (70%) is NOT full → riders fire.
+      const fullyBlocked = d.canParry && victim.parrying && !victim.parryIsHold
       // Curse / Fury / Flow outgoing-damage modifiers (sim/damage-modifiers.ts).
       let applied = applyOutgoingDamageModifiers(
         { statuses: this.statuses, mechanics: this.mechanics },
@@ -1026,6 +1041,7 @@ export class GameRoom extends Room<GameState> {
         attacker,
         d.attackerId,
         d.victimId,
+        fullyBlocked,
       )
       if (d.canParry && victim.parrying) {
         const before = applied
@@ -1079,25 +1095,10 @@ export class GameRoom extends Room<GameState> {
         attacker.lastDamageAtTick = now
       }
 
-      if (d.knockup && applied > 0) {
-        const simState = this.sim.get(d.victimId)
-        if (simState) {
-          simState.vel.y = uppercutInitialVy()
-          simState.vel.x = 0
-          simState.vel.z = 0
-          simState.onGround = false
-          victim.onGround = false
-          victim.vy = simState.vel.y
-          victim.vx = 0
-          victim.vz = 0
-        }
-        victim.airborneUntilTick = now + UPPERCUT_AIRBORNE_TICKS
-        // Knockup interrupts any active cast that took real damage. Parry is
-        // allowed to remain active in air when it did not block the launch.
-        if (victim.casting) {
-          this.engine.cancelCast(d.victimId, 'damage')
-        }
-      }
+      // NOTE: PendingDamage.knockup is always false (no producer sets it — all
+      // knockups go through applyKnockupToPlayer in the engine, before this
+      // drain), so the former `if (d.knockup && applied > 0)` launch block here
+      // was dead code and has been removed.
 
       const hitMsg: ServerHitMessage = {
         attackerId: d.attackerId,
@@ -1536,6 +1537,31 @@ export class GameRoom extends Room<GameState> {
       msg.classId && CLASS_IDS.includes(msg.classId as ClassId)
         ? (msg.classId as ClassId)
         : 'hybrid'
+
+    // Reject malformed / oversized payloads before any per-element work. A
+    // legit client sends <= 8 ids total; without this an array of millions of
+    // empty strings would be spread + iterated (the `id === ''` skip below has
+    // no length bound), stalling the single-threaded room tick (event-loop DoS).
+    const MAX_SLOT_IDS = 32
+    const fields = [msg.melee, msg.bow, msg.magicBase, msg.magicAdvanced, msg.utility]
+    let totalIds = 0
+    for (const f of fields) {
+      if (f !== undefined && !Array.isArray(f)) {
+        client?.send(MessageTypes.ServerNote, {
+          kind: 'warn',
+          text: 'loadout rejected: malformed payload',
+        })
+        return
+      }
+      totalIds += f?.length ?? 0
+    }
+    if (totalIds > MAX_SLOT_IDS) {
+      client?.send(MessageTypes.ServerNote, {
+        kind: 'warn',
+        text: 'loadout rejected: too many slots',
+      })
+      return
+    }
 
     // Build the canonical flat ability list from the class-aware envelope.
     // Each array contains ids for one slot family; order within arrays is

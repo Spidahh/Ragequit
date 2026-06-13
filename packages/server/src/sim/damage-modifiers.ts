@@ -39,7 +39,14 @@ export function applyOutgoingDamageModifiers(
   attacker: Player | undefined,
   attackerId: string,
   victimId: string,
+  // True when the hit is FULLY blocked (tap parry, 100%). A perfect block must
+  // not consume the attacker's once-per-5-stacks Fury Surge / Flow, nor apply
+  // the surge stagger-slow to the defender — the attack connected with nothing.
+  // Hold parry (70%) still lets damage through, so it is NOT fully blocked and
+  // the riders correctly fire.
+  fullyBlocked = false,
 ): number {
+  if (fullyBlocked) return Math.round(base)
   let applied = base
   // Curse of Weakness: attacker's outgoing damage is reduced.
   if (attacker && ctx.statuses.hasStatus(attacker, 'curse')) {

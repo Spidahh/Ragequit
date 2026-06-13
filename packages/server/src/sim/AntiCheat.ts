@@ -29,6 +29,9 @@ export const ANTI_CHEAT_LIMITS: Record<string, RateLimitConfig> = {
   charge: { windowMs: 1000, maxInWindow: 20 },
   fireStaff: { windowMs: 1000, maxInWindow: 30 },
   loadoutSet: { windowMs: 5000, maxInWindow: 5 },
+  // Honest client sends one heartbeat / 500 ms (~2/s). 10/s leaves headroom for
+  // clock jitter and background-tab catch-up bursts while killing ping floods.
+  heartbeat: { windowMs: 1000, maxInWindow: 10 },
 }
 
 interface Slot {
