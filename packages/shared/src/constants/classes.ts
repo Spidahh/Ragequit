@@ -104,9 +104,9 @@ export const TARGET_CLASS_DEFS = {
     weapons: ['staff'],
     recoveryId: 'arcane_rebind',
     visuals: {
-      // ⚠️ Realistic shadowkin mage DISABLED for gameplay (no locomotion clips —
-      // see the tank note). Re-enable once CC run/walk/death clips exist.
-      // mixamoGlb: 'shadowkin_mage_norm',
+      // Mixamo Vampire A Lusth (pale blood-warlock) + Pro Magic Pack, 17 clips
+      // (magic attacks, cast, area, heal, full locomotion, deaths, blocks).
+      mixamoGlb: 'vampire',
       base: 'Superhero_Male_FullBody',
       outfit: 'Male_Peasant',
       hair: 'Hair_Long',
