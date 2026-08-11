@@ -643,6 +643,23 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
   PRATICA senza ELO). main.ts alleggerito (~-60 righe, i due call-site ora sono una chiamata).
   Gate verde 362 test → push su `main`. **+ RIVINCITA**: chip ⟳ sul fine-partita (duel e multi) che rilancia lo STESSO ui-mode via `lastConnectMode` (teardown pulito → launchModeOrForge).
 
+- **2026-08-11 (5ª parte) — 🎉 PERSONAGGI REALISTICI IN GIOCO (F3 core, «muoviti/fai tutto tu»).**
+  Con l'utente loggato su Mixamo (Brave, estensione Chrome): scaricati **i personaggi stock + i
+  PACK di animazioni** (la scoperta chiave: 1 pack = 50+ clip in uno zip): Paladin J Nordstrom +
+  Pro Sword and Shield (52), Erika Archer con arco + Pro Longbow (40), Ninja + Great Sword (52).
+  Blocco Brave "download multipli" superato coi "Consenti" dell'utente. Tutto committato in
+  `character-sources/mixamo/`. **Pipeline di fusione NUOVA** `tools/asset-pipeline/mixamo-to-glb.mjs`
+  (niente Blender: FBX2glTF via npm + gltf-transform mergeDocuments con retarget canali per nome
+  osso + prune/dedup/unpartition + optimize quantize/WebP) → **paladin.glb 1.9MB/29 clip,
+  erika.glb 2.5MB/20, ninja.glb 1.8MB/23**. `classes.ts`: `mixamoGlb` RIATTIVATO per tank/archer/
+  hybrid (il blocco storico "no locomotion" è morto — clip complete embedded); `_mapMixamoClips`
+  esteso ai nomi dei pack (guardie negative su block_idle, slash→attack2, impact→hit-react,
+  power_up→respawn, aim_overdraw/recoil→arco). **Verificato**: lineup post-compressione (tutti e
+  3 animati) + Stanza Test in-engine (a terra, armati, team-rim ok). Gate 362 test → main (9ec00a4).
+  - RESTANO (tuning prossima sessione): materiali scuri nell'arena (Paladin quasi nero → serve
+    boost tipo GLB_BRIGHTNESS), grip armi per-rig, yaw lineup, **mago** (serve Pro Magic Pack —
+    zip ancora bloccato dal consenso Brave — + un modello CC via AccuRig), FPV braccia.
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.
