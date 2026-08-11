@@ -150,3 +150,37 @@ describe('MatchManager', () => {
     expect(r.state.roundWins.get('B')).toBe(1)
   })
 })
+
+describe('kill-cap match timer fallback', () => {
+  it('ends an FFA match after the time ceiling even with no kills', () => {
+    const r = makeHost()
+    r.state.mode = 'ffa'
+    const mm = new MatchManager(r.host)
+    mm.tick() // lobby → countdown
+    for (let i = 0; i < 60 * 3 + 5; i++) {
+      r.state.tick += 1
+      mm.tick()
+    }
+    expect(r.state.phase).toBe('live')
+    // 10 minutes of live play with zero kills → matchEnd, not an endless lobby.
+    r.state.tick += 10 * 60 * 60 + 5
+    mm.tick()
+    expect(r.state.phase).toBe('matchEnd')
+  })
+
+  it('never applies the ceiling to 1v1 round modes (round timer owns those)', () => {
+    const r = makeHost()
+    r.state.mode = 'duel_arena'
+    const mm = new MatchManager(r.host)
+    mm.tick()
+    for (let i = 0; i < 60 * 3 + 5; i++) {
+      r.state.tick += 1
+      mm.tick()
+    }
+    expect(r.state.phase).toBe('live')
+    r.state.tick += 10 * 60 * 60 + 5
+    mm.tick()
+    // Round timer fires first (roundEnd), not a whole-match end.
+    expect(r.state.phase).not.toBe('matchEnd')
+  })
+})

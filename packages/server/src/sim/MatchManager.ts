@@ -34,6 +34,9 @@ import {
 const ROUND_MODES = new Set(['duel_arena', 'blockout', '1v1'])
 
 const ROUND_TIMER_TICKS = Math.round(ROUND_TIMER_SEC * TICK_RATE_HZ)
+// Kill-cap modes (FFA/5v5) have no round timer — without a match ceiling a
+// cautious lobby can stall forever. After this, the current scores decide.
+const KILLCAP_MATCH_TIMER_TICKS = 10 * 60 * TICK_RATE_HZ
 const COUNTDOWN_TICKS = Math.round(ROUND_COUNTDOWN_SEC * TICK_RATE_HZ)
 const ROUND_END_HOLD_TICKS = Math.round(ROUND_END_HOLD_SEC * TICK_RATE_HZ)
 
@@ -142,6 +145,9 @@ export class MatchManager {
             const winner = this.higherHpWinner()
             this.endRound(winner)
           }
+        } else if (tickNow >= this.roundStartTick + KILLCAP_MATCH_TIMER_TICKS) {
+          // FFA/5v5 fallback: time is up — whoever leads now wins.
+          this.enterMatchEnd(tickNow)
         }
         break
       }
