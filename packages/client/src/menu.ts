@@ -77,6 +77,7 @@ export function initMenu(handlers: {
   onTraining: (difficulty: 'novice' | 'competent' | 'master' | 'test') => void
   onLoadout: () => void
   onScoreboardBack: () => void
+  onRematch: () => void
   onFovChange: (fov: number) => void
   onSensChange: (sens: number) => void
   onVolumeChange: (vol: number) => void
@@ -127,6 +128,10 @@ export function initMenu(handlers: {
   scoreboard.addEventListener('click', (e) => {
     const target = e.target as HTMLElement | null
     if (!target) return
+    if (target.closest('#sb-rematch')) {
+      handlers.onRematch()
+      return
+    }
     const isChip = target.closest('.sb-chip')
     const isMenuButton = target.closest('#scoreboard-back')
     const hasMenuText = target.textContent?.toUpperCase().includes('MENU')

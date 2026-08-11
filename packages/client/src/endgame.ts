@@ -95,6 +95,7 @@ export function renderScoreboard(host: HTMLElement, data: ScoreboardData | Multi
           → <b>${data.eloBefore + data.eloDelta}</b>
         </div>
         <div class="sb-actions">
+          <span class="sb-chip" id="sb-rematch">⟳ RIVINCITA</span>
           <span class="sb-chip primary">SPC / ESC · MENU</span>
         </div>
       </div>
@@ -136,7 +137,7 @@ function renderMultiScoreboard(host: HTMLElement, data: MultiScoreboard): void {
       </div>
       <div class="sb-foot">
         <div></div>
-        <div class="sb-actions"><span class="sb-chip primary">SPC / ESC · MENU</span></div>
+        <div class="sb-actions"><span class="sb-chip" id="sb-rematch">⟳ RIVINCITA</span><span class="sb-chip primary">SPC / ESC · MENU</span></div>
       </div>
     </div>
   `

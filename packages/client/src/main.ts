@@ -1127,6 +1127,13 @@ const menu = initMenu({
   onScoreboardBack: () => {
     returnToMainMenu({ leaveRoom: true, statusText: 'left match' })
   },
+  onRematch: () => {
+    // Clean teardown of the finished room, then relaunch the SAME ui-mode
+    // (lastConnectMode keeps the training difficulty too).
+    menu.hideScoreboard()
+    returnToMainMenu({ leaveRoom: true })
+    launchModeOrForge(lastConnectMode)
+  },
   onFovChange: (fov) => {
     settingsFovBase = fov
     camFovBase = fov // snap immediately when changed from settings

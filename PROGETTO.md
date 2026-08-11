@@ -641,7 +641,7 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
   inizio match). Render `renderMultiScoreboard` in `endgame.ts` + CSS `.sb-table/.sb-trow`.
   Vale anche per l'uscita volontaria (FFA/5v5 mostrano la tabella, duel abbandonato resta
   PRATICA senza ELO). main.ts alleggerito (~-60 righe, i due call-site ora sono una chiamata).
-  Gate verde 362 test → push su `main`.
+  Gate verde 362 test → push su `main`. **+ RIVINCITA**: chip ⟳ sul fine-partita (duel e multi) che rilancia lo STESSO ui-mode via `lastConnectMode` (teardown pulito → launchModeOrForge).
 
 ## 7. Metodo di lavoro (professionale)
 
