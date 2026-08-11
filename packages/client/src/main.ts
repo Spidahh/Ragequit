@@ -119,6 +119,7 @@ import {
   applyParryArmPose,
   triggerWeaponRecoil,
 } from './render/characters.js'
+import { configureGameRenderer, createRendererOrGate } from './render/create-renderer.js'
 import { installArenaEnvironment } from './render/environment.js'
 import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
 import { createFpvBow } from './render/fpv-bow.js'
@@ -375,28 +376,8 @@ const statusOverlay = initStatusOverlay({
 
 VfxTextures.init()
 
-// preserveDrawingBuffer only when the screenshot harness asks (?capture) — it lets
-// gl.readPixels() grab the rendered frame headlessly; off in prod (small GPU cost).
-const renderer = new THREE.WebGLRenderer({
-  antialias: true,
-  alpha: false,
-  preserveDrawingBuffer:
-    typeof location !== 'undefined' && new URLSearchParams(location.search).has('capture'),
-})
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
-renderer.setSize(window.innerWidth, window.innerHeight)
-renderer.setClearColor(0x141c28, 1)
-;(globalThis as Record<string, unknown>)['__renderer'] = renderer // verify-harness diag
-// Head-only clip of the FullBody base (face from base, body from outfit) — characters.ts.
-renderer.localClippingEnabled = true
-// Shadow maps — PCFSoft gives smooth shadow edges at low perf cost.
-renderer.shadowMap.enabled = true
-renderer.shadowMap.type = THREE.PCFSoftShadowMap
-// ACES filmic tone mapping makes the scene colours pop without over-exposing.
-renderer.toneMapping = THREE.ACESFilmicToneMapping
-renderer.toneMappingExposure = 1.3
-renderer.domElement.tabIndex = 0
-renderer.domElement.style.outline = 'none'
+const renderer = createRendererOrGate()
+configureGameRenderer(renderer)
 app.appendChild(renderer.domElement)
 
 // Nameplate container — absolutely positioned over the canvas for HP bars /
@@ -1100,7 +1081,9 @@ const loadoutStation = initLoadoutStation(
         ? 'START 1V1'
         : pendingLaunchMode === 'ffa'
           ? 'START FFA'
-          : null,
+          : pendingLaunchMode === '5v5'
+            ? 'START 5V5'
+            : null,
 )
 function getCurrentClassId(): ClassId {
   const schemaPlayer = getSelfSchemaPlayer?.()
@@ -1148,52 +1131,27 @@ async function connectWithMode(mode: string, reopenLoadout = true): Promise<void
   }
 }
 
+// Shared mode-tile behaviour: with a configured loadout launch straight into the
+// match; otherwise route through the Forge, remembering the requested mode.
+function launchModeOrForge(mode: string): void {
+  loadoutReturnsToPause = false
+  menu.hideMain()
+  if (localStorage.getItem('ragequit.profile.configured') === 'true') {
+    pendingLaunchMode = null
+    engageCanvasInput()
+    requestArenaPointerLock()
+    void connectWithMode(mode, false)
+  } else {
+    pendingLaunchMode = mode
+    loadoutStation.open()
+  }
+}
+
 const menu = initMenu({
-  onPlay: () => {
-    loadoutReturnsToPause = false
-    const isConfigured = localStorage.getItem('ragequit.profile.configured') === 'true'
-    if (isConfigured) {
-      pendingLaunchMode = null
-      menu.hideMain()
-      engageCanvasInput()
-      requestArenaPointerLock()
-      void connectWithMode('duel_arena', false)
-    } else {
-      pendingLaunchMode = 'duel_arena'
-      menu.hideMain()
-      loadoutStation.open()
-    }
-  },
-  onFfa: () => {
-    loadoutReturnsToPause = false
-    const isConfigured = localStorage.getItem('ragequit.profile.configured') === 'true'
-    if (isConfigured) {
-      pendingLaunchMode = null
-      menu.hideMain()
-      engageCanvasInput()
-      requestArenaPointerLock()
-      void connectWithMode('ffa', false)
-    } else {
-      pendingLaunchMode = 'ffa'
-      menu.hideMain()
-      loadoutStation.open()
-    }
-  },
-  onTraining: (difficulty) => {
-    loadoutReturnsToPause = false
-    const isConfigured = localStorage.getItem('ragequit.profile.configured') === 'true'
-    if (isConfigured) {
-      pendingLaunchMode = null
-      menu.hideMain()
-      engageCanvasInput()
-      requestArenaPointerLock()
-      void connectWithMode(`training_${difficulty}`, false)
-    } else {
-      pendingLaunchMode = `training_${difficulty}`
-      menu.hideMain()
-      loadoutStation.open()
-    }
-  },
+  onPlay: () => launchModeOrForge('duel_arena'),
+  onFfa: () => launchModeOrForge('ffa'),
+  onTeam: () => launchModeOrForge('5v5'),
+  onTraining: (difficulty) => launchModeOrForge(`training_${difficulty}`),
   onLoadout: () => {
     loadoutReturnsToPause = false
     pendingLaunchMode = null
@@ -1303,11 +1261,39 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
     const roomOptions: Record<string, unknown> = {
       mode: resolvedMode,
       difficulty,
-      botFill: resolvedMode === 'duel_arena',
+      // Every online mode asks for bot-fill so a solo player always gets a live
+      // match (duel: 1 bot; FFA: small brawl; 5v5: both teams filled). Humans
+      // joining later take the remaining open slots.
+      botFill: resolvedMode === 'duel_arena' || resolvedMode === 'ffa' || resolvedMode === '5v5',
     }
     roomOptions['name'] = initialName || 'PLAYER'
     if (token) roomOptions['token'] = token
-    const joinedRoom = await client.joinOrCreate('game', roomOptions)
+    // Free-tier hosting cold-starts: the first join after idle can fail or hang.
+    // Retry with backoff while the user is still waiting (menu hidden); abort
+    // silently if they pressed Back (menu visible) or a newer connect started.
+    const JOIN_RETRY_DELAYS_MS = [2000, 4000, 8000]
+    let joinedRoom: Awaited<ReturnType<typeof client.joinOrCreate>> | null = null
+    for (let attempt = 0; joinedRoom === null; attempt++) {
+      try {
+        joinedRoom = await client.joinOrCreate('game', roomOptions)
+      } catch (err) {
+        const menuVisible = !(
+          document.getElementById('main-menu')?.classList.contains('hidden') ?? false
+        )
+        if (seq !== connectSeq || menuVisible || attempt >= JOIN_RETRY_DELAYS_MS.length) {
+          throw err
+        }
+        serverToast.textContent = `Server in avvio... nuovo tentativo (${attempt + 2}/${JOIN_RETRY_DELAYS_MS.length + 1})`
+        serverToast.classList.remove('hidden')
+        await new Promise((r) => setTimeout(r, JOIN_RETRY_DELAYS_MS[attempt]))
+        if (seq !== connectSeq) {
+          serverToast.classList.add('hidden')
+          return
+        }
+      }
+    }
+    serverToast.classList.add('hidden')
+    if (!joinedRoom) return // unreachable; satisfies TS narrowing after the retry loop
     const mainMenuHidden =
       document.getElementById('main-menu')?.classList.contains('hidden') ?? false
     if (seq !== connectSeq || !mainMenuHidden) {
@@ -1512,6 +1498,15 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
   } catch (err) {
     setStatus('offline', '#e87070')
     console.warn('[ragequit-client] connection failed', err)
+    // Surface the failure — a silent bounce back to the menu reads as a broken
+    // game. Only toast if this is still the most recent connect attempt.
+    if (seq === connectSeq) {
+      serverToast.textContent =
+        'Impossibile raggiungere il server. Riprova tra qualche secondo (il server gratuito può impiegare un po’ a svegliarsi).'
+      serverToast.classList.remove('hidden')
+      setTimeout(() => serverToast.classList.add('hidden'), 8000)
+      returnToMainMenu({ leaveRoom: false })
+    }
   }
 }
 

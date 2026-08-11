@@ -70,6 +70,7 @@ export interface MenuApi {
 export function initMenu(handlers: {
   onPlay: () => void
   onFfa: () => void
+  onTeam: () => void
   onTraining: (difficulty: 'novice' | 'competent' | 'master' | 'test') => void
   onLoadout: () => void
   onScoreboardBack: () => void
@@ -99,6 +100,7 @@ export function initMenu(handlers: {
 
   document.getElementById('menu-play')?.addEventListener('click', () => handlers.onPlay())
   document.getElementById('menu-ffa')?.addEventListener('click', () => handlers.onFfa())
+  document.getElementById('menu-5v5')?.addEventListener('click', () => handlers.onTeam())
 
   // Toggle the training options sub-menu container
   const menuTrain = document.getElementById('menu-train')!
@@ -366,6 +368,7 @@ export function initMenu(handlers: {
     updateProfile: (profile) => {
       const playBtn = document.getElementById('menu-play') as HTMLButtonElement
       const ffaBtn = document.getElementById('menu-ffa') as HTMLButtonElement
+      const teamBtn = document.getElementById('menu-5v5') as HTMLButtonElement
       const trainBtn = document.getElementById('menu-train') as HTMLButtonElement
       const noviceBtn = document.getElementById('menu-train-novice') as HTMLButtonElement
       const competentBtn = document.getElementById('menu-train-competent') as HTMLButtonElement
@@ -392,7 +395,7 @@ export function initMenu(handlers: {
         forgeBtn?.classList.add('forge-tile--cta')
 
         // Lock competitive modes only — training redirects to Forge by itself
-        ;[playBtn, ffaBtn].forEach((btn) => {
+        ;[playBtn, ffaBtn, teamBtn].forEach((btn) => {
           if (btn) {
             btn.disabled = true
             btn.classList.add('locked')
@@ -436,7 +439,7 @@ export function initMenu(handlers: {
         const iconEl = statusEl?.querySelector('.pc-loadout-icon')
         if (iconEl) iconEl.textContent = '✓'
         if (statusTextEl) statusTextEl.textContent = 'Loadout pronto'
-        ;[playBtn, ffaBtn, trainBtn, noviceBtn, competentBtn, masterBtn].forEach((btn) => {
+        ;[playBtn, ffaBtn, teamBtn, trainBtn, noviceBtn, competentBtn, masterBtn].forEach((btn) => {
           if (btn) {
             btn.disabled = false
             btn.classList.remove('locked', 'mode-tile--available')

@@ -117,6 +117,7 @@ import {
   trackPlayerDisconnected,
 } from '../telemetry.js'
 
+import * as lobby from './lobby-fill.js'
 import { makePendingDamageBridge } from './pending-damage-bridge.js'
 import { resolveMapId, testDummySpawn, testPlayerSpawn, testRoomMaxClients } from './test-room.js'
 
@@ -244,18 +245,23 @@ export class GameRoom extends Room<GameState> {
     if (resolvedMode === 'ffa') this.maxClients = Number(process.env['MAX_CLIENTS_FFA'] ?? 8)
     else if (resolvedMode === '5v5') this.maxClients = Number(process.env['MAX_CLIENTS_5V5'] ?? 10)
 
-    if (resolvedMode === 'training' || options.botFill === true) {
-      this.botSpawnAtMatchStart = Math.max(1, this.botSpawnAtMatchStart)
-    }
+    // Fill lobbies so a solo player always gets a live match (rules in
+    // lobby-fill.ts); humans who join later take the remaining open slots.
+    const fill = lobby.botFillTarget(
+      resolvedMode,
+      options.botFill === true,
+      this.maxClients,
+      process.env['FFA_BOT_FILL'],
+    )
+    this.botSpawnAtMatchStart = Math.max(fill, this.botSpawnAtMatchStart)
 
     if (resolvedMode === 'training' && this.difficulty === 'test') {
       this.maxClients = testRoomMaxClients(this.maxClients, CLASS_IDS.length)
       this.botSpawnAtMatchStart = CLASS_IDS.length
     }
 
-    // In FFA / 5v5, cap bots so at least 1 human slot stays open.
-    // Bots all spawn at onCreate() before any human connects; without this cap
-    // the room can fill entirely with bots if BOTS >= maxClients.
+    // FFA/5v5: bots all spawn at onCreate() before any human connects — cap
+    // them so at least 1 human slot stays open even if BOTS >= maxClients.
     if (resolvedMode === 'ffa' || resolvedMode === '5v5') {
       this.botSpawnAtMatchStart = Math.min(this.botSpawnAtMatchStart, this.maxClients - 1)
     }
@@ -493,6 +499,12 @@ export class GameRoom extends Room<GameState> {
     )
   }
 
+  // Team + spawn slot for a joining player/bot (pure rules in lobby-fill.ts).
+  private assignTeamAndSpawn(player: Player): number {
+    const spawns = this.activeMap.spawns.length
+    return lobby.assignTeamAndSpawnIndex(this.state.players, this.state.mode, spawns, player)
+  }
+
   // Spawn an in-process bot. The bot occupies a player slot just like a real
   // client — same Player schema, same StatusRuntime/AbilityEngine path. The
   // bot's input + cast decisions are produced by BotController each tick.
@@ -504,9 +516,7 @@ export class GameRoom extends Room<GameState> {
 
     const botNum = Number(botId.replace('bot-', ''))
     player.name = BOT_NAMES[botNum % BOT_NAMES.length] ?? 'Bot'
-    player.team = ''
-
-    const spawnIndex = this.state.players.size % this.activeMap.spawns.length
+    const spawnIndex = this.assignTeamAndSpawn(player)
     let spawn = this.activeMap.spawns[spawnIndex]!
     if (this.difficulty === 'test') spawn = testDummySpawn(spawn, botNum, CLASS_IDS.length)
     player.transform.x = spawn.x
@@ -539,13 +549,7 @@ export class GameRoom extends Room<GameState> {
       botId,
       {
         getSelf: (id) => this.state.players.get(id) ?? null,
-        getOpponent: (id) => {
-          let other: Player | null = null
-          this.state.players.forEach((p, pid) => {
-            if (pid !== id && p.alive) other = p
-          })
-          return other
-        },
+        getOpponent: (id) => lobby.nearestEnemy(this.state.players, id),
         sendCast: (id, abilityId, yaw, pitch) => {
           const queue = this.castQueues.get(id)
           if (queue && queue.length < GameRoom.MAX_CAST_QUEUE) {
@@ -609,8 +613,7 @@ export class GameRoom extends Room<GameState> {
     const player = new Player()
     player.id = client.sessionId
     player.name = options.name ?? `player-${client.sessionId.slice(0, 4)}`
-    player.team =
-      this.state.mode === '5v5' ? (this.state.players.size % 2 === 0 ? 'red' : 'blue') : ''
+    const spawnIndex = this.assignTeamAndSpawn(player)
 
     // --- Supabase JWT verification ---
     // If a token is supplied, verify it. On success, userId = Supabase UUID.
@@ -628,7 +631,6 @@ export class GameRoom extends Room<GameState> {
     }
     player.userId = verifiedUserId
 
-    const spawnIndex = this.state.players.size % this.activeMap.spawns.length
     let spawn = this.activeMap.spawns[spawnIndex]!
     if (this.difficulty === 'test') spawn = testPlayerSpawn(spawn)
     player.transform.x = spawn.x

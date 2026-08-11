@@ -314,7 +314,7 @@ button.locked {
 }
 
 .mm-modes-row {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .mm-subnav {
@@ -4084,6 +4084,27 @@ button.locked {
 
 .mode-tile--pvp:hover:not(:disabled):not(.locked) .mode-tile-name {
   color: var(--gold);
+}
+
+.mode-tile--team::before {
+  background: #4a9eff;
+  box-shadow: 2px 0 10px rgba(74, 158, 255, 0.5);
+}
+
+.mode-tile--team .mode-tile-glow {
+  background:
+    linear-gradient(90deg, rgba(74, 158, 255, 0.1), transparent 52%),
+    radial-gradient(circle at 88% 18%, rgba(74, 158, 255, 0.06), transparent 30%);
+}
+
+.mode-tile--team .mode-tile-icon {
+  border-color: rgba(74, 158, 255, 0.3);
+  background: rgba(74, 158, 255, 0.07);
+  color: #4a9eff;
+}
+
+.mode-tile--team:hover:not(:disabled):not(.locked) .mode-tile-name {
+  color: #4a9eff;
 }
 
 .mode-tile--ffa::before {
