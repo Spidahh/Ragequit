@@ -467,10 +467,17 @@ function _installSingleGlbModel(
   })
   if (rightHand && wg) {
     ;(rightHand as THREE.Bone).add(wg)
-    // Blade along the hand's bone axis (down at rest), tip away from the wrist.
-    wg.position.set(0, 0.08, 0.02)
-    wg.rotation.set(0, 0, Math.PI)
-    wg.scale.setScalar(0.3)
+    // Grip values live in ONE place — character-weapons' mixamo grip table —
+    // otherwise the async applyWeaponProp overwrote whatever was set here.
+    charGroup.userData['mixamoRigWeapon'] = true
+    const grip = getWeaponGrip(
+      (charGroup.userData['activeWeaponProp'] as 'sword' | 'bow' | 'staff') ?? 'sword',
+      undefined,
+      true,
+    )
+    wg.position.set(...grip.position)
+    wg.rotation.set(...grip.rotation)
+    wg.scale.setScalar(grip.scale)
   }
 
   // Physical off-hand shield (sword-and-board) — same as the modular installer.

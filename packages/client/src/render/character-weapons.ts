@@ -94,9 +94,23 @@ const _weaponGripConfig: Record<string, Record<'sword' | 'bow' | 'staff', Weapon
   },
 }
 
+// Grip for single-GLB Mixamo rigs (mixamorig:RightHand axes ≠ the modular
+// Quaternius hand axes the per-class table above was tuned for). One set for
+// all Mixamo characters — same skeleton family, same hand orientation.
+const _mixamoGripConfig: Record<'sword' | 'bow' | 'staff', WeaponGrip> = {
+  sword: { position: [0, 0.09, 0.03], rotation: [Math.PI / 2, 0, 0], scale: 0.45 },
+  bow: { position: [0, 0.08, 0.02], rotation: [Math.PI / 2, -0.08, Math.PI / 2], scale: 0.5 },
+  staff: { position: [0, 0.08, 0.02], rotation: [Math.PI / 2, 0, 0], scale: 0.58 },
+}
+
 /** Return the grip config for a weapon — used by _installCharacterModel when
  *  re-attaching the weaponGroup to a new hand bone after a class change. */
-export function getWeaponGrip(weaponId: 'sword' | 'bow' | 'staff', classId?: string): WeaponGrip {
+export function getWeaponGrip(
+  weaponId: 'sword' | 'bow' | 'staff',
+  classId?: string,
+  mixamoRig = false,
+): WeaponGrip {
+  if (mixamoRig) return _mixamoGripConfig[weaponId]
   const c = (classId || 'hybrid').toLowerCase()
   const defs = _weaponGripConfig[c] || _weaponGripConfig['hybrid']!
   return defs[weaponId]!
@@ -253,7 +267,11 @@ export function applyWeaponProp(
       // frames. Install re-applies the grip after re-parenting, so skipping is safe.
       if (wg.parent && wg.parent !== charGroup) {
         const classId = (charGroup.userData['loadedClassId'] as string) || 'hybrid'
-        const grip = getWeaponGrip(weaponId, classId)
+        const grip = getWeaponGrip(
+          weaponId,
+          classId,
+          charGroup.userData['mixamoRigWeapon'] === true,
+        )
         wg.position.set(...grip.position)
         wg.rotation.set(...grip.rotation)
         wg.scale.setScalar(grip.scale)
