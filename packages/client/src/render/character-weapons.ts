@@ -193,6 +193,19 @@ export function applyWeaponProp(
   charGroup.userData['activeWeaponProp'] = weaponId
   clearWeaponGroup(wg)
 
+  // Models that ship their own animated bow (Erika): show the embedded bow
+  // while it's the active weapon and suppress the game's prop; other weapons
+  // hide the embedded bow and use the normal prop path.
+  const embeddedBow = charGroup.userData['embeddedBowMeshes'] as THREE.Object3D[] | undefined
+  if (embeddedBow?.length) {
+    const useEmbedded = weaponId === 'bow'
+    for (const m of embeddedBow) m.visible = useEmbedded
+    wg.visible = !useEmbedded
+    if (useEmbedded) return
+  } else {
+    wg.visible = true
+  }
+
   fetchWeaponGlb(weaponId)
     .then((scene) => {
       if (charGroup.userData['activeWeaponProp'] !== weaponId) return

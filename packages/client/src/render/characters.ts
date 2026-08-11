@@ -386,19 +386,28 @@ function _installSingleGlbModel(
     delete charGroup.userData['mixerStore']
   }
 
-  // Per-asset material brightness lift — the Tripo medieval knight is vertex-coloured
-  // and authored very dark; multiplying material.color brightens the vertex colours.
-  const GLB_BRIGHTNESS: Record<string, number> = { medieval_knight: 1.55 }
+  // Per-asset material brightness lift — dark-authored models (black plate,
+  // dark cloth) read as silhouettes under the arena light without it.
+  const GLB_BRIGHTNESS: Record<string, number> = {
+    medieval_knight: 1.55,
+    paladin: 1.5,
+    ninja: 1.2,
+    erika: 1.15,
+  }
   const glbFile = (model.userData['singleGlbFile'] as string) ?? ''
   const lift = GLB_BRIGHTNESS[glbFile] ?? 1
 
   // Register the model's real materials so status flashes (hp pulse / shield /
   // damage blink in self-emissive.ts & remote-players.ts) reach realistic chars too.
+  // Also collect embedded weapon meshes (Erika ships her own animated bow+arrow):
+  // applyWeaponProp toggles them against the game's weaponGroup per active weapon.
   const glbMaterials: THREE.MeshStandardMaterial[] = []
+  const embeddedBow: THREE.Object3D[] = []
   model.traverse((child) => {
     if (!(child instanceof THREE.Mesh)) return
     child.castShadow = true
     child.frustumCulled = false
+    if (/bow|arrow|quiver/i.test(child.name)) embeddedBow.push(child)
     for (const m of Array.isArray(child.material) ? child.material : [child.material]) {
       const mm = m as THREE.MeshStandardMaterial
       if (lift !== 1 && mm?.color) mm.color.multiplyScalar(lift)
@@ -406,6 +415,12 @@ function _installSingleGlbModel(
     }
   })
   charGroup.userData['glbMaterials'] = glbMaterials
+  if (embeddedBow.length > 0) {
+    charGroup.userData['embeddedBowMeshes'] = embeddedBow
+    // Visible only while the bow is the active weapon (default: hidden).
+    const active = charGroup.userData['activeWeaponProp'] as string | undefined
+    for (const m of embeddedBow) m.visible = active === 'bow'
+  }
 
   // Face forward + scale to render height + feet to ground.
   model.rotation.y = Math.PI
