@@ -6,7 +6,6 @@ import {
   ABILITY_DEFS,
   CLASS_IDS,
   BOW_CHARGE_FULL_SEC,
-  ELO_STARTING,
   BOW_CHARGE_MIN_SEC,
   CAPSULE_HALF_HEIGHT_M,
   CAPSULE_HEIGHT_M,
@@ -68,13 +67,8 @@ import {
 import { matchSM } from './game/match-state-machine.js'
 import { reconcilePrediction } from './game/prediction.js'
 import { createSchemaAccessors } from './game/schema-helpers.js'
-import { buildScoreboardData } from './game/scoreboard-data.js'
-import {
-  type MatchStats,
-  emptyMatchStats,
-  recordAbilityCast,
-  computeEloDelta,
-} from './game/stats-tracker.js'
+import { assembleEndScreen } from './game/scoreboard-data.js'
+import { type MatchStats, emptyMatchStats, recordAbilityCast } from './game/stats-tracker.js'
 import {
   disposeObject3D,
   applyDirectionalShake as _applyDirectionalShake,
@@ -818,6 +812,9 @@ let livePhaseStartTick = -1
 let currentMatchPhase: ServerMatchPhaseMessage['phase'] = 'lobby'
 // ELO deltas from the last matchEnd score broadcast (session ID → delta).
 let lastMatchEloDeltas: Record<string, number> = {}
+// Last per-player kill map (FFA) and team totals (5v5) — feed the end screen.
+let lastSoloScores: Record<string, number> | null = null
+let lastTeamScores: Record<string, number> | null = null
 let lastKillerName = ''
 // Timestamps of self kills for streak detection (ms).
 const recentKillTimes: number[] = []
@@ -911,6 +908,8 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
     (msg.phase === 'countdown' && prevPhase !== 'live' && prevPhase !== 'roundEnd')
   if (isNewMatch) {
     lastMatchEloDeltas = {}
+    lastSoloScores = null
+    lastTeamScores = null
     selfStats = emptyMatchStats()
     opponentStats = emptyMatchStats()
     lastHitDetails = { killer: '', ability: '', element: '', damage: 0 }
@@ -920,58 +919,20 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
     // Release pointer lock so the cursor is visible and the scoreboard
     // buttons (BACK TO MENU) are clickable.
     if (document.pointerLockElement) document.exitPointerLock()
-
-    // Construct ScoreboardData dynamically
-    const players = getSchemaPlayers()
-    const selfSchema = players?.get(selfId)
-
-    let otherId = ''
-    players?.forEach((_p, sid) => {
-      if (sid !== selfId) otherId = sid
-    })
-    const otherSchema = otherId ? players?.get(otherId) : null
-
-    const selfName = selfSchema?.name || 'Player'
-    const opponentName = otherSchema?.name || 'Opponent'
-
-    // Build label: class + active weapon
-    const selfClassId = selfSchema?.classId || 'hybrid'
-    const selfBuild = `${selfClassId.toUpperCase()} · ${selfSchema?.activeWeapon?.toUpperCase() || 'SWORD'}`
-
-    const oppClassId = otherSchema?.classId || 'hybrid'
-    const oppBuild = `${oppClassId.toUpperCase()} · ${otherSchema?.activeWeapon?.toUpperCase() || 'SWORD'}`
-
-    // Determine winner using server ELO deltas (authoritative) or round wins,
-    // falling back to kill count only when neither is available.
-    const selfEloDelta = lastMatchEloDeltas[selfId]
-    const oppEloDelta = otherId ? lastMatchEloDeltas[otherId] : undefined
-    const isWin =
-      selfEloDelta !== undefined
-        ? selfEloDelta > 0
-        : oppEloDelta !== undefined
-          ? oppEloDelta < 0
-          : selfStats.kills > opponentStats.kills
-
-    const eloBefore = ELO_STARTING // real per-player ELO from Supabase — TODO when auth is complete
-    const eloDelta =
-      selfEloDelta !== undefined ? selfEloDelta : computeEloDelta(eloBefore, ELO_STARTING, isWin)
-
-    const scoreboardData = buildScoreboardData({
-      selfName,
-      opponentName,
-      selfBuild,
-      oppBuild,
+    // Duel gets the classic winner/loser panel; FFA/5v5 a real ranked table.
+    const endScreen = assembleEndScreen({
+      players: getSchemaPlayers(),
+      selfId,
       selfStats,
       opponentStats,
-      isWin,
+      eloDeltas: lastMatchEloDeltas,
+      soloScores: lastSoloScores,
+      teamScores: lastTeamScores,
       arena: getSchemaMapId(),
       matchMs: performance.now() - matchStartMs,
       mode: getRoomMode(),
-      eloBefore,
-      eloDelta,
     })
-
-    menu.showScoreboard(selfId, scoreboardData)
+    menu.showScoreboard(selfId, endScreen)
   }
 }
 
@@ -1443,6 +1404,8 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
         if (sid !== selfId) otherId = sid
       })
       if (msg.eloDeltas) lastMatchEloDeltas = msg.eloDeltas
+      if (msg.solo) lastSoloScores = msg.solo
+      if (msg.team) lastTeamScores = msg.team
       menu.onScore(msg, selfId, otherId)
     })
 
@@ -1966,42 +1929,22 @@ function returnToTrainingScoreboard(): void {
   settingsOverlay.dataset['returnTo'] = ''
   loadoutStation.close()
 
-  const players = getSchemaPlayers()
-  const selfSchema = players?.get(selfId)
-
-  let otherId = ''
-  players?.forEach((_p, sid) => {
-    if (sid !== selfId) otherId = sid
-  })
-  const otherSchema = otherId ? players?.get(otherId) : null
-
-  const selfName = selfSchema?.name || 'Player'
-  const opponentName = otherSchema?.name || 'Opponent'
-
-  const selfClassId = selfSchema?.classId || 'hybrid'
-  const selfBuild = `${selfClassId.toUpperCase()} · ${selfSchema?.activeWeapon?.toUpperCase() || 'SWORD'}`
-
-  const oppClassId = otherSchema?.classId || 'hybrid'
-  const oppBuild = `${oppClassId.toUpperCase()} · ${otherSchema?.activeWeapon?.toUpperCase() || 'SWORD'}`
-
-  const isWin = selfStats.kills > opponentStats.kills
-
-  const scoreboardData = buildScoreboardData({
-    selfName,
-    opponentName,
-    selfBuild,
-    oppBuild,
+  // Voluntary leave: aborted duels get practice labels (no ELO at stake);
+  // FFA/5v5 still show their ranked table.
+  const leaveMode = getRoomMode()
+  const endScreen = assembleEndScreen({
+    players: getSchemaPlayers(),
+    selfId,
     selfStats,
     opponentStats,
-    isWin,
+    eloDeltas: {},
+    soloScores: lastSoloScores,
+    teamScores: lastTeamScores,
     arena: getSchemaMapId(),
     matchMs: performance.now() - matchStartMs,
-    mode: 'training',
-    eloBefore: ELO_STARTING,
-    eloDelta: 0,
+    mode: leaveMode === 'ffa' || leaveMode === '5v5' ? leaveMode : 'training',
   })
-
-  menu.showScoreboard(selfId, scoreboardData)
+  menu.showScoreboard(selfId, endScreen)
 
   const leavingRoom = room
   // Mark this leave as scoreboard-driven so its onLeave keeps the results up

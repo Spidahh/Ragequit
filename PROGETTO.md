@@ -633,6 +633,16 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
     telegraph a terra pre-impatto, composer unico pmndrs (F1d), varietà per-elemento (es. fulmine
     jitter, dark che ASSORBE luce).
 
+- **2026-08-11 (4ª parte) — SCOREBOARD MULTI-PLAYER (FFA/5v5 non collassano più a 1v1).**
+  `assembleEndScreen` in `game/scoreboard-data.ts` (pure, +6 test): duel → pannello classico;
+  **FFA → classifica ranked** (kill desc, riga TU evidenziata, vittoria = primo posto strict);
+  **5v5 → tabella per squadre** (rosse prima, bordo colore team, titolo «ROSSO x — y BLU», esito
+  dai totali team). Dati dal último Score broadcast (`lastSoloScores`/`lastTeamScores`, reset a
+  inizio match). Render `renderMultiScoreboard` in `endgame.ts` + CSS `.sb-table/.sb-trow`.
+  Vale anche per l'uscita volontaria (FFA/5v5 mostrano la tabella, duel abbandonato resta
+  PRATICA senza ELO). main.ts alleggerito (~-60 righe, i due call-site ora sono una chiamata).
+  Gate verde 362 test → push su `main`.
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.

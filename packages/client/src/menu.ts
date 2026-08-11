@@ -18,7 +18,7 @@ import {
   type ClassId,
 } from '@ragequit/shared'
 
-import { renderScoreboard, type ScoreboardData } from './endgame.js'
+import { renderScoreboard, type MultiScoreboard, type ScoreboardData } from './endgame.js'
 import { initKeybindLabels, initKeybindSettings } from './input/keybinds.js'
 import { initMenuBackground } from './menu-bg.js'
 import { markQualityManual } from './render/auto-quality.js'
@@ -60,7 +60,7 @@ function saveSettings(s: SettingsData): void {
 export interface MenuApi {
   showMain: () => void
   hideMain: () => void
-  showScoreboard: (selfId: string, scoreboardData?: ScoreboardData) => void
+  showScoreboard: (selfId: string, scoreboardData?: ScoreboardData | MultiScoreboard) => void
   hideScoreboard: () => void
   onMatchPhase: (msg: ServerMatchPhaseMessage, selfId: string) => void
   onScore: (msg: ServerScoreMessage, selfId: string, otherId: string) => void

@@ -8,9 +8,11 @@
 // orchestration (schema lookups, win determination, menu.showScoreboard) stays
 // in main.ts; this is the data shape, unit-tested.
 // ---------------------------------------------------------------------------
-import type { PlayerSummary, ScoreboardData } from '../endgame.js'
+import { ELO_STARTING } from '@ragequit/shared'
 
-import type { MatchStats } from './stats-tracker.js'
+import type { MultiScoreboard, MultiScoreRow, PlayerSummary, ScoreboardData } from '../endgame.js'
+
+import { computeEloDelta, type MatchStats } from './stats-tracker.js'
 
 export interface ScoreboardParams {
   selfName: string
@@ -58,5 +60,117 @@ export function buildScoreboardData(p: ScoreboardParams): ScoreboardData {
     loser: p.isWin ? opponent : self,
     eloBefore: p.eloBefore,
     eloDelta: isTraining ? 0 : p.eloDelta,
+  }
+}
+
+// ── Full end-screen assembly (duel AND multi-player modes) ─────────────────
+// Moved out of main.ts applyMatchPhase so FFA/5v5 get a real ranked table
+// instead of being collapsed into the 1v1 winner/loser layout.
+
+/** Minimal shape of a schema Player the end screen needs. */
+export interface EndPlayerLike {
+  name?: string
+  classId?: string
+  activeWeapon?: string
+  team?: string
+}
+interface PlayersLike {
+  get(id: string): EndPlayerLike | undefined
+  forEach(cb: (p: EndPlayerLike, id: string) => void): void
+}
+
+export interface AssembleEndScreenParams {
+  players: PlayersLike | null | undefined
+  selfId: string
+  selfStats: MatchStats
+  opponentStats: MatchStats
+  /** Server ELO deltas from the final Score broadcast (sessionId → delta). */
+  eloDeltas: Record<string, number>
+  /** Last per-player kill map (FFA) / team totals (5v5) seen from Score. */
+  soloScores: Record<string, number> | null
+  teamScores: Record<string, number> | null
+  arena: string
+  matchMs: number
+  mode: string
+}
+
+function buildLabel(p: EndPlayerLike | undefined): string {
+  return `${(p?.classId ?? 'hybrid').toUpperCase()} · ${(p?.activeWeapon ?? 'sword').toUpperCase()}`
+}
+
+export function assembleEndScreen(p: AssembleEndScreenParams): ScoreboardData | MultiScoreboard {
+  if (p.mode === 'ffa' || p.mode === '5v5') return assembleMulti(p)
+
+  const selfSchema = p.players?.get(p.selfId)
+  let otherId = ''
+  p.players?.forEach((_pl, sid) => {
+    if (sid !== p.selfId) otherId = sid
+  })
+  const otherSchema = otherId ? p.players?.get(otherId) : undefined
+
+  // Winner via server ELO deltas (authoritative) → fall back to kill count.
+  const selfEloDelta = p.eloDeltas[p.selfId]
+  const oppEloDelta = otherId ? p.eloDeltas[otherId] : undefined
+  const isWin =
+    selfEloDelta !== undefined
+      ? selfEloDelta > 0
+      : oppEloDelta !== undefined
+        ? oppEloDelta < 0
+        : p.selfStats.kills > p.opponentStats.kills
+
+  const eloBefore = ELO_STARTING // real per-player ELO from Supabase — TODO when auth is complete
+  const eloDelta =
+    selfEloDelta !== undefined ? selfEloDelta : computeEloDelta(eloBefore, ELO_STARTING, isWin)
+
+  return buildScoreboardData({
+    selfName: selfSchema?.name || 'Player',
+    opponentName: otherSchema?.name || 'Opponent',
+    selfBuild: buildLabel(selfSchema),
+    oppBuild: buildLabel(otherSchema),
+    selfStats: p.selfStats,
+    opponentStats: p.opponentStats,
+    isWin,
+    arena: p.arena,
+    matchMs: p.matchMs,
+    mode: p.mode,
+    eloBefore,
+    eloDelta,
+  })
+}
+
+function assembleMulti(p: AssembleEndScreenParams): MultiScoreboard {
+  const rows: MultiScoreRow[] = []
+  p.players?.forEach((pl, sid) => {
+    rows.push({
+      name: pl.name || sid.slice(0, 6),
+      build: buildLabel(pl),
+      kills: p.soloScores?.[sid] ?? 0,
+      isSelf: sid === p.selfId,
+      team: pl.team === 'red' || pl.team === 'blue' ? pl.team : '',
+    })
+  })
+  if (p.mode === '5v5') {
+    // Group by team (red first), kills desc inside each team.
+    rows.sort((a, b) => (a.team !== b.team ? (a.team === 'red' ? -1 : 1) : b.kills - a.kills))
+  } else {
+    rows.sort((a, b) => b.kills - a.kills)
+  }
+  const red = p.teamScores?.['red'] ?? 0
+  const blue = p.teamScores?.['blue'] ?? 0
+  const selfTeam = p.players?.get(p.selfId)?.team ?? ''
+  const isWin =
+    p.mode === '5v5'
+      ? selfTeam === 'red'
+        ? red > blue
+        : blue > red
+      : rows.length > 0 && rows[0]!.isSelf && rows[0]!.kills > (rows[1]?.kills ?? -1)
+  return {
+    kind: 'multi',
+    arena: p.arena.toUpperCase(),
+    matchMs: p.matchMs > 0 ? p.matchMs : 120000,
+    isWin,
+    title: p.mode === '5v5' ? `ROSSO ${red} — ${blue} BLU` : 'TUTTI CONTRO TUTTI',
+    showKills: p.mode !== '5v5' || Boolean(p.soloScores),
+    rows,
   }
 }

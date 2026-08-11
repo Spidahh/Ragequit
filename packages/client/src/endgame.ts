@@ -24,6 +24,26 @@ export interface ScoreboardData {
   eloDelta: number
 }
 
+// Multi-player end screen (FFA ranked table / 5v5 team table).
+export interface MultiScoreRow {
+  name: string
+  build: string
+  kills: number
+  isSelf: boolean
+  team: 'red' | 'blue' | ''
+}
+export interface MultiScoreboard {
+  kind: 'multi'
+  arena: string
+  matchMs: number
+  isWin: boolean
+  /** Header line: "TUTTI CONTRO TUTTI" or "ROSSO 12 — 9 BLU". */
+  title: string
+  /** Hide the kill column when the mode never reported per-player kills. */
+  showKills: boolean
+  rows: MultiScoreRow[]
+}
+
 export interface DeathcamData {
   killer: string
   ability: string // "LIFE DRAIN"
@@ -38,7 +58,11 @@ export interface DeathcamData {
 }
 
 // ── SCOREBOARD ────────────────────────────────────────────────────────
-export function renderScoreboard(host: HTMLElement, data: ScoreboardData): void {
+export function renderScoreboard(host: HTMLElement, data: ScoreboardData | MultiScoreboard): void {
+  if ('rows' in data) {
+    renderMultiScoreboard(host, data)
+    return
+  }
   const ms = data.matchMs
   const mm = Math.floor(ms / 60_000)
   const ss = Math.floor((ms % 60_000) / 1000)
@@ -73,6 +97,46 @@ export function renderScoreboard(host: HTMLElement, data: ScoreboardData): void 
         <div class="sb-actions">
           <span class="sb-chip primary">SPC / ESC · MENU</span>
         </div>
+      </div>
+    </div>
+  `
+}
+
+function renderMultiScoreboard(host: HTMLElement, data: MultiScoreboard): void {
+  const ms = data.matchMs
+  const mm = Math.floor(ms / 60_000)
+  const ss = Math.floor((ms % 60_000) / 1000)
+  const time = `${String(mm).padStart(2, '0')} : ${String(ss).padStart(2, '0')}`
+  const rowsHtml = data.rows
+    .map((r, i) => {
+      const cls = ['sb-trow', r.isSelf ? 'is-self' : '', r.team ? `team-${r.team}` : '']
+        .filter(Boolean)
+        .join(' ')
+      return `
+        <div class="${cls}">
+          <span class="sb-rank">${r.team ? (r.team === 'red' ? '🔴' : '🔵') : `#${i + 1}`}</span>
+          <span class="sb-tname">${escapeHtml(r.name)}${r.isSelf ? ' · TU' : ''}</span>
+          <span class="sb-tbuild">${escapeHtml(r.build)}</span>
+          <span class="sb-tkills">${data.showKills ? r.kills : ''}</span>
+        </div>`
+    })
+    .join('')
+  host.innerHTML = `
+    <div class="scoreboard-shell ${data.isWin ? 'is-win' : 'is-loss'}" id="scoreboard">
+      <div class="sb-head">
+        <div>
+          <div class="sb-winner">${data.isWin ? 'VICTORY' : 'DEFEAT'} · ${escapeHtml(data.arena)}</div>
+          <div class="sb-title">${escapeHtml(data.title)}</div>
+        </div>
+        <div class="sb-meta"><b>${time}</b></div>
+      </div>
+      <div class="sb-table">
+        ${data.showKills ? '<div class="sb-trow head"><span class="sb-rank"></span><span class="sb-tname">GIOCATORE</span><span class="sb-tbuild">BUILD</span><span class="sb-tkills">KILL</span></div>' : ''}
+        ${rowsHtml}
+      </div>
+      <div class="sb-foot">
+        <div></div>
+        <div class="sb-actions"><span class="sb-chip primary">SPC / ESC · MENU</span></div>
       </div>
     </div>
   `
