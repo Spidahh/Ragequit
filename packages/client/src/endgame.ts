@@ -68,19 +68,19 @@ export function renderScoreboard(host: HTMLElement, data: ScoreboardData | Multi
   const ss = Math.floor((ms % 60_000) / 1000)
   const time = `${String(mm).padStart(2, '0')} : ${String(ss).padStart(2, '0')}`
 
-  const headline = data.isWin ? 'VICTORY' : 'DEFEAT'
-  const outcome = data.isWin ? 'WIN.' : 'LOSE.'
+  const headline = data.isWin ? 'VITTORIA' : 'SCONFITTA'
+  const outcome = data.isWin ? 'VINCI.' : 'PERDI.'
   host.innerHTML = `
     <div class="scoreboard-shell ${data.isWin ? 'is-win' : 'is-loss'}" id="scoreboard">
       <div class="sb-head">
         <div>
           <div class="sb-winner">${headline} · ${escapeHtml(data.arena)}</div>
-          <div class="sb-title">YOU <span class="ele">${outcome}</span></div>
+          <div class="sb-title">TU <span class="ele">${outcome}</span></div>
         </div>
         <div class="sb-meta">
           <b>${time}</b>
-          Match · ${escapeHtml(data.rounds)}<br>
-          League ${escapeHtml(data.league)}
+          Partita · ${escapeHtml(data.rounds)}<br>
+          Lega ${escapeHtml(data.league)}
         </div>
       </div>
       <div class="sb-body">
@@ -126,7 +126,7 @@ function renderMultiScoreboard(host: HTMLElement, data: MultiScoreboard): void {
     <div class="scoreboard-shell ${data.isWin ? 'is-win' : 'is-loss'}" id="scoreboard">
       <div class="sb-head">
         <div>
-          <div class="sb-winner">${data.isWin ? 'VICTORY' : 'DEFEAT'} · ${escapeHtml(data.arena)}</div>
+          <div class="sb-winner">${data.isWin ? 'VITTORIA' : 'SCONFITTA'} · ${escapeHtml(data.arena)}</div>
           <div class="sb-title">${escapeHtml(data.title)}</div>
         </div>
         <div class="sb-meta"><b>${time}</b></div>
@@ -146,7 +146,7 @@ function renderMultiScoreboard(host: HTMLElement, data: MultiScoreboard): void {
 function playerBlock(p: PlayerSummary, lose: boolean): string {
   let abilitiesHtml = ''
   if (p.abilitiesUsed && Object.keys(p.abilitiesUsed).length > 0) {
-    abilitiesHtml = `<div class="sb-abilities-header">Abilities Used</div>`
+    abilitiesHtml = `<div class="sb-abilities-header">Abilità usate</div>`
     for (const [id, count] of Object.entries(p.abilitiesUsed)) {
       const name = ABILITY_DEFS[id]?.name ?? id.toUpperCase()
       abilitiesHtml += `<div class="sb-row sub"><span class="l">${escapeHtml(name)}</span><span class="v">x${count}</span></div>`
@@ -157,12 +157,12 @@ function playerBlock(p: PlayerSummary, lose: boolean): string {
     <div class="sb-player${lose ? ' lose' : ''}">
       <div class="sb-nm">${escapeHtml(p.name)}</div>
       <div class="sb-tag">${escapeHtml(p.build)}</div>
-      ${row('Kills', p.kills)}
-      ${row('Damage dealt', p.damageDealt.toLocaleString())}
-      ${row('Damage taken', p.damageTaken.toLocaleString())}
+      ${row('Uccisioni', p.kills)}
+      ${row('Danni inflitti', p.damageDealt.toLocaleString())}
+      ${row('Danni subiti', p.damageTaken.toLocaleString())}
       ${row('Knockups', p.knockups)}
-      ${row('Parries', p.parries)}
-      ${row('Combo procs', p.comboProcs)}
+      ${row('Parate', p.parries)}
+      ${row('Proc combo', p.comboProcs)}
       ${abilitiesHtml}
     </div>
   `
@@ -181,26 +181,26 @@ export function renderDeathcam(host: HTMLElement, data: DeathcamData): void {
         <div class="dc-banner">
           <div class="dc-eliminated">ELIMINATO</div>
           <div class="dc-by">
-            KILLED BY
+            UCCISO DA
             <b>${escapeHtml(data.killer.toUpperCase())}</b>
             <div class="dc-tape">${escapeHtml(data.element)} · ${escapeHtml(data.ability)} · ${data.damage} DMG</div>
           </div>
         </div>
         <div class="dc-bottom">
           <div class="dc-card death">
-            <div class="l">FINAL HIT</div>
+            <div class="l">COLPO FINALE</div>
             <div class="v blood">−${data.damage} HP</div>
             <div class="meta">${escapeHtml(data.ability)}</div>
           </div>
           <div class="dc-card">
             <div class="l">ROUND</div>
             <div class="v brass">${escapeHtml(data.round)}</div>
-            <div class="meta">Next round in ${Math.ceil(data.timeToNextMs / 1000)}s</div>
+            <div class="meta">Prossimo round tra ${Math.ceil(data.timeToNextMs / 1000)}s</div>
           </div>
           <div class="dc-card">
-            <div class="l">YOUR DAMAGE</div>
+            <div class="l">I TUOI DANNI</div>
             <div class="v">${data.yourDamage.toLocaleString()}</div>
-            <div class="meta">${data.yourHits} hits · ${data.yourProcs} procs · ${data.yourParries} parry</div>
+            <div class="meta">${data.yourHits} colpi · ${data.yourProcs} proc · ${data.yourParries} parate</div>
           </div>
         </div>
       </div>
