@@ -16,6 +16,7 @@ import {
 } from '@ragequit/shared'
 import express, { type RequestHandler } from 'express'
 
+import { startKeepAlive } from './db/supabase.js'
 import { GameRoom } from './rooms/GameRoom.js'
 import { initServerTelemetry, shutdownServerTelemetry } from './telemetry.js'
 
@@ -129,6 +130,7 @@ const gameServer = new Server({
 gameServer.define('game', GameRoom).filterBy(['mode', 'difficulty'])
 
 initServerTelemetry()
+startKeepAlive()
 
 // Graceful shutdown: Fly.io sends SIGTERM on every deploy and scale-to-zero.
 // Dispose rooms first (runs GameRoom.onDispose → finalize replay + match_ended

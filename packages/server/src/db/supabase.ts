@@ -19,6 +19,29 @@ export function getSupabase(): SupabaseClient | null {
   return _client
 }
 
+/**
+ * Supabase free tier pauses the project after ~7 idle days. While the game
+ * server is awake, touch the DB every 12 h (plus once at boot) so organic
+ * player traffic is never the only thing keeping the backend alive.
+ * No-op when Supabase isn't configured.
+ */
+export function startKeepAlive(): void {
+  const sb = getSupabase()
+  if (!sb) return
+  const ping = (): void => {
+    void sb
+      .from('players')
+      .select('user_id', { head: true, count: 'exact' })
+      .limit(1)
+      .then(({ error }) => {
+        if (error) console.warn('[supabase] keep-alive ping failed:', error.message)
+      })
+  }
+  ping()
+  const timer = setInterval(ping, 12 * 60 * 60 * 1000)
+  timer.unref() // never keep the process alive just for the ping
+}
+
 /** Verify a Supabase JWT and return the user_id (uuid string), or null if invalid. */
 export async function verifyToken(token: string): Promise<string | null> {
   const sb = getSupabase()
