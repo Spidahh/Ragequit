@@ -660,6 +660,15 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
     boost tipo GLB_BRIGHTNESS), grip armi per-rig, yaw lineup, **mago** (serve Pro Magic Pack —
     zip ancora bloccato dal consenso Brave — + un modello CC via AccuRig), FPV braccia.
 
+- **2026-08-12 — GIRO «continua a migliorare e fixare» (4 fix shippati, gate verde 364 test).**
+  (1) **Luminosità personaggi**: GLB_BRIGHTNESS paladin 1.5 / ninja 1.2 / erika 1.15 (il piastre-nero
+  era una silhouette). (2) **Arco animato di Erika**: i mesh `Bow/Arrow` embedded si mostrano SOLO con
+  arco equipaggiato (prop di gioco soppressa), staff li nasconde — generico via nome mesh. (3) **Via le
+  outline ink da armi+scudo** (STILE bloccato: rim, non ink; i corpi le avevano già perse). (4) **Timer
+  10 min sui modi kill-cap** (FFA/5v5 non possono più stallare all'infinito; +2 test MatchManager).
+  Probe col Paladin in play: 0 errori, shader 43→43 (nessuna compilazione mid-fight). Scoreboard e
+  deathcam ora TUTTI in italiano. Commits: 4100670, 782340c, ac21282, bb93271.
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.
