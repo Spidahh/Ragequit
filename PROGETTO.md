@@ -575,6 +575,29 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
   persona · spell/VFX (`render/projectile-visuals.ts`) · menu/HUD/font (`menu.ts`,`public/game-ui.css`,`hud/*`).
   **FATTO finora:** SOLO arena (PBR+luce). Tutto il resto è da fare con questo processo, deciso con lui.
 
+- **2026-08-11 — REVISIONE GLOBALE + RICERCA 2026 + RIFONDAZIONE (richiesta utente: «rivedi tutto,
+  cerca aggiornamenti, studia il piano perfetto e realizzalo»).** Ricerca web su 5 fronti (three.js,
+  VFX, personaggi/anim, netcode/hosting, asset free) + piano completo in **`RIFONDAZIONE.md`**
+  (prompt riscritto, diagnosi, ricerca, fasi F0-F7, punti-decisione utente). Scoperte chiave:
+  - **Personaggi (LO SBLOCCO):** i personaggi STOCK di Mixamo (Paladin/Knight/Vanguard, Erika
+    Archer, Ninja) sono tutti sul rig `mixamorig` → scaricando le anim **"with skin"** per ciascuno
+    il retargeting sparisce. Mago assente su Mixamo → modello CC + AccuRig 2.0 (free) + Rokoko/Expy
+    in Blender. Mixamo è vivo ma non mantenuto → scaricare presto. Serve l'account Adobe dell'utente.
+  - **VFX:** three.quarks (mantenuto, editor visuale, trail/sub-emitter) = sistema pronto per le
+    spell; richiede three ≥0.182 → upgrade r185 (basso rischio, ritarare ombre/GTAO).
+  - **Netcode/hosting:** Colyseus 0.17 ha la riconnessione automatica (nostro gap); **Fly.io free
+    è morto per i nuovi account** (verificare grandfathering!, piano B: Koyeb Francoforte);
+    **Supabase free si pausa dopo 7 giorni** → serve keep-alive cron.
+  - **Asset:** la licenza Fab Standard è engine-agnostic → i free bisettimanali valgono per
+    Three.js (claimarli sempre); audio completo gratis via Sonniss GDC + pack spell itch; font
+    Cinzel+Grenze Gotisch.
+  - **F0 ESEGUITA (flow sbloccato, gate verde 355 test):** (1) errore-connessione VISIBILE + retry
+    con backoff per il cold-start (niente più rimbalzo muto al menu); (2) FFA parte con 5 bot
+    (`FFA_BOT_FILL`); (3) **Team 5v5 giocabile**: tile nel menu (griglia a 4), wiring `connect('5v5')`,
+    team bilanciati (squadra più piccola), spawn a metà-anello per team, bot mai contro compagni e
+    sul nemico più VICINO (prima: ultimo iterato — fix anche per FFA); (4) gate WebGL con messaggio
+    chiaro. Estratto `rooms/lobby-fill.ts` (pure) + 11 test che bloccano le regole.
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.
