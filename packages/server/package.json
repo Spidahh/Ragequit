@@ -13,13 +13,13 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@colyseus/core": "^0.16.0",
-    "@colyseus/monitor": "^0.16.0",
-    "@colyseus/schema": "^3.0.0",
-    "@colyseus/ws-transport": "^0.16.0",
+    "@colyseus/core": "^0.17.0",
+    "@colyseus/monitor": "^0.17.0",
+    "@colyseus/schema": "^4.0.30",
+    "@colyseus/ws-transport": "^0.17.0",
     "@ragequit/shared": "workspace:*",
     "@supabase/supabase-js": "^2.106.1",
-    "colyseus": "^0.16.0",
+    "colyseus": "^0.17.10",
     "dotenv": "^17.4.2",
     "express": "^4.21.0",
     "posthog-node": "^5.34.6"

@@ -152,7 +152,7 @@ const PROJECTILE_SPAWN_FORWARD_OFFSET_M = 0.8
 // Eye/muzzle height above capsule centre. Must match the client FPS camera.
 const PROJECTILE_SPAWN_Y_OFFSET_M = PROJECTILE_MUZZLE_Y_OFFSET_M
 
-export class GameRoom extends Room<GameState> {
+export class GameRoom extends Room<{ state: GameState }> {
   override maxClients = Number(process.env['MAX_CLIENTS'] ?? 2)
 
   private tickTimer: NodeJS.Timeout | null = null
@@ -208,7 +208,7 @@ export class GameRoom extends Room<GameState> {
   private gateRate(client: Client, channel: string): boolean {
     if (this.rateLimiter.allow(client.sessionId, channel, performance.now())) return true
     console.warn(`[GameRoom ${this.roomId}] rate limit hit ${client.sessionId} ${channel} — kick`)
-    client.leave(4001)
+    client.leave(4100) // 0.17 reserves close codes 4000-4010 — stay above them
     return false
   }
 
@@ -230,7 +230,7 @@ export class GameRoom extends Room<GameState> {
       difficulty?: 'novice' | 'competent' | 'master' | 'test'
     } = {},
   ): void {
-    this.setState(new GameState())
+    this.state = new GameState()
     this.difficulty = options.difficulty ?? 'competent'
 
     // Resolve map and mode from options. Defaults: duel_arena for 1v1/training,
@@ -685,7 +685,7 @@ export class GameRoom extends Room<GameState> {
     )
   }
 
-  override onLeave(client: Client, _consented?: boolean): void {
+  override onLeave(client: Client, _code?: number): void {
     const sid = client.sessionId
     this.state.players.delete(sid)
     this.sim.delete(sid)

@@ -1,5 +1,5 @@
+import type { Room } from '@colyseus/sdk'
 import { MessageTypes } from '@ragequit/shared'
-import type { Room } from 'colyseus.js'
 
 import { buildLoadoutMessage } from '../input/loadout-slots.js'
 

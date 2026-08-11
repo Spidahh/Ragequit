@@ -4,6 +4,7 @@
 // which slot families are available, which abilities are legal, and which vitals
 // are displayed. Each slot is freely assignable within class slot-family budget.
 
+import type { Room } from '@colyseus/sdk'
 import {
   ABILITY_DEFS,
   MessageTypes,
@@ -18,7 +19,6 @@ import {
   type AbilityDef,
   type TargetAbilitySlotFamily,
 } from '@ragequit/shared'
-import type { Room } from 'colyseus.js'
 
 import { abilityIconMarkup } from './icons.js'
 import { actionLabel, onKeybindsChanged } from './input/keybinds.js'

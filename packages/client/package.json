@@ -12,12 +12,12 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@colyseus/schema": "^3.0.0",
+    "@colyseus/schema": "^4.0.30",
     "@ragequit/shared": "workspace:*",
     "@supabase/supabase-js": "^2.106.1",
-    "colyseus.js": "^0.16.0",
     "posthog-js": "^1.374.2",
-    "three": "^0.185.0"
+    "three": "^0.185.0",
+    "@colyseus/sdk": "^0.17.43"
   },
   "devDependencies": {
     "@types/three": "^0.185.0",

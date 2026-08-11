@@ -598,6 +598,22 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
     sul nemico più VICINO (prima: ultimo iterato — fix anche per FFA); (4) gate WebGL con messaggio
     chiaro. Estratto `rooms/lobby-fill.ts` (pure) + 11 test che bloccano le regole.
 
+- **2026-08-11 (2ª parte) — F1 FONDAMENTA TECH ESEGUITA (ok dell'utente sul piano).** Gate verde
+  (358 test), verificato live (join 5v5 reale + in-match browser headless, 0 errori):
+  - **Colyseus 0.16→0.17 + schema v4 + client `@colyseus/sdk`**: il bootstrap è cambiato — in 0.17
+    le rotte di matchmaking vivono nell'app express DEL TRANSPORT; health/monitor si montano nel
+    callback `express:` di `new Server({...})` (un'app express propria = /matchmake 404, provato).
+    `Room<{state}>`, `this.state =`, `onLeave(client, code)`, kick rate-limit 4001→**4100** (0.17
+    riserva 4000-4010). Sblocca la riconnessione automatica lato client (da cablare in F7).
+  - **Auto-quality FPS-adattivo** (`render/auto-quality.ts` + 6 test): niente detect-gpu (scarica
+    benchmark da CDN = contro la regola self-contained); campiona gli fps SOLO in live, media <42
+    → scala il preset di un tier (mai su, mai dopo scelta manuale), toast informativo.
+  - **Keep-alive Supabase**: `.github/workflows/supabase-keepalive.yml` (cron lun+gio, usa i secret già in repo; ⚠ il token locale non ha scope `workflow` → il file va aggiunto una volta dalla UI GitHub)
+    VITE*SUPABASE*\* già presenti) — il free tier si pausa dopo 7 giorni senza query.
+  - Estrazioni per file-budget: `net/join-with-retry.ts` (retry cold-start), `render/create-renderer.ts`.
+  - **F1d post-FX pmndrs RIMANDATO a F2** (stesso compositor delle spell, va visto dal vivo).
+  - DA FARE (serve l'utente): stato account Fly (grandfathered o no) · ora Mixamo (F3).
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.

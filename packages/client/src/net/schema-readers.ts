@@ -5,7 +5,7 @@
 // factory taking a room getter (the room reference is reassigned on connect),
 // so they can be destructured in main.ts and used exactly as before.
 // ---------------------------------------------------------------------------
-import type { Room } from 'colyseus.js'
+import type { Room } from '@colyseus/sdk'
 
 import type { SchemaPlayer } from '../game/schema-helpers.js'
 import type { SchemaProjectile } from '../render/projectile-visuals.js'

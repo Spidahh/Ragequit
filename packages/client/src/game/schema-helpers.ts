@@ -6,7 +6,7 @@
 // createSchemaAccessors(getRoom) returns a set of zero-argument getter
 // functions that close over the room reference — safe to call from any module.
 
-import type { Room } from 'colyseus.js'
+import type { Room } from '@colyseus/sdk'
 
 import type { SchemaProjectile } from '../render/projectile-visuals.js'
 

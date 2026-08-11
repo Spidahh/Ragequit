@@ -1,6 +1,7 @@
 // RAGEQUIT browser client: input, local prediction, Three.js render, HUD,
 // loadout station, wheels, VFX, and Colyseus room sync.
 
+import { Client, type Room } from '@colyseus/sdk'
 import {
   ABILITY_DEFS,
   CLASS_IDS,
@@ -44,7 +45,6 @@ import {
   type Weapon,
   type ClassId,
 } from '@ragequit/shared'
-import { Client, type Room } from 'colyseus.js'
 import * as THREE from 'three'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js'
@@ -98,6 +98,7 @@ import { initMouseSensitivity } from './input/sensitivity.js'
 import { initLoadoutStation } from './loadout-station.js'
 import { createAccountUi } from './menu/account-ui.js'
 import { initMenu } from './menu.js'
+import { joinWithRetry } from './net/join-with-retry.js'
 import { sendLoadout } from './net/loadout-sync.js'
 import { createSchemaReaders } from './net/schema-readers.js'
 import { initSupabaseAuth, getAccessToken, getCurrentUserEmail } from './net/supabase-auth.js'
@@ -107,6 +108,7 @@ import {
   preloadMatchAssets,
   preloadOtherClassesBackground,
 } from './preloader.js'
+import { createAutoQuality } from './render/auto-quality.js'
 import {
   makeCharacter,
   applyWeaponProp,
@@ -1182,6 +1184,18 @@ const menu = initMenu({
   },
 })
 
+// FPS-driven quality auto-tune: steps the preset down (never up) on machines
+// that can't hold the target frame rate, unless the player chose manually.
+const autoQuality = createAutoQuality({
+  getQuality: () => menu.getSettings().quality,
+  setQuality: (q) => menu.setQuality(q),
+  notify: (msg) => {
+    serverToast.textContent = msg
+    serverToast.classList.remove('hidden')
+    setTimeout(() => serverToast.classList.add('hidden'), 4000)
+  },
+})
+
 // Account / profile menu UI (auth panel, profile card, display name).
 const accountUi = createAccountUi({
   loadoutStation,
@@ -1268,32 +1282,17 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
     }
     roomOptions['name'] = initialName || 'PLAYER'
     if (token) roomOptions['token'] = token
-    // Free-tier hosting cold-starts: the first join after idle can fail or hang.
-    // Retry with backoff while the user is still waiting (menu hidden); abort
-    // silently if they pressed Back (menu visible) or a newer connect started.
-    const JOIN_RETRY_DELAYS_MS = [2000, 4000, 8000]
-    let joinedRoom: Awaited<ReturnType<typeof client.joinOrCreate>> | null = null
-    for (let attempt = 0; joinedRoom === null; attempt++) {
-      try {
-        joinedRoom = await client.joinOrCreate('game', roomOptions)
-      } catch (err) {
-        const menuVisible = !(
-          document.getElementById('main-menu')?.classList.contains('hidden') ?? false
-        )
-        if (seq !== connectSeq || menuVisible || attempt >= JOIN_RETRY_DELAYS_MS.length) {
-          throw err
-        }
-        serverToast.textContent = `Server in avvio... nuovo tentativo (${attempt + 2}/${JOIN_RETRY_DELAYS_MS.length + 1})`
+    const joinedRoom = await joinWithRetry(client, 'game', roomOptions, {
+      isCurrent: () => seq === connectSeq,
+      isMenuVisible: () =>
+        !(document.getElementById('main-menu')?.classList.contains('hidden') ?? false),
+      showRetryToast: (attempt, total) => {
+        serverToast.textContent = `Server in avvio... nuovo tentativo (${attempt}/${total})`
         serverToast.classList.remove('hidden')
-        await new Promise((r) => setTimeout(r, JOIN_RETRY_DELAYS_MS[attempt]))
-        if (seq !== connectSeq) {
-          serverToast.classList.add('hidden')
-          return
-        }
-      }
-    }
-    serverToast.classList.add('hidden')
-    if (!joinedRoom) return // unreachable; satisfies TS narrowing after the retry loop
+      },
+      hideToast: () => serverToast.classList.add('hidden'),
+    })
+    if (!joinedRoom) return // aborted mid-retry (superseded or back-to-menu)
     const mainMenuHidden =
       document.getElementById('main-menu')?.classList.contains('hidden') ?? false
     if (seq !== connectSeq || !mainMenuHidden) {
@@ -2294,6 +2293,9 @@ function _renderInner(now: number): void {
     fpsAccum = 0
     frameCount = 0
   }
+  // FPS-driven quality auto-tune (only while actually playing, never after a
+  // manual quality pick — see render/auto-quality.ts).
+  autoQuality.frame(dt, matchSM.isLive && currentMatchPhase === 'live')
 
   // Skip 3D render entirely while the menu/loadout overlay is visible. The
   // canvas is CSS-hidden there (visibility:hidden), so the only effect of

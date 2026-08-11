@@ -106,13 +106,17 @@ musica/audio-file, UI esports generica, niente progressione.
   cold-start; FFA con bot-fill (5, env `FFA_BOT_FILL`); **Team 5v5 giocabile** (tile menu,
   wiring, team bilanciati, spawn per metà anello, bot che non attaccano i compagni e
   scelgono il nemico più vicino); gate WebGL con messaggio. +11 test (`lobby-fill`).
-- **F1 — Fondamenta tech 2026.** three r180→**r185** (migrazione + ritaratura ombre/GTAO) ·
-  post-FX su **pmndrs postprocessing** (una passata) · **detect-gpu** per qualità auto ·
-  **Colyseus 0.16→0.17** (riconnessione automatica vera) · keep-alive Supabase (cron) ·
-  verifica del piano hosting Fly (se non grandfathered → migrazione Koyeb).
-- **F2 — Spell rifatte (three.quarks).** Emitter JSON per elemento (editor quarks.art):
-  core+glow+trail+ember, muzzle-flash al cast, telegraph a terra, impatto dedicato;
-  pool luci esistente mantenuto; regole di leggibilità §3.2. Verifica `shot.mjs SHOT_FIRE=1`.
+- **F1 — Fondamenta tech 2026 ✅ (fatta 2026-08-11, salvo post-FX).** three r180→**r185** ✅ ·
+  **Colyseus 0.16→0.17** ✅ (bootstrap `express`-callback del transport, schema v4, client
+  `@colyseus/sdk`, close-code kick spostato a 4100, verificato live 5v5 e in-match browser) ·
+  **auto-quality FPS-adattivo** ✅ (al posto di detect-gpu: campiona gli fps reali in match e
+  scala il preset, mai dopo una scelta manuale — zero CDN, 6 test) · **keep-alive Supabase** ✅
+  (workflow cron pronto in `.github/workflows/supabase-keepalive.yml` — il token di push non ha lo scope `workflow`: va caricato una volta a mano su GitHub → Add file, poi gira da solo) · RESTANO: post-FX pmndrs (accorpato a
+  F2: stesso compositor, va visto dal vivo) e la verifica del piano hosting Fly (serve l'utente).
+- **F2 — Spell rifatte (three.quarks) + post-FX pmndrs.** Emitter JSON per elemento (editor
+  quarks.art): core+glow+trail+ember, muzzle-flash al cast, telegraph a terra, impatto dedicato;
+  pool luci esistente mantenuto; regole di leggibilità §3.2. Nello stesso giro: composer unico
+  pmndrs (bloom selettivo+AO+grade in una passata). Verifica `shot.mjs SHOT_FIRE=1` + utente dal vivo.
 - **F3 — Personaggi realistici (il piano §5B diventa eseguibile).**
   1. _(UTENTE, ~1 ora, con la mia guida)_ Login Adobe → scaricare i 3-4 stock scelti +
      set animazioni "with skin" per ciascuno; scegliere il modello del mago (CC) →

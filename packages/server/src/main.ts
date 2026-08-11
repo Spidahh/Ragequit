@@ -1,6 +1,5 @@
 import { timingSafeEqual } from 'node:crypto'
 import { readFileSync } from 'node:fs'
-import { createServer } from 'node:http'
 
 // Load .env before anything else so SUPABASE_* vars are available.
 const { config } = await import('dotenv')
@@ -55,14 +54,6 @@ function loadBalanceFromDisk(): void {
 }
 loadBalanceFromDisk()
 
-const app = express()
-app.use(express.json())
-
-// Health endpoint for Fly.io and local probes.
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', ts: Date.now() })
-})
-
 function constantTimeEquals(a: string, b: string): boolean {
   const left = Buffer.from(a)
   const right = Buffer.from(b)
@@ -101,24 +92,31 @@ function requireBasicAuth(user: string, password: string): RequestHandler {
   }
 }
 
-// Colyseus monitor — opt-in admin surface. Never expose it without auth.
-if (MONITOR_ENABLED) {
-  if (!MONITOR_USER || !MONITOR_PASSWORD) {
-    throw new Error(
-      'COLYSEUS_MONITOR_ENABLED=true requires COLYSEUS_MONITOR_USER and COLYSEUS_MONITOR_PASSWORD',
-    )
-  }
-  app.use('/colyseus', requireBasicAuth(MONITOR_USER, MONITOR_PASSWORD), monitor())
-}
-
-const httpServer = createServer(app)
-
+// 0.17: the transport owns the express app (matchmaking routes live there).
+// Custom routes (health, monitor) are mounted through the `express` callback —
+// attaching them to a self-made app would leave /matchmake/* returning 404.
 const gameServer = new Server({
-  transport: new WebSocketTransport({ server: httpServer }),
+  transport: new WebSocketTransport(),
   // We own the signal handlers below so we can dispose rooms, flush telemetry
   // and close the HTTP server in order before exiting. Disable Colyseus's own
   // auto-registered handler to avoid a double-handler race that exits early.
   gracefullyShutdown: false,
+  express: (app) => {
+    app.use(express.json())
+    // Health endpoint for the hosting platform and local probes.
+    app.get('/health', (_req, res) => {
+      res.json({ status: 'ok', ts: Date.now() })
+    })
+    // Colyseus monitor — opt-in admin surface. Never expose it without auth.
+    if (MONITOR_ENABLED) {
+      if (!MONITOR_USER || !MONITOR_PASSWORD) {
+        throw new Error(
+          'COLYSEUS_MONITOR_ENABLED=true requires COLYSEUS_MONITOR_USER and COLYSEUS_MONITOR_PASSWORD',
+        )
+      }
+      app.use('/colyseus', requireBasicAuth(MONITOR_USER, MONITOR_PASSWORD), monitor())
+    }
+  },
 })
 
 // Keep one room kind, but never match clients across different modes OR
@@ -148,9 +146,10 @@ async function gracefulShutdown(signal: string): Promise<void> {
   }, 5000)
   forceExit.unref()
   try {
+    // 0.17: gracefullyShutdown disposes rooms AND shuts the transport (with the
+    // http server the transport owns), so no separate httpServer.close here.
     await gameServer.gracefullyShutdown(false)
     await shutdownServerTelemetry()
-    await new Promise<void>((resolve) => httpServer.close(() => resolve()))
   } catch (err) {
     console.warn(`[ragequit-server] shutdown error: ${(err as Error).message}`)
   } finally {
@@ -161,13 +160,12 @@ async function gracefulShutdown(signal: string): Promise<void> {
 process.on('SIGTERM', () => void gracefulShutdown('SIGTERM'))
 process.on('SIGINT', () => void gracefulShutdown('SIGINT'))
 
-httpServer.listen(PORT, () => {
-  console.info(`[ragequit-server] listening on http://localhost:${PORT}`)
-  console.info(`[ragequit-server]   ws endpoint:  ws://localhost:${PORT}`)
-  console.info(`[ragequit-server]   health:       http://localhost:${PORT}/health`)
-  console.info(
-    MONITOR_ENABLED
-      ? `[ragequit-server]   monitor:      http://localhost:${PORT}/colyseus (basic auth)`
-      : '[ragequit-server]   monitor:      disabled',
-  )
-})
+await gameServer.listen(PORT)
+console.info(`[ragequit-server] listening on http://localhost:${PORT}`)
+console.info(`[ragequit-server]   ws endpoint:  ws://localhost:${PORT}`)
+console.info(`[ragequit-server]   health:       http://localhost:${PORT}/health`)
+console.info(
+  MONITOR_ENABLED
+    ? `[ragequit-server]   monitor:      http://localhost:${PORT}/colyseus (basic auth)`
+    : '[ragequit-server]   monitor:      disabled',
+)

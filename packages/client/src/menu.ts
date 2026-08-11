@@ -21,6 +21,7 @@ import {
 import { renderScoreboard, type ScoreboardData } from './endgame.js'
 import { initKeybindLabels, initKeybindSettings } from './input/keybinds.js'
 import { initMenuBackground } from './menu-bg.js'
+import { markQualityManual } from './render/auto-quality.js'
 
 export type MenuChoice = 'play1v1' | 'training' | 'loadout' | 'stats' | 'settings'
 export type GraphicsQuality = 'low' | 'med' | 'high'
@@ -64,6 +65,8 @@ export interface MenuApi {
   onMatchPhase: (msg: ServerMatchPhaseMessage, selfId: string) => void
   onScore: (msg: ServerScoreMessage, selfId: string, otherId: string) => void
   getSettings: () => SettingsData
+  /** Programmatic quality change (FPS auto-tuner) — updates UI + persists. */
+  setQuality: (quality: GraphicsQuality) => void
   updateProfile: (profile: { currentClass: ClassId | null; equippedSpells: string[] }) => void
 }
 
@@ -199,12 +202,13 @@ export function initMenu(handlers: {
     saveSettings(settings)
   })
 
-  // Graphics quality buttons
+  // Graphics quality buttons — a manual pick disables the FPS auto-tuner.
   qualityBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       settings.quality = (btn.dataset['quality'] ?? 'med') as GraphicsQuality
       qualityBtns.forEach((b) => b.classList.toggle('active', b === btn))
       handlers.onGraphicsChange(settings.quality)
+      markQualityManual()
       saveSettings(settings)
     })
   })
@@ -313,6 +317,12 @@ export function initMenu(handlers: {
     },
     hideScoreboard: () => scoreboard.classList.add('hidden'),
     getSettings: () => settings,
+    setQuality: (quality) => {
+      settings.quality = quality
+      qualityBtns.forEach((b) => b.classList.toggle('active', b.dataset['quality'] === quality))
+      handlers.onGraphicsChange(quality)
+      saveSettings(settings)
+    },
     onMatchPhase: (msg, _selfId) => {
       setPhase(msg.phase, msg.countdownMs)
     },
