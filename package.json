@@ -44,6 +44,7 @@
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^9.0.0",
     "eslint-plugin-import": "^2.30.0",
+    "fbx2gltf": "0.9.7-p1",
     "playwright": "^1.60.0",
     "prettier": "^3.3.0",
     "sharp": "^0.34.5",
