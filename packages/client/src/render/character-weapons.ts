@@ -11,7 +11,6 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { ELEMENT_COLORS, type ElementId } from '../character.js'
 
 import { findBone } from './character-loader.js'
-import { createOutlineMesh } from './outlines.js'
 
 const _loader = new GLTFLoader()
 
@@ -260,14 +259,8 @@ export function applyWeaponProp(
         wg.scale.setScalar(grip.scale)
       }
 
-      // Toon outlines for weapon meshes.
-      const outlines: { mesh: THREE.Mesh; outline: THREE.Mesh }[] = []
-      wg.traverse((child) => {
-        if (!(child instanceof THREE.Mesh)) return
-        if (child.name.endsWith('_outline')) return
-        outlines.push({ mesh: child, outline: createOutlineMesh(child, 0.016, 0x0a0a0f) })
-      })
-      for (const { mesh, outline } of outlines) mesh.parent?.add(outline)
+      // No ink outlines on weapons — STILE.md (locked): identity comes from the
+      // PBR material + team rim, not toon ink. (Bodies already dropped theirs.)
 
       // Update shield visibility/attachment if weapon swap changed.
       updateShieldAttachment(charGroup)
@@ -320,14 +313,7 @@ export function applyShieldProp(charGroup: THREE.Group, _toonGradient?: THREE.Da
 
       sg.add(model)
 
-      // Toon outlines for shield.
-      const outlines: { mesh: THREE.Mesh; outline: THREE.Mesh }[] = []
-      sg.traverse((child) => {
-        if (!(child instanceof THREE.Mesh)) return
-        if (child.name.endsWith('_outline')) return
-        outlines.push({ mesh: child, outline: createOutlineMesh(child, 0.016, 0x0a0a0f) })
-      })
-      for (const { mesh, outline } of outlines) mesh.parent?.add(outline)
+      // No ink outlines on the shield either — STILE.md (locked): rim, not ink.
 
       // Update shield attachment position
       updateShieldAttachment(charGroup)
