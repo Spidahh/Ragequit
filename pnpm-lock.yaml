@@ -72,6 +72,9 @@ importers:
       three:
         specifier: ^0.185.0
         version: 0.185.1
+      three.quarks:
+        specifier: ^0.17.1
+        version: 0.17.1(three@0.185.1)
     devDependencies:
       '@types/three':
         specifier: ^0.185.0
@@ -2805,6 +2808,9 @@ packages:
     resolution: {integrity: sha512-6YHEFRL9mfgcAvql/XhwTvf5jKcOiiupt2FiJxHkiX1z4j7WL8J/jRHYLluORvc1XxB5rV20KoeK00gVJamspg==}
     engines: {node: '>=0.6'}
 
+  quarks.core@0.17.1:
+    resolution: {integrity: sha512-WkY2Ipw/2uapCXRqA0UQm3U3SOh4TRIKYCVq2I8XolxF3wTLyC0c7XxIzZOYSpjkCDxqFTaM2+DZoRZom8NCdA==}
+
   query-selector-shadow-dom@1.0.1:
     resolution: {integrity: sha512-lT5yCqEBgfoMYpf3F2xQRK7zEr1rhIIZuceDK6+xRkJQ4NMbHTwXqk4NkwDwQMNqXgG9r9fyHnzwNVs6zV5KRw==}
 
@@ -3104,6 +3110,11 @@ packages:
 
   text-hex@1.0.0:
     resolution: {integrity: sha512-uuVGNWzgJ4yhRaNSiubPY7OjISw4sw4E5Uv0wbjp+OzcbmVU/rsT8ujgcXJhn9ypzsgr5vlzpPqP+MBBKcGvbg==}
+
+  three.quarks@0.17.1:
+    resolution: {integrity: sha512-HiyORXkPZTfy7OBA/IRJqTcNxpo53yctgV3N8dSUG/jdisiVciDFGyf6hVnOLQDrIEmzU0yOtNFvzo+JHCjc7A==}
+    peerDependencies:
+      three: '>=0.182.0'
 
   three@0.185.1:
     resolution: {integrity: sha512-5aojFCXKwnjBRZvUnt3WFfEcvUJgkN5LlijRFN95hMy8WVkG4I0QNcJE+OuWvuJ0bOdStrbfXn0pkd6/QyiAlg==}
@@ -6227,6 +6238,8 @@ snapshots:
     dependencies:
       side-channel: 1.1.0
 
+  quarks.core@0.17.1: {}
+
   query-selector-shadow-dom@1.0.1: {}
 
   random-bytes@1.0.0: {}
@@ -6633,6 +6646,11 @@ snapshots:
       string-width: 3.1.0
 
   text-hex@1.0.0: {}
+
+  three.quarks@0.17.1(three@0.185.1):
+    dependencies:
+      quarks.core: 0.17.1
+      three: 0.185.1
 
   three@0.185.1: {}
 

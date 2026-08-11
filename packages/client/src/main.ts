@@ -132,6 +132,7 @@ import { initProjectileVisuals, type SchemaProjectile } from './render/projectil
 import { initRemotePlayers, type RemotePlayerSchema } from './render/remote-players.js'
 import { initSelfEmissive, STATUS_EMISSIVE } from './render/self-emissive.js'
 import { scheduleViewmodelPrecompile } from './render/shader-warmup.js'
+import { initSpellParticles } from './render/spell-particles.js'
 import { VfxTextures } from './render/vfx-textures.js'
 import { getWeaponView } from './render/weapon-view.js'
 import { initZoneVisuals, zoneColorForElement } from './render/zone-visuals.js'
@@ -578,10 +579,12 @@ scene.add(deathBurstVfx.mesh)
 deathBurstVfx.mesh.layers.enable(1) // bloom
 
 const zoneVfx = initZoneVisuals({ scene })
+const spellParticles = initSpellParticles(scene) // quarks: embers/impacts/muzzle (STILE §7)
 const projectileVfx = initProjectileVisuals({
   scene,
   spawnImpact,
   zoneColorForElement,
+  spellParticles,
 })
 const remotePlayerSystem = initRemotePlayers({
   scene,
@@ -2293,9 +2296,9 @@ function _renderInner(now: number): void {
     fpsAccum = 0
     frameCount = 0
   }
-  // FPS-driven quality auto-tune (only while actually playing, never after a
-  // manual quality pick — see render/auto-quality.ts).
+  // FPS auto-tune — only while live, never after a manual pick (auto-quality.ts).
   autoQuality.frame(dt, matchSM.isLive && currentMatchPhase === 'live')
+  spellParticles.update(dt)
 
   // Skip 3D render entirely while the menu/loadout overlay is visible. The
   // canvas is CSS-hidden there (visibility:hidden), so the only effect of

@@ -13,11 +13,12 @@
   },
   "dependencies": {
     "@colyseus/schema": "^4.0.30",
+    "@colyseus/sdk": "^0.17.43",
     "@ragequit/shared": "workspace:*",
     "@supabase/supabase-js": "^2.106.1",
     "posthog-js": "^1.374.2",
     "three": "^0.185.0",
-    "@colyseus/sdk": "^0.17.43"
+    "three.quarks": "^0.17.1"
   },
   "devDependencies": {
     "@types/three": "^0.185.0",

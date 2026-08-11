@@ -7,6 +7,7 @@ import * as THREE from 'three'
 import type { ImpactProfile } from '../vfx/impact-pool.js'
 
 import { makeProjectileMesh } from './factories.js'
+import type { EmberHandle, SpellParticles, SpellStyle } from './spell-particles.js'
 import { VfxTextures } from './vfx-textures.js'
 
 export interface SchemaProjectile {
@@ -38,6 +39,7 @@ interface ProjectileVisual {
   kind: ProjectileKind
   style: ProjectileStyle
   light: THREE.PointLight | null
+  embers: EmberHandle | null
 }
 
 // STILE §7 layer 5 — per-spell-bolt point light so the magic lights the stone.
@@ -264,6 +266,7 @@ export interface ProjectileVisualsOptions {
   scene: THREE.Scene
   spawnImpact: (pos: THREE.Vector3, color: number, profile?: ImpactProfile) => void
   zoneColorForElement: (element: string) => number
+  spellParticles: SpellParticles
 }
 
 export interface ProjectileVisualsController {
@@ -281,6 +284,7 @@ export function initProjectileVisuals({
   scene,
   spawnImpact,
   zoneColorForElement,
+  spellParticles,
 }: ProjectileVisualsOptions): ProjectileVisualsController {
   const projectileVisuals = new Map<string, ProjectileVisual>()
   _lightPool.init(scene)
@@ -323,6 +327,10 @@ export function initProjectileVisuals({
     const trail = makeTrailLine(style)
     scene.add(object)
     scene.add(trail)
+    // Cast juice: a short element-tinted puff right where the bolt is born.
+    if (style !== 'arrow') {
+      spellParticles.muzzleFlash(object.position.clone(), style as SpellStyle)
+    }
     const buf = new Float32Array(TRAIL_LEN * 3)
     for (let i = 0; i < TRAIL_LEN; i++) {
       buf[i * 3] = msg.origin.x
@@ -339,12 +347,15 @@ export function initProjectileVisuals({
       kind,
       style,
       light,
+      embers: style !== 'arrow' ? spellParticles.attachEmbers(style as SpellStyle, object) : null,
     })
   }
 
   function disposeVisual(vis: ProjectileVisual): void {
     _lightPool.release(vis.light)
     vis.light = null
+    vis.embers?.release()
+    vis.embers = null
     scene.remove(vis.object)
     scene.remove(vis.trail)
     disposeObject(vis.object)
@@ -355,15 +366,19 @@ export function initProjectileVisuals({
   function onExpired(msg: ServerProjectileExpiredMessage): void {
     const vis = projectileVisuals.get(msg.id)
     const impactProfile: ImpactProfile = vis?.kind === 'arrow' ? 'pierce' : 'magic'
+    const style = vis?.style
     if (vis) {
       disposeVisual(vis)
       projectileVisuals.delete(msg.id)
     }
+    const pos = new THREE.Vector3(msg.pos.x, msg.pos.y, msg.pos.z)
     const elemColor = msg.element ? zoneColorForElement(msg.element) : null
     const color =
       elemColor ??
       (msg.reason === 'victim' ? 0xff6060 : msg.reason === 'terrain' ? 0xaabbcc : 0x80d0ff)
-    spawnImpact(new THREE.Vector3(msg.pos.x, msg.pos.y, msg.pos.z), color, impactProfile)
+    spawnImpact(pos, color, impactProfile)
+    // Element spark burst on top of the pooled 3-layer impact (bolts only).
+    if (style && style !== 'arrow') spellParticles.burstImpact(pos, style as SpellStyle)
   }
 
   // Shift existing points toward index 0 (oldest), write new at end.
@@ -425,6 +440,8 @@ export function initProjectileVisuals({
           kind,
           style,
           light,
+          embers:
+            style !== 'arrow' ? spellParticles.attachEmbers(style as SpellStyle, object) : null,
         }
         projectileVisuals.set(id, vis)
       }

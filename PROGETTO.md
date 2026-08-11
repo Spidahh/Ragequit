@@ -614,6 +614,25 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
   - **F1d post-FX pmndrs RIMANDATO a F2** (stesso compositor delle spell, va visto dal vivo).
   - DA FARE (serve l'utente): stato account Fly (grandfathered o no) · ora Mixamo (F3).
 
+- **2026-08-11 (3ª parte) — F2a SPELL PARTICLE LAYER (three.quarks) — «continua da solo, decidi tu».**
+  Le spell ora hanno CORPO: `render/spell-particles.ts` (three.quarks 0.17) sopra i core a piani
+  incrociati — **ember-trail** che scia dal dardo (emission-over-distance: densità costante a ogni
+  velocità), **burst di scintille all'impatto** (con gravità), **muzzle-puff al lancio**; tutto
+  element-tinted (STILE §7) e sul layer bloom. Design anti-freeze: **UN solo materiale** (sprite
+  `vfx_shield` cerchio soffice, colore per-particella) → un solo SpriteBatch/shader, warmato al
+  load con un burst sotto il pavimento; pool luci invariato. Verifica: nuova sonda
+  **`tools/verify/spellshot.mjs`** (pointer-lock come probe, mostra il debug HUD col Backquote,
+  campiona SOLO quando `#dbg-proj>0`) → dardo mago IN VOLO con nube di embers catturato
+  (`.verify/spell-mage-*.png`), 0 errori; `probe.mjs`: programmi shader STABILI in play (46→39,
+  nessuna compilazione mid-fight). Gate verde 358 test → push su `main`.
+  - API quarks imparata (per la prossima volta): `startColor` vuole `ConstantColor`; i vettori
+    sono di quarks.core (`Vector3/4` da three.quarks, NON di three); `ColorOverLife` vuole un
+    `Gradient` (FunctionColorGenerator), non `ColorRange`; `BatchedRenderer.update` aggiorna i
+    sistemi anche a emitter sganciato → `endEmit()+autoDestroy` è un teardown sicuro.
+  - PROSSIMO F2b (visivo, con utente o altra sessione): tuning quantità/dimensioni per elemento,
+    telegraph a terra pre-impatto, composer unico pmndrs (F1d), varietà per-elemento (es. fulmine
+    jitter, dark che ASSORBE luce).
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.
