@@ -283,21 +283,33 @@ function _mapMixamoClips(
     c.name = name
     out[name] = c
   }
-  const idle = exact('idle') ?? find(/idle/)
+  // Fused Mixamo-pack GLBs name clips like `sword_and_shield_idle`,
+  // `great_sword_run`, `standing_aim_recoil` — plain "idle" must not match
+  // `block_idle`/`crouch_idle`, hence the negative guards.
+  const plain = (word: string) =>
+    animations.find((a) => {
+      const n = a.name.toLowerCase()
+      return n.includes(word) && !/block|crouch|aim|turn|dodge|kick|sheath|draw_sword/.test(n)
+    })
+  const idle = exact('idle') ?? plain('idle') ?? find(/idle/)
   set('Idle', idle)
   set('Attacking_Idle', idle)
-  set('Run', find(/run/))
-  set('Walk', find(/walk/) ?? find(/strafe/))
-  const attack = find(/attack/) ?? find(/whirlwind/)
+  set('Run', plain('run') ?? find(/run/))
+  set('Walk', plain('walk') ?? find(/walk/) ?? find(/strafe/))
+  const attack = plain('attack') ?? find(/attack/) ?? find(/slash/) ?? find(/whirlwind/)
   set('Dagger_Attack', attack)
-  set('Dagger_Attack2', find(/whirlwind/) ?? attack)
+  set('Dagger_Attack2', find(/slash/) ?? find(/whirlwind/) ?? attack)
   set('Death', find(/death/))
-  set('Jump', find(/jump/))
-  set('Parry_Block', exact('block') ?? find(/block/))
+  set('Jump', plain('jump') ?? find(/jump/))
+  set('Parry_Block', exact('block') ?? find(/block_idle/) ?? find(/block/))
   const cast = find(/cast/)
   set('Staff_Cast', cast)
   set('Channel', cast)
-  set('Respawn', find(/powerup|respawn|enter/))
+  set('Respawn', find(/power_?up|respawn|enter/))
+  set('RecieveHit', find(/impact/))
+  set('RecieveHit_Attacking', find(/impact_2/) ?? find(/impact/))
+  set('Bow_Draw', find(/aim_overdraw|draw_arrow/))
+  set('Bow_Release', find(/aim_recoil/))
 
   // Fallback for rigs with generic clip names (e.g. Blender "NlaTrack"): if name
   // matching found no idle, spread the available clips across the core states by

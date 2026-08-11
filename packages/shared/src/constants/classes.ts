@@ -69,20 +69,14 @@ export const TARGET_CLASS_DEFS = {
     weapons: ['sword', 'bow'],
     recoveryId: 'brace_recovery',
     visuals: {
-      // ⚠️ REALISTIC CHARACTER (medieval_knight + CC clips) DISABLED FOR GAMEPLAY:
-      // the free CC clips are mage casts only — NO run/walk/death — so in a live
-      // match the model slides around frozen ("models that don't move"). A playable
-      // class must be COMPLETE. Re-enable `mixamoGlb`+`ccAnims` once CC-family
-      // locomotion clips exist in /characters/anims (e.g. ActorCore free pack).
-      // The GLBs + CC clips were moved OUT of the shipped bundle to
-      // packages/client/character-sources/ (medieval_knight.glb, shadowflame_samurai_norm.glb,
-      // shadowkin_mage_norm.glb, anims/) — copy them back into public/characters/ when re-enabling.
-      // mixamoGlb: 'medieval_knight',
+      // Mixamo stock Paladin fused with the full Pro Sword and Shield Pack
+      // (29 embedded clips: idle/run/walk/strafe/jump/attacks/blocks/impacts/
+      // deaths/casting) via tools/asset-pipeline/mixamo-to-glb.mjs. COMPLETE —
+      // the old "no locomotion clips" blocker is gone.
+      mixamoGlb: 'paladin',
       base: 'Superhero_Male_FullBody',
       outfit: 'Male_Ranger',
       hair: 'Hair_Buzzed',
-      // The hood already ships INSIDE Male_Ranger.gltf — listing it again here
-      // attached a second coincident hood shell that z-fought. Keep only the pauldron.
       accessories: ['Male_Ranger_Acc_Pauldron'],
     },
   },
@@ -94,10 +88,11 @@ export const TARGET_CLASS_DEFS = {
     weapons: ['bow', 'staff'],
     recoveryId: 'hunters_flow',
     visuals: {
+      // Mixamo Erika Archer (with animated bow) + Pro Longbow Pack, 20 clips.
+      mixamoGlb: 'erika',
       base: 'Superhero_Female_FullBody',
       outfit: 'Female_Ranger',
       hair: 'Hair_Buns',
-      // Hood ships inside Female_Ranger.gltf; the duplicate accessory z-fought.
       accessories: [],
     },
   },
@@ -126,9 +121,8 @@ export const TARGET_CLASS_DEFS = {
     weapons: ['sword', 'bow', 'staff'],
     recoveryId: 'adaptive_mend',
     visuals: {
-      // ⚠️ Realistic shadowflame samurai DISABLED for gameplay (no locomotion
-      // clips — see the tank note). Re-enable once CC run/walk/death clips exist.
-      // mixamoGlb: 'shadowflame_samurai_norm',
+      // Mixamo Ninja + Great Sword Pack, 23 clips (two-handed sword set).
+      mixamoGlb: 'ninja',
       base: 'Superhero_Female_FullBody',
       outfit: 'Female_Peasant',
       hair: 'Hair_SimpleParted',
