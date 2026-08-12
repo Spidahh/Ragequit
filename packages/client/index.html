@@ -397,9 +397,14 @@
             </div>
           </div>
         </div>
-        <!-- Server connection status -->
-        <div id="menu-server-status" class="status-disconnected">
-          <span class="server-status-dot">●</span>offline
+        <div class="menu-utility-row">
+          <!-- Server connection status -->
+          <div id="menu-server-status" class="status-disconnected">
+            <span class="server-status-dot">●</span>offline
+          </div>
+          <button class="util-btn menu-settings-btn" id="menu-settings">
+            <span class="util-btn-icon">⚙</span>Impostazioni
+          </button>
         </div>
       </div>
     </div>
@@ -473,10 +478,12 @@
               <button class="keybind-btn" data-keybind-action="swapWeapon"></button> Cicla arma
             </div>
             <div class="keybind-row">
-              <button class="keybind-btn" data-keybind-action="wheelAbility"></button> Ruota E (armi/magie)
+              <button class="keybind-btn" data-keybind-action="wheelAbility"></button> Ruota E
+              (armi/magie)
             </div>
             <div class="keybind-row">
-              <button class="keybind-btn" data-keybind-action="wheelUtility"></button> Ruota Q (utility/magie)
+              <button class="keybind-btn" data-keybind-action="wheelUtility"></button> Ruota Q
+              (utility/magie)
             </div>
             <div class="keybind-row">
               <button class="keybind-btn" data-keybind-action="slot1"></button> Abilità 1 (E ↑)
@@ -519,7 +526,6 @@
     </div>
 
     <div id="loadout-station" class="hidden">
-
       <!-- ── HEADER: logo · class tabs · compact vitals ── -->
       <div id="ls-header">
         <div id="ls-title-block">
@@ -534,23 +540,28 @@
             <b>Scegli classe</b>
             <small>scegli classe e meccanica</small>
           </div>
-          <button class="class-select-card active" data-class="tank" id="ls-class-tank" type="button">
-            <img class="card-banner" src="/ui/classes/tank.webp" alt="Tank" loading="eager">
+          <button
+            class="class-select-card active"
+            data-class="tank"
+            id="ls-class-tank"
+            type="button"
+          >
+            <img class="card-banner" src="/ui/classes/tank.webp" alt="Tank" loading="eager" />
             <span class="card-title">TANK</span>
             <span class="card-desc">Spada/Arco · FURY</span>
           </button>
           <button class="class-select-card" data-class="archer" id="ls-class-archer" type="button">
-            <img class="card-banner" src="/ui/classes/archer.webp" alt="Arciere" loading="eager">
+            <img class="card-banner" src="/ui/classes/archer.webp" alt="Arciere" loading="eager" />
             <span class="card-title">ARCIERE</span>
             <span class="card-desc">Arco/Staff · MOMENTUM</span>
           </button>
           <button class="class-select-card" data-class="mage" id="ls-class-mage" type="button">
-            <img class="card-banner" src="/ui/classes/mage.webp" alt="Mago" loading="eager">
+            <img class="card-banner" src="/ui/classes/mage.webp" alt="Mago" loading="eager" />
             <span class="card-title">MAGO</span>
             <span class="card-desc">Staff · RISONANZA</span>
           </button>
           <button class="class-select-card" data-class="hybrid" id="ls-class-hybrid" type="button">
-            <img class="card-banner" src="/ui/classes/hybrid.webp" alt="Ibrido" loading="eager">
+            <img class="card-banner" src="/ui/classes/hybrid.webp" alt="Ibrido" loading="eager" />
             <span class="card-title">IBRIDO</span>
             <span class="card-desc">Tutte le armi · FLOW</span>
           </button>
@@ -558,7 +569,9 @@
 
         <div id="ls-vitals-bar">
           <span id="ls-vitals-class-name" class="vitals-class-tag">IBRIDO</span>
-          <span id="ls-vitals-mechanic" class="vitals-mechanic-tag" title="Meccanica di classe">⚡ FLOW</span>
+          <span id="ls-vitals-mechanic" class="vitals-mechanic-tag" title="Meccanica di classe"
+            >⚡ FLOW</span
+          >
           <div class="vital-pill">
             <span class="vp-icon">❤️</span>
             <div class="vital-bar-track"><div class="vital-bar hp" id="ls-bar-hp"></div></div>
@@ -566,7 +579,9 @@
           </div>
           <div class="vital-pill">
             <span class="vp-icon">⚡</span>
-            <div class="vital-bar-track"><div class="vital-bar stamina" id="ls-bar-stam"></div></div>
+            <div class="vital-bar-track">
+              <div class="vital-bar stamina" id="ls-bar-stam"></div>
+            </div>
             <span class="vital-value" id="ls-val-stam">100</span>
           </div>
           <div class="vital-pill">
@@ -579,7 +594,6 @@
 
       <!-- ── BODY: left=build lanes  right=ability pool ── -->
       <div id="ls-body">
-
         <!-- LEFT: build slots -->
         <div id="ls-left">
           <div class="ls-section">
@@ -606,10 +620,15 @@
 
         <!-- RIGHT: compact ability pool -->
         <div id="ls-right">
-
           <div id="ls-pool-section">
             <div id="ls-filter-bar">
-              <input id="ls-search" type="text" placeholder="Cerca abilità…" autocomplete="off" spellcheck="false" />
+              <input
+                id="ls-search"
+                type="text"
+                placeholder="Cerca abilità…"
+                autocomplete="off"
+                spellcheck="false"
+              />
               <div class="filter-group" aria-label="Build filters">
                 <button class="filter-btn smart" data-filter="recommended">★ CONSIGLIATI</button>
                 <button class="filter-btn" data-filter="control">CONTROLLO</button>
@@ -622,9 +641,10 @@
             </div>
             <div class="pool-grid" id="ls-pool"></div>
           </div>
-
-        </div><!-- /ls-right -->
-      </div><!-- /ls-body -->
+        </div>
+        <!-- /ls-right -->
+      </div>
+      <!-- /ls-body -->
 
       <!-- ── FOOTER ── -->
       <div class="station-buttons">
@@ -632,8 +652,8 @@
         <button class="btn" id="ls-default">RESET BASE</button>
         <button class="btn primary" id="ls-confirm">CONFERMA ED ENTRA</button>
       </div>
-
-    </div><!-- /loadout-station -->
+    </div>
+    <!-- /loadout-station -->
 
     <div id="hint" class="hidden" aria-hidden="true"></div>
     <div id="debug" class="hidden">

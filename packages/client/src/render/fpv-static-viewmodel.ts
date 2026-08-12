@@ -2,7 +2,7 @@
 // Static first-person weapon viewmodel (staff).
 //
 // Owns the non-animated first-person weapon model: loads the weapon GLB, applies
-// overlay-safe materials + outlines, places it per-weapon, and swaps it on
+// overlay-safe materials, places it per-weapon, and swaps it on
 // weapon change. The bow uses the dedicated animated rig (fpv-bow.ts); this
 // covers the staff (and could cover any future static FPV weapon).
 //
@@ -14,7 +14,6 @@ import type { Weapon } from '@ragequit/shared'
 import * as THREE from 'three'
 
 import { fetchWeaponGlb } from './characters.js'
-import { createOutlineMesh } from './outlines.js'
 
 export interface FpvStaticViewmodel {
   /** Parent this under the viewmodel camera. */
@@ -35,7 +34,7 @@ export function createFpvStaticViewmodel(): FpvStaticViewmodel {
       child.traverse((node) => {
         if (!(node instanceof THREE.Mesh)) return
         // The viewmodel is a clone that SHARES geometry with the weapon cache;
-        // only outline meshes own a cloned geometry. Materials are per-instance.
+        // materials are the only per-instance resources.
         if (node.name.endsWith('_outline')) node.geometry.dispose()
         const material = node.material
         if (Array.isArray(material)) material.forEach((mat) => mat.dispose())
@@ -100,22 +99,6 @@ export function createFpvStaticViewmodel(): FpvStaticViewmodel {
           }
         })
 
-        // Outlines keep weapon silhouettes readable in dark arenas. Collect
-        // {mesh, outline} pairs and attach each outline to its SOURCE mesh's
-        // parent — `outline.parent` is null on a fresh createOutlineMesh, so the
-        // old `outline.parent?.add(outline)` was a no-op that left the staff/sword
-        // viewmodel with no outline AND leaked the cloned geometry every rebuild
-        // (clear() only disposes outlines that actually live under root).
-        const outlinePairs: { mesh: THREE.Mesh; outline: THREE.Mesh }[] = []
-        model.traverse((child) => {
-          if (child instanceof THREE.Mesh && !child.name.endsWith('_outline')) {
-            const outline = createOutlineMesh(child, 0.016, 0x0a0a0f)
-            outline.frustumCulled = false
-            outlinePairs.push({ mesh: child, outline })
-          }
-        })
-        for (const { mesh, outline } of outlinePairs) mesh.parent?.add(outline)
-
         // Per-weapon first-person placement (tuned for the 58° viewmodel camera).
         if (weapon === 'sword') {
           model.position.set(0.18, -0.25, -0.5)
@@ -127,10 +110,11 @@ export function createFpvStaticViewmodel(): FpvStaticViewmodel {
           model.rotation.set(Math.PI / 2, Math.PI / 2, 0)
           model.scale.setScalar(0.33)
         } else if (weapon === 'staff') {
-          // Held diagonally in the lower-right.
-          model.position.set(0.13, -0.24, -0.5)
-          model.rotation.set(-0.18, -0.42, 0.12)
-          model.scale.setScalar(0.3)
+          // Keep the grip in the lower-right and the head inside the frame. The
+          // previous close-up placement showed only a giant vertical shaft.
+          model.position.set(0.25, -0.24, -0.74)
+          model.rotation.set(0.24, -0.34, Math.PI - 0.28)
+          model.scale.setScalar(0.22)
         }
 
         root.add(model)

@@ -65,29 +65,47 @@ export function createAccountUi(deps: AccountUiDeps): AccountUi {
       `
     } else {
       container.innerHTML = `
-        <div class="auth-logged-out-form">
-          <input type="email" id="auth-email-input" aria-label="Email" class="auth-input" autocomplete="username" placeholder="Email">
-          <input type="password" id="auth-pass-input" aria-label="Password" class="auth-input" autocomplete="current-password" placeholder="Password">
-          <div class="auth-buttons-row">
-            <button class="auth-btn btn-accedi" id="btn-auth-signin">ACCEDI</button>
-            <button class="auth-btn btn-registrati" id="btn-auth-signup">REGISTRATI</button>
-          </div>
-          <div class="auth-oauth-divider"><span>oppure</span></div>
-          <button class="auth-btn btn-google-oauth" id="btn-auth-google">
-            <svg class="google-icon" viewBox="0 0 24 24" width="16" height="16">
-              <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.866-3.577-7.866-8s3.536-8 7.866-8c2.46 0 4.105 1.025 5.047 1.926l3.227-3.227C18.32 1.258 15.535 0 12.24 0 5.58 0 0 5.58 0 12.24s5.58 12.24 12.24 12.24c6.96 0 11.58-4.887 11.58-11.76 0-.792-.084-1.396-.188-1.935H12.24z"/>
-            </svg>
-            ACCEDI CON GOOGLE
+        <div class="auth-menu">
+          <button class="auth-menu-trigger" id="btn-auth-toggle" aria-expanded="false">
+            <span class="auth-menu-dot"></span> ACCOUNT
           </button>
-          <div id="auth-status" class="auth-status-message"></div>
+          <div class="auth-popover hidden" id="auth-popover">
+            <div class="auth-popover-title">ACCOUNT RAGEQUIT</div>
+            <div class="auth-popover-copy">Salva progressi, grado e statistiche.</div>
+            <div class="auth-logged-out-form">
+              <input type="email" id="auth-email-input" aria-label="Email" class="auth-input" autocomplete="username" placeholder="Email">
+              <input type="password" id="auth-pass-input" aria-label="Password" class="auth-input" autocomplete="current-password" placeholder="Password">
+              <div class="auth-buttons-row">
+                <button class="auth-btn btn-accedi" id="btn-auth-signin">ACCEDI</button>
+                <button class="auth-btn btn-registrati" id="btn-auth-signup">REGISTRATI</button>
+              </div>
+              <div class="auth-oauth-divider"><span>oppure</span></div>
+              <button class="auth-btn btn-google-oauth" id="btn-auth-google">
+                <svg class="google-icon" viewBox="0 0 24 24" width="16" height="16">
+                  <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.866-3.577-7.866-8s3.536-8 7.866-8c2.46 0 4.105 1.025 5.047 1.926l3.227-3.227C18.32 1.258 15.535 0 12.24 0 5.58 0 0 5.58 0 12.24s5.58 12.24 12.24 12.24c6.96 0 11.58-4.887 11.58-11.76 0-.792-.084-1.396-.188-1.935H12.24z"/>
+                </svg>
+                ACCEDI CON GOOGLE
+              </button>
+              <div id="auth-status" class="auth-status-message"></div>
+            </div>
+          </div>
         </div>
       `
+      const btnToggle = document.getElementById('btn-auth-toggle') as HTMLButtonElement | null
+      const authPopover = document.getElementById('auth-popover')
       const btnSignin = document.getElementById('btn-auth-signin') as HTMLButtonElement | null
       const btnSignup = document.getElementById('btn-auth-signup') as HTMLButtonElement | null
       const btnGoogle = document.getElementById('btn-auth-google') as HTMLButtonElement | null
       const emailInput = document.getElementById('auth-email-input') as HTMLInputElement
       const passInput = document.getElementById('auth-pass-input') as HTMLInputElement
       const statusEl = document.getElementById('auth-status')
+
+      btnToggle?.addEventListener('click', () => {
+        const willOpen = authPopover?.classList.contains('hidden') ?? false
+        authPopover?.classList.toggle('hidden', !willOpen)
+        btnToggle.setAttribute('aria-expanded', String(willOpen))
+        if (willOpen) emailInput?.focus()
+      })
 
       if (btnGoogle && statusEl) {
         btnGoogle.addEventListener('click', async () => {

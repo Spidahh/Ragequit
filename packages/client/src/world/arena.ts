@@ -1,6 +1,6 @@
 import { getMap, type AABB } from '@ragequit/shared'
 import * as THREE from 'three'
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
 
 import { VfxTextures } from '../render/vfx-textures.js'
 
@@ -47,7 +47,6 @@ function makeBoxMesh(box: AABB, color: number): THREE.Mesh {
   // clone with a size-scaled repeat keeps the block course ~2 m regardless of box
   // dimensions (clones share the canvas image, so no extra GPU upload cost).
   const stone = getStoneTexture().clone()
-  stone.needsUpdate = true
   stone.repeat.set(Math.max(1, Math.round(sx * 0.5)), Math.max(1, Math.round(sy * 0.5)))
   const m = new THREE.Mesh(
     new THREE.BoxGeometry(sx, sy, sz),
@@ -70,15 +69,72 @@ export function buildArena(scene: THREE.Scene, _toonGradient: THREE.DataTexture)
   // barrels, banners) are fetched + parsed once instead of per spawn entry.
   THREE.Cache.enabled = true
   const gltfLoader = new GLTFLoader()
+  const gltfCache = new Map<string, Promise<GLTF>>()
+  const propTextureLoader = new THREE.TextureLoader()
+  const propAssetBaseUrl = new URL('/arena/props/', window.location.href)
+  const sharedPropTextureNames = [
+    'T_Trim_Metal_BaseColor.png',
+    'T_Trim_Metal_Normal.png',
+    'T_Trim_Metal_ORM.png',
+    'dungeon_texture.png',
+  ]
+  const sharedPropTextures = new Map<string, THREE.Texture>()
+  const sharedPropTexturesReady = Promise.all(
+    sharedPropTextureNames.map((filename) =>
+      propTextureLoader.loadAsync(new URL(filename, propAssetBaseUrl).href),
+    ),
+  ).then((textures) => {
+    textures.forEach((texture, index) => {
+      const filename = sharedPropTextureNames[index]!
+      const sourceName = filename.replace(/\.png$/, '')
+      texture.name = sourceName
+      sharedPropTextures.set(sourceName, texture)
+    })
+  })
+
+  function loadGltf(url: string): Promise<GLTF> {
+    const cached = gltfCache.get(url)
+    if (cached) return cached
+    const pending = gltfLoader.loadAsync(url)
+    gltfCache.set(url, pending)
+    return pending
+  }
+
+  function loadPropGltf(url: string): Promise<GLTF> {
+    return sharedPropTexturesReady.then(() => loadGltf(url))
+  }
+
+  // Cached scenes share GPU resources. Each placed instance gets its own
+  // geometry/material objects so map cleanup can dispose it safely without
+  // invalidating the cached source or another live instance.
+  function cloneGltfScene(source: THREE.Group): THREE.Group {
+    const model = source.clone(true)
+    model.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return
+      child.geometry = child.geometry.clone()
+      child.material = Array.isArray(child.material)
+        ? child.material.map((material) => material.clone())
+        : child.material.clone()
+      const materials = Array.isArray(child.material) ? child.material : [child.material]
+      for (const material of materials) {
+        const standard = material as THREE.MeshStandardMaterial
+        for (const slot of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap'] as const) {
+          const authored = standard[slot]
+          const shared = authored ? sharedPropTextures.get(authored.name) : undefined
+          if (shared) standard[slot] = shared
+        }
+      }
+    })
+    return model
+  }
 
   // ── Permanent coliseum shell (gladiators_arena.glb) ──────────────────────
   // The real tournament arena: an oval colosseum (~50×57 m, walls to ~20 m)
   // that wraps every gameplay map. It is purely decorative — collision is
   // still driven by the per-map AABB boxes — but it replaces the old flat
   // procedural void with a believable fighting pit. Loaded once, always shown.
-  gltfLoader.load(
-    '/arena/gladiators_arena.glb',
-    (gltf) => {
+  void loadGltf('/arena/gladiators_arena.glb')
+    .then((gltf) => {
       const model = gltf.scene
       // Arena ×1.5: the native pit (inner wall at r≈16.7) was cramped for ranged
       // play. Uniform scale widens the fighting pit to r≈25 to match the enlarged
@@ -119,10 +175,8 @@ export function buildArena(scene: THREE.Scene, _toonGradient: THREE.DataTexture)
         })
       })
       arenaVisualGroup.add(model)
-    },
-    undefined,
-    (err) => console.warn('[arena] gladiators_arena shell load failed:', err),
-  )
+    })
+    .catch((err: unknown) => console.warn('[arena] gladiators_arena shell load failed:', err))
 
   // ── Torch lights + 3D torch models ringing the coliseum wall ──
   // Placed just inside the arena wall so they wash warm light across the pit.
@@ -166,10 +220,9 @@ export function buildArena(scene: THREE.Scene, _toonGradient: THREE.DataTexture)
     torchFlames.push(flame)
 
     // 3D torch model (Torch_Metal.gltf)
-    gltfLoader.load(
-      '/arena/props/Torch_Metal.gltf',
-      (gltf) => {
-        const model = gltf.scene.clone()
+    void loadPropGltf('/arena/props/Torch_Metal.gltf')
+      .then((gltf) => {
+        const model = cloneGltfScene(gltf.scene)
         model.position.set(x, 3.7, z)
         model.rotation.y = -a // face inward toward arena
         model.scale.setScalar(0.6)
@@ -196,10 +249,8 @@ export function buildArena(scene: THREE.Scene, _toonGradient: THREE.DataTexture)
           }
         })
         arenaVisualGroup.add(model)
-      },
-      undefined,
-      (err) => console.warn('[arena] Torch_Metal load failed:', err),
-    )
+      })
+      .catch((err: unknown) => console.warn('[arena] Torch_Metal load failed:', err))
   }
 
   // ── Atmospheric drifting dust motes particles ──
@@ -403,11 +454,10 @@ export function buildArena(scene: THREE.Scene, _toonGradient: THREE.DataTexture)
     }
     spawns.forEach((s) => {
       const filename = filenameMap[s.type] ?? 'Crate_Wooden'
-      gltfLoader.load(
-        `/arena/props/${filename}.gltf`,
-        (gltf) => {
+      void loadPropGltf(`/arena/props/${filename}.gltf`)
+        .then((gltf) => {
           if (activeMapId !== spawnMapId) return // Discard if map switched in flight
-          const model = gltf.scene.clone()
+          const model = cloneGltfScene(gltf.scene)
           model.position.set(...s.pos)
           model.rotation.set(...s.rot)
           model.scale.setScalar(s.scale)
@@ -431,12 +481,10 @@ export function buildArena(scene: THREE.Scene, _toonGradient: THREE.DataTexture)
             }
           })
           arenaPropsGroup.add(model)
-        },
-        undefined,
-        (err) => {
+        })
+        .catch((err: unknown) => {
           console.error(`[arena] Failed to load prop ${s.type}:`, err)
-        },
-      )
+        })
     })
   }
 

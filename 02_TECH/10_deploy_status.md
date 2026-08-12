@@ -16,14 +16,14 @@ Questo documento raccoglie lo stato reale del deployment. Aggiornarlo ogni volta
 
 ## Server (Fly.io)
 
-| Campo    | Valore                         |
-| -------- | ------------------------------ |
-| App name | `ragequit-server`              |
-| Region   | `ams` (Amsterdam)              |
-| Porta    | 8080                           |
-| Stato    | **DEPLOYED — live**            |
-| Config   | `fly.toml` nella root del repo |
-| Scale    | scale-to-zero abilitato        |
+| Campo    | Valore                                                     |
+| -------- | ---------------------------------------------------------- |
+| App name | `ragequit-server`                                          |
+| Region   | `ams` (Amsterdam)                                          |
+| Porta    | 8080                                                       |
+| Stato    | **DEPLOYED — health da ripristinare (timeout 2026-08-12)** |
+| Config   | `fly.toml` nella root del repo                             |
+| Scale    | scale-to-zero abilitato                                    |
 
 Il server si connette su WebSocket. Il monitor Colyseus è disabilitato di default; quando abilitato richiede Basic Auth (env `COLYSEUS_MONITOR_ENABLED`, `COLYSEUS_MONITOR_USER`, `COLYSEUS_MONITOR_PASSWORD`).
 
@@ -42,33 +42,35 @@ Il client può usare Supabase auth anonima se `VITE_SUPABASE_URL` e `VITE_SUPABA
 
 | Campo | Valore                                |
 | ----- | ------------------------------------- |
-| Stato | Destinazione statica Cloudflare Pages |
+| Stato | **LIVE**                              |
 | Build | `packages/client/dist/` (output Vite) |
 | CDN   | Cloudflare Pages                      |
+| URL   | `https://ragequit-5i6.pages.dev/`     |
 
-Attualmente il client viene servito localmente via `pnpm dev:client` (Vite dev server su `localhost:5173`).
+In locale il client viene servito via `pnpm dev:client` (Vite su `localhost:5173`).
 
 ## Asset locali esistenti
 
 Questi asset sono nel repo e NON vanno cercati o scaricati.
 Per la lista completa vedi `01_DESIGN/10_tech_assets.md`.
 
-| Path                                                   | Contenuto                                                            |
-| ------------------------------------------------------ | -------------------------------------------------------------------- |
-| `packages/client/public/ui/ragequit-logo-full.webp`    | Logo principale                                                      |
-| `packages/client/public/ui/ragequit-logo-small.webp`   | Logo small                                                           |
-| `packages/client/public/icons-sprite.svg`              | SVG sprite icone (~45 KB)                                            |
-| `packages/client/public/arena/gladiators_arena.glb`    | Arena 3D (~171 KB)                                                   |
-| `packages/client/public/characters/UAL1_Standard.glb`  | Animazioni (NON rimuovere)                                           |
-| `packages/client/public/characters/*.gltf`             | Modelli personaggio per classe                                       |
-| `packages/client/public/weapons/kaykit/sword.glb`      | Spada (loader attivo; `sword_D.glb` è il vecchio modello, non usato) |
-| `packages/client/public/weapons/kaykit/bow.glb`        | Arco (loader attivo)                                                 |
-| `packages/client/public/weapons/kaykit/staff.glb`      | Bastone (loader attivo)                                              |
-| `packages/client/public/weapons/kaykit/shield_A.glb`   | Scudo fisico                                                         |
-| `packages/client/public/arena/props/Torch_Metal.gltf`  | Torcia arena                                                         |
-| `packages/client/public/arena/props/barrel_large.gltf` | Barile KayKit                                                        |
-| `packages/client/public/vfx/vfx_*.png`                 | Texture VFX (RGBA bianco-su-trasparente)                             |
-| `packages/client/public/ability-icons/*.png`           | Icone 53 abilita                                                     |
+| Path                                                                  | Contenuto                                                            |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `packages/client/public/ui/ragequit-logo-full.webp`                   | Logo principale                                                      |
+| `packages/client/public/ui/ragequit-logo-small.webp`                  | Logo small                                                           |
+| `packages/client/public/icons-sprite.svg`                             | SVG sprite icone (~45 KB)                                            |
+| `packages/client/public/arena/gladiators_arena.glb`                   | Arena 3D (~171 KB)                                                   |
+| `packages/client/public/characters/UAL1_Standard.glb`                 | Animazioni (NON rimuovere)                                           |
+| `packages/client/public/characters/{paladin,erika,vampire,ninja}.glb` | Modelli runtime delle quattro classi                                 |
+| `packages/client/public/characters/*.gltf`                            | Asset modulari fallback/sorgente                                     |
+| `packages/client/public/weapons/kaykit/sword.glb`                     | Spada (loader attivo; `sword_D.glb` è il vecchio modello, non usato) |
+| `packages/client/public/weapons/kaykit/bow.glb`                       | Arco (loader attivo)                                                 |
+| `packages/client/public/weapons/kaykit/staff.glb`                     | Bastone (loader attivo)                                              |
+| `packages/client/public/weapons/kaykit/shield_A.glb`                  | Scudo fisico                                                         |
+| `packages/client/public/arena/props/Torch_Metal.gltf`                 | Torcia arena                                                         |
+| `packages/client/public/arena/props/barrel_large.gltf`                | Barile KayKit                                                        |
+| `packages/client/public/vfx/vfx_*.png`                                | Texture VFX (RGBA bianco-su-trasparente)                             |
+| `packages/client/public/ability-icons/*.png`                          | Icone 53 abilita                                                     |
 
 **Loader attivo armi**: `packages/client/src/render/character-weapons.ts` carica
 da `public/weapons/kaykit/*.glb`. I file `public/weapons/sword.glb`, `bow.glb`,
@@ -76,22 +78,24 @@ da `public/weapons/kaykit/*.glb`. I file `public/weapons/sword.glb`, `bow.glb`,
 
 ## CI/CD (GitHub Actions)
 
-- Lint + typecheck + test + build su ogni push/PR
-- Gate non passing = warning via email, push tecnicamente ok ma CI fallisce
-- Nessun deploy automatico configurato (deploy manuale via `flyctl`)
+- `pnpm check` + build su ogni push/PR.
+- Push su `main` pubblica automaticamente server su Fly.io e client su
+  Cloudflare Pages.
+- Dopo il deploy server, la CI interroga `/health` con retry e raccoglie stato e
+  log Fly in caso di errore: un server irraggiungibile non può più risultare verde.
 
 ## Comandi deploy
 
 ```bash
 # Deploy server (richiede flyctl installato + login)
-fly deploy
+flyctl deploy
 
 # Verifica stato
-fly status --app ragequit-server
+flyctl status --app ragequit-server
 
 # Log live
-fly logs --app ragequit-server
+flyctl logs --app ragequit-server
 
 # Secrets (già configurati — solo per riferimento)
-fly secrets list --app ragequit-server
+flyctl secrets list --app ragequit-server
 ```

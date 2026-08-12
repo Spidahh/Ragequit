@@ -103,6 +103,12 @@ const gameServer = new Server({
   // auto-registered handler to avoid a double-handler race that exits early.
   gracefullyShutdown: false,
   express: (app) => {
+    // The static client is hosted on Cloudflare Pages, so its lightweight
+    // availability probe needs explicit cross-origin access.
+    app.use((_req, res, next) => {
+      res.setHeader('Access-Control-Allow-Origin', '*')
+      next()
+    })
     app.use(express.json())
     // Health endpoint for the hosting platform and local probes.
     app.get('/health', (_req, res) => {

@@ -96,6 +96,7 @@ import { initMenu } from './menu.js'
 import { joinWithRetry } from './net/join-with-retry.js'
 import { sendLoadout } from './net/loadout-sync.js'
 import { createSchemaReaders } from './net/schema-readers.js'
+import { probeServerAvailability } from './net/server-health.js'
 import { initSupabaseAuth, getAccessToken, getCurrentUserEmail } from './net/supabase-auth.js'
 import {
   showLoadingScreen,
@@ -1209,6 +1210,9 @@ _supabaseAuthReady
   })
   .catch((e: unknown) => console.warn('[supabase] auth init failed:', e))
 setStatus('offline', 'rgba(200,200,200,0.35)')
+void probeServerAvailability(SERVER_URL).then(
+  (online) => !room && setStatus(online ? 'server online' : 'server offline', ''),
+)
 
 // Register all keyboard/mouse/pointer event handlers now that loadoutStation,
 // radialWheels, and menu are fully initialised.

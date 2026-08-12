@@ -32,8 +32,11 @@ assunzioni precedenti come autorita.
 - Armi caricate come `.glb` auto-contenuti da `public/weapons/kaykit/` (sword, bow,
   staff, shield_A). I sorgenti legacy `.gltf`/`.bin`/`.png` sono stati rimossi: solo i
   `.glb` vengono spediti.
-- Personaggi: caricati come `.gltf` + `.bin` da `public/characters/`. NON usare `.glb`
-  per i personaggi: le texture embedded producono file 15-40 MB ciascuno.
+- Personaggi runtime: le quattro classi usano GLB Mixamo ottimizzati da
+  `public/characters/` (`paladin.glb`, `erika.glb`, `vampire.glb`, `ninja.glb`,
+  circa 1.8-2.5 MB ciascuno). `UAL1_Standard.glb` resta la sorgente delle
+  animazioni. I vecchi modelli modulari `.gltf` + `.bin` restano fallback/asset
+  sorgente, non sono il percorso vivo delle classi.
 - Post-processing bloom: Three.js layer 1 = bloom-eligible. Layer 0 = default.
   Non aggiungere mesh al layer 1 a meno che non siano emissive/glowing.
 - LOD remote players: oltre 40m modello nascosto (solo nameplate), oltre 20m shadow off.

@@ -79,6 +79,7 @@ export function getStoneTexture(): THREE.Texture {
   }
 
   const tex = new THREE.CanvasTexture(canvas)
+  tex.name = 'procedural-stone'
   tex.wrapS = THREE.RepeatWrapping
   tex.wrapT = THREE.RepeatWrapping
   tex.colorSpace = THREE.SRGBColorSpace

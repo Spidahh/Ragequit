@@ -48,15 +48,20 @@ export class VfxTextures {
   }
 
   private static load(filename: string): THREE.Texture {
-    const tex = this.loader.load(`/vfx/${filename}`)
+    // colorSpace marks a texture for GPU upload. Set it only after ImageLoader
+    // has supplied pixel data, otherwise every early render frame emits
+    // "Texture marked for update but no image data found".
+    const tex = this.loader.load(`/vfx/${filename}`, (loaded) => {
+      loaded.colorSpace = THREE.NoColorSpace
+      loaded.premultiplyAlpha = false
+    })
+    tex.name = `vfx/${filename}`
     tex.wrapS = THREE.ClampToEdgeWrapping
     tex.wrapT = THREE.ClampToEdgeWrapping
     tex.minFilter = THREE.LinearFilter
     tex.magFilter = THREE.LinearFilter
-    // White-on-transparent RGBA textures -- used as alpha masks, not color data
-    tex.colorSpace = THREE.NoColorSpace
-    tex.premultiplyAlpha = false
-    tex.needsUpdate = true
+    // White-on-transparent RGBA textures -- used as alpha masks, not color data.
+    // Texture defaults already match until the callback above confirms them.
     return tex
   }
 }

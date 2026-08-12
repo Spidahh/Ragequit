@@ -106,6 +106,7 @@ export function makeArenaFloorTexture(): THREE.CanvasTexture {
   ctx.restore()
 
   const tex = new THREE.CanvasTexture(canvas)
+  tex.name = 'procedural-arena-floor'
   tex.colorSpace = THREE.SRGBColorSpace
   tex.anisotropy = 4
   return tex
