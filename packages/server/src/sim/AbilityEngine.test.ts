@@ -3,6 +3,7 @@ import { describe, expect, it, beforeEach } from 'vitest'
 
 import {
   AbilityEngine,
+  insideAoe,
   type EngineHost,
   type ProjectileSpawnRequest,
   type ZoneSpawnRequest,
@@ -809,5 +810,29 @@ describe('AbilityCasted broadcast', () => {
     const cast = r.broadcasts.find((b) => b.type === 'abilityCasted')
     expect(cast).toBeDefined()
     expect((cast!.message as ServerAbilityCastedMessage).abilityId).toBe('whirlwind')
+  })
+})
+
+// Regression: damage AoE used a 3-D sphere while status and knockup used
+// INFINITE vertical cylinders, so one ability resolved three different victim
+// sets — an enemy above the blast could be rooted and launched while taking no
+// damage, and one far overhead was still affected.
+describe('AbilityEngine — one AoE shape for every effect', () => {
+  const victimAt = (x: number, y: number, z: number) => ({ transform: { x, y, z } }) as never
+
+  it('includes anyone inside the disc at blast height', () => {
+    expect(insideAoe(victimAt(2, 0, 0), { x: 0, y: 0, z: 0 }, 3)).toBe(true)
+  })
+
+  it('excludes anyone outside the radius', () => {
+    expect(insideAoe(victimAt(4, 0, 0), { x: 0, y: 0, z: 0 }, 3)).toBe(false)
+  })
+
+  it('still catches a jumping target just above the blast', () => {
+    expect(insideAoe(victimAt(0, 1, 0), { x: 0, y: 0, z: 0 }, 3)).toBe(true)
+  })
+
+  it('no longer reaches a target far overhead (the infinite-cylinder bug)', () => {
+    expect(insideAoe(victimAt(0, 20, 0), { x: 0, y: 0, z: 0 }, 3)).toBe(false)
   })
 })

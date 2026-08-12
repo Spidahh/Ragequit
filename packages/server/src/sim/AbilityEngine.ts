@@ -47,6 +47,7 @@ import {
 
 import type { StatusRuntime } from './StatusRuntime.js'
 import type { CastTarget, EngineHost } from './ability-engine-host.js'
+import { insideAoe } from './aoe-shape.js'
 import { validateCast } from './cast-validation.js'
 import { impactPushDirection } from './combat-geometry.js'
 import { placePointForward, clampPointToRange } from './targeting-geometry.js'
@@ -54,6 +55,8 @@ import { placePointForward, clampPointToRange } from './targeting-geometry.js'
 // --- Host interface --------------------------------------------------------
 // Lives in ./ability-engine-host.ts; re-exported so existing importers of
 // AbilityEngine keep working.
+
+export { insideAoe } from './aoe-shape.js'
 
 export type {
   CastTarget,
@@ -375,11 +378,7 @@ export class AbilityEngine {
       if (!victim.alive) return
       if (vid === sid) return // melee/AoE skips self by default
       if (primaryVictimId && vid === primaryVictimId) return
-      const dx = victim.transform.x - center.x
-      const dz = victim.transform.z - center.z
-      const dy = victim.transform.y + PLAYER_CAPSULE_HEIGHT_M / 2 - center.y
-      const dist = Math.hypot(dx, dz, dy)
-      if (dist > radius) return
+      if (!insideAoe(victim, center, radius)) return
       this.host.pendingDamage.push({
         attackerId: sid,
         victimId: vid,
@@ -418,9 +417,7 @@ export class AbilityEngine {
     this.host.state.players.forEach((victim, vid) => {
       if (!victim.alive || vid === sid) return
       if (!this.canApplyParryableFollowup(def, victim)) return
-      const dx = victim.transform.x - center.x
-      const dz = victim.transform.z - center.z
-      if (Math.hypot(dx, dz) > radius) return
+      if (!insideAoe(victim, center, radius)) return
       this.statuses.applyToPlayer(vid, e.status, dur, e.stacks ?? 1, sid, e.slowFraction)
     })
   }
@@ -454,9 +451,7 @@ export class AbilityEngine {
       if (!victim.alive || vid === sid) return
       if (!this.canApplyParryableFollowup(def, victim)) return
       if (e.requiresGroundedTarget && !victim.onGround) return
-      const dx = victim.transform.x - center.x
-      const dz = victim.transform.z - center.z
-      if (Math.hypot(dx, dz) > radius) return
+      if (!insideAoe(victim, center, radius)) return
       if (
         tickNow < victim.airborneUntilTick + KNOCKUP_IMMUNITY_TICKS &&
         victim.airborneUntilTick > 0
