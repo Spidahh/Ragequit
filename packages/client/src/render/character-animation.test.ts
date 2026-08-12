@@ -1,7 +1,11 @@
 import * as THREE from 'three'
 import { describe, expect, it } from 'vitest'
 
-import { selectCharacterAnimation, type AnimName } from './character-animation.js'
+import {
+  fitOneShotToWindow,
+  selectCharacterAnimation,
+  type AnimName,
+} from './character-animation.js'
 import { mapCharacterClips } from './character-loader.js'
 
 const clips = (...names: string[]) => names.map((name) => new THREE.AnimationClip(name, 1, []))
@@ -95,5 +99,39 @@ describe('character animation decisions', () => {
         casting: true,
       }),
     ).toBe('Staff_Cast')
+  })
+})
+
+// Regression: attack/cast clips run 1.5–2.5 s but the gameplay state driving
+// them is held for only ~220–420 ms, so the crossfade left the clip after
+// 10–25% of its length — the wind-up played and the strike never rendered.
+describe('one-shot clips fit their gameplay window', () => {
+  const action = (durationSec: number) => {
+    const clip = new THREE.AnimationClip('x', durationSec, [])
+    return { timeScale: 1, getClip: () => clip } as unknown as THREE.AnimationAction
+  }
+
+  it('speeds a long swing up so the whole strike lands inside the window', () => {
+    const a = action(2.0) // 2 s clip, 400 ms window
+    fitOneShotToWindow(a, 'Dagger_Attack')
+    expect(a.timeScale).toBeCloseTo(5)
+  })
+
+  it('never slows a clip that is already shorter than its window', () => {
+    const a = action(0.2)
+    fitOneShotToWindow(a, 'Dagger_Attack')
+    expect(a.timeScale).toBe(1)
+  })
+
+  it('caps the speed-up so the motion never becomes a blur', () => {
+    const a = action(10)
+    fitOneShotToWindow(a, 'Bow_Release')
+    expect(a.timeScale).toBe(6)
+  })
+
+  it('leaves states with no declared window at normal speed', () => {
+    const a = action(2.0)
+    fitOneShotToWindow(a, 'Death')
+    expect(a.timeScale).toBe(1)
   })
 })

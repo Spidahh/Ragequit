@@ -118,6 +118,43 @@ const _ONE_SHOTS = new Set<AnimName>([
   'Roll',
 ])
 
+/**
+ * How long the GAMEPLAY state behind each one-shot actually lasts.
+ *
+ * The Mixamo attack/cast clips run 1.5–2.5 s, but the state driving them is
+ * held for only ~220–420 ms (the swing arc / ranged-release window), so the
+ * crossfade left the clip after 10–25% of its length: the wind-up played and
+ * the strike itself never rendered. Rather than stretching the gameplay
+ * window — which would make the game feel sluggish — the clip is sped up to
+ * fit it, so the whole motion reads inside the window it belongs to.
+ */
+const _ONE_SHOT_WINDOW_MS: Partial<Record<AnimName, number>> = {
+  Dagger_Attack: 400,
+  Dagger_Attack2: 400,
+  Punch: 400,
+  Bow_Release: 260,
+  Staff_Cast: 420,
+  RecieveHit: 260,
+  RecieveHit_Attacking: 260,
+  Roll: 420,
+  Land: 260,
+}
+
+/** Never slow a clip down, and never blur it past this speed. */
+const _MAX_ONE_SHOT_SPEED = 6
+
+/** Exported for tests. */
+export function fitOneShotToWindow(action: THREE.AnimationAction, name: AnimName): void {
+  const windowMs = _ONE_SHOT_WINDOW_MS[name]
+  const durationSec = action.getClip().duration
+  if (!windowMs || durationSec <= 0) {
+    action.timeScale = 1
+    return
+  }
+  const speed = (durationSec * 1000) / windowMs
+  action.timeScale = Math.min(_MAX_ONE_SHOT_SPEED, Math.max(1, speed))
+}
+
 function _crossfade(store: MixerStore, next: AnimName, fadeSec: number): void {
   if (store.current === next) {
     // Re-trigger: consecutive IDENTICAL one-shot requests (bow shot → bow shot,
@@ -126,6 +163,7 @@ function _crossfade(store: MixerStore, next: AnimName, fadeSec: number): void {
     const cur = store.actions[next]
     if (cur && _ONE_SHOTS.has(next) && next !== 'Death' && !cur.isRunning()) {
       cur.reset()
+      fitOneShotToWindow(cur, next)
       cur.play()
     }
     return
@@ -139,9 +177,11 @@ function _crossfade(store: MixerStore, next: AnimName, fadeSec: number): void {
   if (isOneShot) {
     to.setLoop(THREE.LoopOnce, 1)
     to.clampWhenFinished = true
+    fitOneShotToWindow(to, next)
   } else {
     to.setLoop(THREE.LoopRepeat, Infinity)
     to.clampWhenFinished = false
+    to.timeScale = 1
   }
   to.play()
   if (from) from.crossFadeTo(to, fadeSec, true)
@@ -256,7 +296,9 @@ export function tickCharacterMixer(charGroup: THREE.Group, deltaS: number): void
     const cur = store.current
     if (cur === 'Dagger_Attack' || cur === 'Dagger_Attack2') {
       const action = store.actions[cur]
-      if (action) action.timeScale = 1
+      // Restore the window-fitted speed, not a flat 1 — resetting to 1 would
+      // drop the swing back to its original 2 s length mid-strike.
+      if (action) fitOneShotToWindow(action, cur)
     }
   }
 

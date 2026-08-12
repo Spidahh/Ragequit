@@ -16,17 +16,12 @@
 import {
   ABILITY_DEFS,
   GCD_SEC,
-  HP_MAX,
   KNOCKUP_IMMUNITY_AFTER_LAND_SEC,
-  MANA_MAX,
   MessageTypes,
   PLAYER_CAPSULE_HEIGHT_M,
-  STAMINA_MAX,
   TICK_RATE_HZ,
   directionFromYawPitch,
   isElementId,
-  ClassId,
-  TARGET_CLASS_DEFS,
   type AbilityDef,
   type ChannelEffect,
   type DamageEffect,
@@ -50,6 +45,7 @@ import type { CastTarget, EngineHost } from './ability-engine-host.js'
 import { insideAoe } from './aoe-shape.js'
 import { validateCast } from './cast-validation.js'
 import { impactPushDirection } from './combat-geometry.js'
+import { getPlayerMaxima } from './player-maxima.js'
 import { placePointForward, clampPointToRange } from './targeting-geometry.js'
 
 // --- Host interface --------------------------------------------------------
@@ -76,17 +72,6 @@ interface PendingCast {
 
 const GCD_TICKS = Math.round(GCD_SEC * TICK_RATE_HZ)
 const KNOCKUP_IMMUNITY_TICKS = Math.round(KNOCKUP_IMMUNITY_AFTER_LAND_SEC * TICK_RATE_HZ)
-
-function getPlayerMaxima(player: Player): { hp: number; mana: number; stamina: number } {
-  const classId = (player.classId || 'hybrid') as ClassId
-  return (
-    TARGET_CLASS_DEFS[classId]?.resourceMaxima ?? {
-      hp: HP_MAX,
-      mana: MANA_MAX,
-      stamina: STAMINA_MAX,
-    }
-  )
-}
 
 export class AbilityEngine {
   private readonly windups: PendingCast[] = []
@@ -356,9 +341,14 @@ export class AbilityEngine {
     let totalDealt = 0
     if (radius === 0) {
       const victimId = this.resolveSingleTarget(sid, caster, target, def)
-      if (!victimId) return 0
-      const victim = this.host.state.players.get(victimId)
-      if (!victim?.alive) return 0
+      const victim = victimId ? this.host.state.players.get(victimId) : undefined
+      // A whiff used to be silent — cost and CD spent, a successful cast
+      // broadcast — so a miss was indistinguishable from a bug. Cost still
+      // stands (missing should cost); this only reports it.
+      if (!victimId || !victim?.alive) {
+        this.host.sendAbilityFailed(sid, def.id, 'no_target')
+        return 0
+      }
       this.host.pendingDamage.push({
         attackerId: sid,
         victimId,

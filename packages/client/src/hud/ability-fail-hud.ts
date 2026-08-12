@@ -87,6 +87,8 @@ export function initAbilityFailHud({
         return 'Abilità sconosciuta'
       case 'swapping':
         return 'cambio arma in corso'
+      case 'no_target':
+        return `${abilityName}: a vuoto`
     }
   }
 

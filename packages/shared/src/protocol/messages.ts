@@ -160,6 +160,10 @@ export interface ServerAbilityFailedMessage {
     | 'unknown_ability'
     | 'not_in_loadout'
     | 'swapping'
+    // The cast was legal and resolved, but hit nothing. Cost and cooldown are
+    // still spent (a missed skillshot should cost) — this exists so the player
+    // is TOLD they whiffed instead of watching an ability silently do nothing.
+    | 'no_target'
 }
 
 // Status apply / expire / DoT damage tick events for HUD.
