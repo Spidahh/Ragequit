@@ -16,17 +16,22 @@ Questo documento raccoglie lo stato reale del deployment. Aggiornarlo ogni volta
 
 ## Server (Fly.io)
 
-| Campo    | Valore                                              |
-| -------- | --------------------------------------------------- |
-| App name | `ragequit-server`                                   |
-| Region   | `ams` (Amsterdam)                                   |
-| Porta    | 8080                                                |
-| Runtime  | Node.js 22 (WebSocket nativo richiesto da Supabase) |
-| Stato    | **DEPLOYING — fix avvio Node 22 (2026-08-12)**      |
-| Config   | `fly.toml` nella root del repo                      |
-| Scale    | scale-to-zero abilitato                             |
+| Campo    | Valore                                               |
+| -------- | ---------------------------------------------------- |
+| App name | `ragequit-server`                                    |
+| Region   | `ams` (Amsterdam)                                    |
+| Porta    | 8080                                                 |
+| Runtime  | Node.js 22 (WebSocket nativo richiesto da Supabase)  |
+| Stato    | **LIVE — health e Training verificati (2026-08-12)** |
+| Config   | `fly.toml` nella root del repo                       |
+| Scale    | scale-to-zero abilitato                              |
 
 Il server si connette su WebSocket. Il monitor Colyseus è disabilitato di default; quando abilitato richiede Basic Auth (env `COLYSEUS_MONITOR_ENABLED`, `COLYSEUS_MONITOR_USER`, `COLYSEUS_MONITOR_PASSWORD`).
+
+Il probe pubblico `https://ragequit-server.fly.dev/health` risponde `ok`. La
+Stanza Test è stata verificata dal client Cloudflare fino all'ingresso nella
+room Colyseus. Il runtime resta Node.js 22: Node 20 non fornisce il WebSocket
+nativo richiesto dalle versioni correnti di Supabase.
 
 ## Supabase
 
