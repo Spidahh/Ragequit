@@ -370,6 +370,18 @@ export function mapCharacterClips(
       find(/slash|high_spin|attack_2|attack_02/) ??
       attack,
   )
+  // Third swing variant, from clips the packs already ship and never played:
+  // paladin has attack_2/3/4 and slash_2, ninja has slash/slash_2, the mage has
+  // a two-handed cast. Only two attack clips were ever mapped.
+  set(
+    'Dagger_Attack3',
+    exact(
+      'sword_and_shield_attack_2',
+      'great_sword_slash',
+      'standing_2h_magic_attack_01',
+      'sword_and_shield_slash_2',
+    ) ?? find(/attack_2$|attack_3$|slash_2$/),
+  )
   set('Death', find(/death/))
   set('Jump', find(/(^|_)jump(_|$)|standing_jump/))
   set('Land', find(/land/))

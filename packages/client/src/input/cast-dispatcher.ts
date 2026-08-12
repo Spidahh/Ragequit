@@ -28,7 +28,7 @@ export interface CastDispatcherOptions {
   isDirectCast: (id: string) => boolean
   hidePlacementVisual: () => void
   sendCast: (abilityId: string, tick: number) => void
-  showShootFlash: () => void
+  showShootFlash: (style?: { color?: string; tier?: 'light' | 'normal' | 'heavy' }) => void
   showAbilityReadout?: (abilityId: string, mode: 'primed' | 'placement') => void
   hideAbilityReadout?: () => void
   /** Called immediately when a sword swing is sent — used to trigger
@@ -166,7 +166,7 @@ export function initCastDispatcher({
         room.send(MessageTypes.ChargeRelease, msg)
         bowCharge.bowChargeStartMs = 0
         bowCharge.bowChargeServerAcked = false
-        showShootFlash()
+        showShootFlash({ color: '#39ff14', tier: 'heavy' }) // a full draw is a committed shot
         onWeaponFired?.('bow')
       }
     }
@@ -184,7 +184,7 @@ export function initCastDispatcher({
           // Without this, the swing arc waits for schema echo (~16 ms) and the
           // attack animation starts late, making the weapon look slower than the hit.
           onSwingSent?.()
-          showShootFlash()
+          showShootFlash({ color: '#ff3344', tier: 'light' }) // M1 swing: frequent, so keep it subtle
         }
       } else if (activeWeapon === 'staff') {
         const now = performance.now()
@@ -197,7 +197,7 @@ export function initCastDispatcher({
           }
           room.send(MessageTypes.FireStaff, msg)
           lastStaffFireMs = now
-          showShootFlash()
+          showShootFlash({ color: '#00d0ff', tier: 'light' }) // staff M1 fires fast
           onWeaponFired?.('staff')
         }
       }

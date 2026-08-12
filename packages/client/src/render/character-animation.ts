@@ -19,6 +19,7 @@ export type AnimName =
   | 'Walk'
   | 'Dagger_Attack'
   | 'Dagger_Attack2'
+  | 'Dagger_Attack3'
   | 'Death'
   | 'Punch'
   | 'RecieveHit'
@@ -44,6 +45,7 @@ export const ANIM_NAMES: AnimName[] = [
   'Walk',
   'Dagger_Attack',
   'Dagger_Attack2',
+  'Dagger_Attack3',
   'Death',
   'Punch',
   'RecieveHit',
@@ -71,6 +73,7 @@ export const ANIM_NAME_MAP: Record<AnimName, string> = {
   Walk: 'Walk_Loop',
   Dagger_Attack: 'Sword_Attack',
   Dagger_Attack2: 'Sword_Attack',
+  Dagger_Attack3: 'Sword_Attack',
   Death: 'Death01',
   Punch: 'Punch_Cross',
   RecieveHit: 'Hit_Chest',
@@ -106,6 +109,7 @@ export interface MixerStore {
 const _ONE_SHOTS = new Set<AnimName>([
   'Dagger_Attack',
   'Dagger_Attack2',
+  'Dagger_Attack3',
   'Death',
   'Punch',
   'Jump',
@@ -131,6 +135,7 @@ const _ONE_SHOTS = new Set<AnimName>([
 const _ONE_SHOT_WINDOW_MS: Partial<Record<AnimName, number>> = {
   Dagger_Attack: 400,
   Dagger_Attack2: 400,
+  Dagger_Attack3: 400,
   Punch: 400,
   Bow_Release: 260,
   Staff_Cast: 420,
@@ -230,12 +235,15 @@ export function selectCharacterAnimation(
   if (state.attacking) {
     if (weapon === 'bow') return first(['Bow_Release', 'Dagger_Attack', 'Punch'])
     if (weapon === 'staff') return first(['Staff_Cast', 'Punch', 'Dagger_Attack'])
-    return first([
-      state.attackVariant && state.attackVariant % 2 === 1 ? 'Dagger_Attack2' : 'Dagger_Attack',
-      'Dagger_Attack',
-      'Punch',
-      'Attacking_Idle',
-    ])
+    // Cycle the swing through every variant the pack actually shipped, so a
+    // 3-hit combo does not replay the same two frames. The Mixamo packs carry
+    // 4-6 attack clips each; only two were ever played.
+    const variants: AnimName[] = (
+      ['Dagger_Attack', 'Dagger_Attack2', 'Dagger_Attack3'] as AnimName[]
+    ).filter((n) => available.has(n))
+    const pick =
+      variants.length > 0 ? variants[(state.attackVariant ?? 0) % variants.length]! : null
+    return first([...(pick ? [pick] : []), 'Dagger_Attack', 'Punch', 'Attacking_Idle'])
   }
 
   if (state.moving) {

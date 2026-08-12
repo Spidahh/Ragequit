@@ -77,7 +77,7 @@ import { initCooldownStrip, ELEMENT_COLOR } from './hud/cd-strip.js'
 import { createCombatFeedHud } from './hud/combat-feed.js'
 import { initCombatOverlayHud } from './hud/combat-overlay-hud.js'
 import { createStatusSetter } from './hud/connection-status.js'
-import { createHudFlash } from './hud/flash.js'
+import { createHudFlash, shootFlashStyleFor } from './hud/flash.js'
 import { initHitFeedback } from './hud/hit-feedback.js'
 import { initDraggableHud } from './hud/hud-drag.js'
 import { initSelfHud } from './hud/self-hud.js'
@@ -1997,9 +1997,9 @@ function sendAbilityCast(abilityId: string, tick: number): void {
         } else {
           cooldownStrip.markPending(id)
           abilityReadout.show(id, 'request')
-          showShootFlash()
-          // On the INPUT frame, not the server echo — the sound used to
-          // arrive a full round-trip after the keypress that caused it.
+          // Both on the INPUT frame, not the server echo: the flash now says
+          // WHAT fired, and the sound no longer trails the keypress by an RTT.
+          showShootFlash(shootFlashStyleFor(ABILITY_DEFS[id], ELEMENT_COLOR))
           soundEngine.playCast(ABILITY_DEFS[id]?.element ?? 'none')
         }
         lastCastTargetPoint = targetPoint

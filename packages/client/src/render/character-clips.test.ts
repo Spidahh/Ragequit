@@ -107,3 +107,18 @@ describe('shipped character clip mapping', () => {
     ).toBeLessThanOrEqual(WORST_CASE_SHARED_STATES[cls])
   })
 })
+
+// The Mixamo packs ship 4-6 attack clips each, but only two were ever mapped,
+// so a 3-hit combo replayed the same two swings.
+describe('melee combo variety', () => {
+  it.each(['paladin', 'ninja'] as const)('%s swings three distinct clips', (cls) => {
+    const { stateSource } = resolveStates(cls)
+    const swings = [
+      stateSource.Dagger_Attack,
+      stateSource.Dagger_Attack2,
+      stateSource.Dagger_Attack3,
+    ]
+    expect(swings.every(Boolean), `${cls} swings: ${swings.join(', ')}`).toBe(true)
+    expect(new Set(swings).size, `${cls} swings: ${swings.join(', ')}`).toBe(3)
+  })
+})

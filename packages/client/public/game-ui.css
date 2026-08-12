@@ -4183,12 +4183,24 @@ button.locked {
 
 /* ── Shoot flash (brief centre glow on firing) ──────────────────── */
 /* Uses remove→reflow→add pattern: animation-based */
+/* Element-tinted and weight-scaled by showShootFlash(); the vars are set on the
+   element right before the animation replays. Defaults keep the old look for
+   any caller that passes nothing. */
 #shoot-flash {
   position: fixed;
   inset: 0;
   z-index: 570;
   opacity: 0;
-  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.18) 0%, transparent 60%);
+  background: radial-gradient(
+    circle at 50% 50%,
+    color-mix(
+        in srgb,
+        var(--flash-color, #ffffff) calc(var(--flash-alpha, 0.18) * 100%),
+        transparent
+      )
+      0%,
+    transparent var(--flash-reach, 60%)
+  );
 }
 
 #shoot-flash.fire {
