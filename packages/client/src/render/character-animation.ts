@@ -12,6 +12,9 @@ import * as THREE from 'three'
 export type AnimName =
   | 'Idle'
   | 'Attacking_Idle'
+  | 'Sword_Idle'
+  | 'Bow_Idle'
+  | 'Staff_Idle'
   | 'Run'
   | 'Walk'
   | 'Dagger_Attack'
@@ -34,6 +37,9 @@ export type AnimName =
 export const ANIM_NAMES: AnimName[] = [
   'Idle',
   'Attacking_Idle',
+  'Sword_Idle',
+  'Bow_Idle',
+  'Staff_Idle',
   'Run',
   'Walk',
   'Dagger_Attack',
@@ -58,6 +64,9 @@ export const ANIM_NAMES: AnimName[] = [
 export const ANIM_NAME_MAP: Record<AnimName, string> = {
   Idle: 'Idle_Loop',
   Attacking_Idle: 'Idle_Loop',
+  Sword_Idle: 'Sword_Idle',
+  Bow_Idle: 'Spell_Simple_Idle_Loop',
+  Staff_Idle: 'Spell_Simple_Idle_Loop',
   Run: 'Sprint_Loop',
   Walk: 'Walk_Loop',
   Dagger_Attack: 'Sword_Attack',
@@ -142,40 +151,46 @@ function _firstAvailable(store: MixerStore, names: AnimName[]): AnimName {
   return names.find((name) => !!store.actions[name]) ?? 'Attacking_Idle'
 }
 
-function _chooseAnimState(store: MixerStore, state: CharAnimState): AnimName {
+/** Pure animation decision used by the runtime and semantic mapping tests. */
+export function selectCharacterAnimation(
+  available: ReadonlySet<AnimName>,
+  state: CharAnimState,
+): AnimName {
+  const first = (names: AnimName[]): AnimName =>
+    names.find((name) => available.has(name)) ?? 'Attacking_Idle'
   const weapon = state.activeWeapon ?? 'sword'
 
-  if (!state.alive) return _firstAvailable(store, ['Death', 'RecieveHit', 'Attacking_Idle'])
-  if (state.respawning) return _firstAvailable(store, ['Respawn', 'Attacking_Idle', 'Idle'])
-  if (state.landing) return _firstAvailable(store, ['Land', 'Attacking_Idle', 'Idle'])
+  if (!state.alive) return first(['Death', 'RecieveHit', 'Attacking_Idle'])
+  if (state.respawning) return first(['Respawn', 'Attacking_Idle', 'Idle'])
+  if (state.landing) return first(['Land', 'Attacking_Idle', 'Idle'])
 
   if (state.hitReact) {
-    return _firstAvailable(store, [
+    return first([
       state.attacking || state.casting ? 'RecieveHit_Attacking' : 'RecieveHit',
       'RecieveHit',
       'Attacking_Idle',
     ])
   }
 
-  if (state.airborne) return _firstAvailable(store, ['Airborne', 'Jump', 'Attacking_Idle'])
-  if (state.jumping) return _firstAvailable(store, ['Jump', 'Airborne', 'Attacking_Idle'])
-  if (state.rolling) return _firstAvailable(store, ['Roll', 'Run', 'Attacking_Idle'])
+  if (state.airborne) return first(['Airborne', 'Jump', 'Attacking_Idle'])
+  if (state.jumping) return first(['Jump', 'Airborne', 'Attacking_Idle'])
+  if (state.rolling) return first(['Roll', 'Run', 'Attacking_Idle'])
 
-  if (state.casting && weapon === 'staff') {
-    if (state.channeling)
-      return _firstAvailable(store, ['Channel', 'Staff_Cast', 'Punch', 'Attacking_Idle'])
-    return _firstAvailable(store, ['Staff_Cast', 'Channel', 'Punch', 'Attacking_Idle'])
+  if (state.casting) {
+    if (state.channeling) return first(['Channel', 'Staff_Cast', 'Punch', 'Attacking_Idle'])
+    return first(['Staff_Cast', 'Channel', 'Punch', 'Attacking_Idle'])
   }
 
-  if (state.bowCharging) return _firstAvailable(store, ['Bow_Draw', 'Attacking_Idle', 'Idle'])
+  if (state.bowCharging) return first(['Bow_Draw', 'Bow_Idle', 'Attacking_Idle', 'Idle'])
 
   // Parrying takes priority over attacking — a player who parries while the swing
   // arc is still visible must show Parry_Block, not the attack animation.
-  if (state.parrying) return _firstAvailable(store, ['Parry_Block', 'Attacking_Idle', 'Idle'])
+  if (state.parrying) return first(['Parry_Block', 'Sword_Idle', 'Attacking_Idle', 'Idle'])
 
   if (state.attacking) {
-    if (weapon === 'bow') return _firstAvailable(store, ['Bow_Release', 'Dagger_Attack', 'Punch'])
-    return _firstAvailable(store, [
+    if (weapon === 'bow') return first(['Bow_Release', 'Dagger_Attack', 'Punch'])
+    if (weapon === 'staff') return first(['Staff_Cast', 'Punch', 'Dagger_Attack'])
+    return first([
       state.attackVariant && state.attackVariant % 2 === 1 ? 'Dagger_Attack2' : 'Dagger_Attack',
       'Dagger_Attack',
       'Punch',
@@ -186,11 +201,20 @@ function _chooseAnimState(store: MixerStore, state: CharAnimState): AnimName {
   if (state.moving) {
     const isWalking = state.speed !== undefined && state.speed < 3.0
     return isWalking
-      ? _firstAvailable(store, ['Walk', 'Run', 'Attacking_Idle'])
-      : _firstAvailable(store, ['Run', 'Walk', 'Attacking_Idle'])
+      ? first(['Walk', 'Run', 'Attacking_Idle'])
+      : first(['Run', 'Walk', 'Attacking_Idle'])
   }
 
-  return _firstAvailable(store, ['Attacking_Idle', 'Idle', 'Run'])
+  const weaponIdle: AnimName =
+    weapon === 'bow' ? 'Bow_Idle' : weapon === 'staff' ? 'Staff_Idle' : 'Sword_Idle'
+  return first([weaponIdle, 'Attacking_Idle', 'Idle', 'Run'])
+}
+
+function _chooseAnimState(store: MixerStore, state: CharAnimState): AnimName {
+  const available = new Set(
+    ANIM_NAMES.filter((name) => !!store.actions[name]),
+  ) as ReadonlySet<AnimName>
+  return selectCharacterAnimation(available, state)
 }
 
 // ---------------------------------------------------------------------------

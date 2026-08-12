@@ -3,6 +3,7 @@ import type { ClassId } from '@ragequit/shared'
 
 import { abilityIconMarkup } from '../icons.js'
 import { actionCode, codeToLabel, onKeybindsChanged, SLOT_ACTIONS } from '../input/keybinds.js'
+import { abilityReadability } from '../loadout/ability-format.js'
 
 export const ELEMENT_COLOR: Record<string, string> = {
   fire: '#ff6a2a',
@@ -115,8 +116,9 @@ export function initCooldownStrip(
       if (hasMana) costParts.push(`${def!.costMana}mp`)
       if (hasStamina) costParts.push(`${def!.costStamina}sp`)
       const costStr = costParts.length > 0 ? `  · ${costParts.join(' ')}` : ''
+      const readable = def ? abilityReadability(def) : null
       const tooltip = def
-        ? `${def.name}\nCD ${def.cooldownSec}s${costStr}\n${def.miniMalus ?? ''}`
+        ? `${def.name}\nCD ${def.cooldownSec}s${costStr}\n${readable?.shapeLabel ?? ''} · ${readable?.outcome ?? ''}`
         : id
 
       const elemLabel =
@@ -125,7 +127,6 @@ export function initCooldownStrip(
           : (def?.slot.toUpperCase() ?? '')
       const cdLabel = def ? `${def.cooldownSec}s CD` : ''
       const costLabel = costParts.length > 0 ? costParts.join(' · ') : 'free'
-      const malusHtml = def?.miniMalus ? `<div class="tt-malus">${def.miniMalus}</div>` : ''
 
       const pip = document.createElement('div')
       pip.className = `cd-pip ready ${meta.pipClass}`
@@ -148,8 +149,8 @@ export function initCooldownStrip(
         <div class="ability-tooltip">
           <div class="tt-name">${icon} <span>${def?.name ?? id}</span></div>
           <div class="tt-el">${elemLabel}${cdLabel ? ' · ' + cdLabel : ''}</div>
+          ${readable ? `<div class="tt-shape">${readable.shapeLabel} · ${readable.instruction}</div><div class="tt-effect">${readable.outcome}</div>` : ''}
           <div class="tt-cost">${costLabel}</div>
-          ${malusHtml}
         </div>
       `
       pip.addEventListener('click', (e) => {

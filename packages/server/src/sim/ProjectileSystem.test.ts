@@ -141,13 +141,14 @@ describe('ProjectileSystem — spawn', () => {
     const sys = new ProjectileSystem(host)
 
     const speed = 30
-    sys.spawn(levelShotParams(0, 0, speed, 7, 60))
+    sys.spawn({ ...levelShotParams(0, 0, speed, 7, 60), abilityId: 'marksman_shot' })
 
     const spawned = rec.broadcasts.find((b) => b.type === MessageTypes.ProjectileSpawned)
     expect(spawned).toBeDefined()
     const msg = spawned!.message as ServerProjectileSpawnedMessage
     expect(msg.id).toBe('p1')
     expect(msg.ownerId).toBe('A')
+    expect(msg.abilityId).toBe('marksman_shot')
     expect(msg.atTick).toBe(7)
     expect(msg.velocity.z).toBeCloseTo(-speed, 6)
     expect(msg.origin.y).toBeCloseTo(5, 6)

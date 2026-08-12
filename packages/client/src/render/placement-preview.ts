@@ -17,6 +17,15 @@ export interface PlacementPreviewController {
   aimPoint: (abilityId: string) => { x: number; y: number; z: number } | undefined
 }
 
+function elementColor(element: string): number {
+  if (element === 'fire') return 0xff5511
+  if (element === 'ice') return 0x00d0ff
+  if (element === 'lightning') return 0xffe600
+  if (element === 'dark') return 0x9922ff
+  if (element === 'nature') return 0x39ff14
+  return 0xffd260
+}
+
 function placementFootprint(abilityId: string): {
   radius: number
   width: number
@@ -85,6 +94,21 @@ export function initPlacementPreview({
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.96, 1, 64), ringMat)
   ring.rotation.x = -Math.PI / 2
   group.add(ring)
+
+  const reticleGeom = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-0.72, 0, 0),
+    new THREE.Vector3(0.72, 0, 0),
+    new THREE.Vector3(0, 0, -0.72),
+    new THREE.Vector3(0, 0, 0.72),
+  ])
+  const reticleMat = new THREE.LineBasicMaterial({
+    color: 0xffd260,
+    transparent: true,
+    opacity: 0.7,
+  })
+  const reticle = new THREE.LineSegments(reticleGeom, reticleMat)
+  reticle.position.y = 0.012
+  group.add(reticle)
 
   const wall = new THREE.Mesh(
     new THREE.PlaneGeometry(1, 1),
@@ -179,6 +203,7 @@ export function initPlacementPreview({
       return
     }
     const footprint = placementFootprint(placementAbilityId)
+    const color = elementColor(def.element)
     const pulse = 0.5 + 0.5 * Math.sin(now * 0.008)
     group.visible = true
     group.position.set(point.x, point.y + 0.035, point.z)
@@ -186,12 +211,18 @@ export function initPlacementPreview({
     disc.visible = !footprint.wall
     ring.visible = !footprint.wall
     wall.visible = footprint.wall
+    reticle.visible = !footprint.wall
+    discMat.color.setHex(color)
+    ringMat.color.setHex(color)
+    reticleMat.color.setHex(color)
+    ;(wall.material as THREE.MeshBasicMaterial).color.setHex(color)
     if (footprint.wall) {
       wall.scale.set(footprint.width, footprint.depth, 1)
       ;(wall.material as THREE.MeshBasicMaterial).opacity = 0.32 + pulse * 0.14
     } else {
       disc.scale.setScalar(footprint.radius)
       ring.scale.setScalar(footprint.radius)
+      reticle.scale.setScalar(footprint.radius)
       discMat.opacity = 0.18 + pulse * 0.1
       ringMat.opacity = 0.72 + pulse * 0.22
     }

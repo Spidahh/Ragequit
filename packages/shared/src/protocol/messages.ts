@@ -236,6 +236,8 @@ export interface ServerNoteMessage {
 export interface ServerProjectileSpawnedMessage {
   id: string
   ownerId: string
+  /** Ability identity lets clients render mechanic-specific silhouettes, not just an element tint. */
+  abilityId?: string
   kind: 'arrow' | 'bolt'
   atTick: number
   origin: { x: number; y: number; z: number }

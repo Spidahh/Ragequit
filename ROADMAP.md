@@ -1,6 +1,6 @@
 # RAGEQUIT — Stato Corrente
 
-Ultimo riallineamento: 2026-06-01.
+Ultimo riallineamento: 2026-08-12.
 
 Questo file descrive solo lo stato vivo del progetto.
 
@@ -59,6 +59,17 @@ Questo file descrive solo lo stato vivo del progetto.
 - Zone VFX e cast ring su layer bloom.
 - ASSET_GRAFICA esplorata: particelle Kenney, props Fantasy MegaKit, KayKit Dungeon.
 
+### Revisione leggibilita e game feel (2026-08-12)
+
+- Il precedente pass visivo e stato rifiutato: la sola presenza di HUD, animazioni e VFX non e una prova di qualita.
+- Animazioni delle quattro classi mappate per ruolo semantico sui nomi reali delle clip; rimosso il fallback per indice che poteva usare atterraggio come idle e mira come corsa.
+- Idle specifici per spada, arco e staff; cast visibile anche quando l'arma attiva non e lo staff.
+- Evento `projectileSpawned` arricchito con `abilityId`: proiettili con sagome distinte per sfera, scheggia, lancia, drenaggio, spina e freccia pesante.
+- Zone persistenti con firme distinte per volley, trappola, ghiaccio, tempesta, rovi, fumo e totem; il bordo continua a rappresentare la hitbox reale.
+- Loadout Forge mechanic-first: tutti gli 8 slot visibili senza scroll a 1280x720, tasto diretto 1-8, percorso wheel, diagramma della forma, istruzione di mira e risultato numerico.
+- HUD compatto e readout temporaneo vicino al mirino con nome, forma e risultato dell'abilita attivata.
+- Preview delle abilita a punto colorata per elemento, con raggio/muro e reticolo della zona colpita.
+
 ## Verifica Minima
 
 ```text
@@ -71,6 +82,5 @@ pnpm lint
 ## Prossimi Passi
 
 - Split di main.ts (~3400 righe) in moduli separati.
-- Mappatura 104 sprite icone da ASSET_GRAFICA agli ability_id esistenti.
 - Valutazione Rapier.js per fisica slope-aware.
-- Bloom calibration dopo test visivi.
+- Continuare il collaudo visivo delle animazioni su tutte le classi e delle 53 abilita in arena; nessun sistema e considerato visualmente approvato solo perche i test automatici passano.

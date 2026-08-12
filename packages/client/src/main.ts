@@ -75,6 +75,7 @@ import {
   applyDirectionalShake as _applyDirectionalShake,
 } from './game/visual-helpers.js'
 import { initAbilityFailHud } from './hud/ability-fail-hud.js'
+import { initAbilityReadout } from './hud/ability-readout.js'
 import { initCooldownStrip, ELEMENT_COLOR } from './hud/cd-strip.js'
 import { createCombatFeedHud } from './hud/combat-feed.js'
 import { initCombatOverlayHud } from './hud/combat-overlay-hud.js'
@@ -169,6 +170,7 @@ const dbgSeq = document.getElementById('dbg-seq')!
 const dbgDraws = document.getElementById('dbg-draws')!
 const hint = document.getElementById('hint')!
 const crosshairEl = document.getElementById('crosshair')!
+const abilityReadoutEl = document.getElementById('ability-readout')!
 const killFeed = document.getElementById('kill-feed')!
 const streakDisplay = document.getElementById('streak-display')!
 const streakCountEl = document.getElementById('streak-count')!
@@ -274,7 +276,7 @@ const combatFeedHud = createCombatFeedHud({
   streakCount: streakCountEl,
   streakDisplay,
 })
-
+const abilityReadout = initAbilityReadout(abilityReadoutEl)
 // -----------------------------------------------------------------------
 // Radial wheels — Q for utility loadout slots, E for combat abilities.
 // -----------------------------------------------------------------------
@@ -298,8 +300,7 @@ const mouseSensitivity = initMouseSensitivity()
 const PITCH_UP_LIMIT = Math.PI * 0.415 //  +75° — max look-up angle
 const PITCH_DOWN_LIMIT = -Math.PI * 0.36 //  -65° — max look-down angle
 
-// Cast / fire / weapon input dispatcher — owns primedSlotIdx, abilityCastQueue,
-// placementAbilityId, lastStaffFireMs and dispatches combat actions each sim tick.
+// Cast/fire/weapon dispatcher owns queues, placement and cadence.
 const castDispatcher = initCastDispatcher({
   getLoadout: currentLoadoutArray,
   isDirectCast: (id) => loadoutStation.isDirectCast(id),
@@ -308,12 +309,10 @@ const castDispatcher = initCastDispatcher({
   },
   sendCast: (id, tick) => sendAbilityCast(id, tick),
   showShootFlash,
-  // Immediately show the swing arc + start attack animation on the local character
-  // without waiting for the server schema echo (~16 ms). Makes the weapon
-  // animation feel perfectly in sync with the click.
+  showAbilityReadout: (id, mode) => abilityReadout.show(id, mode),
+  // Show swing feedback immediately instead of waiting for the schema echo.
   onSwingSent: () => {
-    // Audible whoosh on every swing so the attack reads instantly (the hit
-    // sound only plays on contact — without this a missed/short swing was silent).
+    // Missed swings still need an audible whoosh.
     soundEngine.playSwing()
     if (selfArc) {
       selfArc.visible = true
@@ -2070,6 +2069,7 @@ function sendAbilityCast(abilityId: string, tick: number): void {
   }
   room.send(MessageTypes.Cast, msg)
   cooldownStrip.markPending(abilityId)
+  abilityReadout.show(abilityId, 'cast')
   showShootFlash()
   // Remember the target for resolution VFX (shown when windup completes).
   lastCastTargetPoint = msg.targetPoint ?? null

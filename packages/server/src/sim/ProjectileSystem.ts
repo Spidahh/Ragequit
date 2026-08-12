@@ -162,6 +162,7 @@ export class ProjectileSystem {
     const spawnedMsg: ServerProjectileSpawnedMessage = {
       id: pid,
       ownerId: params.ownerId,
+      abilityId: params.abilityId,
       kind: params.kind,
       atTick: params.spawnedAtTick,
       origin: { ...params.origin },
@@ -234,6 +235,7 @@ export class ProjectileSystem {
     const spawnedMsg: ServerProjectileSpawnedMessage = {
       id: pid,
       ownerId: req.ownerId,
+      abilityId: req.abilityId,
       kind: req.kind,
       atTick: req.spawnedAtTick,
       origin: { ...req.origin },

@@ -231,6 +231,131 @@ export function targetingLabel(def: AbilityDef): string {
   return '◎ TARGET'
 }
 
+export type AbilityShapeKind = 'self' | 'line' | 'area' | 'wall' | 'dash' | 'melee'
+
+export interface AbilityReadability {
+  shape: AbilityShapeKind
+  shapeLabel: string
+  instruction: string
+  outcome: string
+}
+
+const STATUS_IT: Record<string, string> = {
+  airborne: 'lancio in aria',
+  blind: 'cecità',
+  bleed: 'sanguinamento',
+  burn: 'bruciatura',
+  chill: 'gelo',
+  curse: 'maledizione',
+  freeze: 'congelamento',
+  mark: 'marchio',
+  poison: 'veleno',
+  root: 'radice',
+  shield: 'scudo',
+  slow: 'rallentamento',
+  stun: 'stordimento',
+}
+
+function effectOutcome(def: AbilityDef): string[] {
+  const parts: string[] = []
+  for (const effect of def.effects) {
+    if (effect.kind === 'projectile') {
+      const splash = (effect.splashRadius ?? 0) > 0 ? ` · esplosione ${effect.splashRadius} m` : ''
+      parts.push(`${effect.damage} danni${splash}`)
+    } else if (effect.kind === 'damage') {
+      const area = (effect.radius ?? 0) > 0 ? ` in ${effect.radius} m` : ''
+      parts.push(`${effect.amount} danni${area}`)
+    } else if (effect.kind === 'zone') {
+      const size = (effect.width ?? 0) > 0 ? `${effect.width} m` : `raggio ${effect.radius} m`
+      const tick = (effect.damagePerTick ?? 0) > 0 ? ` · ${effect.damagePerTick} danni/impulso` : ''
+      parts.push(`zona ${size} per ${effect.durationSec}s${tick}`)
+      if (effect.applyStatus)
+        parts.push(
+          `${STATUS_IT[effect.applyStatus.status] ?? effect.applyStatus.status} ${effect.applyStatus.durationSec}s`,
+        )
+    } else if (effect.kind === 'channel') {
+      const tick = effect.perTick
+      if (tick.kind === 'damage')
+        parts.push(`${tick.amount} danni/impulso per ${effect.durationSec}s`)
+      else if (tick.kind === 'heal')
+        parts.push(`${tick.amount} cura/impulso per ${effect.durationSec}s`)
+    } else if (effect.kind === 'applyStatus') {
+      parts.push(`${STATUS_IT[effect.status] ?? effect.status} ${effect.durationSec}s`)
+    } else if (effect.kind === 'knockup') {
+      parts.push(`lancia in aria ${effect.airborneSec}s`)
+    } else if (effect.kind === 'move') {
+      parts.push(`${effect.mode === 'dash' ? 'scatto' : 'teletrasporto'} ${effect.distance} m`)
+    } else if (effect.kind === 'heal') {
+      parts.push(`${effect.amount} cura${effect.overSec ? ` in ${effect.overSec}s` : ''}`)
+    } else if (effect.kind === 'restoreStamina') {
+      parts.push(`+${effect.amount} stamina`)
+    } else if (effect.kind === 'resourceDrain') {
+      parts.push(`ruba ${effect.amount} ${effect.resource}`)
+    } else if (effect.kind === 'cleanse') {
+      parts.push(
+        effect.status
+          ? `rimuove ${STATUS_IT[effect.status] ?? effect.status}`
+          : 'rimuove tutti i malus',
+      )
+    } else if (effect.kind === 'lifesteal') {
+      parts.push(`${Math.round(effect.fraction * 100)}% cura dal danno`)
+    }
+  }
+  return Array.from(new Set(parts)).slice(0, 3)
+}
+
+export function abilityReadability(def: AbilityDef): AbilityReadability {
+  const zone = def.effects.find((effect) => effect.kind === 'zone')
+  const hasProjectile = def.effects.some((effect) => effect.kind === 'projectile')
+  const hasMove = def.effects.some((effect) => effect.kind === 'move')
+  const hasRadius = def.effects.some(
+    (effect) =>
+      (effect.kind === 'damage' || effect.kind === 'heal' || effect.kind === 'knockup') &&
+      (effect.radius ?? 0) > 0,
+  )
+
+  let shape: AbilityShapeKind
+  let shapeLabel: string
+  let instruction: string
+  if (zone?.width && zone.width > 0) {
+    shape = 'wall'
+    shapeLabel = `MURO ${zone.width} M`
+    instruction =
+      def.targeting === 'point' ? 'SCEGLI IL PUNTO · LMB CONFERMA' : 'CREA UN MURO DAVANTI A TE'
+  } else if (def.targeting === 'point') {
+    shape = 'area'
+    shapeLabel = `AREA ${zone?.radius ?? def.range} M`
+    instruction = 'SCEGLI IL PUNTO · LMB CONFERMA'
+  } else if (hasMove) {
+    shape = 'dash'
+    shapeLabel = 'MOVIMENTO'
+    instruction = 'PARTE NELLA DIREZIONE DI MIRA'
+  } else if (hasProjectile) {
+    shape = 'line'
+    shapeLabel = 'TRAIETTORIA'
+    instruction = 'MIRA E SPARA · COLPO IN LINEA'
+  } else if (def.targeting === 'self' && hasRadius) {
+    shape = 'area'
+    shapeLabel = 'AREA ATTORNO A TE'
+    instruction = 'ISTANTANEA · COLPISCE ATTORNO A TE'
+  } else if (def.targeting === 'self') {
+    shape = 'self'
+    shapeLabel = 'SU DI TE'
+    instruction = 'ISTANTANEA SU DI TE'
+  } else if (def.slot === 'melee') {
+    shape = 'melee'
+    shapeLabel = 'ARCO RAVVICINATO'
+    instruction = 'MIRA DAVANTI · CORTA DISTANZA'
+  } else {
+    shape = 'line'
+    shapeLabel = 'LINEA DI MIRA'
+    instruction =
+      def.targeting === 'target' ? 'AGGANCIA IL NEMICO PIÙ VICINO' : 'MIRA DAVANTI · COLPO DIRETTO'
+  }
+
+  return { shape, shapeLabel, instruction, outcome: effectOutcome(def).join(' · ') }
+}
+
 export function slotPoolTitle(slot: TargetAbilitySlotFamily, _idx: number): string {
   if (slot === 'melee') return 'Abilita Spada'
   if (slot === 'bow') return 'Abilita Arco'

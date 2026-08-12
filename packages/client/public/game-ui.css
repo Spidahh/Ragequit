@@ -5,44 +5,44 @@
 /* R6 fix — self-hosted webfonts (previously only declared in font-family stacks,
    never loaded → every browser fell back to Arial). Files in /fonts (~95 KB). */
 @font-face {
-  font-family: "Inter";
+  font-family: 'Inter';
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url("/fonts/inter-var.woff2") format("woff2");
+  src: url('/fonts/inter-var.woff2') format('woff2');
 }
 /* Display face — lapidary roman capitals for titles (dark-fantasy identity
    without sacrificing legibility). Self-hosted, OFL. */
 @font-face {
-  font-family: "Cinzel";
+  font-family: 'Cinzel';
   font-style: normal;
   font-weight: 700 900;
   font-display: swap;
-  src: url("/fonts/cinzel-var.woff2") format("woff2");
+  src: url('/fonts/cinzel-var.woff2') format('woff2');
 }
 :root {
-  --font-display: "Cinzel", "Rajdhani", serif;
+  --font-display: 'Cinzel', 'Rajdhani', serif;
 }
 @font-face {
-  font-family: "Rajdhani";
+  font-family: 'Rajdhani';
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url("/fonts/rajdhani-500.woff2") format("woff2");
+  src: url('/fonts/rajdhani-500.woff2') format('woff2');
 }
 @font-face {
-  font-family: "Rajdhani";
+  font-family: 'Rajdhani';
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url("/fonts/rajdhani-600.woff2") format("woff2");
+  src: url('/fonts/rajdhani-600.woff2') format('woff2');
 }
 @font-face {
-  font-family: "Rajdhani";
+  font-family: 'Rajdhani';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url("/fonts/rajdhani-700.woff2") format("woff2");
+  src: url('/fonts/rajdhani-700.woff2') format('woff2');
 }
 
 :root {
@@ -68,9 +68,9 @@
   --dark: #6a0dad;
   --nature: #39ff14;
   --radius: 6px;
-  --font-ui: Inter, "Segoe UI", system-ui, sans-serif;
-  --font-hud: Rajdhani, "Arial Narrow", Arial, sans-serif;
-  --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --font-ui: Inter, 'Segoe UI', system-ui, sans-serif;
+  --font-hud: Rajdhani, 'Arial Narrow', Arial, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
 }
 
 *,
@@ -126,6 +126,7 @@ body.loadout-active canvas {
 
 /* When player is dead: hide combat UI to reduce noise */
 body.player-dead #crosshair,
+body.player-dead #ability-readout,
 body.player-dead #gcd-ring,
 body.player-dead #combat-console,
 body.player-dead #weapons {
@@ -137,6 +138,7 @@ body.player-dead #weapons {
 body.main-menu-active #hud,
 body.main-menu-active #combat-console,
 body.main-menu-active #crosshair,
+body.main-menu-active #ability-readout,
 body.main-menu-active #gcd-ring,
 body.main-menu-active #parry-ring,
 body.main-menu-active #bow-charge,
@@ -148,6 +150,7 @@ body.main-menu-active #round-hud,
 body.loadout-active #hud,
 body.loadout-active #combat-console,
 body.loadout-active #crosshair,
+body.loadout-active #ability-readout,
 body.loadout-active #gcd-ring,
 body.loadout-active #parry-ring,
 body.loadout-active #bow-charge,
@@ -259,14 +262,19 @@ button.locked {
   gap: clamp(18px, 2.4vw, 34px);
   padding: clamp(26px, 3.4vw, 58px);
   background:
-    linear-gradient(90deg, rgba(2, 4, 9, 0.96) 0%, rgba(2, 4, 9, 0.78) 43%, rgba(2, 4, 9, 0.5) 100%),
+    linear-gradient(
+      90deg,
+      rgba(2, 4, 9, 0.96) 0%,
+      rgba(2, 4, 9, 0.78) 43%,
+      rgba(2, 4, 9, 0.5) 100%
+    ),
     linear-gradient(180deg, rgba(2, 4, 9, 0.16), rgba(2, 4, 9, 0.76)),
-    url("/ui/sfondo.webp") center / cover no-repeat;
+    url('/ui/sfondo.webp') center / cover no-repeat;
 }
 
 #main-menu::before,
 #loadout-station::before {
-  content: "";
+  content: '';
   position: absolute;
   inset: clamp(16px, 1.8vw, 28px);
   border: 1px solid rgba(255, 210, 96, 0.13);
@@ -275,10 +283,12 @@ button.locked {
 
 #main-menu::after,
 #loadout-station::after {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 72% 42%, rgba(255, 210, 96, 0.12), transparent 26%), linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.48));
+  background:
+    radial-gradient(circle at 72% 42%, rgba(255, 210, 96, 0.12), transparent 26%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.48));
   pointer-events: none;
 }
 
@@ -354,14 +364,14 @@ button.locked {
 .mode-tile {
   background:
     linear-gradient(180deg, rgba(6, 8, 14, 0.45) 0%, rgba(6, 8, 14, 0.38) 100%),
-    url("/ui/frame_but.webp") center / 100% 100% no-repeat;
+    url('/ui/frame_but.webp') center / 100% 100% no-repeat;
   border-color: rgba(180, 140, 80, 0.55);
 }
 
 .mode-tile:hover {
   background:
     linear-gradient(180deg, rgba(6, 8, 14, 0.22) 0%, rgba(6, 8, 14, 0.18) 100%),
-    url("/ui/frame_but.webp") center / 100% 100% no-repeat;
+    url('/ui/frame_but.webp') center / 100% 100% no-repeat;
   border-color: rgba(255, 210, 96, 0.8);
 }
 
@@ -370,13 +380,15 @@ button.locked {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(90deg, rgba(255, 210, 96, 0.08), transparent 52%), radial-gradient(circle at 88% 18%, rgba(0, 208, 255, 0.08), transparent 30%);
+  background:
+    linear-gradient(90deg, rgba(255, 210, 96, 0.08), transparent 52%),
+    radial-gradient(circle at 88% 18%, rgba(0, 208, 255, 0.08), transparent 30%);
   opacity: 0.8;
 }
 
 .class-select-card::before,
 .pool-card::before {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0 auto 0 0;
   width: 3px;
@@ -719,7 +731,7 @@ button.locked {
   background:
     linear-gradient(90deg, rgba(4, 6, 11, 0.98), rgba(4, 6, 11, 0.9) 44%, rgba(4, 6, 11, 0.78)),
     linear-gradient(180deg, rgba(4, 6, 11, 0.22), rgba(4, 6, 11, 0.8)),
-    url("/ui/sfondo.webp") center / cover no-repeat;
+    url('/ui/sfondo.webp') center / cover no-repeat;
 }
 
 #loadout-station.hidden {
@@ -782,7 +794,8 @@ button.locked {
   padding: 8px 12px;
   border: 1px solid rgba(255, 210, 96, 0.16);
   border-radius: 6px;
-  background: linear-gradient(90deg, rgba(255, 210, 96, 0.08), rgba(0, 0, 0, 0.16)), rgba(8, 10, 18, 0.62);
+  background:
+    linear-gradient(90deg, rgba(255, 210, 96, 0.08), rgba(0, 0, 0, 0.16)), rgba(8, 10, 18, 0.62);
 }
 
 .ls-class-selector-title {
@@ -829,8 +842,8 @@ button.locked {
   /* Banner image takes the left column; text takes the right */
   grid-template-columns: 56px minmax(0, 1fr);
   grid-template-areas:
-    "banner title"
-    "banner desc";
+    'banner title'
+    'banner desc';
   gap: 3px 10px;
   align-items: center;
   padding: 0 10px 0 0;
@@ -864,16 +877,16 @@ button.locked {
   opacity: 1;
 }
 
-.class-select-card[data-class="tank"] {
+.class-select-card[data-class='tank'] {
   --class-color: #d4a04a;
 }
-.class-select-card[data-class="archer"] {
+.class-select-card[data-class='archer'] {
   --class-color: #39ff14;
 }
-.class-select-card[data-class="mage"] {
+.class-select-card[data-class='mage'] {
   --class-color: #00d0ff;
 }
-.class-select-card[data-class="hybrid"] {
+.class-select-card[data-class='hybrid'] {
   --class-color: #ffd260;
 }
 
@@ -885,14 +898,20 @@ button.locked {
 .class-select-card.active {
   border-color: color-mix(in srgb, var(--class-color, var(--gold)) 58%, rgba(145, 170, 220, 0.16));
   border-left-color: var(--class-color, var(--gold));
-  background: linear-gradient(90deg, color-mix(in srgb, var(--class-color, var(--gold)) 18%, transparent), rgba(0, 0, 0, 0.28)), rgba(0, 0, 0, 0.48);
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--class-color, var(--gold)) 18%, transparent),
+      rgba(0, 0, 0, 0.28)
+    ),
+    rgba(0, 0, 0, 0.48);
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.03),
     0 0 18px color-mix(in srgb, var(--class-color, var(--gold)) 24%, transparent);
 }
 
 .class-select-card.active::after {
-  content: "";
+  content: '';
   position: absolute;
   left: 8px;
   right: 8px;
@@ -1189,19 +1208,19 @@ button.locked {
 }
 
 #ls-melee:not(:empty)::before {
-  content: "Sword slots · E wheel";
+  content: 'Sword slots · E wheel';
 }
 #ls-bow:not(:empty)::before {
-  content: "Bow slots · E wheel";
+  content: 'Bow slots · E wheel';
 }
 #ls-magic-base:not(:empty)::before {
-  content: "Magic Base · keys 1-5";
+  content: 'Magic Base · keys 1-5';
 }
 #ls-magic-advanced:not(:empty)::before {
-  content: "Magic Advanced · keys 1-5";
+  content: 'Magic Advanced · keys 1-5';
 }
 #ls-utility:not(:empty)::before {
-  content: "Utility + Recovery · Q wheel";
+  content: 'Utility + Recovery · Q wheel';
 }
 
 /* Station footer button row */
@@ -1415,41 +1434,42 @@ button.locked {
 
 /* ── Forza il layout 2 colonne: sinistra compatta, destra ampia ── */
 #ls-body {
-  grid-template-columns: clamp(380px, 30vw, 480px) minmax(0, 1fr) !important;
+  grid-template-columns: clamp(560px, 46vw, 660px) minmax(0, 1fr) !important;
 }
 
-/* ── Slot list: colonna singola, uno sotto l'altro ── */
+/* All eight slots stay visible at once: two compact editable lanes per row. */
+#ls-left .ls-section {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 5px;
+  padding: 7px 9px;
+}
+
+#ls-left .ls-section-label {
+  grid-column: 1 / -1;
+  margin-bottom: 2px;
+}
+
 .slot-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 3px 7px 6px;
-}
-.slot-list:empty {
-  padding: 0;
-  gap: 0;
+  display: contents;
 }
 
-/* ── Family label strip ── */
+/* Family is printed inside every lane, so separate strips no longer consume height. */
 #ls-melee:not(:empty)::before {
-  content: "MELEE";
-  color: #d4824a;
+  content: none;
 }
 #ls-bow:not(:empty)::before {
-  content: "BOW";
-  color: #5ab97a;
+  content: none;
 }
 #ls-magic-base:not(:empty)::before {
-  content: "SPELL";
-  color: #9b6cf4;
+  content: none;
 }
 #ls-magic-advanced:not(:empty)::before {
-  content: "ADVANCED";
-  color: #00d0ff;
+  content: none;
 }
 #ls-utility:not(:empty)::before {
-  content: "UTILITY";
-  color: #ffd260;
+  content: none;
 }
 
 #ls-melee::before,
@@ -1500,8 +1520,8 @@ button.locked {
   display: grid;
   grid-template-columns: 50px minmax(0, 1fr) 66px 18px;
   grid-template-areas:
-    "portrait main meta clear"
-    "portrait route input input";
+    'portrait main meta clear'
+    'portrait route input input';
   align-items: center;
   gap: 3px 6px;
   padding: 5px 7px;
@@ -1582,6 +1602,13 @@ button.locked {
   align-self: center;
 }
 
+.ls-slot-family {
+  color: var(--fam, var(--gold));
+  font: 900 7px/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 /* Ability name — prominent primary text */
 .ls-slot-name {
   display: block;
@@ -1633,7 +1660,7 @@ button.locked {
   grid-area: input;
   position: static;
   width: 100%;
-  min-height: 15px;
+  min-height: 19px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1641,8 +1668,8 @@ button.locked {
   border-radius: 3px;
   background: rgba(0, 0, 0, 0.48);
   color: var(--gold);
-  font: 900 7px/1 var(--font-mono);
-  letter-spacing: 0.04em;
+  font: 900 11px/1 var(--font-mono);
+  letter-spacing: 0.08em;
   padding: 0 4px;
 }
 
@@ -1704,12 +1731,12 @@ button.locked {
   grid-template-columns: minmax(0, 1fr) 82px;
   grid-template-rows: auto auto minmax(44px, 1fr) auto auto auto;
   grid-template-areas:
-    "nature visual"
-    "meta visual"
-    "summary visual"
-    "dmgrow dmgrow"
-    "tags tags"
-    "costs costs";
+    'nature visual'
+    'meta visual'
+    'summary visual'
+    'dmgrow dmgrow'
+    'tags tags'
+    'costs costs';
   align-items: start;
   gap: 4px 10px;
   padding: 10px;
@@ -1730,12 +1757,12 @@ button.locked {
 .pool-copy {
   display: grid;
   grid-template-areas:
-    "nature"
-    "meta"
-    "summary"
-    "dmgrow"
-    "tags"
-    "costs";
+    'nature'
+    'meta'
+    'summary'
+    'dmgrow'
+    'tags'
+    'costs';
   grid-template-rows: auto auto minmax(44px, 1fr) auto auto auto;
   gap: 4px;
   min-width: 0;
@@ -2394,9 +2421,9 @@ button.locked {
   z-index: 600;
   transform: translateX(-50%);
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 8px;
   background: none;
   border: none;
   box-shadow: none;
@@ -2406,9 +2433,9 @@ button.locked {
 #weapons {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  background: rgba(15, 17, 26, 0.75);
+  gap: 4px;
+  padding: 4px;
+  background: linear-gradient(180deg, rgba(15, 17, 26, 0.9), rgba(6, 8, 14, 0.88));
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius);
   backdrop-filter: blur(12px);
@@ -2460,8 +2487,8 @@ button.locked {
 }
 
 .wslot {
-  width: 60px;
-  height: 60px;
+  width: 46px;
+  height: 46px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2558,9 +2585,9 @@ button.locked {
 
 #cd-strip {
   display: flex;
-  gap: 12px;
-  padding: 6px 12px;
-  background: rgba(15, 17, 26, 0.75);
+  gap: 7px;
+  padding: 4px;
+  background: linear-gradient(180deg, rgba(15, 17, 26, 0.92), rgba(6, 8, 14, 0.9));
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius);
   backdrop-filter: blur(12px);
@@ -2576,19 +2603,19 @@ button.locked {
 
 .hotbar-section.spell-section,
 .hotbar-section.utility-section {
-  padding-left: 12px;
+  padding-left: 7px;
   border-left: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .hotbar-rail {
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
 
 .cd-pip {
   position: relative;
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-bottom: 3px solid var(--elem-color, var(--gold));
   border-radius: 6px;
@@ -2619,13 +2646,13 @@ button.locked {
 } /* utility */
 
 .cd-pip.utility-pip {
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
 }
 
 .cd-pip.spell-pip {
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
 }
 
 .cd-pip.ready {
@@ -2824,6 +2851,21 @@ button.locked {
   margin-bottom: 3px;
 }
 
+.ability-tooltip .tt-shape {
+  margin: 6px 0 3px;
+  color: #fff;
+  font: 900 9px/1.25 var(--font-mono);
+  white-space: normal;
+}
+
+.ability-tooltip .tt-effect {
+  max-width: 220px;
+  margin-bottom: 6px;
+  color: #aebbd2;
+  font: 600 10px/1.35 var(--font-ui);
+  white-space: normal;
+}
+
 .ability-tooltip .tt-cost {
   font: 600 10px/1.2 var(--font-mono);
   color: var(--muted);
@@ -2855,7 +2897,7 @@ button.locked {
 
 #crosshair::before,
 #crosshair::after {
-  content: "";
+  content: '';
   position: absolute;
   background: rgba(232, 236, 246, 0.74);
 }
@@ -2879,17 +2921,17 @@ button.locked {
 }
 
 /* Bow charge crosshair feedback */
-#crosshair[data-charge="low"] {
+#crosshair[data-charge='low'] {
   border-color: rgba(80, 220, 80, 0.7);
   transform: translate(-50%, -50%) scale(0.9);
 }
 
-#crosshair[data-charge="high"] {
+#crosshair[data-charge='high'] {
   border-color: rgba(255, 200, 50, 0.9);
   transform: translate(-50%, -50%) scale(0.85);
 }
 
-#crosshair[data-charge="full"] {
+#crosshair[data-charge='full'] {
   border-color: #ff6030;
   transform: translate(-50%, -50%) scale(0.75);
   box-shadow: 0 0 8px rgba(255, 96, 48, 0.7);
@@ -3325,39 +3367,39 @@ button.locked {
   text-align: center;
 }
 
-.radial-slot[data-dir="top"] {
+.radial-slot[data-dir='top'] {
   top: 12px;
   left: 50%;
   transform: translateX(-50%);
 }
-.radial-slot[data-dir="right"] {
+.radial-slot[data-dir='right'] {
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
 }
-.radial-slot[data-dir="bottom"] {
+.radial-slot[data-dir='bottom'] {
   bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
 }
-.radial-slot[data-dir="left"] {
+.radial-slot[data-dir='left'] {
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
 }
-.radial-slot[data-dir="top-right"] {
+.radial-slot[data-dir='top-right'] {
   top: 38px;
   right: 38px;
 }
-.radial-slot[data-dir="bottom-right"] {
+.radial-slot[data-dir='bottom-right'] {
   right: 38px;
   bottom: 38px;
 }
-.radial-slot[data-dir="bottom-left"] {
+.radial-slot[data-dir='bottom-left'] {
   left: 38px;
   bottom: 38px;
 }
-.radial-slot[data-dir="top-left"] {
+.radial-slot[data-dir='top-left'] {
   left: 38px;
   top: 38px;
 }
@@ -3539,7 +3581,7 @@ button.locked {
   text-transform: uppercase;
 }
 
-.setting-control input[type="range"] {
+.setting-control input[type='range'] {
   flex: 1;
   accent-color: var(--gold);
 }
@@ -3861,7 +3903,7 @@ button.locked {
   opacity: 0;
 }
 
-.hit-dir[data-dir="top"] {
+.hit-dir[data-dir='top'] {
   top: 0;
   left: 0;
   right: 0;
@@ -3869,7 +3911,7 @@ button.locked {
   background: linear-gradient(to bottom, rgba(255, 30, 30, 0.55), transparent);
 }
 
-.hit-dir[data-dir="bottom"] {
+.hit-dir[data-dir='bottom'] {
   bottom: 0;
   left: 0;
   right: 0;
@@ -3877,7 +3919,7 @@ button.locked {
   background: linear-gradient(to top, rgba(255, 30, 30, 0.55), transparent);
 }
 
-.hit-dir[data-dir="left"] {
+.hit-dir[data-dir='left'] {
   top: 0;
   left: 0;
   bottom: 0;
@@ -3885,7 +3927,7 @@ button.locked {
   background: linear-gradient(to right, rgba(255, 30, 30, 0.55), transparent);
 }
 
-.hit-dir[data-dir="right"] {
+.hit-dir[data-dir='right'] {
   top: 0;
   right: 0;
   bottom: 0;
@@ -4472,7 +4514,7 @@ button.locked {
 }
 
 .auth-menu-trigger:hover,
-.auth-menu-trigger[aria-expanded="true"] {
+.auth-menu-trigger[aria-expanded='true'] {
   border-color: rgba(0, 208, 255, 0.62);
   background: rgba(0, 208, 255, 0.13);
 }
@@ -4626,7 +4668,9 @@ button.locked {
 }
 
 .mode-tile--team .mode-tile-glow {
-  background: linear-gradient(90deg, rgba(74, 158, 255, 0.1), transparent 52%), radial-gradient(circle at 88% 18%, rgba(74, 158, 255, 0.06), transparent 30%);
+  background:
+    linear-gradient(90deg, rgba(74, 158, 255, 0.1), transparent 52%),
+    radial-gradient(circle at 88% 18%, rgba(74, 158, 255, 0.06), transparent 30%);
 }
 
 .mode-tile--team .mode-tile-icon {
@@ -4645,7 +4689,9 @@ button.locked {
 }
 
 .mode-tile--ffa .mode-tile-glow {
-  background: linear-gradient(90deg, rgba(255, 51, 68, 0.1), transparent 52%), radial-gradient(circle at 88% 18%, rgba(255, 51, 68, 0.06), transparent 30%);
+  background:
+    linear-gradient(90deg, rgba(255, 51, 68, 0.1), transparent 52%),
+    radial-gradient(circle at 88% 18%, rgba(255, 51, 68, 0.06), transparent 30%);
 }
 
 .mode-tile--ffa .mode-tile-icon {
@@ -4664,7 +4710,9 @@ button.locked {
 }
 
 .mode-tile--training .mode-tile-glow {
-  background: linear-gradient(90deg, rgba(0, 208, 255, 0.09), transparent 52%), radial-gradient(circle at 88% 18%, rgba(0, 208, 255, 0.05), transparent 30%);
+  background:
+    linear-gradient(90deg, rgba(0, 208, 255, 0.09), transparent 52%),
+    radial-gradient(circle at 88% 18%, rgba(0, 208, 255, 0.05), transparent 30%);
 }
 
 .mode-tile--training .mode-tile-icon {
@@ -5147,7 +5195,9 @@ button.locked {
 .dc-killer-silhouette {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 55% 90% at 50% 115%, rgba(180, 20, 20, 0.18) 0%, transparent 65%), linear-gradient(to top, rgba(180, 20, 20, 0.12) 0%, transparent 40%);
+  background:
+    radial-gradient(ellipse 55% 90% at 50% 115%, rgba(180, 20, 20, 0.18) 0%, transparent 65%),
+    linear-gradient(to top, rgba(180, 20, 20, 0.12) 0%, transparent 40%);
   pointer-events: none;
 }
 
@@ -5344,7 +5394,7 @@ button.locked {
 }
 
 #loadout-station.build-locked #ls-pool::after {
-  content: "LOCKED IN COMBAT";
+  content: 'LOCKED IN COMBAT';
   position: absolute;
   inset: 0;
   display: flex;
@@ -5394,20 +5444,32 @@ button.locked {
 
 /* Gradiente scuro in basso, sopra al portrait, sotto al testo */
 .class-select-card::after {
-  content: "";
+  content: '';
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
   height: 100%;
-  background: linear-gradient(0deg, rgba(4, 6, 14, 0.97) 0%, rgba(4, 6, 14, 0.62) 35%, rgba(4, 6, 14, 0.18) 65%, transparent 100%);
+  background: linear-gradient(
+    0deg,
+    rgba(4, 6, 14, 0.97) 0%,
+    rgba(4, 6, 14, 0.62) 35%,
+    rgba(4, 6, 14, 0.18) 65%,
+    transparent 100%
+  );
   pointer-events: none;
   z-index: 1;
 }
 
 /* Stato attivo: gradiente leggermente più trasparente per far vedere meglio il portrait */
 .class-select-card.active::after {
-  background: linear-gradient(0deg, rgba(4, 6, 14, 0.93) 0%, rgba(4, 6, 14, 0.5) 35%, rgba(4, 6, 14, 0.1) 65%, transparent 100%);
+  background: linear-gradient(
+    0deg,
+    rgba(4, 6, 14, 0.93) 0%,
+    rgba(4, 6, 14, 0.5) 35%,
+    rgba(4, 6, 14, 0.1) 65%,
+    transparent 100%
+  );
   left: 0;
   right: 0;
   bottom: 0;
@@ -5829,7 +5891,7 @@ button.locked {
 /* Pool: 2 colonne */
 .pool-grid {
   display: grid !important;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
   align-content: start;
   gap: 8px !important;
   padding: 12px !important;
@@ -5847,8 +5909,16 @@ button.locked {
   grid-template-columns: unset !important;
   grid-template-rows: unset !important;
   grid-template-areas: unset !important;
-  padding: 16px 20px !important;
+  padding: 14px 16px !important;
   min-height: unset !important;
+  min-width: 0 !important;
+  background:
+    linear-gradient(
+      125deg,
+      color-mix(in srgb, var(--elem-color, #6b7894) 9%, transparent),
+      transparent 52%
+    ),
+    rgba(11, 14, 23, 0.96) !important;
 }
 
 /* Nasconde i vecchi elementi se residui */
@@ -5898,6 +5968,13 @@ button.locked {
   display: flex;
   flex-direction: column;
   gap: 5px;
+}
+
+.pc-badges {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 /* Nome: grande, bold, uppercase */
@@ -6032,71 +6109,133 @@ button.locked {
   font-weight: 900;
 }
 
-/* ── DESCRIPTION: testo principale — grande e leggibile ── */
-.pc-desc {
-  font: 400 14px/1.65 var(--font-ui);
-  color: #ccd5e8;
-  flex: 1;
-  margin-bottom: 12px;
-}
-.pc-desc b {
-  font-weight: 800;
-  color: #eef2ff;
-}
-.pc-malus {
-  display: none;
-  font-style: italic;
-}
-
-/* ── CHIPS CC/status: riga di quick-scan DOPO la descrizione ── */
-.pc-chips {
+/* Mechanic-first readout: target geometry before prose. */
+.pc-readline {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 8px;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  margin: 1px 0 9px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid color-mix(in srgb, var(--elem-color, #7c89a5) 32%, transparent);
+  border-radius: 5px;
 }
 
-/* Chip compatta: solo il necessario, NON duplica tutta la descrizione */
-.pf-chip {
-  display: inline-flex;
-  align-items: center;
+.pc-readcopy {
+  display: flex;
+  flex-direction: column;
   gap: 4px;
-  padding: 3px 8px;
-  border-radius: 3px;
-  font: 900 8px/1 var(--font-mono);
-  text-transform: uppercase;
+  min-width: 0;
+}
+
+.pc-readcopy b {
+  color: #f4f7ff;
+  font: 900 11px/1 var(--font-mono);
   letter-spacing: 0.06em;
-  white-space: nowrap;
-}
-.pfc-cc {
-  background: rgba(120, 40, 210, 0.26);
-  border: 1px solid rgba(180, 100, 255, 0.6);
-  color: #cc88ff;
-}
-.pfc-dot {
-  background: rgba(190, 130, 20, 0.22);
-  border: 1px solid rgba(230, 170, 50, 0.55);
-  color: #f0c050;
-}
-.pfc-mob {
-  background: rgba(30, 160, 70, 0.22);
-  border: 1px solid rgba(60, 210, 110, 0.55);
-  color: #50e888;
-}
-.pfc-time {
-  background: rgba(180, 160, 20, 0.18);
-  border: 1px solid rgba(220, 200, 50, 0.4);
-  color: #d4c048;
 }
 
-/* ── FOOTER: barra stat compatta ── */
-.pc-footer {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+.pc-readcopy small {
+  color: #8f9bb4;
+  font: 700 9px/1.2 var(--font-mono);
+  letter-spacing: 0.035em;
+}
+
+.pc-outcome {
+  display: block;
+  min-height: 38px;
+  margin-bottom: 8px;
+  color: #dce6fa;
+  font: 700 13px/1.45 var(--font-ui);
+}
+
+.ability-shape {
+  position: relative;
+  width: 68px;
+  height: 38px;
+  flex: 0 0 68px;
+  overflow: hidden;
+}
+
+.ability-shape i {
+  position: absolute;
+  display: block;
+}
+
+.shape-player {
+  left: 4px;
+  top: 15px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 7px rgba(255, 255, 255, 0.65);
+}
+
+.shape-target {
+  right: 3px;
+  top: 16px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff5267;
+}
+
+.shape-effect {
+  left: 16px;
+  top: 18px;
+  width: 42px;
+  height: 2px;
+  background: var(--elem-color, var(--gold));
+  box-shadow: 0 0 8px var(--elem-color, var(--gold));
+}
+
+.shape-area .shape-effect,
+.shape-self .shape-effect {
+  left: 20px;
+  top: 7px;
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--elem-color, var(--gold));
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--elem-color, var(--gold)) 18%, transparent);
+}
+
+.shape-area .shape-player {
+  left: 30px;
+}
+.shape-self .shape-player {
+  left: 30px;
+}
+.shape-area .shape-target {
+  right: 8px;
+  top: 9px;
+}
+.shape-self .shape-target {
+  display: none;
+}
+.shape-wall .shape-effect {
+  left: 31px;
+  top: 3px;
+  width: 4px;
+  height: 32px;
+}
+.shape-wall .shape-target {
+  right: 4px;
+}
+.shape-dash .shape-effect {
+  transform: skewX(-28deg);
+  height: 4px;
+}
+.shape-melee .shape-effect {
+  left: 12px;
+  top: 5px;
+  width: 30px;
+  height: 28px;
+  border: 3px solid var(--elem-color, var(--gold));
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  background: transparent;
 }
 
 /* Footer bar: altezza minima fissa → tutte le card hanno la stessa altezza */
@@ -6104,7 +6243,7 @@ button.locked {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 14px;
+  gap: 7px;
   padding-top: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.09);
   min-height: 48px;
@@ -6117,7 +6256,7 @@ button.locked {
   background: rgba(220, 70, 30, 0.22);
   border: 1px solid rgba(255, 100, 50, 0.5);
   border-radius: 3px;
-  padding: 5px 12px;
+  padding: 5px 8px;
   white-space: nowrap;
 }
 
@@ -6189,6 +6328,77 @@ button.locked {
   color: #f09060;
 }
 
+/* Ability confirmation stays close to the crosshair without covering targets. */
+#ability-readout {
+  position: fixed;
+  left: 50%;
+  top: calc(50% + 54px);
+  z-index: 720;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 250px;
+  max-width: 390px;
+  padding: 8px 11px 8px 8px;
+  border-left: 3px solid var(--gold);
+  background: linear-gradient(90deg, rgba(8, 10, 17, 0.92), rgba(8, 10, 17, 0.66));
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.42);
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 8px) scale(0.98);
+  transition:
+    opacity 130ms ease,
+    transform 130ms ease;
+}
+
+#ability-readout.visible {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+
+#ability-readout.mode-placement {
+  border-left-color: #00d0ff;
+}
+#ability-readout.mode-cast {
+  border-left-color: #ff3344;
+}
+
+.ar-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.ar-icon img,
+.ar-icon svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.ar-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ar-copy small {
+  color: var(--gold);
+  font: 900 8px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+}
+.ar-copy b {
+  color: #fff;
+  font: 900 14px/1.1 var(--font-hud);
+  text-transform: uppercase;
+}
+.ar-copy span {
+  color: #aebbd2;
+  font: 600 10px/1.25 var(--font-ui);
+  white-space: normal;
+}
+
 /* ── Loading Screen ──────────────────────────────────────────────────────── */
 #loading-screen {
   position: fixed;
@@ -6256,12 +6466,12 @@ button.locked {
     transform 0.12s ease,
     opacity 0.1s;
 }
-#crosshair[data-moving="true"] {
+#crosshair[data-moving='true'] {
   transform: translate(-50%, -50%) scale(1.55);
   opacity: 0.65;
 }
-#crosshair[data-moving="true"]::before,
-#crosshair[data-moving="true"]::after {
+#crosshair[data-moving='true']::before,
+#crosshair[data-moving='true']::after {
   opacity: 0.5;
 }
 /* Kill confirm flash — green burst */
@@ -6272,7 +6482,7 @@ button.locked {
   transition: none;
 }
 /* Primed ability accent ring */
-#crosshair[data-primed="true"] {
+#crosshair[data-primed='true'] {
   box-shadow: 0 0 0 2px rgba(212, 160, 74, 0.55);
 }
 
@@ -6300,14 +6510,14 @@ button.locked {
    Sword = third-person melee: crosshair is a larger soft ring (less precise)
    Bow / Staff = first-person precision: standard sharp dot+ring
    ─────────────────────────────────────────────────────────────────────── */
-#crosshair[data-weapon="sword"] {
+#crosshair[data-weapon='sword'] {
   width: 38px;
   height: 38px;
   border-color: rgba(232, 236, 246, 0.3);
   opacity: 0.55;
 }
-#crosshair[data-weapon="sword"]::before,
-#crosshair[data-weapon="sword"]::after {
+#crosshair[data-weapon='sword']::before,
+#crosshair[data-weapon='sword']::after {
   display: none; /* no crosshairs lines in TPV melee — ring only */
 }
 
@@ -6337,7 +6547,7 @@ button.locked {
   gap: 3px;
   min-width: 168px;
   pointer-events: none;
-  font-family: "Rajdhani", sans-serif;
+  font-family: 'Rajdhani', sans-serif;
 }
 #ffa-ladder .fl-row {
   display: grid;

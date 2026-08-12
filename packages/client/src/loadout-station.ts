@@ -21,7 +21,7 @@ import {
 } from '@ragequit/shared'
 
 import { abilityIconMarkup } from './icons.js'
-import { actionLabel, onKeybindsChanged } from './input/keybinds.js'
+import { actionLabel, onKeybindsChanged, SLOT_ACTIONS } from './input/keybinds.js'
 import { buildLoadoutMessage, normalizeLoadoutSlots } from './input/loadout-slots.js'
 import {
   formatCost,
@@ -31,11 +31,11 @@ import {
   statusControlScore,
   formatEffectTags,
   escapeHtml,
-  formatDesc,
   tagClass,
   typeBadgeClass,
   targetingLabel,
   slotPoolTitle,
+  abilityReadability,
 } from './loadout/ability-format.js'
 
 const STORAGE_KEY = 'ragequit.loadout.v6'
@@ -208,13 +208,14 @@ export function initLoadoutStation(
   // every family, because the slot grammar order puts the E-wheel families
   // first and the Q-wheel families last.
   function slotKeyLabel(idx: number): string {
-    return idx < 4 ? `${actionLabel('wheelAbility')} WHEEL` : `${actionLabel('wheelUtility')} WHEEL`
+    const action = SLOT_ACTIONS[idx]
+    return action ? actionLabel(action) : String(idx + 1)
   }
 
   function slotRouteLabel(_slot: TargetAbilitySlotFamily, idx: number): string {
-    return idx < 4
-      ? `${actionLabel('wheelAbility')} wheel · tieni premuto`
-      : `${actionLabel('wheelUtility')} wheel · tieni premuto`
+    const directions = ['↑', '→', '↓', '←']
+    const wheel = idx < 4 ? actionLabel('wheelAbility') : actionLabel('wheelUtility')
+    return `${wheel} ${directions[idx % 4]} · alternativa radiale`
   }
 
   function refreshSectionKeyLabels(): void {
@@ -238,10 +239,11 @@ export function initLoadoutStation(
       utility: 'UTILITY',
     }
     const emptyTypeLabel = SLOT_TYPE_LABELS[slotKind] ?? slotKind.toUpperCase()
+    const readable = def ? abilityReadability(def) : null
     el.innerHTML = [
       `<span class="ls-slot-portrait"><span class="ls-slot-icon">${def ? abilityIconMarkup(def.id) : `<span class="ls-slot-empty-type">${emptyTypeLabel}</span>`}</span></span>`,
       `<span class="ls-slot-label">${slotKeyLabel(idx)}</span>`,
-      `<span class="ls-slot-main"><span class="ls-slot-name">${def ? escapeHtml(def.name) : emptyTypeLabel}</span><span class="ls-slot-nature">${def ? abilityNatureLabel(def) : slotPoolTitle(slotKind, idx)}</span></span>`,
+      `<span class="ls-slot-main"><span class="ls-slot-family">${emptyTypeLabel}</span><span class="ls-slot-name">${def ? escapeHtml(def.name) : emptyTypeLabel}</span><span class="ls-slot-nature">${readable ? `${escapeHtml(readable.shapeLabel)} · ${escapeHtml(readable.outcome)}` : slotPoolTitle(slotKind, idx)}</span></span>`,
       `<span class="ls-slot-route">${slotRouteLabel(slotKind, idx)}</span>`,
       def ? `<span class="ls-slot-cost">${formatCost(def)} · ${def.cooldownSec}s</span>` : '',
       id ? '<span class="ls-slot-clear" title="Clear">×</span>' : '',
@@ -330,9 +332,10 @@ export function initLoadoutStation(
       const poolInputLabel = slotKeyLabel(activeIdx)
       const recTags = recommendationTags(def, activeIdx, slots)
       const nature = abilityNatureLabel(def)
+      const readable = abilityReadability(def)
       card.className = `pool-card el-${def.element} ${isActive ? 'equipped' : ''} ${recTags.length > 0 ? 'recommended' : ''} ${locked ? 'locked' : ''}`
       card.disabled = locked
-      card.title = def.description
+      card.title = `${readable.instruction} · ${readable.outcome}`
       card.setAttribute(
         'aria-label',
         `${def.name}. ${nature}. ${def.element !== 'none' ? def.element : 'fisico'}. ${formatCost(def)}. ${formatEffectTags(def).join(', ')}`,
@@ -397,24 +400,21 @@ export function initLoadoutStation(
         `<span class="pf-stat pf-cd"><span class="pf-val">${def.cooldownSec}s</span><span class="pf-lbl">cooldown</span></span>`,
       )
 
-      // Struttura: header (icon+name+badge) → sub (element·targeting·key) → descrizione → footer
+      // Header, explicit hit shape, mechanical outcome and compact stats.
       card.innerHTML = `
         <span class="pc-head">
           <span class="pc-icon-sm">${abilityIconMarkup(def.id)}</span>
           <span class="pc-headright">
             <span class="pc-name">${escapeHtml(def.name)}${recTags.length > 0 ? ' <span class="pc-rec">★</span>' : ''}</span>
-            <span class="ptype-badge ptype-${badgeClass}">${escapeHtml(nature)}</span>
+            <span class="pc-badges"><span class="ptype-badge ptype-${badgeClass}">${escapeHtml(nature)}</span><span class="pc-key">TASTO ${poolInputLabel}</span></span>
           </span>
         </span>
-        <span class="pc-sub">
-          <span class="pc-eldot el-dot-${def.element}"></span>
-          <span class="pc-elname">${elementLabel}</span>
-          <span class="pc-sep">·</span>
-          ${targetingLabel(def)}
-          <span class="pc-sep">·</span>
-          <span class="pc-key">TASTO ${poolInputLabel}</span>
+        <span class="pc-readline">
+          <span class="ability-shape shape-${readable.shape}" aria-label="${escapeHtml(readable.shapeLabel)}"><i class="shape-player"></i><i class="shape-effect"></i><i class="shape-target"></i></span>
+          <span class="pc-readcopy"><b>${escapeHtml(readable.shapeLabel)}</b><small>${escapeHtml(readable.instruction)}</small></span>
         </span>
-        <span class="pc-desc">${formatDesc(def.description)}</span>
+        <span class="pc-outcome">${escapeHtml(readable.outcome || def.description)}</span>
+        <span class="pc-sub"><span class="pc-eldot el-dot-${def.element}"></span><span class="pc-elname">${elementLabel}</span><span class="pc-sep">·</span>${targetingLabel(def)}</span>
         <span class="pc-footer">${footerParts.join('')}</span>
       `
       card.addEventListener('click', () => {

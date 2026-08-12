@@ -28,6 +28,14 @@ const TRAIL_LEN = 10
 
 type ProjectileKind = 'arrow' | 'bolt'
 type ProjectileStyle = 'arrow' | 'fire' | 'ice' | 'lightning' | 'dark' | 'nature' | 'neutral'
+export type ProjectileProfile =
+  | 'arrow'
+  | 'heavyArrow'
+  | 'orb'
+  | 'shard'
+  | 'lance'
+  | 'drain'
+  | 'thorn'
 
 interface ProjectileVisual {
   object: THREE.Object3D
@@ -38,6 +46,7 @@ interface ProjectileVisual {
   lastAt: number
   kind: ProjectileKind
   style: ProjectileStyle
+  profile: ProjectileProfile
   light: THREE.PointLight | null
   embers: EmberHandle | null
 }
@@ -115,14 +124,37 @@ function projectileColor(style: ProjectileStyle): number {
   }
 }
 
+export function projectileProfile(
+  kind: ProjectileKind,
+  element?: string,
+  abilityId?: string,
+): ProjectileProfile {
+  if (kind === 'arrow') {
+    return abilityId === 'marksman_shot' || abilityId === 'blast_arrow' ? 'heavyArrow' : 'arrow'
+  }
+  if (abilityId === 'fireball' || abilityId === 'meteor') return 'orb'
+  if (abilityId === 'frost_bolt' || abilityId === 'freeze_target') return 'shard'
+  if (abilityId === 'chain_bolt' || abilityId === 'arc_lift') return 'lance'
+  if (abilityId === 'shadow_bolt' || abilityId === 'life_drain') return 'drain'
+  if (abilityId === 'poison_dart' || abilityId === 'entangle') return 'thorn'
+  if (element === 'ice') return 'shard'
+  if (element === 'lightning') return 'lance'
+  if (element === 'dark') return 'drain'
+  if (element === 'nature') return 'thorn'
+  return 'orb'
+}
+
 function makeProjectileObject(
   kind: ProjectileKind,
   element?: string,
+  abilityId?: string,
 ): {
   object: THREE.Object3D
   style: ProjectileStyle
+  profile: ProjectileProfile
 } {
   const style = projectileStyle(kind, element)
+  const profile = projectileProfile(kind, element, abilityId)
   const elemColor = projectileColor(style)
   const group = new THREE.Group()
 
@@ -158,9 +190,11 @@ function makeProjectileObject(
     projOutline.scale.copy(baseMesh.scale)
     projOutline.rotation.copy(baseMesh.rotation)
     baseMesh.add(projOutline)
+    if (profile === 'heavyArrow') baseMesh.scale.multiplyScalar(1.35)
     group.add(baseMesh)
   } else {
-    // Spells are rendered as volumetric Crossed Planes (Overwatch style) using additive blending
+    // The texture supplies energy, while the solid silhouette communicates the
+    // mechanic: orb, ice shard, lightning lance, drain halo or thorn.
     let texture: THREE.Texture
     let scaleX = 0.38
     let scaleY = 0.38
@@ -208,6 +242,10 @@ function makeProjectileObject(
       side: THREE.DoubleSide,
     })
 
+    if (profile === 'shard' || profile === 'lance' || profile === 'thorn') {
+      scaleX *= 0.68
+      scaleY *= profile === 'lance' ? 1.5 : 1.15
+    }
     const geo = new THREE.PlaneGeometry(scaleX, scaleY)
 
     // Plane 1 (Horizontal slice along movement)
@@ -225,9 +263,34 @@ function makeProjectileObject(
     // cost of a layer flag. (Physical arrows stay off the bloom layer.)
     p1.layers.enable(1)
     p2.layers.enable(1)
+
+    const signatureMat = new THREE.MeshBasicMaterial({
+      color: elemColor,
+      transparent: true,
+      opacity: 0.9,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    })
+    let signature: THREE.Mesh
+    if (profile === 'shard') {
+      signature = new THREE.Mesh(new THREE.OctahedronGeometry(0.2, 0), signatureMat)
+      signature.scale.set(0.7, 0.7, 1.9)
+    } else if (profile === 'lance') {
+      signature = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.9, 6), signatureMat)
+      signature.rotation.x = Math.PI / 2
+    } else if (profile === 'thorn') {
+      signature = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.72, 5), signatureMat)
+      signature.rotation.x = -Math.PI / 2
+    } else if (profile === 'drain') {
+      signature = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.055, 6, 16), signatureMat)
+    } else {
+      signature = new THREE.Mesh(new THREE.IcosahedronGeometry(0.2, 1), signatureMat)
+    }
+    signature.layers.enable(1)
+    group.add(signature)
   }
 
-  return { object: group, style }
+  return { object: group, style, profile }
 }
 
 function disposeObject(object: THREE.Object3D): void {
@@ -320,7 +383,7 @@ export function initProjectileVisuals({
   function onSpawned(msg: ServerProjectileSpawnedMessage): void {
     if (projectileVisuals.has(msg.id)) return
     const kind: ProjectileKind = msg.kind === 'bolt' ? 'bolt' : 'arrow'
-    const { object, style } = makeProjectileObject(kind, msg.element)
+    const { object, style, profile } = makeProjectileObject(kind, msg.element, msg.abilityId)
     object.position.set(msg.origin.x, msg.origin.y, msg.origin.z)
     const light = style !== 'arrow' ? _lightPool.acquire(projectileColor(style)) : null
     if (light) light.position.copy(object.position)
@@ -346,6 +409,7 @@ export function initProjectileVisuals({
       lastAt: performance.now(),
       kind,
       style,
+      profile,
       light,
       embers: style !== 'arrow' ? spellParticles.attachEmbers(style as SpellStyle, object) : null,
     })
@@ -417,7 +481,7 @@ export function initProjectileVisuals({
       let vis = projectileVisuals.get(id)
       if (!vis) {
         const kind: ProjectileKind = p.kind === 'bolt' ? 'bolt' : 'arrow'
-        const { object, style } = makeProjectileObject(kind, p.element)
+        const { object, style, profile } = makeProjectileObject(kind, p.element)
         object.position.set(p.x, p.y, p.z)
         const light = style !== 'arrow' ? _lightPool.acquire(projectileColor(style)) : null
         if (light) light.position.copy(object.position)
@@ -439,6 +503,7 @@ export function initProjectileVisuals({
           lastAt: now,
           kind,
           style,
+          profile,
           light,
           embers:
             style !== 'arrow' ? spellParticles.attachEmbers(style as SpellStyle, object) : null,
@@ -457,31 +522,31 @@ export function initProjectileVisuals({
 
         const child1 = vis.object.children[1] as THREE.Mesh | undefined
 
-        // Organic swirling rotation and scale modulation on crossed planes
-        if (vis.style === 'fire') {
+        // Each mechanic has a stable motion language in addition to its color.
+        if (vis.profile === 'orb') {
           vis.object.rotation.z += 0.09 * dt60
           if (child1) {
             const f = now * 0.035
             child1.scale.setScalar(1.0 + 0.08 * Math.sin(f))
           }
-        } else if (vis.style === 'ice') {
+        } else if (vis.profile === 'shard') {
           vis.object.rotation.z += 0.04 * dt60
           if (child1) {
             child1.scale.setScalar(1.0 + 0.05 * Math.sin(now * 0.02))
           }
-        } else if (vis.style === 'lightning') {
+        } else if (vis.profile === 'lance') {
           vis.object.rotation.z += 0.22 * dt60
           if (child1) {
-            const jit = 0.85 + 0.3 * Math.random()
+            const jit = 0.9 + 0.16 * Math.sin(now * 0.08)
             child1.scale.set(jit, 1.0, jit)
           }
-        } else if (vis.style === 'dark') {
+        } else if (vis.profile === 'drain') {
           vis.object.rotation.z -= 0.05 * dt60
           if (child1) {
             const ds = 0.95 + 0.12 * Math.sin(now * 0.025)
             child1.scale.setScalar(ds)
           }
-        } else if (vis.style === 'nature') {
+        } else if (vis.profile === 'thorn') {
           vis.object.rotation.z += 0.035 * dt60
           if (child1) {
             child1.scale.setScalar(1.0 + 0.06 * Math.sin(now * 0.018))

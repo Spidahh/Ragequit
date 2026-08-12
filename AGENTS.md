@@ -221,6 +221,18 @@ Se una modifica rompe o ignora anche solo uno dei sistemi collegati, la soluzion
   determinano forma e intensita. I file sono Kenney Particle Pack CC0.
 - Se l'utente dice che un layout/stile fa schifo, va trattato come feedback
   vincolante: aggiornare subito UI e memoria, poi verificare.
+- Il pass precedente di animazioni/VFX/HUD/Loadout e stato esplicitamente
+  rifiutato il 2026-08-12. Non descrivere piu il gioco come rifinito in base ai
+  soli test: verificare in arena la qualita percepita, la leggibilita del colpo e
+  la corrispondenza tra azione, animazione, VFX, audio e HUD.
+- Le clip dei quattro personaggi vanno mappate per nome e funzione. Non
+  assegnare mai idle, corsa, attacco o morte in base all'indice della clip.
+- Proiettili e zone non possono distinguersi soltanto per colore: l'evento di
+  spawn porta `abilityId` e ogni famiglia meccanica deve avere una silhouette o
+  firma leggibile mantenendo il bordo della hitbox reale.
+- Il Loadout Forge mostra tutti gli 8 slot senza scroll del build a 1280x720 e,
+  per ogni abilita, tasto diretto, wheel alternativa, forma del colpo,
+  istruzione di mira e risultato numerico.
 - Quando l'utente ordina di eliminare una cosa, eliminarla dal gioco e dai
   documenti nella stessa passata.
 - Nuove decisioni dell'utente vanno scritte come stato vivo, non come proposta.
@@ -236,7 +248,7 @@ Se una modifica rompe o ignora anche solo uno dei sistemi collegati, la soluzion
   - Dark: `#6A0DAD`
   - Nature: `#39FF14`
 - Barre risorse: rettangolari, leggibili, draggable/resizable.
-- Weapon strip: slot leggibili stile 60x60, nessun overlap con hotbar.
+- Weapon strip: slot compatti 46x46, nessun overlap con la hotbar.
 - Quando rifai o aggiorni una regola CSS, cancella quella vecchia nello stesso
   commit — nessun duplicato, nessun override inutile.
 - Preferisci rimozione e consolidamento invece di aggiungere pannelli.

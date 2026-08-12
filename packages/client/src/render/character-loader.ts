@@ -283,11 +283,14 @@ function _fetchMixamoGlb(file: string): Promise<_LoadedGltf> {
  * `_firstAvailable`. (Knight_Met ships: idle, run, walk, strafe, attack 1, block,
  * block idle, cast 1, death, jump, powerup, whirlwind.)
  */
-function _mapMixamoClips(
+export function mapCharacterClips(
   animations: THREE.AnimationClip[],
 ): Partial<Record<AnimName, THREE.AnimationClip>> {
   const out: Partial<Record<AnimName, THREE.AnimationClip>> = {}
-  const exact = (n: string) => animations.find((a) => a.name.toLowerCase() === n)
+  const exact = (...names: string[]) => {
+    const wanted = new Set(names.map((name) => name.toLowerCase()))
+    return animations.find((clip) => wanted.has(clip.name.toLowerCase()))
+  }
   const find = (re: RegExp) => animations.find((a) => re.test(a.name.toLowerCase()))
   const set = (name: AnimName, clip: THREE.AnimationClip | undefined): void => {
     if (!clip) return
@@ -295,51 +298,77 @@ function _mapMixamoClips(
     c.name = name
     out[name] = c
   }
-  // Fused Mixamo-pack GLBs name clips like `sword_and_shield_idle`,
-  // `great_sword_run`, `standing_aim_recoil` — plain "idle" must not match
-  // `block_idle`/`crouch_idle`, hence the negative guards.
-  const plain = (word: string) =>
-    animations.find((a) => {
-      const n = a.name.toLowerCase()
-      return n.includes(word) && !/block|crouch|aim|turn|dodge|kick|sheath|draw_sword/.test(n)
-    })
-  const idle = exact('idle') ?? plain('idle') ?? find(/idle/)
+  // Candidate order is intentional. Each class ships differently named clips;
+  // never infer locomotion or combat states from array position.
+  const idle =
+    exact(
+      'sword_and_shield_idle',
+      'great_sword_idle',
+      'standing_idle_03',
+      'standing_aim_overdraw',
+      'idle',
+    ) ?? find(/(^|_)idle(_|$)/)
   set('Idle', idle)
   set('Attacking_Idle', idle)
-  set('Run', plain('run') ?? find(/run/))
-  set('Walk', plain('walk') ?? find(/walk/) ?? find(/strafe/))
-  const attack = plain('attack') ?? find(/attack/) ?? find(/slash/) ?? find(/whirlwind/)
+  set('Sword_Idle', exact('sword_and_shield_idle', 'great_sword_idle') ?? idle)
+  set('Bow_Idle', exact('standing_aim_overdraw', 'standing_draw_arrow') ?? idle)
+  set('Staff_Idle', exact('standing_idle_03', 'standing_idle_04') ?? idle)
+  set(
+    'Run',
+    exact('sword_and_shield_run', 'great_sword_run', 'standing_run_forward') ??
+      find(/run_forward|(^|_)run(_|$)/),
+  )
+  set(
+    'Walk',
+    exact('sword_and_shield_walk', 'great_sword_walk', 'standing_walk_forward') ??
+      find(/walk_forward|(^|_)walk(_|$)|strafe/),
+  )
+  const attack =
+    exact(
+      'sword_and_shield_attack',
+      'great_sword_attack',
+      'standing_1h_magic_attack_01',
+      'standing_aim_recoil',
+    ) ?? find(/(^|_)attack(_|$)|slash|magic_attack|aim_recoil/)
   set('Dagger_Attack', attack)
-  set('Dagger_Attack2', find(/slash/) ?? find(/whirlwind/) ?? attack)
+  set(
+    'Dagger_Attack2',
+    exact(
+      'sword_and_shield_slash',
+      'great_sword_high_spin_attack',
+      'standing_1h_magic_attack_02',
+    ) ??
+      find(/slash|high_spin|attack_2|attack_02/) ??
+      attack,
+  )
   set('Death', find(/death/))
-  set('Jump', plain('jump') ?? find(/jump/))
-  set('Parry_Block', exact('block') ?? find(/block_idle/) ?? find(/block/))
-  const cast = find(/cast/) ?? find(/2h_magic|magic_area/)
+  set('Jump', find(/(^|_)jump(_|$)|standing_jump/))
+  set('Land', find(/land/))
+  set('Airborne', find(/jump_2|jump_loop/))
+  set('Parry_Block', find(/block_idle|standing_block$|(^|_)block$/))
+  const cast =
+    exact(
+      'sword_and_shield_casting',
+      'great_sword_casting',
+      'standing_2h_cast_spell_01',
+      'standing_1h_magic_attack_01',
+    ) ?? find(/cast|magic_attack/)
   set('Staff_Cast', cast)
-  set('Channel', find(/magic_area|heal/) ?? cast)
+  set('Channel', find(/magic_area|power_up|heal/) ?? cast)
   set('Respawn', find(/power_?up|respawn|enter|heal/))
   set('RecieveHit', find(/impact|block_react/))
   set('RecieveHit_Attacking', find(/impact_2/) ?? find(/impact|block_react/))
-  set('Bow_Draw', find(/aim_overdraw|draw_arrow/))
-  set('Bow_Release', find(/aim_recoil/))
+  set(
+    'Bow_Draw',
+    exact('standing_draw_arrow', 'standing_aim_overdraw') ?? find(/draw_arrow|aim_overdraw/),
+  )
+  set('Bow_Release', exact('standing_aim_recoil') ?? find(/aim_recoil/))
 
-  // Fallback for rigs with generic clip names (e.g. Blender "NlaTrack"): if name
-  // matching found no idle, spread the available clips across the core states by
-  // index so the character still animates instead of standing in a frozen T-pose.
-  if (!out['Idle'] && animations.length) {
-    const byIdx = (name: AnimName, i: number): void => {
-      if (animations[i]) set(name, animations[i])
-    }
-    byIdx('Idle', 0)
-    byIdx('Attacking_Idle', 0)
-    byIdx('Run', 1)
-    byIdx('Walk', 1)
-    byIdx('Dagger_Attack', 2)
-    byIdx('Dagger_Attack2', 2)
-    byIdx('Parry_Block', 1)
-    byIdx('Staff_Cast', 2)
-    byIdx('Channel', 2)
-    byIdx('Death', 3)
+  // Unknown rigs get only a neutral fallback. Guessing run/attack/death by clip
+  // index made valid animations play in the wrong gameplay states.
+  if (!out['Idle'] && animations[0]) {
+    set('Idle', animations[0])
+    set('Attacking_Idle', animations[0])
   }
   return out
 }
@@ -526,7 +555,7 @@ export async function buildCharacterModel(classId: string): Promise<{
       if (Object.keys(clips).length > 0) return { model, clips }
     }
 
-    return { model, clips: _mapMixamoClips(gltf.animations) }
+    return { model, clips: mapCharacterClips(gltf.animations) }
   }
 
   const data = await fetchCharacterData(classId)

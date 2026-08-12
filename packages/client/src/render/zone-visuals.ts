@@ -7,7 +7,9 @@ interface ZoneVisual {
   mesh: THREE.Mesh
   extra?: THREE.Mesh
   accent?: THREE.Mesh
+  signature?: THREE.Group
   element: string
+  profile: ZoneProfile
   /** ms timestamp when the zone was spawned on the client */
   spawnedAtMs: number
   /** seconds before the zone becomes active; 0 = immediately armed */
@@ -15,6 +17,17 @@ interface ZoneVisual {
   /** wall barrier (box) vs circular AoE — drives opacity + spin animation. */
   isWall: boolean
 }
+
+export type ZoneProfile =
+  | 'wall'
+  | 'fire'
+  | 'ice'
+  | 'storm'
+  | 'thorns'
+  | 'volley'
+  | 'trap'
+  | 'smoke'
+  | 'totem'
 
 export interface ZoneVisualsOptions {
   scene: THREE.Scene
@@ -45,6 +58,104 @@ export function zoneColorForElement(element: string): number {
   }
 }
 
+export function zoneProfile(
+  abilityId: string,
+  element: string,
+  shape: 'circle' | 'wall',
+): ZoneProfile {
+  if (shape === 'wall') return 'wall'
+  if (abilityId === 'volley') return 'volley'
+  if (abilityId === 'snare_trap') return 'trap'
+  if (abilityId === 'storm_field') return 'storm'
+  if (abilityId === 'thorn_field' || abilityId === 'entangle') return 'thorns'
+  if (abilityId === 'smoke_screen') return 'smoke'
+  if (abilityId === 'healing_totem') return 'totem'
+  if (element === 'ice') return 'ice'
+  if (element === 'lightning') return 'storm'
+  if (element === 'nature') return 'thorns'
+  return 'fire'
+}
+
+function makeZoneSignature(
+  profile: ZoneProfile,
+  radius: number,
+  color: number,
+): THREE.Group | undefined {
+  if (profile === 'wall' || profile === 'fire') return undefined
+  const group = new THREE.Group()
+  const additive = profile !== 'smoke'
+  const mat = new THREE.MeshBasicMaterial({
+    color: profile === 'smoke' ? 0x281d36 : color,
+    transparent: true,
+    opacity: profile === 'smoke' ? 0.46 : 0.72,
+    blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+    depthWrite: false,
+  })
+  const addRadial = (geometry: THREE.BufferGeometry, count: number, atRadius: number): void => {
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2
+      const mesh = new THREE.Mesh(geometry.clone(), mat.clone())
+      mesh.position.set(Math.cos(angle) * atRadius, 0.25, Math.sin(angle) * atRadius)
+      mesh.rotation.z = (i % 2 === 0 ? 1 : -1) * 0.16
+      mesh.layers.enable(1)
+      group.add(mesh)
+    }
+    geometry.dispose()
+    mat.dispose()
+  }
+
+  if (profile === 'ice') {
+    addRadial(
+      new THREE.ConeGeometry(Math.max(0.08, radius * 0.055), radius * 0.55, 5),
+      8,
+      radius * 0.62,
+    )
+  } else if (profile === 'storm') {
+    addRadial(new THREE.CylinderGeometry(0.025, 0.075, radius * 0.9, 5), 6, radius * 0.52)
+  } else if (profile === 'thorns' || profile === 'trap') {
+    addRadial(
+      new THREE.ConeGeometry(
+        Math.max(0.07, radius * 0.045),
+        profile === 'trap' ? 0.28 : radius * 0.38,
+        5,
+      ),
+      profile === 'trap' ? 12 : 9,
+      radius * (profile === 'trap' ? 0.76 : 0.58),
+    )
+  } else if (profile === 'volley') {
+    addRadial(
+      new THREE.CylinderGeometry(0.018, 0.018, Math.max(0.9, radius * 0.45), 5),
+      10,
+      radius * 0.58,
+    )
+  } else if (profile === 'smoke') {
+    const cloud = new THREE.Mesh(new THREE.SphereGeometry(radius * 0.82, 16, 8), mat)
+    cloud.scale.y = 0.42
+    cloud.position.y = radius * 0.25
+    group.add(cloud)
+  } else if (profile === 'totem') {
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.2, 1.1, 6), mat)
+    stem.position.y = 0.55
+    stem.layers.enable(1)
+    const halo = new THREE.Mesh(new THREE.TorusGeometry(radius * 0.4, 0.045, 6, 24), mat.clone())
+    halo.rotation.x = Math.PI / 2
+    halo.position.y = 1.05
+    halo.layers.enable(1)
+    group.add(stem, halo)
+  }
+  return group
+}
+
+function disposeGroup(group: THREE.Group | undefined): void {
+  if (!group) return
+  group.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return
+    child.geometry.dispose()
+    const materials = Array.isArray(child.material) ? child.material : [child.material]
+    materials.forEach((material) => material.dispose())
+  })
+}
+
 export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsController {
   const zoneVisuals = new Map<string, ZoneVisual>()
 
@@ -52,6 +163,7 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
     if (zoneVisuals.has(msg.id)) return
     let mesh: THREE.Mesh
     const zColor = zoneColorForElement(msg.element)
+    const profile = zoneProfile(msg.abilityId, msg.element, msg.shape)
 
     if (msg.shape === 'wall' && msg.width > 0) {
       const geo = new THREE.BoxGeometry(msg.width, 1.6, 0.4)
@@ -99,6 +211,7 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
         mesh,
         extra: edge,
         element: msg.element,
+        profile,
         spawnedAtMs: performance.now(),
         armDelaySec: msg.armDelaySec,
         isWall: true,
@@ -166,11 +279,19 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
       accentMesh.layers.enable(1) // bloom
       scene.add(accentMesh)
 
+      const signature = makeZoneSignature(profile, msg.radius, zColor)
+      if (signature) {
+        signature.position.set(msg.pos.x, msg.pos.y, msg.pos.z)
+        scene.add(signature)
+      }
+
       zoneVisuals.set(msg.id, {
         mesh,
         extra: floorMesh,
         accent: accentMesh,
+        signature,
         element: msg.element,
+        profile,
         spawnedAtMs: performance.now(),
         armDelaySec: msg.armDelaySec,
         isWall: false,
@@ -195,6 +316,10 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
       vis.accent.geometry.dispose()
       ;(vis.accent.material as THREE.Material).dispose()
     }
+    if (vis.signature) {
+      scene.remove(vis.signature)
+      disposeGroup(vis.signature)
+    }
     zoneVisuals.delete(msg.id)
   }
 
@@ -212,6 +337,10 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
         scene.remove(vis.accent)
         vis.accent.geometry.dispose()
         ;(vis.accent.material as THREE.Material).dispose()
+      }
+      if (vis.signature) {
+        scene.remove(vis.signature)
+        disposeGroup(vis.signature)
       }
     })
     zoneVisuals.clear()
@@ -259,6 +388,12 @@ export function initZoneVisuals({ scene }: ZoneVisualsOptions): ZoneVisualsContr
         if (vis.element === 'ice') vis.accent.scale.setScalar(1.0 + pulse * 0.04)
         else if (vis.element === 'nature')
           vis.accent.scale.set(1.0 + pulse * 0.06, 1, 1.0 + pulse * 0.06)
+      }
+      if (vis.signature) {
+        const direction = vis.profile === 'storm' || vis.profile === 'volley' ? -1 : 1
+        vis.signature.rotation.y += direction * 0.006 * dt60
+        const bob = 1 + Math.sin(now * 0.006) * 0.04
+        if (vis.profile === 'totem' || vis.profile === 'smoke') vis.signature.scale.setScalar(bob)
       }
     })
   }
