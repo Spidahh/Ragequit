@@ -576,8 +576,6 @@ function spawnImpact(pos: THREE.Vector3, color: number, profile: ImpactProfile =
   impactVfx.spawn(pos, color, profile)
 }
 
-// elementToImpactColor imported from ./game/hitstop.js
-
 const impactVfx = new ImpactPool()
 scene.add(impactVfx.mesh)
 scene.add(impactVfx.ringMesh)
@@ -607,6 +605,7 @@ const remotePlayerSystem = initRemotePlayers({
   capsuleHeightM: CAPSULE_HEIGHT_M,
   capsuleHalfHeightM: CAPSULE_HALF_HEIGHT_M,
   getSelfTeam: () => getSelfSchemaPlayer()?.team ?? '',
+  soundEngine,
 })
 
 const hitFeedback = initHitFeedback({

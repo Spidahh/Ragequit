@@ -1,6 +1,9 @@
 import { ABILITY_DEFS, HP_MAX, INTERPOLATION_DELAY_MS, TARGET_CLASS_DEFS } from '@ragequit/shared'
 import * as THREE from 'three'
 
+import { forgetRemoteFootsteps, tickRemoteFootsteps } from '../audio/ambience.js'
+import type { SoundEngine } from '../audio/sound-engine.js'
+
 import {
   makeCharacter,
   applyWeaponProp,
@@ -116,6 +119,8 @@ export interface RemotePlayersOptions {
   capsuleHeightM: number
   capsuleHalfHeightM: number
   getSelfTeam: () => string // '' | 'red' | 'blue' — used to colour allies vs enemies in 5v5
+  /** Drives spatial footsteps for other players (previously local-only). */
+  soundEngine: SoundEngine
 }
 
 export interface RemotePlayersController {
@@ -244,6 +249,7 @@ export function initRemotePlayers({
   capsuleHeightM,
   capsuleHalfHeightM,
   getSelfTeam,
+  soundEngine,
 }: RemotePlayersOptions): RemotePlayersController {
   const remotePlayers = new Map<string, RemoteState>()
   ;(globalThis as Record<string, unknown>)['__remotes'] = remotePlayers // verify-harness diag
@@ -476,6 +482,8 @@ export function initRemotePlayers({
         if (!r.onGround && isOnGround) r.landUntilMs = now + 400 // landed
         r.onGround = isOnGround
       }
+      // Spatial footsteps — you could not hear anyone approaching at all.
+      tickRemoteFootsteps(soundEngine, sid, p.transform, r.onGround, p.alive)
       if (r.lastWeapon !== remoteWeapon) {
         r.lastWeapon = remoteWeapon
         applyWeaponProp(r.mesh, remoteWeapon, toonGradient)
@@ -502,6 +510,7 @@ export function initRemotePlayers({
         disposeRemote(r)
         remotePlayers.delete(sid)
         remoteDamageBlinkUntil.delete(sid) // don't leak blink state across joins
+        forgetRemoteFootsteps(sid)
       }
     })
   }

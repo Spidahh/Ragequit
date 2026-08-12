@@ -26,11 +26,11 @@ const HARD_LIMIT = 800
 // from the "split" intent but still ratcheted so it can't balloon.
 // Baselined against the prettier-formatted tree (the canonical line count).
 const BUDGET = {
-  'packages/client/src/main.ts': 2753,
+  'packages/client/src/main.ts': 2752,
   'packages/server/src/rooms/GameRoom.ts': 1927,
   'packages/shared/src/abilities/registry.ts': 1508,
   'packages/server/src/sim/AbilityEngine.ts': 906,
-  'packages/client/src/audio/sound-engine.ts': 819,
+  'packages/client/src/audio/sound-engine.ts': 796,
 }
 
 const SCAN_DIRS = ['packages/client/src', 'packages/server/src', 'packages/shared/src']

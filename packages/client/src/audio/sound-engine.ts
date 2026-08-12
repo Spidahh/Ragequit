@@ -3,6 +3,7 @@
 // "must be triggered by a user gesture" browser requirement.
 
 import { hurtAbility, hurtAoe, hurtMelee, hurtProjectile } from './hurt-sounds.js'
+import { remoteCast, remoteHit } from './remote-sounds.js'
 
 export class SoundEngine {
   private ctx: AudioContext | null = null
@@ -473,6 +474,15 @@ export class SoundEngine {
     return { ac: this.ac, out: this.out, muted: this._muted }
   }
 
+  /** Same as graph(), but routed through an HRTF panner at a world position. */
+  spatialGraph(
+    wx: number,
+    wy: number,
+    wz: number,
+  ): { ac: AudioContext; out: AudioNode; muted: boolean } {
+    return { ac: this.ac, out: this._spatialOut(wx, wy, wz), muted: this._muted }
+  }
+
   /** Short upward frequency sweep — jump. */
   playJump(): void {
     if (this._muted) return
@@ -565,26 +575,7 @@ export class SoundEngine {
    */
   playRemoteHit(wx: number, wy: number, wz: number, power = 0.7): void {
     if (this._muted) return
-    const ac = this.ac
-    const out = this._spatialOut(wx, wy, wz)
-    const len = Math.floor(ac.sampleRate * 0.055)
-    const buf = ac.createBuffer(1, len, ac.sampleRate)
-    const d = buf.getChannelData(0)
-    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) * 0.7
-    const src = ac.createBufferSource()
-    src.buffer = buf
-    const filt = ac.createBiquadFilter()
-    filt.type = 'bandpass'
-    filt.frequency.value = 600 + power * 400
-    filt.Q.value = 0.6
-    const gain = ac.createGain()
-    gain.gain.setValueAtTime(0.28 + power * 0.35, ac.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.08)
-    src.connect(filt)
-    filt.connect(gain)
-    gain.connect(out)
-    this._pitch(src, 0.1)
-    src.start()
+    remoteHit(this.ac, this._spatialOut(wx, wy, wz), power, (s, v) => this._pitch(s, v))
   }
 
   /**
@@ -592,21 +583,7 @@ export class SoundEngine {
    */
   playRemoteCast(wx: number, wy: number, wz: number, element = 'none'): void {
     if (this._muted) return
-    const ac = this.ac
-    const out = this._spatialOut(wx, wy, wz)
-    const osc = ac.createOscillator()
-    const gain = ac.createGain()
-    const baseFreq =
-      element === 'fire' ? 180 : element === 'ice' ? 320 : element === 'lightning' ? 480 : 240
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(baseFreq, ac.currentTime)
-    osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.6, ac.currentTime + 0.15)
-    gain.gain.setValueAtTime(0.18, ac.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.25)
-    osc.connect(gain)
-    gain.connect(out)
-    osc.start()
-    osc.stop(ac.currentTime + 0.28)
+    remoteCast(this.ac, this._spatialOut(wx, wy, wz), element, (s, v) => this._pitch(s, v))
   }
 
   // ─── Low-HP heartbeat ────────────────────────────────────────────────────

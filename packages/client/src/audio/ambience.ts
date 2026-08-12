@@ -74,6 +74,80 @@ export function playFootstep(engine: SoundEngine, power = 1): void {
   src.start()
 }
 
+/**
+ * One footstep from ANOTHER player, spatialised at their world position.
+ *
+ * You could not hear anyone approaching: footsteps existed only for the local
+ * player and were routed through the non-spatial output. In FFA/5v5 that means
+ * an opponent can cross the arena behind you in total silence.
+ */
+export function playRemoteFootstep(
+  engine: SoundEngine,
+  wx: number,
+  wy: number,
+  wz: number,
+  power = 1,
+): void {
+  const { ac, out, muted } = engine.spatialGraph(wx, wy, wz)
+  if (muted) return
+  const len = Math.floor(ac.sampleRate * 0.055)
+  const buf = ac.createBuffer(1, len, ac.sampleRate)
+  const d = buf.getChannelData(0)
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (len * 0.3))
+  const src = ac.createBufferSource()
+  src.buffer = buf
+  src.playbackRate.value = 1 + (Math.random() * 2 - 1) * 0.2
+  const filt = ac.createBiquadFilter()
+  filt.type = 'lowpass'
+  filt.frequency.value = 480
+  const gain = ac.createGain()
+  // Louder than our own step: an enemy's position is information we need.
+  gain.gain.value = 0.16 * power
+  src.connect(filt)
+  filt.connect(gain)
+  gain.connect(out)
+  src.start()
+}
+
+/**
+ * Per-remote-player stride accumulator. Same 2.1 m rule as the local player,
+ * tracked independently for each session id.
+ */
+const _remoteStride = new Map<string, { x: number; z: number; accum: number }>()
+
+export function tickRemoteFootsteps(
+  engine: SoundEngine,
+  playerId: string,
+  pos: { x: number; y: number; z: number },
+  onGround: boolean,
+  alive: boolean,
+): void {
+  const { x, y, z } = pos
+  const prev = _remoteStride.get(playerId)
+  if (!prev) {
+    _remoteStride.set(playerId, { x, z, accum: 0 })
+    return
+  }
+  const moved = Math.hypot(x - prev.x, z - prev.z)
+  prev.x = x
+  prev.z = z
+  // Teleports/respawns produce a huge single-frame delta — not a stride.
+  if (!onGround || !alive || moved > 2.5) {
+    prev.accum = 0
+    return
+  }
+  prev.accum += moved
+  if (prev.accum > 2.1) {
+    prev.accum = 0
+    playRemoteFootstep(engine, x, y, z)
+  }
+}
+
+/** Drop a player's stride state when they leave. */
+export function forgetRemoteFootsteps(playerId: string): void {
+  _remoteStride.delete(playerId)
+}
+
 let _lastX: number | null = null
 let _lastZ = 0
 
