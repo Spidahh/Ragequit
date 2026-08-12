@@ -56,14 +56,9 @@ import { MusicPlayer } from './audio/music.js'
 import { SoundEngine } from './audio/sound-engine.js'
 import { type DeathcamData } from './endgame.js'
 import { type ComboState, victimShakeIntensity, COMBO_RESET_MS } from './game/combat-feedback.js'
+import { spawnHitImpacts } from './game/hit-impacts.js'
 import { accumulateHitStats, killStreakSplash } from './game/hit-stats.js'
-import {
-  rawCauseId,
-  isAirPunishCause,
-  hitstopAttacker,
-  hitstopVictim,
-  elementToImpactColor,
-} from './game/hitstop.js'
+import { rawCauseId, isAirPunishCause, hitstopAttacker, hitstopVictim } from './game/hitstop.js'
 import { matchSM } from './game/match-state-machine.js'
 import { reconcilePrediction } from './game/prediction.js'
 import { createSchemaAccessors } from './game/schema-helpers.js'
@@ -132,7 +127,7 @@ import { initProjectileVisuals, type SchemaProjectile } from './render/projectil
 import { initRemotePlayers, type RemotePlayerSchema } from './render/remote-players.js'
 import { initSelfEmissive, STATUS_EMISSIVE } from './render/self-emissive.js'
 import { scheduleViewmodelPrecompile } from './render/shader-warmup.js'
-import { initSpellParticles } from './render/spell-particles.js'
+import { initSpellParticles, type SpellStyle } from './render/spell-particles.js'
 import { VfxTextures } from './render/vfx-textures.js'
 import { getWeaponView } from './render/weapon-view.js'
 import { initZoneVisuals, zoneColorForElement } from './render/zone-visuals.js'
@@ -1649,82 +1644,18 @@ function onHit(msg: ServerHitMessage): void {
   }
 
   // --- World-space impact VFX — melee, projectile, combo, parry ---
-  {
-    const vicPos = getPlayerWorldPos(msg.victimId)
-    const attPos = getPlayerWorldPos(msg.attackerId)
-    const midpoint =
-      attPos && vicPos
-        ? new THREE.Vector3(
-            (attPos.x + vicPos.x) * 0.5,
-            (attPos.y + vicPos.y) * 0.5,
-            (attPos.z + vicPos.z) * 0.5,
-          )
-        : vicPos
-          ? new THREE.Vector3(vicPos.x, vicPos.y, vicPos.z)
-          : null
-
-    if (midpoint) {
-      const cause = msg.cause
-      // Strip 'ability:' prefix so melee/bow abilities match their VFX category.
-      const rawC = rawCauseId(cause)
-      if (msg.didParry) {
-        // Parry spark — bright silver flash at contact midpoint.
-        spawnImpact(midpoint, 0xddeeff, 'parry')
-      } else if (msg.damage > 0) {
-        // Air punish — extra burst directly at victim height.
-        if (isAirPunish && vicPos) {
-          spawnImpact(new THREE.Vector3(vicPos.x, vicPos.y + 0.3, vicPos.z), 0xff8844, 'melee')
-          spawnImpact(new THREE.Vector3(vicPos.x, vicPos.y + 0.6, vicPos.z), 0xff4422, 'magic')
-        }
-        if (
-          rawC === 'sword_m1' ||
-          rawC === 'uppercut' ||
-          rawC === 'gap_closer' ||
-          rawC === 'bleed_strike' ||
-          rawC === 'guard_break' ||
-          rawC === 'rending_dash' ||
-          rawC === 'whirlwind'
-        ) {
-          // Melee — gold spark + secondary red burst for hard hits.
-          spawnImpact(midpoint, 0xffcc44, 'melee')
-          if (msg.damage >= 10 && vicPos) {
-            spawnImpact(new THREE.Vector3(vicPos.x, vicPos.y + 0.4, vicPos.z), 0xff6622, 'melee')
-          }
-        } else if (
-          rawC === 'bow' ||
-          rawC === 'piercing_shot' ||
-          rawC === 'pin_shot' ||
-          rawC === 'marksman_shot' ||
-          rawC === 'broadhead' ||
-          rawC === 'blast_arrow' ||
-          rawC === 'volley' ||
-          rawC === 'disengage_shot' ||
-          rawC === 'snare_trap'
-        ) {
-          // Bow / arrow — amber.
-          spawnImpact(midpoint, 0xf08020, 'pierce')
-        } else if (cause.startsWith('combo:')) {
-          // Status combo reactions — element-specific colour.
-          spawnImpact(midpoint, elementToImpactColor(msg.element, cause))
-        } else if (
-          cause.startsWith('zone:') ||
-          cause.startsWith('dot:') ||
-          cause.startsWith('status:')
-        ) {
-          // Zone / DoT ticks — small element-coloured pulse at victim.
-          if (vicPos)
-            spawnImpact(
-              new THREE.Vector3(vicPos.x, vicPos.y + 0.5, vicPos.z),
-              elementToImpactColor(msg.element, cause),
-              'tick',
-            )
-        } else {
-          // All other magic / ability hits — element-coloured impact.
-          spawnImpact(midpoint, elementToImpactColor(msg.element, cause))
-        }
-      }
-    }
-  }
+  spawnHitImpacts(
+    {
+      spawnImpact,
+      burstElement: (pos, element) => spellParticles.burstImpact(pos, element as SpellStyle),
+    },
+    msg,
+    {
+      vicPos: getPlayerWorldPos(msg.victimId),
+      attPos: getPlayerWorldPos(msg.attackerId),
+      isAirPunish,
+    },
+  )
 
   const victimPos = getPlayerWorldPos(msg.victimId)
   if (victimPos) {
