@@ -2104,6 +2104,14 @@ button.locked {
 }
 
 @media (max-width: 1180px) {
+  /* Smallest supported layout: shrink the ability bar further so all 8 slots
+     stay on screen next to the vitals panel. */
+  #cd-strip {
+    --pip-w: 58px;
+    --pip-h: 68px;
+    --pip-name: 7px;
+  }
+
   #main-menu {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) auto;
@@ -2584,6 +2592,12 @@ button.locked {
 }
 
 #cd-strip {
+  /* Pip size is a variable so narrow viewports scale the whole ability bar
+     down instead of overflowing off-screen (it used to be hard-coded, and any
+     growth pushed the UTILITY section past the right edge at 1280x720). */
+  --pip-w: 82px;
+  --pip-h: 84px;
+  --pip-name: 9px;
   display: flex;
   align-items: flex-end;
   gap: 10px;
@@ -2662,8 +2676,8 @@ button.locked {
 
 .cd-pip {
   position: relative;
-  width: 58px;
-  height: 62px;
+  width: var(--pip-w, 82px);
+  height: var(--pip-h, 84px);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-bottom: 3px solid var(--family-color, var(--elem-color, var(--gold)));
   border-radius: 3px;
@@ -2692,14 +2706,10 @@ button.locked {
   border-bottom-color: #ffd260;
 } /* utility */
 
-.cd-pip.utility-pip {
-  width: 58px;
-  height: 62px;
-}
-
+.cd-pip.utility-pip,
 .cd-pip.spell-pip {
-  width: 58px;
-  height: 62px;
+  width: var(--pip-w, 82px);
+  height: var(--pip-h, 84px);
 }
 
 .cd-pip.ready {
@@ -2752,27 +2762,73 @@ button.locked {
   top: 3px;
   left: 3px;
   right: 3px;
-  bottom: 17px;
+  bottom: 24px;
   display: block;
   overflow: hidden;
   border-radius: 2px;
   z-index: 2;
 }
 
+/* The full ability name, wrapped over up to two lines. NEVER ellipsised:
+   "MARKSMA…" / "LIGHTNING …" told the player nothing. */
 .cd-pip .ability-short-name {
   position: absolute;
   right: 2px;
   bottom: 2px;
   left: 2px;
   z-index: 12;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  color: #eef3ff;
-  font: 800 7px/11px var(--font-ui);
-  letter-spacing: 0.02em;
+  color: #f4f7ff;
+  font: 800 var(--pip-name, 9px) / calc(var(--pip-name, 9px) + 1px) var(--font-ui);
+  letter-spacing: 0.01em;
   text-align: center;
-  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
   text-transform: uppercase;
-  white-space: nowrap;
+  word-break: break-word;
+}
+
+/* Headline number (damage / heal / control duration / dash metres), pinned over
+   the icon so it survives at a glance without a tooltip. */
+.cd-pip .pip-stat {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  z-index: 13;
+  padding: 1px 4px;
+  border-radius: 2px;
+  background: rgba(4, 6, 11, 0.88);
+  font: 900 11px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+.cd-pip .pip-stat.stat-damage {
+  color: #ff8d7a;
+}
+.cd-pip .pip-stat.stat-heal {
+  color: #7dffa8;
+}
+.cd-pip .pip-stat.stat-control {
+  color: #ffd260;
+}
+.cd-pip .pip-stat.stat-move {
+  color: #8fd4ff;
+}
+
+/* Shot-shape glyph: line / area / wall / dash / self / melee arc. Tells the
+   player WHERE it lands without reading a word. */
+.cd-pip .pip-shape {
+  position: absolute;
+  bottom: 24px;
+  left: 4px;
+  z-index: 13;
+  color: rgba(238, 243, 255, 0.92);
+  font-size: 12px;
+  line-height: 1;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
 .cd-pip .ability-icon img {
@@ -3606,24 +3662,27 @@ button.locked {
   filter: grayscale(40%) brightness(60%);
 }
 
-/* Settings, pause, scoreboard, respawn */
+/* Settings, pause, scoreboard, respawn, leaderboard */
 #settings-overlay,
 #pause-menu,
-#scoreboard {
+#scoreboard,
+#leaderboard-overlay {
   position: fixed;
   inset: 0;
   z-index: 850;
   background: linear-gradient(90deg, rgba(4, 6, 11, 0.96), rgba(4, 6, 11, 0.68));
 }
 
-#settings-overlay {
+#settings-overlay,
+#leaderboard-overlay {
   display: grid;
   place-items: center;
   padding: 34px;
   overflow-y: auto;
 }
 
-#settings-overlay h2 {
+#settings-overlay h2,
+#leaderboard-overlay h2 {
   margin: 0 0 18px;
   color: var(--gold);
   font: 900 34px/1 var(--font-hud);
@@ -3642,6 +3701,21 @@ button.locked {
 .settings-panel {
   width: min(880px, 100%);
   padding: 18px;
+}
+
+.leaderboard-panel {
+  width: min(520px, 100%);
+}
+
+.leaderboard-body {
+  padding: 14px 4px;
+}
+
+.leaderboard-empty {
+  padding: 20px 14px;
+  text-align: center;
+  color: var(--text-soft);
+  font: 700 13px/1.4 var(--font-mono);
 }
 
 .setting-row {
@@ -4992,10 +5066,18 @@ button.locked {
     grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
   }
 
+  /* Keep the console clear of the bottom-left vitals panel, but never force a
+     width its own content exceeds — a fixed width made the ability bar spill
+     past the right screen edge. Shrink the pips instead. */
   #combat-console {
-    left: calc(50% + 120px);
-    min-width: 650px;
-    width: min(760px, calc(100vw - 420px));
+    left: calc(50% + 110px);
+    max-width: calc(100vw - 380px);
+  }
+
+  #cd-strip {
+    --pip-w: 66px;
+    --pip-h: 74px;
+    --pip-name: 8px;
   }
 }
 

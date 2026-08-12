@@ -28,7 +28,6 @@ import {
   ClassId,
   TARGET_CLASS_DEFS,
   type AbilityDef,
-  type AbilityComboRole,
   type ChannelEffect,
   type DamageEffect,
   type EffectSpec,
@@ -40,101 +39,28 @@ import {
   type ProjectileEffect,
   type ResourceDrainEffect,
   type ServerAbilityCastedMessage,
-  type ServerAbilityFailedMessage,
   type ServerChannelInterruptedMessage,
   type StatusEffect,
-  type StatusKind,
   type Vec3,
   type ZoneEffect,
 } from '@ragequit/shared'
 
-import type { PendingDamageEntry, StatusRuntime } from './StatusRuntime.js'
+import type { StatusRuntime } from './StatusRuntime.js'
+import type { CastTarget, EngineHost } from './ability-engine-host.js'
 import { validateCast } from './cast-validation.js'
 import { impactPushDirection } from './combat-geometry.js'
 import { placePointForward, clampPointToRange } from './targeting-geometry.js'
 
 // --- Host interface --------------------------------------------------------
+// Lives in ./ability-engine-host.ts; re-exported so existing importers of
+// AbilityEngine keep working.
 
-export interface ProjectileSpawnRequest {
-  ownerId: string
-  abilityId: string
-  comboRole: AbilityComboRole
-  kind: 'arrow' | 'bolt'
-  origin: Vec3
-  vel: Vec3
-  gravity: number
-  damage: number
-  lifetimeTicks: number
-  spawnedAtTick: number
-  splashRadius?: number
-  lifestealFraction?: number
-  element?: string
-  knockbackDistance?: number
-  onHitStatus?: { kind: StatusKind; durationSec: number; stacks: number; slowFraction?: number }
-}
-
-export interface ZoneSpawnRequest {
-  ownerId: string
-  abilityId: string
-  element: string
-  shape: 'circle' | 'wall'
-  pos: Vec3
-  yaw: number
-  radius: number
-  width: number
-  durationSec: number
-  tickEverySec: number
-  armDelaySec?: number
-  expiresOnTrigger?: boolean
-  damagePerTick: number
-  applyStatus?: { kind: StatusKind; durationSec: number; stacks: number; slowFraction?: number }
-}
-
-export interface CastTarget {
-  yaw: number
-  pitch: number
-  point?: Vec3
-  targetId?: string
-}
-
-export interface EngineHost {
-  state: { players: Map<string, Player>; tick: number }
-  pendingDamage: { push: (e: PendingDamageEntry) => number | unknown }
-  spawnProjectile: (req: ProjectileSpawnRequest) => string
-  spawnZone: (req: ZoneSpawnRequest) => string
-  sendAbilityFailed: (
-    sid: string,
-    abilityId: string,
-    reason: ServerAbilityFailedMessage['reason'],
-  ) => void
-  broadcast: (type: string, message: unknown) => void
-  // Player capsule foot offset that projectile origin uses (eye-height shoulder).
-  computeProjectileOrigin: (player: Player, dir: Vec3) => Vec3
-  // Trigger an atomic weapon swap without GCD penalty.
-  forceWeaponSwap: (sid: string, weapon: 'sword' | 'bow' | 'staff') => void
-  // Apply knockup using the movement helpers (player.airborneUntilTick + vy).
-  applyKnockup: (
-    player: Player,
-    airborneSec: number,
-    knockback?: { x: number; z: number; distance: number },
-  ) => void
-  hasLineOfSight?: (from: Vec3, to: Vec3) => boolean
-  resolveDisplacement?: (
-    player: Player,
-    dx: number,
-    dz: number,
-    cancelOnCollision: boolean,
-  ) => {
-    x: number
-    z: number
-  }
-  // Optional hooks for class mechanic integration.
-  // Returning undefined (when not provided) means "no bonus / no multiplier."
-  /** Returns a cooldown multiplier for ability casts (e.g. Momentum CDR). */
-  getAbilityCooldownMult?: (sid: string) => number
-  /** Returns extra HP to grant the caster on top of the base heal amount. */
-  getRecoveryHealBonus?: (sid: string, abilityId: string, now: number) => number
-}
+export type {
+  CastTarget,
+  EngineHost,
+  ProjectileSpawnRequest,
+  ZoneSpawnRequest,
+} from './ability-engine-host.js'
 
 // --- Pending windups -------------------------------------------------------
 
@@ -214,6 +140,9 @@ export class AbilityEngine {
     }
     if (effectiveStam > 0) {
       player.stamina -= effectiveStam
+      // The movement sim owns stamina; without this the tick loop refunds the
+      // cost immediately and every stamina-costed ability is free.
+      this.host.syncSimStamina?.(sid, player.stamina)
     }
     player.gcdReadyAtTick = now + GCD_TICKS
     player.abilityCooldowns.set(def.id, now + Math.round(effectiveCdSec * TICK_RATE_HZ))
@@ -391,6 +320,7 @@ export class AbilityEngine {
         const caster = this.host.state.players.get(sid)
         if (caster) {
           caster.stamina = Math.min(caster.stamina + effect.amount, getPlayerMaxima(caster).stamina)
+          this.host.syncSimStamina?.(sid, caster.stamina)
         }
         return 0
       }
@@ -628,6 +558,9 @@ export class AbilityEngine {
           caster.stamina + drained * (e.gainFraction ?? 0),
           getPlayerMaxima(caster).stamina,
         )
+        // Both sides must reach the movement sim or the drain is undone.
+        this.host.syncSimStamina?.(victimId, victim.stamina)
+        this.host.syncSimStamina?.(sid, caster.stamina)
       }
     }
   }
@@ -730,6 +663,9 @@ export class AbilityEngine {
     const resolved = this.host.resolveDisplacement(caster, dx, dz, !!e.cancelOnCollision)
     caster.transform.x = resolved.x
     caster.transform.z = resolved.z
+    // The movement sim owns the authoritative position; without this the next
+    // tick overwrites the transform and the dash never happens.
+    this.host.syncSimPos?.(sid, resolved.x, resolved.z)
   }
 
   // Active channels — driven each tick from `tickWindups` (we reuse the

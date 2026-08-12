@@ -403,6 +403,9 @@
           <div id="menu-server-status" class="status-disconnected">
             <span class="server-status-dot">●</span>offline
           </div>
+          <button class="util-btn" id="menu-leaderboard">
+            <span class="util-btn-icon">🏆</span>Classifica
+          </button>
           <button class="util-btn menu-settings-btn" id="menu-settings">
             <span class="util-btn-icon">⚙</span>Impostazioni
           </button>
@@ -524,6 +527,15 @@
         </div>
       </div>
       <button id="settings-back-btn">INDIETRO</button>
+    </div>
+
+    <!-- Leaderboard overlay -->
+    <div id="leaderboard-overlay" class="hidden">
+      <h2>CLASSIFICA</h2>
+      <div class="settings-panel leaderboard-panel">
+        <div id="leaderboard-body" class="leaderboard-body"></div>
+      </div>
+      <button id="leaderboard-back-btn">INDIETRO</button>
     </div>
 
     <div id="loadout-station" class="hidden">

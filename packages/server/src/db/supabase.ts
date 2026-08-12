@@ -84,6 +84,26 @@ export async function saveLoadout(userId: string, loadoutData: string[]): Promis
     .upsert({ user_id: userId, loadout_data: loadoutData }, { onConflict: 'user_id' })
 }
 
+export interface LeaderboardEntry {
+  username: string
+  elo_rating: number
+  wins: number
+  losses: number
+}
+
+/** Top-N players by ELO (1v1 rating — the only ladder that currently exists). */
+export async function getLeaderboard(limit = 10): Promise<LeaderboardEntry[]> {
+  const sb = getSupabase()
+  if (!sb) return []
+  const { data, error } = await sb
+    .from('players')
+    .select('username, elo_rating, wins, losses')
+    .order('elo_rating', { ascending: false })
+    .limit(limit)
+  if (error || !data) return []
+  return data as LeaderboardEntry[]
+}
+
 /** Record a match result and update ELO.
  *  winnerEloDelta / loserEloDelta are the K-factor computed deltas from
  *  MatchManager.applyEloUpdates(). Defaults to a flat ±20 only as a fallback

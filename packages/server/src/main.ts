@@ -16,7 +16,7 @@ import {
 } from '@ragequit/shared'
 import express, { type RequestHandler } from 'express'
 
-import { startKeepAlive } from './db/supabase.js'
+import { startKeepAlive, getLeaderboard } from './db/supabase.js'
 import { GameRoom } from './rooms/GameRoom.js'
 import { initServerTelemetry, shutdownServerTelemetry } from './telemetry.js'
 
@@ -113,6 +113,12 @@ const gameServer = new Server({
     // Health endpoint for the hosting platform and local probes.
     app.get('/health', (_req, res) => {
       res.json({ status: 'ok', ts: Date.now() })
+    })
+    // Global 1v1 ELO leaderboard (COMPLETEZZA.md gap) — read-only, no session
+    // required. Not per-room state, so a plain HTTP route (not a Colyseus
+    // message) is the natural fit; menu can fetch it standalone.
+    app.get('/leaderboard', (_req, res) => {
+      void getLeaderboard(10).then((entries) => res.json({ entries }))
     })
     // Colyseus monitor — opt-in admin surface. Never expose it without auth.
     if (MONITOR_ENABLED) {

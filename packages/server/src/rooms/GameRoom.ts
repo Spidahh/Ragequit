@@ -153,6 +153,22 @@ export class GameRoom extends Room<{ state: GameState }> {
   private roomCreatedAt = Date.now()
 
   private readonly sim = new Map<string, PlayerSimState>()
+
+  // The movement sim owns position and stamina: the tick loop copies both onto
+  // the replicated Player, so a system that writes only the Player has its
+  // change reverted a tick later. Shared by every subsystem host.
+  private readonly syncSimPos = (playerId: string, x: number, z: number): void => {
+    const simState = this.sim.get(playerId)
+    if (!simState) return
+    simState.pos.x = x
+    simState.pos.z = z
+  }
+
+  private readonly syncSimStamina = (playerId: string, stamina: number): void => {
+    const simState = this.sim.get(playerId)
+    if (simState) simState.stamina = stamina
+  }
+
   private readonly inputQueues = new Map<string, ClientInputMessage[]>()
   private readonly swingQueues = new Map<string, ClientSwingMessage[]>()
   private readonly castQueues = new Map<string, ClientCastMessage[]>()
@@ -377,6 +393,8 @@ export class GameRoom extends Room<{ state: GameState }> {
         hasLineOfSight: (from, to) => hasLineOfSight(this.activeMap.boxes, from, to),
         resolveDisplacement: (player, dx, dz, cancelOnCollision) =>
           this.resolveAbilityDisplacement(player, dx, dz, cancelOnCollision),
+        syncSimPos: this.syncSimPos,
+        syncSimStamina: this.syncSimStamina,
         getAbilityCooldownMult: (sid) => {
           const player = this.state.players.get(sid)
           return player ? this.mechanics.getMomentumCooldownMult(player) : 1
@@ -393,13 +411,7 @@ export class GameRoom extends Room<{ state: GameState }> {
       broadcast: (type, message) => this.broadcast(type, message),
       resolveDisplacement: (player, dx, dz, cancelOnCollision) =>
         this.resolveAbilityDisplacement(player, dx, dz, cancelOnCollision),
-      syncSimPos: (playerId, x, z) => {
-        const simState = this.sim.get(playerId)
-        if (simState) {
-          simState.pos.x = x
-          simState.pos.z = z
-        }
-      },
+      syncSimPos: this.syncSimPos,
     })
     this.zones = new ZoneSystem({
       state: this.state,
@@ -413,17 +425,8 @@ export class GameRoom extends Room<{ state: GameState }> {
       enqueueDamage: (d) => this.damageQueue.push(d),
       resolveDisplacement: (player, dx, dz, cancelOnCollision) =>
         this.resolveAbilityDisplacement(player, dx, dz, cancelOnCollision),
-      syncSimPos: (playerId, x, z) => {
-        const simState = this.sim.get(playerId)
-        if (simState) {
-          simState.pos.x = x
-          simState.pos.z = z
-        }
-      },
-      syncSimStamina: (playerId, stamina) => {
-        const simState = this.sim.get(playerId)
-        if (simState) simState.stamina = stamina
-      },
+      syncSimPos: this.syncSimPos,
+      syncSimStamina: this.syncSimStamina,
       lookupHistory: (playerId, tick) => this.history.lookup(playerId, tick),
       sendAbilityFailed: (sid, abilityId, reason) => this.sendAbilityFailed(sid, abilityId, reason),
       hasStatus: (player, kind) => this.statuses.hasStatus(player, kind),
@@ -432,10 +435,7 @@ export class GameRoom extends Room<{ state: GameState }> {
     this.parry = new ParrySystem({
       state: this.state,
       sendAbilityFailed: (sid, abilityId, reason) => this.sendAbilityFailed(sid, abilityId, reason),
-      syncSimStamina: (playerId, stamina) => {
-        const simState = this.sim.get(playerId)
-        if (simState) simState.stamina = stamina
-      },
+      syncSimStamina: this.syncSimStamina,
       broadcast: (type, message) => this.broadcast(type, message),
     })
     // Match manager - drives BO5 round flow + ELO + scoreboard.

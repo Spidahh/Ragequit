@@ -92,6 +92,7 @@ import { initGameInput, makeGameInputState } from './input/game-input.js'
 import { actionLabel, onKeybindsChanged } from './input/keybinds.js'
 import { initRadialWheels } from './input/radial-wheels.js'
 import { initMouseSensitivity } from './input/sensitivity.js'
+import { initLeaderboard } from './leaderboard.js'
 import { initLoadoutStation } from './loadout-station.js'
 import { createAccountUi } from './menu/account-ui.js'
 import { initMenu } from './menu.js'
@@ -765,10 +766,9 @@ pauseLobbyBtn.addEventListener('click', () => {
 // -----------------------------------------------------------------------
 // Networking
 // -----------------------------------------------------------------------
-
 const SERVER_URL =
   (import.meta.env['VITE_SERVER_URL'] as string | undefined) ?? 'ws://localhost:2567'
-
+initLeaderboard(SERVER_URL)
 interface SelfState {
   sessionId: string
   sim: PlayerSimState

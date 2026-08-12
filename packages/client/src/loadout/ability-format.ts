@@ -356,6 +356,63 @@ export function abilityReadability(def: AbilityDef): AbilityReadability {
   return { shape, shapeLabel, instruction, outcome: effectOutcome(def).join(' · ') }
 }
 
+/** Compact glyph per shot shape — the hotbar has no room for words. */
+const SHAPE_GLYPH: Record<AbilityShapeKind, string> = {
+  line: '▶',
+  area: '⊕',
+  wall: '▬',
+  dash: '↦',
+  self: '◉',
+  melee: '⌒',
+}
+
+export interface AbilityPrimaryStat {
+  /** Headline number the player needs mid-fight (damage, heal, dash metres…). */
+  text: string
+  /** Drives the badge colour class. */
+  kind: 'damage' | 'heal' | 'control' | 'move' | 'none'
+}
+
+/**
+ * The ONE number that matters at a glance, for the in-match hotbar.
+ *
+ * A pointer-locked FPS gives the player no cursor, so the hover tooltip that
+ * carries damage/shape/outcome is unreachable during a match. This condenses
+ * the same data into something that fits permanently on the pip.
+ * Damage wins over everything else, because that is what a player compares
+ * under pressure; healing, control duration and dash distance follow.
+ */
+export function abilityPrimaryStat(def: AbilityDef): AbilityPrimaryStat {
+  let damage = 0
+  for (const e of def.effects) {
+    if (e.kind === 'projectile') damage = Math.max(damage, e.damage)
+    else if (e.kind === 'damage') damage = Math.max(damage, e.amount)
+    else if (e.kind === 'zone' && (e.damagePerTick ?? 0) > 0)
+      damage = Math.max(damage, e.damagePerTick ?? 0)
+    else if (e.kind === 'channel' && e.perTick.kind === 'damage')
+      damage = Math.max(damage, e.perTick.amount)
+  }
+  if (damage > 0) return { text: `${damage}`, kind: 'damage' }
+
+  for (const e of def.effects) {
+    if (e.kind === 'heal') return { text: `+${e.amount}`, kind: 'heal' }
+    if (e.kind === 'channel' && e.perTick.kind === 'heal')
+      return { text: `+${e.perTick.amount}`, kind: 'heal' }
+    if (e.kind === 'restoreStamina') return { text: `+${e.amount}`, kind: 'heal' }
+  }
+  for (const e of def.effects) {
+    if (e.kind === 'knockup') return { text: `${e.airborneSec}s`, kind: 'control' }
+    if (e.kind === 'applyStatus') return { text: `${e.durationSec}s`, kind: 'control' }
+    if (e.kind === 'move') return { text: `${e.distance}m`, kind: 'move' }
+  }
+  return { text: '', kind: 'none' }
+}
+
+/** Shape glyph for the hotbar pip (same vocabulary as abilityReadability). */
+export function abilityShapeGlyph(def: AbilityDef): string {
+  return SHAPE_GLYPH[abilityReadability(def).shape]
+}
+
 export function slotPoolTitle(slot: TargetAbilitySlotFamily, _idx: number): string {
   if (slot === 'melee') return 'Abilita Spada'
   if (slot === 'bow') return 'Abilita Arco'

@@ -43,7 +43,12 @@ interface RecordedProjectile {
   speed: number
 }
 
+/** Records engine-side stamina writes pushed into the movement simulation, so
+ *  tests can prove a cost was actually paid and not refunded next tick. */
+const staminaSyncs: { playerId: string; stamina: number }[] = []
+
 function makeRoom(hostOverrides: Partial<Pick<EngineHost, 'hasLineOfSight'>> = {}) {
+  staminaSyncs.length = 0
   const state = new GameState()
   const pendingDamage: PendingDamageEntry[] = []
   const broadcasts: { type: string; message: unknown }[] = []
@@ -125,6 +130,7 @@ function makeRoom(hostOverrides: Partial<Pick<EngineHost, 'hasLineOfSight'>> = {
       }
       player.airborneUntilTick = state.tick + Math.round(airborneSec * 60)
     },
+    syncSimStamina: (playerId, stamina) => staminaSyncs.push({ playerId, stamina }),
     ...hostOverrides,
   }
 
@@ -149,9 +155,14 @@ function makeRoom(hostOverrides: Partial<Pick<EngineHost, 'hasLineOfSight'>> = {
   }
 }
 
+/** Records every syncSimPos the engine performs, so tests can assert that a
+ *  displacement reached the movement simulation and not just the schema. */
+const simSyncs: { playerId: string; x: number; z: number }[] = []
+
 function makeRoomWithMoveResolver(
   resolveDisplacement: EngineHost['resolveDisplacement'],
 ): ReturnType<typeof makeRoom> {
+  simSyncs.length = 0
   const r = makeRoom()
   const statuses = new StatusRuntime({
     state: r.state as unknown as { players: Map<string, Player>; tick: number },
@@ -214,6 +225,7 @@ function makeRoomWithMoveResolver(
         player.airborneUntilTick = r.state.tick + Math.round(airborneSec * 60)
       },
       resolveDisplacement,
+      syncSimPos: (playerId, x, z) => simSyncs.push({ playerId, x, z }),
     },
     statuses,
   )
@@ -701,6 +713,39 @@ describe('AbilityEngine — movement collision contract', () => {
     expect(r.engine.tryCast('A', 'fire_blink', { yaw: 0, pitch: 0 })).toBe(true)
 
     expect(r.caster.transform.z).toBeCloseTo(-3.5)
+  })
+
+  // Regression: displacement used to be written to player.transform ONLY. The
+  // room's tick loop copies simState.pos into the transform every frame, so the
+  // dash was erased one tick later and every mobility ability moved the caster
+  // nowhere. Asserting the transform alone cannot catch that — assert the sim.
+  // Regression: the stamina cost was deducted from player.stamina only. The
+  // tick loop copies simState.stamina back onto the player, so the cost was
+  // refunded a tick later and every stamina-costed ability was effectively
+  // free. MeleeSystem/ParrySystem already synced; the engine did not.
+  it('pushes the stamina cost into the movement simulation', () => {
+    const r = makeRoom()
+    const before = r.caster.stamina
+
+    expect(r.engine.tryCast('A', 'whirlwind', { yaw: 0, pitch: 0 })).toBe(true)
+
+    const cost = ABILITY_DEFS.whirlwind!.costStamina
+    expect(r.caster.stamina).toBeCloseTo(before - cost)
+    expect(staminaSyncs.at(-1)).toEqual({ playerId: 'A', stamina: r.caster.stamina })
+  })
+
+  it('pushes the dash into the movement simulation, not just the schema', () => {
+    const r = makeRoomWithMoveResolver((player, dx, dz) => ({
+      x: player.transform.x + dx,
+      z: player.transform.z + dz,
+    }))
+
+    expect(r.engine.tryCast('A', 'quick_dash', { yaw: 0, pitch: 0 })).toBe(true)
+
+    expect(simSyncs).toHaveLength(1)
+    expect(simSyncs[0]!.playerId).toBe('A')
+    expect(simSyncs[0]!.x).toBeCloseTo(r.caster.transform.x)
+    expect(simSyncs[0]!.z).toBeCloseTo(r.caster.transform.z)
   })
 })
 

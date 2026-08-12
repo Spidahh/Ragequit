@@ -287,9 +287,18 @@ export function mapCharacterClips(
   animations: THREE.AnimationClip[],
 ): Partial<Record<AnimName, THREE.AnimationClip>> {
   const out: Partial<Record<AnimName, THREE.AnimationClip>> = {}
+  // Honours ARGUMENT order, not the order clips happen to sit in the GLB.
+  // (It used to scan `animations` for the first clip matching any candidate,
+  // so `exact('standing_draw_arrow', 'standing_aim_overdraw')` returned the
+  // aim pose for Erika purely because it is earlier in her pack — the bow draw
+  // state played the fully-drawn pose and the draw was never seen.)
   const exact = (...names: string[]) => {
-    const wanted = new Set(names.map((name) => name.toLowerCase()))
-    return animations.find((clip) => wanted.has(clip.name.toLowerCase()))
+    const byName = new Map(animations.map((clip) => [clip.name.toLowerCase(), clip]))
+    for (const name of names) {
+      const hit = byName.get(name.toLowerCase())
+      if (hit) return hit
+    }
+    return undefined
   }
   const find = (re: RegExp) => animations.find((a) => re.test(a.name.toLowerCase()))
   const set = (name: AnimName, clip: THREE.AnimationClip | undefined): void => {
@@ -308,11 +317,31 @@ export function mapCharacterClips(
       'standing_aim_overdraw',
       'idle',
     ) ?? find(/(^|_)idle(_|$)/)
+  // Second idle variant when the pack ships one, so "weapon out, ready to
+  // fight" is not the exact same frame as the neutral stance.
+  const idleAlt =
+    exact('sword_and_shield_idle_2', 'great_sword_idle_2', 'standing_idle_04') ??
+    find(/idle_2$|idle_02$/)
   set('Idle', idle)
-  set('Attacking_Idle', idle)
+  set('Attacking_Idle', idleAlt ?? idle)
   set('Sword_Idle', exact('sword_and_shield_idle', 'great_sword_idle') ?? idle)
   set('Bow_Idle', exact('standing_aim_overdraw', 'standing_draw_arrow') ?? idle)
-  set('Staff_Idle', exact('standing_idle_03', 'standing_idle_04') ?? idle)
+  // Staff idle MUST fall back to a casting/spell pose before the generic idle:
+  // otherwise every class stands in its melee guard while holding a staff, and
+  // switching weapons visibly changes nothing. The Mixamo packs do ship a
+  // casting clip (sword_and_shield_casting / great_sword_casting) — use it.
+  set(
+    'Staff_Idle',
+    exact(
+      'standing_idle_03',
+      'standing_idle_04',
+      'sword_and_shield_casting',
+      'great_sword_casting',
+      'standing_2h_cast_spell_01',
+    ) ??
+      find(/cast/) ??
+      idle,
+  )
   set(
     'Run',
     exact('sword_and_shield_run', 'great_sword_run', 'standing_run_forward') ??
@@ -345,7 +374,10 @@ export function mapCharacterClips(
   set('Jump', find(/(^|_)jump(_|$)|standing_jump/))
   set('Land', find(/land/))
   set('Airborne', find(/jump_2|jump_loop/))
-  set('Parry_Block', find(/block_idle|standing_block$|(^|_)block$/))
+  // Parry needs SOME distinct pose — a parry that looks identical to standing
+  // still is unreadable for the opponent. Packs without a block clip (ninja)
+  // fall back to the guard idle; the shield/weapon prop carries the rest.
+  set('Parry_Block', find(/block_idle|standing_block$|(^|_)block$/) ?? idleAlt ?? idle)
   const cast =
     exact(
       'sword_and_shield_casting',

@@ -29,7 +29,7 @@ const BUDGET = {
   'packages/client/src/main.ts': 2816,
   'packages/server/src/rooms/GameRoom.ts': 1927,
   'packages/shared/src/abilities/registry.ts': 1508,
-  'packages/server/src/sim/AbilityEngine.ts': 985,
+  'packages/server/src/sim/AbilityEngine.ts': 924,
   'packages/client/src/audio/sound-engine.ts': 862,
 }
 
@@ -96,7 +96,9 @@ if (ratchetWins.length) {
 if (violations.length) {
   console.error('✗ File-size budget violated:')
   for (const v of violations) console.error('  ' + v)
-  console.error('\nExtract a cohesive piece into its own module (see 02_TECH/08_project_governance.md).')
+  console.error(
+    '\nExtract a cohesive piece into its own module (see 02_TECH/08_project_governance.md).',
+  )
   process.exit(1)
 }
 

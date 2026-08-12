@@ -35,6 +35,35 @@ describe('semantic character animation mapping', () => {
     expect(mapped.Dagger_Attack).toBeUndefined()
     expect(mapped.Death).toBeUndefined()
   })
+
+  // Regression guard: every weapon-specific idle used to `?? idle`, so a pack
+  // without a literally-named clip collapsed Sword/Bow/Staff/Attacking idle onto
+  // ONE pose — the character never changed posture when swapping weapons.
+  // `duration` is the source fingerprint that survives AnimationClip.clone().
+  it('gives the melee packs a staff pose distinct from their sword guard', () => {
+    const src = (names: string[]) =>
+      names.map((name, i) => new THREE.AnimationClip(name, i + 1, []))
+
+    const paladin = mapCharacterClips(
+      src(['sword_and_shield_idle', 'sword_and_shield_idle_2', 'sword_and_shield_casting']),
+    )
+    expect(paladin.Staff_Idle?.duration).not.toBe(paladin.Sword_Idle?.duration)
+    expect(paladin.Attacking_Idle?.duration).not.toBe(paladin.Idle?.duration)
+
+    const ninja = mapCharacterClips(
+      src(['great_sword_idle', 'great_sword_idle_2', 'great_sword_casting']),
+    )
+    expect(ninja.Staff_Idle?.duration).not.toBe(ninja.Sword_Idle?.duration)
+  })
+
+  it('always resolves a parry pose, even for packs with no block clip', () => {
+    const ninja = mapCharacterClips(
+      ['great_sword_idle', 'great_sword_idle_2', 'great_sword_casting'].map(
+        (name, i) => new THREE.AnimationClip(name, i + 1, []),
+      ),
+    )
+    expect(ninja.Parry_Block).toBeDefined()
+  })
 })
 
 describe('character animation decisions', () => {

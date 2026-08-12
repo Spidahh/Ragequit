@@ -9,6 +9,8 @@ import {
   tagClass,
   typeBadgeClass,
   abilityReadability,
+  abilityPrimaryStat,
+  abilityShapeGlyph,
 } from './ability-format.js'
 
 const def = (over: Record<string, unknown>) => ({ costMana: 0, costStamina: 0, ...over }) as never
@@ -102,6 +104,61 @@ describe('ability-format', () => {
       expect(projectile.shape).toBe('line')
       expect(projectile.instruction).toContain('MIRA E SPARA')
       expect(projectile.outcome).toBe('16 danni')
+    })
+  })
+
+  describe('abilityPrimaryStat', () => {
+    it('prefers damage, taking the largest across effects', () => {
+      const stat = abilityPrimaryStat(
+        def({
+          effects: [
+            { at: 'onCast', kind: 'applyStatus', status: 'burn', durationSec: 4 },
+            { at: 'onCast', kind: 'projectile', speedMps: 20, gravityMps2: 0, damage: 24 },
+          ],
+        }),
+      )
+      expect(stat).toEqual({ text: '24', kind: 'damage' })
+    })
+
+    it('falls back to healing when there is no damage', () => {
+      expect(
+        abilityPrimaryStat(def({ effects: [{ at: 'onCast', kind: 'heal', amount: 30 }] })),
+      ).toEqual({ text: '+30', kind: 'heal' })
+    })
+
+    it('falls back to control duration, then movement distance', () => {
+      expect(
+        abilityPrimaryStat(def({ effects: [{ at: 'onCast', kind: 'knockup', airborneSec: 1.2 }] })),
+      ).toEqual({ text: '1.2s', kind: 'control' })
+      expect(
+        abilityPrimaryStat(
+          def({ effects: [{ at: 'onCast', kind: 'move', mode: 'dash', distance: 8 }] }),
+        ),
+      ).toEqual({ text: '8m', kind: 'move' })
+    })
+
+    it('returns empty for abilities with no headline number', () => {
+      expect(abilityPrimaryStat(def({ effects: [{ at: 'onCast', kind: 'cleanse' }] }))).toEqual({
+        text: '',
+        kind: 'none',
+      })
+    })
+  })
+
+  describe('abilityShapeGlyph', () => {
+    it('maps each shot shape to a distinct glyph', () => {
+      const projectile = abilityShapeGlyph(
+        def({
+          slot: 'magic',
+          targeting: 'forward',
+          range: 30,
+          effects: [{ at: 'onCast', kind: 'projectile', speedMps: 20, gravityMps2: 0, damage: 16 }],
+        }),
+      )
+      const onSelf = abilityShapeGlyph(def({ slot: 'utility', targeting: 'self', effects: [] }))
+      expect(projectile).toBe('▶')
+      expect(onSelf).toBe('◉')
+      expect(projectile).not.toBe(onSelf)
     })
   })
 })

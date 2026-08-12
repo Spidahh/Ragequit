@@ -3,7 +3,11 @@ import type { ClassId } from '@ragequit/shared'
 
 import { abilityIconMarkup } from '../icons.js'
 import { actionCode, codeToLabel, onKeybindsChanged, SLOT_ACTIONS } from '../input/keybinds.js'
-import { abilityReadability } from '../loadout/ability-format.js'
+import {
+  abilityPrimaryStat,
+  abilityReadability,
+  abilityShapeGlyph,
+} from '../loadout/ability-format.js'
 
 export const ELEMENT_COLOR: Record<string, string> = {
   fire: '#ff6a2a',
@@ -141,7 +145,13 @@ export function initCooldownStrip(
           : (def?.slot.toUpperCase() ?? '')
       const cdLabel = def ? `${def.cooldownSec}s CD` : ''
       const costLabel = costParts.length > 0 ? costParts.join(' · ') : 'free'
-      const shortName = (def?.name ?? id).split(/\s+/).slice(0, 2).join(' ')
+      // Full name — never elided. A pointer-locked FPS gives no cursor, so the
+      // hover tooltip below can never be opened mid-match: whatever the player
+      // needs in a fight has to be ON the pip. The name wraps to two lines and
+      // the headline number + shot-shape glyph ride along permanently.
+      const fullName = def?.name ?? id
+      const stat = def ? abilityPrimaryStat(def) : { text: '', kind: 'none' as const }
+      const shapeGlyph = def ? abilityShapeGlyph(def) : ''
 
       const pip = document.createElement('div')
       pip.className = `cd-pip ready ${meta.pipClass}`
@@ -154,7 +164,9 @@ export function initCooldownStrip(
       pip.innerHTML = `
         <span class="ability-icon">${icon}</span>
         <span class="label">${meta.label}</span>
-        <span class="ability-short-name">${shortName}</span>
+        ${stat.text ? `<span class="pip-stat stat-${stat.kind}">${stat.text}</span>` : ''}
+        ${shapeGlyph ? `<span class="pip-shape" aria-hidden="true">${shapeGlyph}</span>` : ''}
+        <span class="ability-short-name">${fullName}</span>
         <svg class="cd-arc" viewBox="0 0 44 44" width="44" height="44">
           <circle class="cd-arc-bg" cx="22" cy="22" r="${CD_ARC_R}" fill="none"/>
           <circle class="cd-arc-fill" cx="22" cy="22" r="${CD_ARC_R}" fill="none"
