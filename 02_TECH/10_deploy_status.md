@@ -81,8 +81,9 @@ da `public/weapons/kaykit/*.glb`. I file `public/weapons/sword.glb`, `bow.glb`,
 - `pnpm check` + build su ogni push/PR.
 - Push su `main` pubblica automaticamente server su Fly.io e client su
   Cloudflare Pages.
-- Dopo il deploy server, la CI interroga `/health` con retry e raccoglie stato e
-  log Fly in caso di errore: un server irraggiungibile non può più risultare verde.
+- Il client mostra lo stato reale del server interrogando `/health`; il controllo
+  post-deploy automatico resta da aggiungere con un token GitHub dotato di scope
+  `workflow`.
 
 ## Comandi deploy
 
