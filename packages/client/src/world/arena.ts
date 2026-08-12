@@ -535,6 +535,15 @@ export function buildArena(scene: THREE.Scene, _toonGradient: THREE.DataTexture)
                 if (s.type.startsWith('barrel') || s.type === 'box_large' || s.type === 'crate') {
                   mat.color.lerp(new THREE.Color(0x6b5233), 0.65)
                   mat.roughness = Math.max(mat.roughness ?? 0.8, 0.85)
+                } else if (s.type === 'banner') {
+                  // The prop is named "_red" but its UVs land on the purple and
+                  // teal strips of KayKit's palette atlas, so it renders as a
+                  // magenta/cyan checker — it reads as a missing texture hanging
+                  // in a blood-red arena. mat.color multiplies the map, so a hard
+                  // pull toward crimson folds both strips back into maroon/brick
+                  // while the pattern survives as luminance variation.
+                  mat.color.lerp(new THREE.Color(0x8c2b22), 0.85)
+                  mat.roughness = Math.max(mat.roughness ?? 0.8, 0.9)
                 }
               }
             }

@@ -870,6 +870,20 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
     serve `<title>RAGEQUIT</title>`, il bundle pubblicato punta a `wss://ragequit-server.fly.dev`,
     e quel server risponde `{"status":"ok"}`. (`ws://127.0.0.1` nel vendor bundle è solo il default
     dell'SDK Colyseus, non l'endpoint configurato.)
+  - **Stendardi a scacchi viola/ciano — trovati FOTOGRAFANDO la produzione, non leggendo il
+    codice.** `banner_patternA_red` si chiama "red" ma i suoi UV pescano sulle strisce viola e
+    turchese della palette atlas KayKit (`dungeon_texture.png`, 64×64 a strisce): in ogni partita
+    pendevano dalle mura due bandiere che sembravano una texture mancante. Non era un 404 (nessuno
+    in produzione) e non era l'arena (la sua palette 3×4 non ha né viola né ciano). `mat.color`
+    moltiplica la map, quindi una tirata decisa verso il cremisi riporta entrambe le strisce su
+    maroon/mattone lasciando vivo il pattern — stessa tecnica già usata lì accanto per i barili,
+    a cui lo stendardo era semplicemente sfuggito. A/B misurato sulla stessa scena locale:
+    **1266 px viola + 1608 ciano → 0 e 0**; il "prima" (0,281% del frame) combacia con la
+    produzione (0,277%), il che conferma che era proprio quello.
+  - **Ancora aperto e NON toccato (è STILE, quindi tuo)**: dentro `gladiators_arena.glb` ci sono
+    barili/casse verde-acqua accesi, che stonano con l'arena rosso-scura. Non sono prop: sono
+    geometria dell'arena, quindi il tint "legno invecchiato" dei prop non li tocca. Colorarli è una
+    scelta di look, non un bug da correggere di mia iniziativa.
 
 ## 7. Metodo di lavoro (professionale)
 
