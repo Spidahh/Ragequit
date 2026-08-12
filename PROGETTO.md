@@ -669,6 +669,15 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
   Probe col Paladin in play: 0 errori, shader 43→43 (nessuna compilazione mid-fight). Scoreboard e
   deathcam ora TUTTI in italiano. Commits: 4100670, 782340c, ac21282, bb93271.
 
+- **2026-08-12 — GIRO POLISH+F5 (autonomo, «fai tutte le fasi»).** Push: d96b341 (Cinzel display
+  font self-hosted su tutti i titoli · preloadClassModel via placeholder dorati · FFA→10 ·
+  barili imbruniti) · d5f3258 (orb emissivo element-tinted sullo staff — backlog giugno chiuso) ·
+  **2275e9a (F5 MUSICA: `audio/music.ts` crossfade menu↔combat, tracce CC0 OpenGameArt —
+  "Loopable Dungeon Ambience" + "Battle Theme A" —, slider Musica dedicato persistito,
+  autoplay-policy gestita col gesture-unlock esistente; CREDITS.md nuovo)**. Gate 364 test.
+  - PROSSIMI: ritratti classi dai modelli veri (menu/loadout mostrano ancora i vecchi) · F2b
+    tuning spell per elemento + pmndrs · foley file-based (Sonniss) · F7 reconnect 0.17/leaderboard.
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.
