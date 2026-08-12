@@ -19,11 +19,22 @@ projectiles and enemy silhouettes dominant.
 
 ## Materials
 
-- `MeshToonMaterial` for characters, weapons, blockout geometry, and arena props.
-- `MeshStandardMaterial` for first-person weapons only (responds to fpvKeyLight for depth).
+RAGEQUIT moved off the toon pipeline (STILE.md: "~75% toward realistic" — PBR
+materic, desaturated, grounded; the toon-ramp fork was explicitly rejected).
+
+- `MeshStandardMaterial` (PBR) for the live realistic characters (Mixamo GLB —
+  `render/characters.ts` keeps the model's OWN authored materials), arena
+  shell/floor/props (`world/arena.ts`, `render/factories.ts`), weapons, and
+  first-person viewmodels. Roughness/metalness/normal ranges: STILE.md §2.
 - `MeshBasicMaterial` for placement previews and short-lived VFX that don't need lighting.
 - Zone walls, projectile VFX, zone floors/domes: `MeshBasicMaterial` with bloom layer.
-- Never use `MeshPhongMaterial` or `MeshLambertMaterial` — inconsistent with toon look.
+- Never use `MeshPhongMaterial` or `MeshLambertMaterial` — inconsistent with the PBR look.
+- `MeshToonMaterial` still exists ONLY in the legacy procedural character path
+  (`character.ts`) — the low-poly silhouette that renders as a placeholder
+  before a class's GLB finishes loading/validating, never the live in-match
+  body. Don't extend the toon path; new character work targets the GLB pipeline.
+- Outline policy: rim, team-colored (`render/outlines.ts` `createOutlineMesh`),
+  NOT a black toon outline. Weapons/shield carry no outline (STILE.md §6).
 
 ## VFX Textures
 
@@ -62,11 +73,16 @@ projectiles and enemy silhouettes dominant.
 
 ## Asset Direction
 
-- Low-poly stylized with clean silhouettes (toon shader).
-- Environment colors muted; element VFX carry the saturated color language.
-- Arena props: KayKit Dungeon + Fantasy Props MegaKit (cel-shaded, outlined).
-- Arena sky: gradient shader (dark zenith to lighter horizon), NOT a skybox texture.
-- Use `DynamicDrawUsage` on BufferAttributes updated every frame (dust particles).
+- PBR realistic-materic, desaturated and grounded (Mordhau/Vermintide/Darkfall
+  reference), NOT low-poly/toon. Full spec + palette: STILE.md.
+- Environment colors muted; element magic (5 hues, `ELEMENT_COLOR`) is the
+  ONE deliberately saturated additive layer — that contrast IS the aesthetic.
+- Arena props: KayKit Dungeon + Fantasy Props MegaKit meshes, but re-materialed
+  PBR (`MeshStandardMaterial`, roughness/metalness per STILE.md §2) — not
+  cel-shaded/outlined as originally authored.
+- Arena sky: gradient shader (dusk zenith to warm amber horizon), NOT a skybox texture.
+- Use `DynamicDrawUsage` on BufferAttributes updated every frame (dust particles,
+  including their per-vertex torch-proximity color).
 - Use instancing for repeated scenery when profiling shows measurable cost.
 
 ## Audio

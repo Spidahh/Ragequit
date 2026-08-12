@@ -353,6 +353,31 @@ export function classLoadoutFitsSlotGrammar(
   return true
 }
 
+export function loadoutHasRecovery(classId: ClassId, abilityIds: readonly string[]): boolean {
+  return abilityIds.includes(TARGET_CLASS_DEFS[classId].recoveryId)
+}
+
+// Deterministically guarantees a resolved build always carries its class's
+// Recovery ability — the slot grammar alone allows a legal build with zero
+// self-sustain (COMPLETEZZA.md gap). Swaps the LAST utility-family slot for
+// it (position is not gameplay-significant — validation is by family budget,
+// not slot index), or appends it when no utility slot is in use.
+export function ensureLoadoutHasRecovery(
+  classId: ClassId,
+  abilityIds: readonly string[],
+): readonly string[] {
+  if (loadoutHasRecovery(classId, abilityIds)) return abilityIds
+  const recoveryId = TARGET_CLASS_DEFS[classId].recoveryId
+  const lastUtilityIndex = abilityIds.reduce(
+    (found, id, i) => (getAbilitySlotFamily(id) === 'utility' ? i : found),
+    -1,
+  )
+  if (lastUtilityIndex === -1) return [...abilityIds, recoveryId]
+  const next = [...abilityIds]
+  next[lastUtilityIndex] = recoveryId
+  return next
+}
+
 export function inferClassFromLoadout(abilityIds: readonly string[]): ClassId | null {
   const activeIds = abilityIds.filter(Boolean)
   const hybridFits = classLoadoutFitsSlotGrammar('hybrid', activeIds)

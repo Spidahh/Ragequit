@@ -79,6 +79,7 @@ import { initAbilityReadout } from './hud/ability-readout.js'
 import { initCooldownStrip, ELEMENT_COLOR } from './hud/cd-strip.js'
 import { createCombatFeedHud } from './hud/combat-feed.js'
 import { initCombatOverlayHud } from './hud/combat-overlay-hud.js'
+import { createStatusSetter } from './hud/connection-status.js'
 import { createHudFlash } from './hud/flash.js'
 import { initHitFeedback } from './hud/hit-feedback.js'
 import { initDraggableHud } from './hud/hud-drag.js'
@@ -96,6 +97,7 @@ import { createAccountUi } from './menu/account-ui.js'
 import { initMenu } from './menu.js'
 import { joinWithRetry } from './net/join-with-retry.js'
 import { sendLoadout } from './net/loadout-sync.js'
+import { wireReconnectFeedback } from './net/reconnect-feedback.js'
 import { createSchemaReaders } from './net/schema-readers.js'
 import { probeServerAvailability } from './net/server-health.js'
 import { initSupabaseAuth, getAccessToken, getCurrentUserEmail } from './net/supabase-auth.js'
@@ -1003,20 +1005,7 @@ const draggableHud = initDraggableHud({
   resizeHandle: hudResizeHandle,
 })
 
-function setStatus(text: string, _color: string): void {
-  const statusClass = `status-${text.replace(/\s+/g, '-').toLowerCase()}`
-  dbgStatus.textContent = text
-  dbgStatus.className = statusClass
-  const footerEl = document.getElementById('menu-server-status')
-  if (footerEl) {
-    footerEl.replaceChildren()
-    footerEl.className = statusClass
-    const dot = document.createElement('span')
-    dot.className = 'server-status-dot'
-    dot.textContent = '●'
-    footerEl.append(dot, text)
-  }
-}
+const setStatus = createStatusSetter(dbgStatus)
 
 let playerProfile = {
   currentClass: null as ClassId | null,
@@ -1446,7 +1435,18 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
       if (msg.solo) updateFfaLadder(msg.solo, selfId)
       menu.onScore(msg, selfId, otherId)
     })
-
+    wireReconnectFeedback(joinedRoom, {
+      isCurrentRoom,
+      onDrop: () => {
+        setStatus('connecting', '#e4c05a')
+        serverToast.textContent = 'Connessione instabile. Riconnessione automatica...'
+        serverToast.classList.remove('hidden')
+      },
+      onReconnect: () => {
+        setStatus('connected', '#9be39b')
+        serverToast.classList.add('hidden')
+      },
+    })
     joinedRoom.onLeave((code?: number) => {
       if (room && room !== joinedRoom) return
       // A leave WE initiated to show an end screen keeps the scoreboard up

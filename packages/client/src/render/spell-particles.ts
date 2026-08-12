@@ -56,6 +56,32 @@ const STYLE_RGB: Record<SpellStyle, [number, number, number]> = {
   neutral: [0.2, 0.85, 1.0],
 }
 
+// Per-element motion signature (F2b tuning). Every element still shares the
+// ONE material/batch/shader above — only the numeric emission parameters and
+// a signed vertical force vary, so this stays anti-freeze safe. forceY sign
+// follows the original hardcoded "(0,-1,0) direction" convention: positive
+// reinforces it (sinks), negative opposes it (rises).
+interface ElementMotion {
+  speedMul: number
+  lifeMul: number
+  sizeMul: number
+  countMul: number
+  forceY: number
+}
+const ELEMENT_MOTION: Record<SpellStyle, ElementMotion> = {
+  // Embers rise and burn out fast — classic fire.
+  fire: { speedMul: 1.15, lifeMul: 1.0, sizeMul: 1.0, countMul: 1.0, forceY: -1.6 },
+  // Crystalline dust: slow, sparse, lingers, settles.
+  ice: { speedMul: 0.6, lifeMul: 1.3, sizeMul: 1.1, countMul: 0.7, forceY: 0.7 },
+  // Crackling snap: fast, brief, small — no drift, just a jolt.
+  lightning: { speedMul: 1.8, lifeMul: 0.5, sizeMul: 0.75, countMul: 1.2, forceY: 0 },
+  // Heavy void wisps: slow, few, big, long-lived, sinks like it has weight.
+  dark: { speedMul: 0.45, lifeMul: 1.5, sizeMul: 1.25, countMul: 0.6, forceY: 0.35 },
+  // Organic drift: gentle upward float, like pollen/leaves.
+  nature: { speedMul: 0.9, lifeMul: 1.1, sizeMul: 0.95, countMul: 1.0, forceY: -0.6 },
+  neutral: { speedMul: 1, lifeMul: 1, sizeMul: 1, countMul: 1, forceY: 0 },
+}
+
 function styleColor(style: SpellStyle, alpha: number): QVector4 {
   const [r, g, b] = STYLE_RGB[style]
   return new QVector4(r, g, b, alpha)
@@ -102,19 +128,24 @@ export function initSpellParticles(scene: THREE.Scene): SpellParticles {
   }
 
   function makeEmberSystem(style: SpellStyle): ParticleSystem {
+    const m = ELEMENT_MOTION[style]
+    const behaviors = [fadeOverLife(style), shrinkOverLife()]
+    if (m.forceY !== 0) {
+      behaviors.push(new ApplyForce(new QVector3(0, -1, 0), new ConstantValue(m.forceY)) as never)
+    }
     return new ParticleSystem({
       duration: 1,
       looping: true,
       autoDestroy: true, // takes effect once looping is turned off on release
       worldSpace: true,
       shape: new SphereEmitter({ radius: 0.06 }),
-      startLife: new IntervalValue(0.25, 0.5),
-      startSpeed: new IntervalValue(0.1, 0.6),
-      startSize: new IntervalValue(0.05, 0.13),
+      startLife: new IntervalValue(0.25 * m.lifeMul, 0.5 * m.lifeMul),
+      startSpeed: new IntervalValue(0.1 * m.speedMul, 0.6 * m.speedMul),
+      startSize: new IntervalValue(0.05 * m.sizeMul, 0.13 * m.sizeMul),
       startColor: new ConstantColor(styleColor(style, 0.9)),
-      emissionOverTime: new ConstantValue(10),
-      emissionOverDistance: new ConstantValue(9),
-      behaviors: [fadeOverLife(style), shrinkOverLife()],
+      emissionOverTime: new ConstantValue(10 * m.countMul),
+      emissionOverDistance: new ConstantValue(9 * m.countMul),
+      behaviors,
       renderMode: RenderMode.BillBoard,
       material,
       layers: bloomLayers,
@@ -128,11 +159,13 @@ export function initSpellParticles(scene: THREE.Scene): SpellParticles {
     speed: [number, number],
     life: [number, number],
     size: [number, number],
-    gravity: number,
+    forceScale: number,
   ): ParticleSystem {
+    const m = ELEMENT_MOTION[style]
     const behaviors = [fadeOverLife(style), shrinkOverLife()]
-    if (gravity > 0) {
-      behaviors.push(new ApplyForce(new QVector3(0, -1, 0), new ConstantValue(gravity)) as never)
+    const forceY = m.forceY * forceScale
+    if (forceY !== 0) {
+      behaviors.push(new ApplyForce(new QVector3(0, -1, 0), new ConstantValue(forceY)) as never)
     }
     return new ParticleSystem({
       duration: 0.7,
@@ -140,13 +173,19 @@ export function initSpellParticles(scene: THREE.Scene): SpellParticles {
       autoDestroy: true,
       worldSpace: true,
       shape: new PointEmitter(),
-      startLife: new IntervalValue(life[0], life[1]),
-      startSpeed: new IntervalValue(speed[0], speed[1]),
-      startSize: new IntervalValue(size[0], size[1]),
+      startLife: new IntervalValue(life[0] * m.lifeMul, life[1] * m.lifeMul),
+      startSpeed: new IntervalValue(speed[0] * m.speedMul, speed[1] * m.speedMul),
+      startSize: new IntervalValue(size[0] * m.sizeMul, size[1] * m.sizeMul),
       startColor: new ConstantColor(styleColor(style, 1)),
       emissionOverTime: new ConstantValue(0),
       emissionBursts: [
-        { time: 0, count: new ConstantValue(count), cycle: 1, interval: 1, probability: 1 },
+        {
+          time: 0,
+          count: new ConstantValue(Math.max(1, Math.round(count * m.countMul))),
+          cycle: 1,
+          interval: 1,
+          probability: 1,
+        },
       ],
       behaviors,
       renderMode: RenderMode.BillBoard,
@@ -180,7 +219,10 @@ export function initSpellParticles(scene: THREE.Scene): SpellParticles {
       system.emitter.position.copy(pos)
     },
     muzzleFlash(pos, style) {
-      const system = addSystem(makeBurstSystem(style, 8, [0.6, 2], [0.12, 0.25], [0.06, 0.14], 0))
+      // Small forceScale so the cast-puff still carries a whisper of the
+      // element's motion signature (fire kicks up, ice/dark settle) without
+      // the burst reading as heavy — it's gone in ~0.2s anyway.
+      const system = addSystem(makeBurstSystem(style, 8, [0.6, 2], [0.12, 0.25], [0.06, 0.14], 1.5))
       system.emitter.position.copy(pos)
     },
     update(dtSec) {

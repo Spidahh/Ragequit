@@ -184,8 +184,10 @@ export function buildArena(scene: THREE.Scene, _toonGradient: THREE.DataTexture)
   // inner wall face and read from the floor — at the old r=20 they were buried in
   // the wall and never seen.
   const TORCH_RING_R = 16 * ARENA_SHELL_SCALE
+  const GOD_RAY_HEIGHT = 4.6 // flame (y≈4.7) down to just above the floor
   const torchLights: THREE.PointLight[] = []
   const torchFlames: THREE.Sprite[] = []
+  const godRayMats: THREE.ShaderMaterial[] = []
   for (let i = 0; i < 8; i += 2) {
     // 4 torch lights around the wall
     const a = (i / 8) * Math.PI * 2 + Math.PI / 8
@@ -218,6 +220,50 @@ export function buildArena(scene: THREE.Scene, _toonGradient: THREE.DataTexture)
     flame.layers.enable(1)
     arenaVisualGroup.add(flame)
     torchFlames.push(flame)
+
+    // God-ray light shaft (STILE §5, "economici, non volumetrici"): a cheap
+    // additive cone narrowing to a point at the flame, fading to nothing at
+    // the floor. Same top/bottom vertex-gradient trick as the sky dome below
+    // (no new texture, no per-fragment branching) so torches read as actual
+    // light sources instead of floating flame sprites.
+    const godRayHalfHeight = GOD_RAY_HEIGHT / 2
+    const godRayMat = new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      uniforms: {
+        uColor: { value: new THREE.Color(0xffa050) },
+        uOpacity: { value: 0.09 },
+        uHalfHeight: { value: godRayHalfHeight },
+      },
+      vertexShader: `
+        varying float vT;
+        uniform float uHalfHeight;
+        void main() {
+          // 1 at the apex (torch flame), 0 at the base (floor).
+          vT = clamp((position.y + uHalfHeight) / (uHalfHeight * 2.0), 0.0, 1.0);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying float vT;
+        uniform vec3 uColor;
+        uniform float uOpacity;
+        void main() {
+          gl_FragColor = vec4(uColor, uOpacity * vT);
+        }
+      `,
+    })
+    const godRay = new THREE.Mesh(
+      new THREE.ConeGeometry(1.3, GOD_RAY_HEIGHT, 10, 1, true),
+      godRayMat,
+    )
+    // Apex at the flame (y≈4.7), base fading out at the floor.
+    godRay.position.set(x, 4.7 - godRayHalfHeight, z)
+    godRay.layers.enable(1) // bloom-eligible, matches the flame sprite
+    arenaVisualGroup.add(godRay)
+    godRayMats.push(godRayMat)
 
     // 3D torch model (Torch_Metal.gltf)
     void loadPropGltf('/arena/props/Torch_Metal.gltf')
@@ -267,10 +313,19 @@ export function buildArena(scene: THREE.Scene, _toonGradient: THREE.DataTexture)
   const dustPosAttr = new THREE.BufferAttribute(pos, 3)
   dustPosAttr.usage = THREE.DynamicDrawUsage
   pGeo.setAttribute('position', dustPosAttr)
+  // Per-particle colour (STILE §5: "luminosità guidata dalla vicinanza torce")
+  // — recomputed each frame from distance-to-nearest-torch in animateArena.
+  // vertexColors multiplies the flat white base colour, so plain opacity/size
+  // stay the single source of truth for the OVERALL dust look; only the warm
+  // pop near a torch is new.
+  const dustColorAttr = new THREE.BufferAttribute(new Float32Array(pCount * 3), 3)
+  dustColorAttr.usage = THREE.DynamicDrawUsage
+  pGeo.setAttribute('color', dustColorAttr)
   const dust = new THREE.Points(
     pGeo,
     new THREE.PointsMaterial({
-      color: 0xb89878,
+      color: 0xffffff,
+      vertexColors: true,
       size: 0.09,
       transparent: true,
       opacity: 0.45,
@@ -278,6 +333,10 @@ export function buildArena(scene: THREE.Scene, _toonGradient: THREE.DataTexture)
     }),
   )
   arenaVisualGroup.add(dust)
+  const DUST_BASE = new THREE.Color(0xb89878).multiplyScalar(0.55)
+  const DUST_HOT = new THREE.Color(0xffb066).multiplyScalar(1.6)
+  const DUST_GLOW_RANGE = 10 // metres — tighter than the torch light's own range (30)
+  const _dustGlowScratch = new THREE.Color()
 
   // ── 8. Outer ground plane and atmospheric sky dome ──
   // Warm dark dust tone (not near-black) so any sliver past the sand reads as
@@ -549,22 +608,50 @@ export function buildArena(scene: THREE.Scene, _toonGradient: THREE.DataTexture)
           flame.scale.set(0.8 + flicker * 0.1, 1.2 + flicker * 0.35, 1)
           ;(flame.material as THREE.SpriteMaterial).opacity = 0.7 + flicker * 0.25
         }
+        // God-ray shaft pulses with the same flicker so it reads as coming
+        // FROM that flame rather than a separate static decal.
+        const godRayMat = godRayMats[i]
+        if (godRayMat) godRayMat.uniforms['uOpacity']!.value = 0.09 * flicker
       }
     }
 
     // Drift dust motes particles — uses DynamicDrawUsage for efficient GPU upload
     if (!inHitStop) {
       const paArr = dustPosAttr.array as Float32Array
+      const colArr = dustColorAttr.array as Float32Array
       for (let i = 0; i < pCount; i++) {
-        const yIndex = i * 3 + 1
+        const xIndex = i * 3
+        const yIndex = xIndex + 1
+        const zIndex = xIndex + 2
         const yVal = paArr[yIndex]
         if (yVal !== undefined) {
           // Gentle ambient updraft (~0.1 m/s); wraps back to the floor at 15 m.
           const nextY = yVal + dt * 0.1
           paArr[yIndex] = nextY > 15 ? 0.1 : nextY
         }
+
+        // Torch-proximity glow: brighten/warm whichever motes are currently
+        // drifting near a brazier (STILE §5), everything else stays dim.
+        const px = paArr[xIndex]!
+        const py = paArr[yIndex]!
+        const pz = paArr[zIndex]!
+        let nearestDistSq = Infinity
+        for (let t = 0; t < torchLights.length; t++) {
+          const tp = torchLights[t]!.position
+          const dx = px - tp.x
+          const dy = py - tp.y
+          const dz = pz - tp.z
+          const distSq = dx * dx + dy * dy + dz * dz
+          if (distSq < nearestDistSq) nearestDistSq = distSq
+        }
+        const glow = Math.max(0, 1 - Math.sqrt(nearestDistSq) / DUST_GLOW_RANGE)
+        _dustGlowScratch.copy(DUST_BASE).lerp(DUST_HOT, glow * glow)
+        colArr[xIndex] = _dustGlowScratch.r
+        colArr[yIndex] = _dustGlowScratch.g
+        colArr[zIndex] = _dustGlowScratch.b
       }
       dustPosAttr.needsUpdate = true
+      dustColorAttr.needsUpdate = true
     }
   }
 

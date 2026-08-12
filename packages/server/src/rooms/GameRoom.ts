@@ -74,17 +74,10 @@ import {
   CLASS_PRESET_BUILDS,
   isAbilityLegalForClass,
   getAbilitySlotFamily,
-  inferClassFromLoadout,
   TARGET_CLASS_DEFS,
 } from '@ragequit/shared'
 
-import {
-  verifyToken,
-  upsertPlayer,
-  loadLoadout,
-  saveLoadout,
-  recordMatchResult,
-} from '../db/supabase.js'
+import { verifyToken, upsertPlayer, saveLoadout, recordMatchResult } from '../db/supabase.js'
 import {
   isCapsuleBlocked2D,
   hasLineOfSight,
@@ -117,6 +110,7 @@ import {
   trackPlayerDisconnected,
 } from '../telemetry.js'
 
+import { resolvePlayerLoadout } from './loadout-resolve.js'
 import * as lobby from './lobby-fill.js'
 import { makePendingDamageBridge } from './pending-damage-bridge.js'
 import { resolveMapId, testDummySpawn, testPlayerSpawn, testRoomMaxClients } from './test-room.js'
@@ -627,23 +621,16 @@ export class GameRoom extends Room<{ state: GameState }> {
     player.invulnUntilTick = this.state.tick + SPAWN_INVULN_TICKS
 
     // Load persisted loadout if user is authenticated; otherwise use defaults.
-    let resolvedLoadout: readonly string[] = DEFAULT_LOADOUT
-    if (verifiedUserId) {
-      const saved = await loadLoadout(verifiedUserId).catch(() => null)
-      if (saved?.loadout_data?.length) {
-        resolvedLoadout = saved.loadout_data
-      }
-    }
-    let resolvedClassId = inferClassFromLoadout(resolvedLoadout)
-    if (!resolvedClassId) {
-      // Saved loadout cannot be classified — reset to hybrid default and notify.
-      resolvedLoadout = DEFAULT_LOADOUT
-      resolvedClassId = 'hybrid'
-      this.send(client, MessageTypes.ServerNote, {
-        kind: 'info',
-        text: 'Il tuo loadout salvato non era compatibile con nessuna classe — ripristinato al preset Ibrido.',
-      } satisfies ServerNoteMessage)
-    }
+    // Also enforces server-authoritative invariants (valid class, ≥1 Recovery)
+    // that client-side choice can't be trusted to guarantee on its own.
+    const { loadout: resolvedLoadout, classId: resolvedClassId } = await resolvePlayerLoadout(
+      verifiedUserId,
+      (text) =>
+        this.send(client, MessageTypes.ServerNote, {
+          kind: 'info',
+          text,
+        } satisfies ServerNoteMessage),
+    )
     for (const id of resolvedLoadout) player.loadout.push(id)
     {
       player.classId = resolvedClassId
@@ -1938,18 +1925,3 @@ export function computeProjectileOrigin(
 }
 
 const BOT_NAMES = ['Shadow', 'Ember', 'Frost', 'Storm', 'Void', 'Blaze', 'Riven', 'Dusk'] as const
-
-// Default loadout applied at onJoin (and to bots). Matches the client's
-// DEFAULT_SLOTS in loadout-station.ts (Ibrido preset build).
-// Slots: melee×2, bow×1, magicBase×2, magicAdvanced×1, utility×2 = 8.
-// Server validates by family budget, not position.
-const DEFAULT_LOADOUT: readonly string[] = Object.freeze([
-  'uppercut', // melee
-  'gap_closer', // melee
-  'marksman_shot', // bow
-  'fireball', // magicBase
-  'lightning_dash', // magicBase
-  'arc_lift', // magicAdvanced
-  'adaptive_mend', // utility — Ibrido Recovery
-  'quick_dash', // utility
-])

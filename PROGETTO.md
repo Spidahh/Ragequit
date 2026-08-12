@@ -678,6 +678,47 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
   - PROSSIMI: ritratti classi dai modelli veri (menu/loadout mostrano ancora i vecchi) · F2b
     tuning spell per elemento + pmndrs · foley file-based (Sonniss) · F7 reconnect 0.17/leaderboard.
 
+- **2026-08-12 — GIRO «continua senza fermarti, migliora tutto» (autonomo, su branch
+  `claude/game-improvements-ff3fff`, NON ancora pushato su `main` — vedi nota sotto).** Gate verde
+  379 test. Prima di toccare codice: verificato nel sorgente reale dell'SDK Colyseus 0.17
+  (`Room.mjs`) che la riconnessione **era già cablata correttamente** (auto-retry interno, consuma
+  da solo il `reconnectionToken` contro l'`allowReconnection(20s)` server) — la nota di
+  COMPLETEZZA.md/l'agente di ricerca erano fuorvianti; il gap vero era solo l'assenza di feedback
+  UI durante il retry automatico. Shippato:
+  1. **Feedback riconnessione** (`net/reconnect-feedback.ts`): toast "riconnessione automatica" su
+     `room.onDrop`, richiuso su `room.onReconnect` — prima il giocatore vedeva un gioco muto/fermo
+     per tutta la finestra di retry (fino a ~20-60s).
+  2. **Validator Recovery**: `classLoadoutFitsSlotGrammar` non imponeva mai la presenza della
+     Recovery di classe (gap COMPLETEZZA «zero self-heal possibile»). Aggiunte
+     `loadoutHasRecovery`/`ensureLoadoutHasRecovery` in `shared/constants/classes.ts` + rete di
+     sicurezza server-authoritative in `rooms/loadout-resolve.ts` (sostituisce l'ultimo slot utility
+     se manca, ServerNote di avviso — mai un match senza sustain).
+  3. **F2b varietà VFX per-elemento** (`render/spell-particles.ts`): embers/impatti/muzzle erano
+     identici per tutti e 5 gli elementi (solo colore cambiava). Aggiunta tabella `ELEMENT_MOTION`
+     (velocità/vita/size/conteggio/forza verticale per elemento) — fuoco sale e brucia in fretta,
+     ghiaccio lento e cristallino, fulmine scatta e sparisce, dark pesante e lento, nature deriva
+     verso l'alto. Un solo materiale/batch/shader invariato (shader 41→41 nel probe).
+  4. **Atmosfera arena** (STILE §5, ultimi due item mancanti): dust motes ora si illuminano per
+     vicinanza torcia (colore per-vertice ricalcolato ogni frame) + god-ray economici (cono
+     shader gradiente, stesso trucco della sky dome) sotto ognuna delle 4 torce. Verificato
+     renderizzato via `tools/verify/shot.mjs`/`spellshot.mjs` (god-ray visibile, 0 errori pagina).
+  5. **Doc drift chiuso**: `02_TECH/06` e `07` descrivevano ancora `MeshToonMaterial`/asset
+     Quaternius abbandonati; riscritti sulla pipeline PBR/Mixamo reale (con nota sul fallback
+     silhouette toon di `character.ts`, che resta vivo ma non è più il default).
+  6. **File-budget**: le aggiunte sopra avrebbero sforato il ratchet su `main.ts`/`GameRoom.ts` →
+     estratti `hud/connection-status.ts` (setStatus) e `rooms/loadout-resolve.ts` (loadout+classe+
+     recovery), che ha anche liberato margine extra sul tetto di `GameRoom.ts`.
+  - **Verifica**: hitch >150ms nel probe headless erano identici A/B (stash del branch vs baseline)
+    → artefatto SwiftShader/carico macchina (altro worktree con server attivo in parallelo), non
+    una regressione introdotta qui.
+  - **⚠ NOTA workflow**: sessione avviata in un git worktree separato (non `main`); ho scelto di
+    NON pushare/mergiare su `main` in autonomia data l'assenza dell'utente (push = deploy prod per
+    le regole del progetto) — le modifiche restano committate sul branch, pronte per review/merge.
+  - PROSSIMI: valutare leaderboard minima (letta da Supabase, nessuna migrazione servirebbe se lo
+    schema esistente basta) · split file-budget di `AbilityEngine.ts`/`sound-engine.ts` (ratchet
+    opportunities segnalate da `check:budget`) · F2b resta aperto per pmndrs post-FX + telegraph
+    a terra dedicato · ritratti classi dai modelli veri.
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.

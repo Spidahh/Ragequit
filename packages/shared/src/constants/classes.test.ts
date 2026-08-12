@@ -5,9 +5,11 @@ import {
   TARGET_CLASS_DEFS,
   TARGET_LOADOUT_SLOT_COUNT,
   classLoadoutFitsSlotGrammar,
+  ensureLoadoutHasRecovery,
   getAbilitySlotFamily,
   inferClassFromLoadout,
   isAbilityLegalForClass,
+  loadoutHasRecovery,
   targetClassSlotCount,
 } from './classes.js'
 
@@ -110,6 +112,29 @@ describe('ability slot family and class legality', () => {
     expect(inferClassFromLoadout(['uppercut', 'fireball', 'lightning_dash', 'chain_bolt'])).toBe(
       null,
     )
+  })
+
+  it('detects when a build is missing its class Recovery ability', () => {
+    expect(loadoutHasRecovery('tank', ['uppercut', 'brace_recovery'])).toBe(true)
+    expect(loadoutHasRecovery('tank', ['uppercut', 'quick_dash'])).toBe(false)
+  })
+
+  it('ensureLoadoutHasRecovery swaps the last utility slot deterministically', () => {
+    const withoutRecovery = ['uppercut', 'gap_closer', 'quick_dash', 'ping_mark']
+    const fixed = ensureLoadoutHasRecovery('tank', withoutRecovery)
+    expect(fixed).toEqual(['uppercut', 'gap_closer', 'quick_dash', 'brace_recovery'])
+    expect(loadoutHasRecovery('tank', fixed)).toBe(true)
+    // Already-correct loadouts are returned unchanged (same reference).
+    expect(ensureLoadoutHasRecovery('tank', fixed)).toBe(fixed)
+  })
+
+  it('ensureLoadoutHasRecovery appends when no utility slot is in use', () => {
+    const noUtility = ['uppercut', 'gap_closer']
+    expect(ensureLoadoutHasRecovery('tank', noUtility)).toEqual([
+      'uppercut',
+      'gap_closer',
+      'brace_recovery',
+    ])
   })
 
   it('validates the preset build family budgets for all four classes', () => {
