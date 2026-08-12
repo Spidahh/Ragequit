@@ -54,9 +54,11 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 
 import { playStatus, playSwap, tickFootsteps } from './audio/ambience.js'
 import { MusicPlayer } from './audio/music.js'
+import { hitConfirm, remoteParry } from './audio/remote-sounds.js'
 import { SoundEngine } from './audio/sound-engine.js'
 import { type DeathcamData } from './endgame.js'
-import { type ComboState, victimShakeIntensity, COMBO_RESET_MS } from './game/combat-feedback.js'
+import { attackerHitFeedback } from './game/attacker-feedback.js'
+import { type ComboState, victimShakeIntensity } from './game/combat-feedback.js'
 import { spawnHitImpacts } from './game/hit-impacts.js'
 import { accumulateHitStats } from './game/hit-stats.js'
 import { rawCauseId, isAirPunishCause, hitstopAttacker, hitstopVictim } from './game/hitstop.js'
@@ -977,8 +979,7 @@ let victimHitStopUntilMs = 0
 // Client-side combo tracking — uses ComboState from game/combat-feedback.ts
 const _comboState: ComboState = { count: 0, lastHitMs: 0 }
 // Legacy aliases for code that still uses these directly (gradually migrating)
-let localComboCount = 0
-let lastHitAsAttackerMs = 0
+const attackerCombo: ComboState = { count: 0, lastHitMs: 0 }
 
 // Kill confirm crosshair flash timestamp
 let _killConfirmUntilMs = 0
@@ -1565,52 +1566,42 @@ function onHit(msg: ServerHitMessage): void {
     if (details) lastHitDetails = details
   }
 
-  // --- Parry sound: victim side already handled by ParryEvent; play for others. ---
+  // --- Parry sound: victim side already handled by ParryEvent; play for others.
+  // Spatialised at the parrying player — it used to ring at full volume no
+  // matter how far away it happened, which destroyed the directional cue. ---
   if (msg.didParry && !amISelf) {
-    soundEngine.playParry()
+    const parryPos = getPlayerWorldPos(msg.victimId)
+    if (parryPos) {
+      const g = soundEngine.spatialGraph(parryPos.x, parryPos.y, parryPos.z)
+      if (!g.muted) remoteParry(g.ac, g.out)
+    } else soundEngine.playParry()
   }
 
   // --- Attacker: combo tracking + escalated feedback ---
   if (amIAttacker && !amISelf && msg.damage > 0 && !msg.didParry) {
-    // Reset combo if too much time has passed since last hit.
-    if (now - lastHitAsAttackerMs > COMBO_RESET_MS) localComboCount = 0
-    localComboCount++
-    lastHitAsAttackerMs = now
-
-    if (isAirPunish) {
-      soundEngine.playCrack(Math.max(power, 0.85))
-      combatFeedHud.triggerComboFlash()
-      combatFeedHud.showComboPopupLabel('AIR PUNISH ✈')
-      hitStopUntilMs = now + hitstopAttacker(msg.cause, isAirPunish)
-      applyDirectionalShake(getPlayerWorldPos(msg.victimId), 1.0)
-      localComboCount = 0
-    } else if (localComboCount >= 3) {
-      // ── CRACK ── strong hit, golden flash, COMBO popup, max shake.
-      soundEngine.playCrack(power)
-      combatFeedHud.triggerComboFlash()
-      combatFeedHud.showComboPopupText(localComboCount)
-      hitStopUntilMs = now + 80 // longer stop for crack
-      applyDirectionalShake(getPlayerWorldPos(msg.victimId), 0.9)
-      localComboCount = 0 // reset after crack
-    } else if (localComboCount === 2) {
-      // ── Heavy hit ── escalated sound + stronger shake.
-      soundEngine.playHeavyHit(power)
-      hitStopUntilMs = now + hitstopAttacker(msg.cause)
-      applyDirectionalShake(getPlayerWorldPos(msg.victimId), 0.55)
-    } else {
-      // ── Normal hit 1 ──
-      soundEngine.playHitByType(msg.cause, power)
-      // Play element-specific impact sound for ability hits
-      if (
-        msg.cause.startsWith('ability:') ||
-        msg.cause.startsWith('zone:') ||
-        msg.cause.startsWith('combo:')
-      ) {
-        soundEngine.playElementImpact(msg.element ?? 'none', Math.min(1, power * 0.8))
-      }
-      hitStopUntilMs = now + hitstopAttacker(msg.cause)
-      applyDirectionalShake(getPlayerWorldPos(msg.victimId), 0.3)
-    }
+    attackerHitFeedback(
+      {
+        playHitConfirm: (tier) => {
+          const g = soundEngine.graph()
+          if (!g.muted) hitConfirm(g.ac, g.out, tier)
+        },
+        playCrack: (p) => soundEngine.playCrack(p),
+        playHeavyHit: (p) => soundEngine.playHeavyHit(p),
+        playHitByType: (cause, p) => soundEngine.playHitByType(cause, p),
+        playElementImpact: (el, p) => soundEngine.playElementImpact(el, p),
+        triggerComboFlash: () => combatFeedHud.triggerComboFlash(),
+        showComboPopupLabel: (label) => combatFeedHud.showComboPopupLabel(label),
+        showComboPopupText: (count) => combatFeedHud.showComboPopupText(count),
+        setHitStop: (untilMs) => {
+          hitStopUntilMs = untilMs
+        },
+        shake: (intensity) => applyDirectionalShake(getPlayerWorldPos(msg.victimId), intensity),
+        hitstopFor: (cause, airPunish) => hitstopAttacker(cause, airPunish),
+      },
+      msg,
+      attackerCombo,
+      { now, power, isAirPunish },
+    )
   }
 
   // --- Victim (self): receive-damage sound + freeze + shake ---
@@ -1717,7 +1708,7 @@ function onDeath(msg: ServerDeathMessage): void {
         castStartedAtMs = 0
         castBar.classList.remove('active')
         castBarFill.style.width = '0%'
-        localComboCount = 0 // a kill must not carry over to the next life
+        attackerCombo.count = 0 // a kill must not carry over to the next life
         castDispatcher.clearQueue() // a primed ability would fire on the wrong tick
       },
       recentKillTimes,
@@ -1853,8 +1844,8 @@ function clearLocalMatchState(): void {
   matchSM.transition('lobby')
   livePhaseStartTick = -1
   ping = 0
-  localComboCount = 0
-  lastHitAsAttackerMs = 0
+  attackerCombo.count = 0
+  attackerCombo.lastHitMs = 0
   hitStopUntilMs = 0
   victimHitStopUntilMs = 0
   shakeOffset.set(0, 0, 0)

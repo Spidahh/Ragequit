@@ -153,10 +153,25 @@ export function projectileProfile(
   return 'orb'
 }
 
+/**
+ * Scale a projectile by how much it hurts.
+ *
+ * `damage` is on the wire and was thrown away, so an 8-damage poke and a
+ * 38-damage finisher rendered at exactly the same size and brightness — the
+ * "scale of importance" rule (a basic attack must never visually rival an
+ * ultimate) was not applied at all.
+ */
+export function damageTier(damage: number): number {
+  if (damage >= 30) return 1.45
+  if (damage >= 18) return 1.15
+  return 0.85
+}
+
 function makeProjectileObject(
   kind: ProjectileKind,
   element?: string,
   abilityId?: string,
+  damage = 14,
 ): {
   object: THREE.Object3D
   style: ProjectileStyle
@@ -165,6 +180,7 @@ function makeProjectileObject(
   const style = projectileStyle(kind, element)
   const profile = projectileProfile(kind, element, abilityId)
   const elemColor = projectileColor(style)
+  const tier = damageTier(damage)
   const group = new THREE.Group()
 
   if (style === 'arrow') {
@@ -200,6 +216,7 @@ function makeProjectileObject(
     projOutline.rotation.copy(baseMesh.rotation)
     baseMesh.add(projOutline)
     if (profile === 'marksmanArrow' || profile === 'blastArrow') baseMesh.scale.multiplyScalar(1.35)
+    baseMesh.scale.multiplyScalar(tier)
     group.add(baseMesh)
 
     const accentColor =
@@ -293,7 +310,7 @@ function makeProjectileObject(
       scaleX *= 0.68
       scaleY *= profile === 'lance' ? 1.5 : 1.15
     }
-    const geo = new THREE.PlaneGeometry(scaleX, scaleY)
+    const geo = new THREE.PlaneGeometry(scaleX * tier, scaleY * tier)
 
     // Plane 1 (Horizontal slice along movement)
     const p1 = new THREE.Mesh(geo, mat)
@@ -438,10 +455,18 @@ export function initProjectileVisuals({
   function onSpawned(msg: ServerProjectileSpawnedMessage): void {
     if (projectileVisuals.has(msg.id)) return
     const kind: ProjectileKind = msg.kind === 'bolt' ? 'bolt' : 'arrow'
-    const { object, style, profile } = makeProjectileObject(kind, msg.element, msg.abilityId)
+    const { object, style, profile } = makeProjectileObject(
+      kind,
+      msg.element,
+      msg.abilityId,
+      msg.damage,
+    )
     object.position.set(msg.origin.x, msg.origin.y, msg.origin.z)
     const light = style !== 'arrow' ? _lightPool.acquire(projectileColor(style)) : null
-    if (light) light.position.copy(object.position)
+    if (light) {
+      light.position.copy(object.position)
+      light.intensity = 7 * damageTier(msg.damage)
+    }
     const trail = makeTrailLine(style, profile)
     scene.add(object)
     scene.add(trail)

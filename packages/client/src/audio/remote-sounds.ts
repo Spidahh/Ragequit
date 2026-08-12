@@ -49,3 +49,52 @@ export function remoteCast(
   osc.start()
   osc.stop(ac.currentTime + 0.28)
 }
+
+/**
+ * "You connected" marker for the ATTACKER.
+ *
+ * Landing a hit had no dedicated confirm at all — you heard the impact body,
+ * which is the same thing bystanders hear, so there was nothing that said THE
+ * HIT WAS YOURS. Parked in a high band (~4.2/5.1 kHz) that nothing else in the
+ * mix occupies, with a sharp transient and a very short decay, so it survives a
+ * teamfight without adding mud. (Overwatch's frequency-slot method.)
+ */
+export function hitConfirm(
+  ac: AudioContext,
+  out: AudioNode,
+  tier: 'normal' | 'heavy' | 'kill' = 'normal',
+): void {
+  const gain = ac.createGain()
+  const peak = tier === 'kill' ? 0.3 : tier === 'heavy' ? 0.26 : 0.2
+  gain.gain.setValueAtTime(peak, ac.currentTime)
+  gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.055)
+  gain.connect(out)
+  // Two detuned partials read as a "tick" rather than a pure beep.
+  for (const f of tier === 'kill' ? [5200, 6400] : [4200, 5100]) {
+    const osc = ac.createOscillator()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(f, ac.currentTime)
+    // A kill lifts in pitch; a normal hit stays flat so it never sounds like one.
+    if (tier === 'kill') osc.frequency.exponentialRampToValueAtTime(f * 1.25, ac.currentTime + 0.05)
+    osc.connect(gain)
+    osc.start()
+    osc.stop(ac.currentTime + 0.07)
+  }
+}
+
+/** Metallic parry ring at a world position — it used to play at full volume
+ *  regardless of distance, which destroyed the directional cue in a brawl. */
+export function remoteParry(ac: AudioContext, out: AudioNode): void {
+  const gain = ac.createGain()
+  gain.gain.setValueAtTime(0.3, ac.currentTime)
+  gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.32)
+  gain.connect(out)
+  for (const f of [1400, 2100, 3000]) {
+    const osc = ac.createOscillator()
+    osc.type = 'triangle'
+    osc.frequency.value = f
+    osc.connect(gain)
+    osc.start()
+    osc.stop(ac.currentTime + 0.34)
+  }
+}
