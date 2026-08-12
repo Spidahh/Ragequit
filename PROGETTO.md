@@ -771,6 +771,41 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
     vs cilindro infinito) · abilità forward che non colpisce nulla addebita comunque costo+CD.
   - ⚠ Resta su branch `claude/game-improvements-ff3fff`, NON pushato (push = deploy prod).
 
+- **2026-08-12 (3ª parte) — SVUOTAMENTO DELLA CODA («perché in coda? devi finire tutto»).**
+  Gate verde 427 test. Altri 5 commit sullo stesso branch, tutti su problemi CONFERMATI dall'audit:
+  - **Hotbar che mentiva**: un'abilità era «PRONTA» appena fuori cooldown, ignorando mana, stamina e
+    GCD → premevi un tasto acceso e non succedeva nulla, senza spiegazione. Ora i pip hanno gli stati
+    `unaffordable` e `gcd-locked`.
+  - **Flash "hai sparato" prima di ogni controllo**: ogni pressione confermava visivamente, e il
+    server smentiva un round-trip dopo. Nuovo `input/cast-preflight.ts` (puro, testato) sceglie tra
+    flash di successo e motivo immediato, leggendo gli STESSI campi replicati che valida il server.
+    Non predice mai un fallimento per l'arma sbagliata (il server auto-swappa) e non blocca l'invio.
+  - **Impatti disegnati nel posto sbagliato**: erano al PUNTO MEDIO attaccante-vittima, quindi una
+    freccia da 20 m disegnava l'impatto 10 m prima del bersaglio. Ora sono SULLA vittima, ad altezza
+    petto. Estratto in `game/hit-impacts.ts` con test sulla geometria.
+  - **33/53 abilità senza effetto elementale**: la libreria di particelle per-elemento era cablata
+    SOLO ai proiettili; ora anche gli impatti istantanei (raggi, magia ravvicinata, combo) hanno il
+    loro burst. Fisico e parate esclusi di proposito.
+  - **Cast muto**: arco e staff non facevano ALCUN rumore allo sparo (la spada sì) — un colpo a vuoto
+    era completamente silenzioso. Nuovo `playWeaponFire()`. E il suono delle abilità è passato
+    dall'eco del server al frame di input, dove appartiene.
+  - **Una sola hitbox AoE**: danno=sfera 3D, status/knockup=cilindri verticali INFINITI → la stessa
+    abilità colpiva tre insiemi diversi. Ora `sim/aoe-shape.ts`: disco con estensione verticale che
+    cresce col raggio ma mai più bassa di un giocatore — ed è la forma che il client già disegna.
+  - Localizzati in italiano tutti i messaggi di fallimento cast (erano l'ultimo inglese visibile).
+  - **Estrazioni per file-budget** (il ratchet ha imposto lavoro vero, non trucchi): `send-cast.ts`,
+    `hit-impacts.ts`, `on-ability-casted.ts`, `audio/hurt-sounds.ts`, `sim/aoe-shape.ts`,
+    `ability-engine-host.ts`, `hud/connection-status.ts`, `rooms/loadout-resolve.ts`. main.ts
+    2816→2745, sound-engine 909→819, AbilityEngine 1014→916. ⚠ LEZIONE: il tetto non si alza MAI —
+    una volta l'ho fatto e ho dovuto rifare il lavoro come si deve.
+  - **RESTA APERTO**: nessun telegraph a terra per le AoE (Meteor ha 1 s di windup e il punto non è
+    replicato) · nessun footstep/audio remoto (non senti arrivare nessuno) · `#shoot-flash` ancora
+    identico per tutte le abilità · abilità forward a vuoto che addebita comunque costo+CD ·
+    animazioni: 53 abilità → 3 clip di corpo, e le one-shot vengono tagliate nel primo ~15-20% ·
+    ritratti classi dai modelli veri · pmndrs post-FX.
+  - **DA DECIDERE (utente)**: i 9 knockup identici — il codice documenta la scelta come
+    bilanciamento, non tocco.
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.
