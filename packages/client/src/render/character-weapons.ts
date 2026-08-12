@@ -256,6 +256,27 @@ export function applyWeaponProp(
         child.material = Array.isArray(source) ? source.map(makeWeaponMat) : makeWeaponMat(source)
       })
 
+      // The KayKit staff is a single mesh (the glow-name heuristic never fires),
+      // so the "magic focus" is OURS: an element-tinted emissive orb floating at
+      // the staff head — reads as living magic in hand and joins the bloom pass.
+      if (weaponId === 'staff') {
+        const orb = new THREE.Mesh(
+          new THREE.SphereGeometry(0.07, 16, 12),
+          new THREE.MeshStandardMaterial({
+            color: elementHex,
+            emissive: elementHex,
+            emissiveIntensity: 1.5,
+            roughness: 0.25,
+            metalness: 0,
+          }),
+        )
+        orb.name = 'staff_orb'
+        // Staff model space: pivot at the grip, head up +Y (tip ≈ 1.1 units).
+        orb.position.set(0, 1.12, 0)
+        orb.layers.enable(1)
+        model.add(orb)
+      }
+
       wg.add(model)
 
       // Apply grip — repositions the weaponGroup so the blade sits correctly in
