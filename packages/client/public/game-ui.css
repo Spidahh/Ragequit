@@ -5703,3 +5703,41 @@ button.locked {
   font-family: var(--font-display);
   letter-spacing: 0.05em;
 }
+
+/* ── FFA/5v5 live mini-ladder (top-right, under the kill feed) ─────────── */
+#ffa-ladder {
+  position: fixed;
+  top: 128px;
+  right: 14px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 168px;
+  pointer-events: none;
+  font-family: "Rajdhani", sans-serif;
+}
+#ffa-ladder .fl-row {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  gap: 6px;
+  align-items: center;
+  padding: 3px 8px;
+  background: rgba(8, 10, 16, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 4px;
+  font-size: 13px;
+  color: #cfd4e2;
+}
+#ffa-ladder .fl-row.self {
+  border-color: rgba(255, 210, 96, 0.55);
+  color: #ffd260;
+}
+#ffa-ladder .fl-rank {
+  opacity: 0.65;
+  font-weight: 600;
+}
+#ffa-ladder .fl-kills {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

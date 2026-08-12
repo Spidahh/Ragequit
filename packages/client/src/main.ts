@@ -1436,6 +1436,7 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
       if (msg.eloDeltas) lastMatchEloDeltas = msg.eloDeltas
       if (msg.solo) lastSoloScores = msg.solo
       if (msg.team) lastTeamScores = msg.team
+      if (msg.solo) updateFfaLadder(msg.solo, selfId)
       menu.onScore(msg, selfId, otherId)
     })
 
@@ -1857,7 +1858,28 @@ function clearSelfVisuals(): void {
   selfLastWeapon = ''
 }
 
+// Live mini-ladder for kill-cap modes: top 3 by kills + you (if outside).
+function updateFfaLadder(solo: Record<string, number>, selfId: string): void {
+  const el = document.getElementById('ffa-ladder')
+  if (!el) return
+  const players = getSchemaPlayers()
+  const rows = Object.entries(solo).sort((a, b) => b[1] - a[1])
+  const selfRank = rows.findIndex(([sid]) => sid === selfId)
+  const shown = rows.slice(0, 3)
+  if (selfRank >= 3) shown.push(rows[selfRank]!)
+  el.innerHTML = shown
+    .map(([sid, kills]) => {
+      const rank = rows.findIndex(([s]) => s === sid) + 1
+      const name = players?.get(sid)?.name || sid.slice(0, 6)
+      const self = sid === selfId ? ' self' : ''
+      return `<div class="fl-row${self}"><span class="fl-rank">#${rank}</span><span class="fl-name">${name.replace(/[<>&]/g, '')}</span><span class="fl-kills">${kills}</span></div>`
+    })
+    .join('')
+  el.classList.remove('hidden')
+}
+
 function clearGameplayUi(): void {
+  document.getElementById('ffa-ladder')?.classList.add('hidden')
   castStartedAtMs = 0
   castBar.classList.remove('active', 'interrupted')
   castBarFill.style.width = '0%'
