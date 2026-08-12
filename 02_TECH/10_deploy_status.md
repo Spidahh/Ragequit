@@ -53,6 +53,13 @@ Il client può usare Supabase auth anonima se `VITE_SUPABASE_URL` e `VITE_SUPABA
 | CDN   | Cloudflare Pages                      |
 | URL   | `https://ragequit-5i6.pages.dev/`     |
 
+**Attenzione al nome del progetto**: il progetto Pages si chiama `ragequit-5i6`,
+non `ragequit`, perché il sottodominio `ragequit.pages.dev` era gia occupato da
+un sito di terzi che non ha nulla a che vedere con questo gioco. Chi prova
+`https://ragequit.pages.dev/` trova quel sito e conclude erroneamente che il
+deploy sia rotto: un `curl` risponde `200` e sembra tutto a posto. L'unico URL
+pubblico valido e quello in tabella.
+
 In locale il client viene servito via `pnpm dev:client` (Vite su `localhost:5173`).
 
 ## Asset locali esistenti

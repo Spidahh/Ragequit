@@ -857,6 +857,20 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
     paladin/vampire/ninja (serve rieseguire la pipeline Mixamo con Pro Longbow: download) ·
     i 9 knockup identici (bilanciamento).
 
+- **2026-08-12 — RILASCIO IN PRODUZIONE (autorizzato dall'utente: "vai")**. I 17 commit del branch
+  `claude/game-improvements-ff3fff` sono entrati su `main` in fast-forward (`f01a111..c99c4ce`) e
+  sono pubblicati. Gate verde sul commit esatto prima del push; CI verde su tutti e quattro i job
+  (gate, build, Fly.io, Cloudflare Pages).
+  - **Trappola dell'URL, scoperta qui**: `ragequit.pages.dev` NON è questo gioco — è il sito di
+    un'altra app. Il sottodominio era occupato, quindi il progetto Pages si chiama `ragequit-5i6`.
+    Un `curl` su quell'URL risponde `200` e sembra un deploy riuscito: ci ero cascato per un
+    momento. Documentato in `02_TECH/10_deploy_status.md` perché non ricapiti a nessuno. È molto
+    probabilmente all'origine del "sento il gioco attivo da qualche parte ma non riesco a vederlo".
+  - Catena verificata end-to-end sul deploy reale, non sui test: `https://ragequit-5i6.pages.dev/`
+    serve `<title>RAGEQUIT</title>`, il bundle pubblicato punta a `wss://ragequit-server.fly.dev`,
+    e quel server risponde `{"status":"ok"}`. (`ws://127.0.0.1` nel vendor bundle è solo il default
+    dell'SDK Colyseus, non l'endpoint configurato.)
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.
