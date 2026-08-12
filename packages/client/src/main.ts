@@ -53,6 +53,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 
 import { playStatus, playSwap, tickFootsteps } from './audio/ambience.js'
+import { MusicPlayer } from './audio/music.js'
 import { SoundEngine } from './audio/sound-engine.js'
 import { type DeathcamData } from './endgame.js'
 import { type ComboState, victimShakeIntensity, COMBO_RESET_MS } from './game/combat-feedback.js'
@@ -357,8 +358,24 @@ onKeybindsChanged(() => {
 
 const soundEngine = new SoundEngine()
 soundEngine.muted = true
-window.addEventListener('pointerdown', () => soundEngine.unlock(), { capture: true, passive: true })
-window.addEventListener('keydown', () => soundEngine.unlock(), { capture: true })
+const musicPlayer = new MusicPlayer()
+musicPlayer.play('menu') // starts silently pre-gesture; retried below
+window.addEventListener(
+  'pointerdown',
+  () => {
+    soundEngine.unlock()
+    musicPlayer.userGesture()
+  },
+  { capture: true, passive: true },
+)
+window.addEventListener(
+  'keydown',
+  () => {
+    soundEngine.unlock()
+    musicPlayer.userGesture()
+  },
+  { capture: true },
+)
 initTelemetry()
 // Boot Supabase auth in the background — store the promise, wire up after menu is ready
 const _supabaseAuthReady = initSupabaseAuth()
@@ -915,7 +932,10 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
     lastHitDetails = { killer: '', ability: '', element: '', damage: 0 }
     matchStartMs = performance.now()
   }
+  // Music follows the match: combat loop while fighting, ambience elsewhere.
+  if (msg.phase === 'live') musicPlayer.play('combat')
   if (msg.phase === 'matchEnd') {
+    musicPlayer.play('menu')
     // Release pointer lock so the cursor is visible and the scoreboard
     // buttons (BACK TO MENU) are clickable.
     if (document.pointerLockElement) document.exitPointerLock()
@@ -1143,6 +1163,9 @@ const menu = initMenu({
   },
   onVolumeChange: (vol) => {
     soundEngine.volume = vol
+  },
+  onMusicChange: (vol) => {
+    musicPlayer.volume = vol
   },
   onGraphicsChange: (quality) => {
     const pixelRatioMap = { low: 1.0, med: 1.25, high: 1.5 }
@@ -1897,6 +1920,7 @@ function clearLocalMatchState(): void {
 
 function returnToMainMenu(opts: { leaveRoom: boolean; statusText?: string }): void {
   soundEngine.stopArenaAmbient()
+  musicPlayer.play('menu')
   connectSeq++
   _reconnectAttempted = false
   if (_reconnectTimer) {

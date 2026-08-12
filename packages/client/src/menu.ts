@@ -32,6 +32,7 @@ interface SettingsData {
   fov: number
   sens: number // raw value (0.0004..0.008)
   volume: number // 0..1
+  musicVol: number // 0..1
 }
 function loadSettings(): SettingsData {
   try {
@@ -42,12 +43,13 @@ function loadSettings(): SettingsData {
         fov: 90,
         sens: 0.0022,
         volume: 0.55,
+        musicVol: 0.3,
         ...JSON.parse(raw),
       } as SettingsData
   } catch {
     /* ignore */
   }
-  return { quality: 'med', fov: 90, sens: 0.0022, volume: 0.55 }
+  return { quality: 'med', fov: 90, sens: 0.0022, volume: 0.55, musicVol: 0.3 }
 }
 function saveSettings(s: SettingsData): void {
   try {
@@ -81,6 +83,7 @@ export function initMenu(handlers: {
   onFovChange: (fov: number) => void
   onSensChange: (sens: number) => void
   onVolumeChange: (vol: number) => void
+  onMusicChange: (vol: number) => void
   onGraphicsChange: (quality: GraphicsQuality) => void
 }): MenuApi {
   const mainMenu = document.getElementById('main-menu')!
@@ -151,6 +154,8 @@ export function initMenu(handlers: {
   const sensVal = document.getElementById('setting-sens-val')!
   const volSlider = document.getElementById('setting-vol') as HTMLInputElement
   const volVal = document.getElementById('setting-vol-val')!
+  const musicSlider = document.getElementById('setting-music') as HTMLInputElement
+  const musicVal = document.getElementById('setting-music-val')!
   const qualityBtns = document.querySelectorAll<HTMLButtonElement>('.quality-btn')
   initKeybindSettings(settingsOverlay)
 
@@ -172,6 +177,10 @@ export function initMenu(handlers: {
     volVal.textContent = `${Math.round(settings.volume * 100)}%`
     volSlider.value = String(Math.round(settings.volume * 100))
     handlers.onVolumeChange(settings.volume)
+    // Music
+    musicVal.textContent = `${Math.round(settings.musicVol * 100)}%`
+    musicSlider.value = String(Math.round(settings.musicVol * 100))
+    handlers.onMusicChange(settings.musicVol)
     // Graphics
     qualityBtns.forEach((btn) => {
       btn.classList.toggle('active', btn.dataset['quality'] === settings.quality)
@@ -204,6 +213,14 @@ export function initMenu(handlers: {
     settings.volume = parseInt(volSlider.value) / 100
     volVal.textContent = `${Math.round(settings.volume * 100)}%`
     handlers.onVolumeChange(settings.volume)
+    saveSettings(settings)
+  })
+
+  // Music slider
+  musicSlider.addEventListener('input', () => {
+    settings.musicVol = parseInt(musicSlider.value) / 100
+    musicVal.textContent = `${Math.round(settings.musicVol * 100)}%`
+    handlers.onMusicChange(settings.musicVol)
     saveSettings(settings)
   })
 
