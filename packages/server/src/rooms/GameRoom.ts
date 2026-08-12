@@ -1,4 +1,4 @@
-import { Room, type Client } from '@colyseus/core'
+import { CloseCode, Room, type Client } from '@colyseus/core'
 import {
   type ServerZoneExpiredMessage,
   ABILITY_DEFS,
@@ -685,8 +685,22 @@ export class GameRoom extends Room<{ state: GameState }> {
     )
   }
 
-  override onLeave(client: Client, _code?: number): void {
+  override async onLeave(client: Client, code?: number): Promise<void> {
     const sid = client.sessionId
+    // Real reconnection: a HUMAN dropping unexpectedly mid-match gets a 20 s
+    // grace window in which their player (HP, loadout, score, position) stays
+    // alive in the room. The 0.17 client SDK reconnects the transport
+    // automatically; this is the server half that makes it seamless.
+    const unexpected = code !== CloseCode.CONSENTED && code !== 1000
+    if (unexpected && this.state.players.has(sid) && this.state.phase !== 'lobby') {
+      try {
+        await this.allowReconnection(client, 20)
+        console.info(`[GameRoom ${this.roomId}] ${sid} reconnected — state preserved`)
+        return
+      } catch {
+        /* grace expired — fall through to normal cleanup */
+      }
+    }
     this.state.players.delete(sid)
     this.sim.delete(sid)
     this.inputQueues.delete(sid)
