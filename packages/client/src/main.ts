@@ -60,6 +60,7 @@ import { spawnHitImpacts } from './game/hit-impacts.js'
 import { accumulateHitStats, killStreakSplash } from './game/hit-stats.js'
 import { rawCauseId, isAirPunishCause, hitstopAttacker, hitstopVictim } from './game/hitstop.js'
 import { matchSM } from './game/match-state-machine.js'
+import { onAbilityCasted } from './game/on-ability-casted.js'
 import { reconcilePrediction } from './game/prediction.js'
 import { createSchemaAccessors } from './game/schema-helpers.js'
 import { assembleEndScreen } from './game/scoreboard-data.js'
@@ -318,6 +319,8 @@ const castDispatcher = initCastDispatcher({
       selfArcExpiresAt = performance.now() + 400
     }
   },
+  // Bow/staff had no input-frame sound at all: a missed shot was silent.
+  onWeaponFired: (weapon) => soundEngine.playWeaponFire(weapon),
 })
 
 // --- HUD helpers -----------------------------------------------------------
@@ -1362,28 +1365,30 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
       MessageTypes.AbilityCasted,
       (msg: { casterId: string; abilityId: string; atTick: number }) => {
         if (!isCurrentRoom()) return
-        const def = ABILITY_DEFS[msg.abilityId]
-        const isDash =
-          def?.effects?.some(
-            (e) => e.kind === 'move' && (e as { mode?: string }).mode === 'dash',
-          ) ?? false
-        if (msg.casterId === self?.sessionId) {
-          soundEngine.playCast(def?.element ?? 'none')
-          trackAbilityCast(msg.abilityId, def?.element ?? 'none')
-          abilityReadout.show(msg.abilityId, def && def.windupSec > 0 ? 'windup' : 'released')
-          if (def?.weapon === 'staff') fpvStatic.triggerCast()
-          if (def?.weapon === 'sword' && selfArc) {
-            selfArc.visible = true
-            selfArcExpiresAt = performance.now() + 420
-          }
-          if (def && def.windupSec > 0) castStartedAtMs = performance.now()
-          if (isDash) selfRollingUntilMs = performance.now() + 400
-        } else {
-          const pos = remotePlayerSystem.getPlayerWorldPos?.(msg.casterId)
-          if (pos) soundEngine.playRemoteCast(pos.x, pos.y, pos.z, def?.element ?? 'none')
-          remotePlayerSystem.triggerAbilityCast(msg.casterId, def?.weapon ?? 'none')
-          if (isDash) remotePlayerSystem.triggerRoll(msg.casterId, performance.now() + 400)
-        }
+        onAbilityCasted(
+          {
+            selfSessionId: () => self?.sessionId,
+            trackCast: (id, element) => trackAbilityCast(id, element),
+            showReadout: (id, mode) => abilityReadout.show(id, mode),
+            triggerStaffViewmodel: () => fpvStatic.triggerCast(),
+            showSelfSwingArc: (untilMs) => {
+              if (!selfArc) return
+              selfArc.visible = true
+              selfArcExpiresAt = untilMs
+            },
+            onSelfWindupStarted: () => {
+              castStartedAtMs = performance.now()
+            },
+            onSelfDash: (untilMs) => {
+              selfRollingUntilMs = untilMs
+            },
+            remoteWorldPos: (id) => remotePlayerSystem.getPlayerWorldPos?.(id),
+            playRemoteCast: (x, y, z, element) => soundEngine.playRemoteCast(x, y, z, element),
+            triggerRemoteCast: (id, weapon) => remotePlayerSystem.triggerAbilityCast(id, weapon),
+            triggerRemoteRoll: (id, untilMs) => remotePlayerSystem.triggerRoll(id, untilMs),
+          },
+          msg,
+        )
       },
     )
 
@@ -2000,6 +2005,9 @@ function sendAbilityCast(abilityId: string, tick: number): void {
           cooldownStrip.markPending(id)
           abilityReadout.show(id, 'request')
           showShootFlash()
+          // On the INPUT frame, not the server echo — the sound used to
+          // arrive a full round-trip after the keypress that caused it.
+          soundEngine.playCast(ABILITY_DEFS[id]?.element ?? 'none')
         }
         lastCastTargetPoint = targetPoint
         recordAbilityCast(selfStats, id)

@@ -34,6 +34,8 @@ export interface CastDispatcherOptions {
   /** Called immediately when a sword swing is sent — used to trigger
    *  the local swing arc / attack animation without waiting for schema echo. */
   onSwingSent?: () => void
+  /** Bow release / staff shot left the client — for input-frame audio. */
+  onWeaponFired?: (weapon: 'bow' | 'staff') => void
 }
 
 export interface CastDispatchParams {
@@ -67,6 +69,7 @@ export function initCastDispatcher({
   showAbilityReadout,
   hideAbilityReadout,
   onSwingSent,
+  onWeaponFired,
 }: CastDispatcherOptions): CastDispatcherController {
   let primedSlotIdx: number | null = null
   let placementAbilityId: string | null = null
@@ -164,6 +167,7 @@ export function initCastDispatcher({
         bowCharge.bowChargeStartMs = 0
         bowCharge.bowChargeServerAcked = false
         showShootFlash()
+        onWeaponFired?.('bow')
       }
     }
 
@@ -194,6 +198,7 @@ export function initCastDispatcher({
           room.send(MessageTypes.FireStaff, msg)
           lastStaffFireMs = now
           showShootFlash()
+          onWeaponFired?.('staff')
         }
       }
     } else if (dead) {
