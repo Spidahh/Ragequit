@@ -65,4 +65,14 @@ describe('cooldown strip castability states', () => {
     update(strip, { gcdReadyAtTick: 0 })
     expect(pip.classList.contains('gcd-locked')).toBe(false)
   })
+
+  // Regression: markPending added a class that the per-frame cooldown refresh
+  // stripped ~16 ms later, so the "input received" state was never seen.
+  it('keeps the pending state alive across a refresh', () => {
+    const { strip, pip } = build()
+    strip.markPending('fireball')
+    expect(pip.classList.contains('pending')).toBe(true)
+    update(strip)
+    expect(pip.classList.contains('pending')).toBe(true)
+  })
 })

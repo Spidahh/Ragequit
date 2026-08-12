@@ -199,9 +199,15 @@ export function initCooldownStrip(
     }
   }
 
+  // The per-frame cooldown refresh strips `.pending` from every pip, so a class
+  // set here was gone ~16 ms later and the "input received" state was never
+  // actually visible. Keep it as an expiry the refresh can honour instead.
+  const pendingUntil = new Map<string, number>()
+
   function markPending(abilityId: string): void {
     const pip = pipEls.get(abilityId)
     if (!pip) return
+    pendingUntil.set(abilityId, performance.now() + 400)
     pip.classList.add('pending')
     setTimeout(() => pip.classList.remove('pending'), 400)
   }
@@ -270,7 +276,7 @@ export function initCooldownStrip(
         const def = ABILITY_DEFS[id]
         const totalSec = def?.cooldownSec ?? 1
         const ratio = Math.min(1, left / totalSec)
-        pip.classList.remove('ready', 'pending')
+        pip.classList.remove('ready')
         pip.classList.add('cooling')
         if (labelEl) labelEl.textContent = meta.label
         if (timerEl) timerEl.textContent = left < 1 ? left.toFixed(1) : left.toFixed(0)
@@ -278,7 +284,7 @@ export function initCooldownStrip(
       } else {
         const wasCooling = pip.classList.contains('cooling')
         pip.classList.add('ready')
-        pip.classList.remove('cooling', 'pending')
+        pip.classList.remove('cooling')
         if (labelEl) labelEl.textContent = meta.label
         if (timerEl) timerEl.textContent = ''
         if (arcEl) arcEl.style.strokeDashoffset = String(CD_ARC_CIRC)
@@ -296,6 +302,12 @@ export function initCooldownStrip(
       const unaffordable =
         (mana !== undefined && mana < (def?.costMana ?? 0)) ||
         (stamina !== undefined && stamina < (def?.costStamina ?? 0))
+      // Honour the pending window instead of clearing it every frame.
+      const pendingLeft = (pendingUntil.get(id) ?? 0) - performance.now()
+      if (pendingLeft <= 0) {
+        pendingUntil.delete(id)
+        pip.classList.remove('pending')
+      }
       pip.classList.toggle('unaffordable', unaffordable)
       pip.classList.toggle('gcd-locked', gcdActive && readyTick <= tickNow)
       pip.classList.toggle('primed', slotIdx === primedSlotIdx)
