@@ -1516,7 +1516,7 @@ button.locked {
 .ls-slot {
   position: relative;
   width: 100%;
-  min-height: 56px;
+  min-height: 74px;
   display: grid;
   grid-template-columns: 50px minmax(0, 1fr) 66px 18px;
   grid-template-areas:
@@ -1554,7 +1554,33 @@ button.locked {
     inset 0 0 16px rgba(255, 210, 96, 0.06);
 }
 
-/* Element accent */
+/* Element accent.
+   `--elem-color` is the accent every ability surface reads: the Forge pool
+   cards, the build lane and — most importantly — the shot-shape diagram that
+   shows WHERE an ability lands. It was never defined outside the in-game
+   hotbar, so all 53 abilities rendered with the same gold fallback and looked
+   identical in the Forge.
+   Values mirror ELEMENT_COLOR (hud/cd-strip.ts) and STILE.md §1, so an ability
+   is the same colour in the Forge as it is in the match. */
+.el-fire {
+  --elem-color: #ff6a2a;
+}
+.el-ice {
+  --elem-color: #6dd6ff;
+}
+.el-lightning {
+  --elem-color: #ffe244;
+}
+.el-dark {
+  --elem-color: #b870ff;
+}
+.el-nature {
+  --elem-color: #80e860;
+}
+.el-none {
+  --elem-color: #9ba0b4;
+}
+
 .ls-slot.el-fire {
   border-left-color: var(--fire);
 }
@@ -1604,8 +1630,8 @@ button.locked {
 
 .ls-slot-family {
   color: var(--fam, var(--gold));
-  font: 900 7px/1 var(--font-mono);
-  letter-spacing: 0.12em;
+  font: 900 10px/1 var(--font-mono);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -1620,23 +1646,26 @@ button.locked {
   color: var(--text);
 }
 
-/* Category — small muted subtitle */
+/* What the ability actually DOES (shape · damage · effect). This is the whole
+   payload of the row, so it wraps to two lines instead of being ellipsised —
+   "TRAIETTORIA · 24 DANNI · ESP…" told the player nothing. */
 .ls-slot-nature {
-  display: block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  color: var(--muted);
-  font: 800 8px/1 var(--font-mono);
+  color: var(--text-soft);
+  font: 700 11px/1.25 var(--font-mono);
   text-transform: uppercase;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
 }
 
 .ls-slot-route {
   grid-area: route;
   display: block;
   color: var(--gold);
-  font: 900 7px/1 var(--font-mono);
+  font: 900 9px/1 var(--font-mono);
   text-transform: uppercase;
   overflow: hidden;
   text-overflow: ellipsis;

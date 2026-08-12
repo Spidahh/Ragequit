@@ -719,6 +719,58 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
     opportunities segnalate da `check:budget`) · F2b resta aperto per pmndrs post-FX + telegraph
     a terra dedicato · ritratti classi dai modelli veri.
 
+- **2026-08-12 (2ª parte) — AUDIT MULTI-AGENTE + FIX DI BUG VERI (feedback durissimo dell'utente:
+  «è tutta una merda, non si capisce quando/cosa casti, le spell sembrano tutte uguali, le
+  animazioni non funzionano, il loadout è incomprensibile»).** Gate verde 403 test.
+  - ⚠ **PRIMA COSA, ed era colpa mia**: l'utente sentiva «il gioco attivo da qualche parte ma non
+    lo vedo, sento l'audio». Era una **scheda browser invisibile lasciata aperta da me** con il
+    gioco (e la musica) in esecuzione. Chiusa. **Lezione: spegnere SEMPRE preview/dev-server a fine
+    verifica** — un server headless che continua a girare è indistinguibile da un bug del gioco.
+  - **Metodo nuovo, e decisivo**: invece di ragionare sul codice, ho costruito sonde che
+    FOTOGRAFANO l'HUD reale in partita. `tools/verify/hud.mjs` (HUD in-match: congela il rAF —
+    `page.screenshot` va altrimenti in timeout sotto il render loop —, rimuove il canvas, nasconde
+    gli overlay, misura la geometria di ogni sezione e **fallisce se l'HUD esce dallo schermo**;
+    `HUD_CAST=1` lancia davvero le abilità e ispeziona il readout) · `tools/verify/forge.mjs`
+    (Loadout: accento-colore risolto per card + conta i nodi di testo sotto gli 11px) ·
+    `tools/verify/list-clips.mjs` (inventario clip per GLB).
+  - **Audit**: workflow a 56 agenti su 8 dimensioni (HUD, cast feedback, VFX spell, animazioni,
+    loadout, logica combat, menu, audio) con ricerca web sulle tecniche di riferimento (LoL VFX
+    style guide, Valorant clarity, Overwatch frequency-slot audio, WildStar telegraph) e verifica
+    avversariale per ogni finding. **31 confermati su 64**. Dump completo nel journal del run
+    `wf_646bb9a6-106`.
+  - **BUG DI GAMEPLAY VERI trovati e corretti** (non estetica — spiegano «le meccaniche sono una
+    merda»): (1) **ogni dash/teleport non muoveva il caster**: `effectMove` scriveva solo
+    `player.transform`, ma il tick copia `simState.pos` sul transform ogni frame → spostamento
+    annullato un tick dopo; (2) **le abilità a costo stamina erano gratis**, stesso meccanismo sul
+    campo stamina (rotti anche Energize e i drain). MeleeSystem/ProjectileSystem/ParrySystem
+    avevano già gli hook `syncSimPos`/`syncSimStamina`; l'AbilityEngine no. Ora li ha, e i test
+    asseriscono che la **simulazione** è stata scritta — i vecchi test guardavano solo lo schema,
+    ed è esattamente per questo che il bug è sopravvissuto.
+  - **NON toccato di proposito**: i 9 knockup identici. Il codice documenta esplicitamente la
+    scelta (`void airborneSec`, «differentiating airtime would be a balance change, not a bug
+    fix») → è una decisione di bilanciamento, **serve l'utente**.
+  - **Leggibilità (le lamentele dirette)**: nomi abilità non più troncati né in hotbar
+    ("MARKSMA…") né nella colonna build del Forge ("TRAIETTORIA · 24 DANNI · ESP…") · danno/cura/
+    controllo/distanza + glifo della forma del colpo ora **sul pip**, sempre visibili (erano
+    calcolati ma chiusi in un tooltip `:hover`, **irraggiungibile in FPS con pointer-lock**) ·
+    dimensione pip da variabile CSS (prima la barra usciva dallo schermo a 1280×720) ·
+    `--elem-color` non era MAI definito fuori dalla hotbar → tutte e 53 le card del Forge e il
+    diagramma "dove colpisce" erano grigi uguali; ora seguono `ELEMENT_COLOR`/STILE.md §1.
+  - **Animazioni**: Sword/Bow/Staff/Attacking idle collassavano su UNA sola clip per classe (il
+    personaggio non cambiava mai postura cambiando arma); lo staff ora usa la clip `*_casting` che
+    i pack già contengono ma non veniva mai suonata. Inoltre `exact()` risolveva i candidati
+    sull'ordine delle clip nel GLB invece che sull'ordine di priorità → Erika suonava la posa ad
+    arco già teso al posto dell'incocco. Nuovo `character-clips.test.ts` valida i **4 GLB reali** e
+    fissa a ratchet le lacune di asset rimaste (Erika non ha idle neutro, Paladin non ha clip arco).
+  - **RESTANO CONFERMATI, non ancora fatti** (in ordine di impatto): hotbar `ready` mente (non
+    legge mana/stamina/GCD) · cast bar morta per 40/53 abilità · niente anello di cast sul mirino ·
+    `#shoot-flash` identico per tutte le 53 abilità/3 armi/5 elementi · 33/53 abilità senza VFX di
+    mondo · impatto VFX spawnato al PUNTO MEDIO attaccante-vittima con raggio fisso (mente su dove
+    e quanto grande) · casting muto sul frame di input (arco e staff completamente silenziosi) ·
+    nessun telegraph a terra AoE · niente footstep/audio remoti · AoE con 3 hitbox diverse (sfera
+    vs cilindro infinito) · abilità forward che non colpisce nulla addebita comunque costo+CD.
+  - ⚠ Resta su branch `claude/game-improvements-ff3fff`, NON pushato (push = deploy prod).
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.
