@@ -806,6 +806,32 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
   - **DA DECIDERE (utente)**: i 9 knockup identici — il codice documenta la scelta come
     bilanciamento, non tocco.
 
+- **2026-08-12 (4ª parte) — CODA FINITA.** Gate verde 433 test, altri 4 commit:
+  - **Animazioni: il colpo non si vedeva MAI.** Le clip Mixamo durano 1.5-2.5s ma lo stato che le
+    guida è tenuto solo ~220-420ms (finestra dell'arco di swing / rilascio a distanza), quindi il
+    crossfade abbandonava la clip dopo il 10-25%: partiva il caricamento e la stoccata non veniva
+    mai renderizzata. Invece di rallentare il gioco per far stare le clip, ogni one-shot viene
+    ACCELERATA per stare nella sua finestra (`fitOneShotToWindow`, cap 6× per non sfocare, mai
+    sotto 1×). Le animazioni c'erano già — semplicemente non le vedevi. Corretto anche il recoil
+    della spada, che rimetteva `timeScale = 1` e rallentava lo swing a metà colpo.
+  - **Telegraph a terra**: nuovo messaggio `CastTelegraph`. Il server lo trasmette appena parte un
+    cast con windup e area reale, col raggio VERO dell'abilità e la durata esatta del windup; il
+    client disegna un cerchio element-tinted con bordo opaco (leggibile su qualsiasi pavimento) e
+    riempimento che cresce dal centro e tocca il bordo esattamente all'impatto — il riempimento È
+    il timer. Verificato con test sul broadcast (l'input headless per le abilità a piazzamento è
+    fragile, il test è più affidabile).
+  - **Audio remoto**: i passi esistevano solo per il giocatore locale e su uscita non spaziale →
+    un avversario poteva attraversare l'arena alle tue spalle in silenzio totale. Ora passi HRTF
+    spazializzati per ogni giocatore remoto, stessa regola dei 2.1 m, più forti dei tuoi (la
+    posizione di un nemico è informazione).
+  - **Abilità a vuoto**: nuova ragione `no_target`. Il costo resta pagato (se rimborsare è una
+    scelta di bilanciamento, tua), ma almeno il giocatore viene informato.
+  - Estratti ancora per budget: `cast-telegraph.ts` (client+server), `on-death.ts`,
+    `remote-sounds.ts`, `player-maxima.ts`, `aoe-shape.ts`. main.ts 2816→2747 in totale.
+  - **RESTA**: `#shoot-flash` identico per tutte le abilità · ritratti classi dai modelli veri ·
+    pmndrs post-FX · 53 abilità → 3 clip di corpo (serve `animFamily` nel registry + clip nuove,
+    è lavoro di asset oltre che di codice).
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.
