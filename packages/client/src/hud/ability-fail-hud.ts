@@ -43,47 +43,50 @@ export function initAbilityFailHud({
     const abilityName =
       ABILITY_DEFS[msg.abilityId]?.name ??
       (msg.abilityId === 'staff_m1'
-        ? 'Staff Shot'
+        ? 'Colpo di Staff'
         : msg.abilityId === 'bow_m1'
-          ? 'Bow Shot'
+          ? 'Tiro con Arco'
           : msg.abilityId === 'parry'
-            ? 'Parry'
-            : 'Ability')
+            ? 'Parata'
+            : 'Abilità')
+    // The rest of the game is Italian (AGENTS.md: one language) — these strings
+    // are the ones the player reads at the exact moment something refuses to
+    // fire, so they were the most visible English left in the HUD.
     const actionVerb =
       msg.abilityId === 'parry'
-        ? 'parry'
+        ? 'parare'
         : msg.abilityId === 'staff_m1' || msg.abilityId === 'bow_m1'
-          ? 'fire'
-          : 'cast'
+          ? 'sparare'
+          : 'lanciare'
     switch (msg.reason) {
       case 'cost':
-        return `${abilityName}: not enough resources`
+        return `${abilityName}: risorse insufficienti`
       case 'cooldown':
-        return `${abilityName}: cooling down`
+        return `${abilityName}: in ricarica`
       case 'gcd':
-        return 'Global cooldown'
+        return 'Recupero globale'
       case 'cc':
-        return `Cannot ${actionVerb} while controlled`
+        return `Non puoi ${actionVerb} sotto controllo`
       case 'casting':
-        return 'Already casting'
+        return 'Stai già lanciando'
       case 'grounded_required':
-        return `${abilityName}: requires ground`
+        return `${abilityName}: serve stare a terra`
       case 'parrying':
-        return `Cannot ${actionVerb} while parrying`
+        return `Non puoi ${actionVerb} mentre pari`
       case 'wrong_weapon':
-        return `${abilityName}: wrong weapon`
+        return `${abilityName}: arma sbagliata`
       case 'not_in_loadout':
-        return `${abilityName}: not in loadout`
+        return `${abilityName}: non è nel loadout`
       case 'range':
-        return `${abilityName}: target out of range`
+        return `${abilityName}: bersaglio troppo lontano`
       case 'unreachable':
-        return `${abilityName}: no clear path`
+        return `${abilityName}: nessuna traiettoria libera`
       case 'dead':
-        return `Cannot ${actionVerb} while dead`
+        return `Non puoi ${actionVerb} da morto`
       case 'unknown_ability':
-        return 'Unknown ability'
+        return 'Abilità sconosciuta'
       case 'swapping':
-        return 'weapon swapping in progress'
+        return 'cambio arma in corso'
     }
   }
 

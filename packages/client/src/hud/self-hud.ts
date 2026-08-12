@@ -288,6 +288,12 @@ export function initSelfHud({
       placementAbilityId,
       primedSlotIdx,
       tickNow,
+      // Cooldown alone is not "castable": an off-cooldown ability you cannot
+      // afford, or one blocked by the global cooldown, still refuses to fire.
+      // Without these the pip shows READY and the press does nothing.
+      mana: selfSchema.mana,
+      stamina: selfSchema.stamina,
+      gcdReadyAtTick: selfSchema.gcdReadyAtTick ?? 0,
     })
 
     if (gcdRingEl) {

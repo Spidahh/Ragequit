@@ -96,3 +96,21 @@ export function accumulateHitStats(
   if (msg.victimId !== ctx.selfId) opponent.damageTaken += msg.damage
   return null
 }
+
+/** Kills inside this window chain into a multi-kill callout. */
+export const KILL_STREAK_WINDOW_MS = 8000
+
+/**
+ * Drops kills older than the streak window and names the resulting multi-kill.
+ *
+ * Mutates `times` in place (it is the caller's rolling buffer) and returns the
+ * splash text, so the streak thresholds are testable without a DOM.
+ */
+export function killStreakSplash(times: number[], now: number): string {
+  while (times.length > 0 && now - times[0]! > KILL_STREAK_WINDOW_MS) times.shift()
+  const streak = times.length
+  if (streak >= 4) return 'ULTRA KILL!'
+  if (streak === 3) return 'TRIPLA KILL!'
+  if (streak === 2) return 'DOPPIA KILL!'
+  return 'KILL!'
+}

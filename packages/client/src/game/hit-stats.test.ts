@@ -1,7 +1,12 @@
 import type { ServerHitMessage } from '@ragequit/shared'
 import { describe, expect, it } from 'vitest'
 
-import { accumulateHitStats, type HitStatsContext } from './hit-stats.js'
+import {
+  accumulateHitStats,
+  killStreakSplash,
+  KILL_STREAK_WINDOW_MS,
+  type HitStatsContext,
+} from './hit-stats.js'
 import { emptyMatchStats } from './stats-tracker.js'
 
 function hit(over: Partial<ServerHitMessage> = {}): ServerHitMessage {
@@ -119,5 +124,29 @@ describe('accumulateHitStats', () => {
     expect(opp.comboProcs).toBe(1)
     expect(opp.damageTaken).toBe(10)
     expect(self).toEqual(emptyMatchStats())
+  })
+})
+
+describe('killStreakSplash', () => {
+  it('escalates with each kill inside the window', () => {
+    const times: number[] = []
+    const at = (t: number) => (times.push(t), killStreakSplash(times, t))
+    expect(at(1000)).toBe('KILL!')
+    expect(at(2000)).toBe('DOPPIA KILL!')
+    expect(at(3000)).toBe('TRIPLA KILL!')
+    expect(at(4000)).toBe('ULTRA KILL!')
+    expect(at(5000)).toBe('ULTRA KILL!')
+  })
+
+  it('drops kills older than the window so streaks do not carry over a match', () => {
+    const times = [1000, 2000]
+    // 1000 and 2000 are both more than 8 s before 11000.
+    expect(killStreakSplash(times, 11000)).toBe('KILL!')
+    expect(times).toEqual([])
+  })
+
+  it('keeps kills exactly on the window edge', () => {
+    const times = [1000, 2000]
+    expect(killStreakSplash(times, 1000 + KILL_STREAK_WINDOW_MS)).toBe('DOPPIA KILL!')
   })
 })

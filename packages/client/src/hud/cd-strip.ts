@@ -34,6 +34,11 @@ export interface CooldownStripController {
     placementAbilityId: string | null
     primedSlotIdx: number | null
     tickNow: number
+    /** Current resources — a pip off cooldown you cannot pay for is NOT ready. */
+    mana?: number
+    stamina?: number
+    /** Global cooldown; while it runs nothing can be cast. */
+    gcdReadyAtTick?: number
   }) => void
 }
 
@@ -215,13 +220,20 @@ export function initCooldownStrip(
     placementAbilityId,
     primedSlotIdx,
     tickNow,
+    mana,
+    stamina,
+    gcdReadyAtTick,
   }: {
     activeWeapon: string
     abilityCooldowns: CooldownLookup | undefined
     placementAbilityId: string | null
     primedSlotIdx: number | null
     tickNow: number
+    mana?: number
+    stamina?: number
+    gcdReadyAtTick?: number
   }): void {
+    const gcdActive = (gcdReadyAtTick ?? 0) > tickNow
     const aimedAbilityId =
       placementAbilityId ?? (primedSlotIdx === null ? '' : (loadoutRef[primedSlotIdx] ?? ''))
     const aimedDef = ABILITY_DEFS[aimedAbilityId]
@@ -277,6 +289,15 @@ export function initCooldownStrip(
           setTimeout(() => pip.classList.remove('cd-ready-flash'), 500)
         }
       }
+      // Off cooldown is not the same as castable. Mark the two other reasons a
+      // press does nothing, so the player sees WHY instead of pressing a
+      // "READY" key into silence.
+      const def = ABILITY_DEFS[id]
+      const unaffordable =
+        (mana !== undefined && mana < (def?.costMana ?? 0)) ||
+        (stamina !== undefined && stamina < (def?.costStamina ?? 0))
+      pip.classList.toggle('unaffordable', unaffordable)
+      pip.classList.toggle('gcd-locked', gcdActive && readyTick <= tickNow)
       pip.classList.toggle('primed', slotIdx === primedSlotIdx)
       pip.classList.toggle('placing', id === placementAbilityId)
     }

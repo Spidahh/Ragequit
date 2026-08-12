@@ -18,7 +18,6 @@ import {
   makePlayerSimState,
   movementCapsFromStatuses,
   simulatePlayer,
-  type ClientCastMessage,
   type MovementCaps,
   type ServerMatchPhaseMessage,
   type ServerNoteMessage,
@@ -57,7 +56,7 @@ import { MusicPlayer } from './audio/music.js'
 import { SoundEngine } from './audio/sound-engine.js'
 import { type DeathcamData } from './endgame.js'
 import { type ComboState, victimShakeIntensity, COMBO_RESET_MS } from './game/combat-feedback.js'
-import { accumulateHitStats } from './game/hit-stats.js'
+import { accumulateHitStats, killStreakSplash } from './game/hit-stats.js'
 import {
   rawCauseId,
   isAirPunishCause,
@@ -91,6 +90,7 @@ import { initCastDispatcher } from './input/cast-dispatcher.js'
 import { initGameInput, makeGameInputState } from './input/game-input.js'
 import { actionLabel, onKeybindsChanged } from './input/keybinds.js'
 import { initRadialWheels } from './input/radial-wheels.js'
+import { sendAbilityCast as sendCast } from './input/send-cast.js'
 import { initMouseSensitivity } from './input/sensitivity.js'
 import { initLeaderboard } from './leaderboard.js'
 import { initLoadoutStation } from './loadout-station.js'
@@ -1795,13 +1795,7 @@ function onDeath(msg: ServerDeathMessage): void {
     soundEngine.playKill()
     const now = performance.now()
     recentKillTimes.push(now)
-    // Keep only kills within the last 8 seconds.
-    while (recentKillTimes.length > 0 && now - recentKillTimes[0]! > 8000) recentKillTimes.shift()
-    const streak = recentKillTimes.length
-    if (streak >= 4) combatFeedHud.showKillSplash('ULTRA KILL!', 'kill')
-    else if (streak === 3) combatFeedHud.showKillSplash('TRIPLA KILL!', 'kill')
-    else if (streak === 2) combatFeedHud.showKillSplash('DOPPIA KILL!', 'kill')
-    else combatFeedHud.showKillSplash('KILL!', 'kill')
+    combatFeedHud.showKillSplash(killStreakSplash(recentKillTimes, now), 'kill')
   }
 }
 
@@ -2059,28 +2053,32 @@ function initSelfIfNeeded(): void {
 // State reading
 // -----------------------------------------------------------------------
 
-// Schema read helpers (getSchemaPlayers/…) are created near the top via
-// createSchemaReaders — see the room declaration.
-
 function sendAbilityCast(abilityId: string, tick: number): void {
-  if (!room) return
-  const msg: ClientCastMessage = {
+  sendCast(
+    {
+      getRoom: () => room,
+      getAim: () => ({ yaw: inp.mouseYaw, pitch: inp.mousePitch }),
+      getAimPoint: (id) => placementPreview.aimPoint(id),
+      getSchemaTick,
+      getSelfPlayer: getSelfSchemaPlayer,
+      onSent: (id, blockedLabel, targetPoint) => {
+        if (blockedLabel) {
+          cooldownStrip.flashFailed(id)
+          abilityReadout.show(id, 'failed', blockedLabel)
+        } else {
+          cooldownStrip.markPending(id)
+          abilityReadout.show(id, 'request')
+          showShootFlash()
+        }
+        lastCastTargetPoint = targetPoint
+        recordAbilityCast(selfStats, id)
+        if (['uppercut', 'eruption', 'arc_lift', 'frost_pillar'].includes(id))
+          selfStats.knockupAttempts++
+      },
+    },
     abilityId,
-    atTick: tick,
-    targetYaw: inp.mouseYaw,
-    targetPitch: inp.mousePitch,
-    targetPoint: placementPreview.aimPoint(abilityId),
-  }
-  room.send(MessageTypes.Cast, msg)
-  cooldownStrip.markPending(abilityId)
-  abilityReadout.show(abilityId, 'request')
-  showShootFlash()
-  lastCastTargetPoint = msg.targetPoint ?? null
-
-  recordAbilityCast(selfStats, abilityId)
-  if (['uppercut', 'eruption', 'arc_lift', 'frost_pillar'].includes(abilityId)) {
-    selfStats.knockupAttempts++
-  }
+    tick,
+  )
 }
 
 // -----------------------------------------------------------------------

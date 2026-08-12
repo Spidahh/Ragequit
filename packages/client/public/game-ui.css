@@ -2878,6 +2878,26 @@ button.locked {
   border-color: rgba(255, 255, 255, 0.06);
 }
 
+/* Off cooldown but NOT castable. Without these the pip read READY and the
+   keypress did nothing, with no explanation anywhere on screen. */
+.cd-pip.unaffordable .ability-icon img {
+  filter: grayscale(65%) brightness(45%);
+}
+
+.cd-pip.unaffordable {
+  border-color: rgba(255, 51, 68, 0.5);
+}
+
+/* The resource you are short of, called out on the pip itself. */
+.cd-pip.unaffordable .pip-stat {
+  color: #ff6a6a;
+}
+
+/* Global cooldown: everything is briefly locked, so dim rather than alarm. */
+.cd-pip.gcd-locked .ability-icon img {
+  filter: brightness(62%);
+}
+
 .hotbar-section.wrong-weapon .cd-pip:hover {
   filter: brightness(1.45) saturate(1.4);
 }
