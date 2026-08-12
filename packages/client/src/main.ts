@@ -25,6 +25,7 @@ import {
   type ServerStatusAppliedMessage,
   type ServerStatusExpiredMessage,
   type ServerZoneExpiredMessage,
+  type ServerCastTelegraphMessage,
   type ServerZoneSpawnedMessage,
   type StatusKind,
   type ClientInputMessage,
@@ -57,10 +58,11 @@ import { SoundEngine } from './audio/sound-engine.js'
 import { type DeathcamData } from './endgame.js'
 import { type ComboState, victimShakeIntensity, COMBO_RESET_MS } from './game/combat-feedback.js'
 import { spawnHitImpacts } from './game/hit-impacts.js'
-import { accumulateHitStats, killStreakSplash } from './game/hit-stats.js'
+import { accumulateHitStats } from './game/hit-stats.js'
 import { rawCauseId, isAirPunishCause, hitstopAttacker, hitstopVictim } from './game/hitstop.js'
 import { matchSM } from './game/match-state-machine.js'
 import { onAbilityCasted } from './game/on-ability-casted.js'
+import { onDeathBroadcast } from './game/on-death.js'
 import { reconcilePrediction } from './game/prediction.js'
 import { createSchemaAccessors } from './game/schema-helpers.js'
 import { assembleEndScreen } from './game/scoreboard-data.js'
@@ -105,6 +107,7 @@ import {
   preloadOtherClassesBackground,
 } from './preloader.js'
 import { createAutoQuality } from './render/auto-quality.js'
+import { initCastTelegraph } from './render/cast-telegraph.js'
 import {
   makeCharacter,
   applyWeaponProp,
@@ -590,6 +593,7 @@ scene.add(deathBurstVfx.mesh)
 deathBurstVfx.mesh.layers.enable(1) // bloom
 
 const zoneVfx = initZoneVisuals({ scene })
+const castTelegraph = initCastTelegraph(scene)
 const spellParticles = initSpellParticles(scene) // quarks: embers/impacts/muzzle (STILE §7)
 const projectileVfx = initProjectileVisuals({
   scene,
@@ -1357,6 +1361,9 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
     joinedRoom.onMessage(MessageTypes.ZoneSpawned, (msg: ServerZoneSpawnedMessage) => {
       if (isCurrentRoom()) zoneVfx.onSpawned(msg)
     })
+    joinedRoom.onMessage(MessageTypes.CastTelegraph, (msg: ServerCastTelegraphMessage) => {
+      if (isCurrentRoom()) castTelegraph.spawn(msg)
+    })
     joinedRoom.onMessage(MessageTypes.ZoneExpired, (msg: ServerZoneExpiredMessage) => {
       if (isCurrentRoom()) zoneVfx.onExpired(msg)
     })
@@ -1681,57 +1688,43 @@ function onHit(msg: ServerHitMessage): void {
 }
 
 function onDeath(msg: ServerDeathMessage): void {
-  const selfId = self?.sessionId ?? ''
-  const isSelfDied = msg.victimId === selfId
-  const isSelfKill = msg.killerId === selfId
-
-  // Resolve display names from schema (fall back to truncated session id).
   const players = getSchemaPlayers()
-  const killerName = players?.get(msg.killerId)?.name || msg.killerId.slice(0, 6)
-  const victimName = players?.get(msg.victimId)?.name || msg.victimId.slice(0, 6)
-
-  combatFeedHud.addKillFeedEntry(killerName, victimName, isSelfKill, isSelfDied)
-
-  // Track match score stats
-  if (isSelfKill) {
-    selfStats.kills++
-  } else if (msg.killerId !== '' && msg.killerId !== selfId) {
-    opponentStats.kills++
-  }
-
-  // World-space death burst — red particle explosion at victim position.
-  const deathPos = getPlayerWorldPos(msg.victimId)
-  if (deathPos) deathBurstVfx.spawn(deathPos, isSelfKill && !isSelfDied)
-
-  if (isSelfKill && !isSelfDied) {
-    trackKill(msg.cause ?? 'unknown')
-    _killConfirmUntilMs = performance.now() + 200
-  }
-  if (isSelfDied) {
-    trackDeath(msg.cause ?? 'unknown')
-    lastKillerName = killerName
-    soundEngine.playDeath()
-    applyDirectionalShake(null, 1.4) // max intensity on death
-    hitFeedback.showDirectionalHit(null)
-    combatFeedHud.showKillSplash('ELIMINATO', 'died')
-    damageFlash.classList.add('active')
-    void damageFlash.offsetHeight
-    damageFlash.classList.remove('active')
-    // Reset cast bar — if dying during a windup the bar would otherwise
-    // persist on the respawn screen and reappear incorrectly after respawn.
-    castStartedAtMs = 0
-    castBar.classList.remove('active')
-    castBarFill.style.width = '0%'
-    // Reset local combo counter so a kill doesn't carry over to next life.
-    localComboCount = 0
-    // Clear any primed ability — it would fire on the wrong tick after respawn.
-    castDispatcher.clearQueue()
-  } else if (isSelfKill) {
-    soundEngine.playKill()
-    const now = performance.now()
-    recentKillTimes.push(now)
-    combatFeedHud.showKillSplash(killStreakSplash(recentKillTimes, now), 'kill')
-  }
+  onDeathBroadcast(
+    {
+      selfSessionId: () => self?.sessionId ?? '',
+      playerName: (id) => players?.get(id)?.name || id.slice(0, 6),
+      worldPos: (id) => getPlayerWorldPos(id),
+      addKillFeedEntry: (k, v, sk, sd) => combatFeedHud.addKillFeedEntry(k, v, sk, sd),
+      showKillSplash: (text, kind) => combatFeedHud.showKillSplash(text, kind),
+      spawnDeathBurst: (pos, byUs) => deathBurstVfx.spawn(pos, byUs),
+      countSelfKill: () => selfStats.kills++,
+      countOpponentKill: () => opponentStats.kills++,
+      trackKill,
+      trackDeath,
+      onSelfKilledSomeone: (now) => {
+        _killConfirmUntilMs = now + 200
+      },
+      onSelfDied: (killerName) => {
+        lastKillerName = killerName
+        soundEngine.playDeath()
+        applyDirectionalShake(null, 1.4) // max intensity on death
+        hitFeedback.showDirectionalHit(null)
+        damageFlash.classList.add('active')
+        void damageFlash.offsetHeight
+        damageFlash.classList.remove('active')
+        // Dying mid-windup would otherwise leave the cast bar on the respawn
+        // screen and bring it back after respawn.
+        castStartedAtMs = 0
+        castBar.classList.remove('active')
+        castBarFill.style.width = '0%'
+        localComboCount = 0 // a kill must not carry over to the next life
+        castDispatcher.clearQueue() // a primed ability would fire on the wrong tick
+      },
+      recentKillTimes,
+      playKillSound: () => soundEngine.playKill(),
+    },
+    msg,
+  )
 }
 
 function onKillStreak(msg: ServerKillStreakMessage): void {
@@ -1872,6 +1865,7 @@ function clearLocalMatchState(): void {
   clearGameplayUi()
   projectileVfx.clear()
   zoneVfx.clear()
+  castTelegraph.clear()
   remotePlayerSystem.clear()
   clearSelfVisuals()
 }
@@ -2653,6 +2647,7 @@ function _renderInner(now: number): void {
   }
 
   zoneVfx.animateFrame(now)
+  castTelegraph.update(now)
 
   selfEmissive.update(now, tickNow, selfSchema ?? null, selfDamageBlinkUntilMs)
 

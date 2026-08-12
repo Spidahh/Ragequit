@@ -201,6 +201,24 @@ export interface ServerZoneSpawnedMessage {
   armDelaySec: number
 }
 
+/**
+ * A wind-up AoE has been committed to a ground position.
+ *
+ * Broadcast to EVERYONE the moment the cast starts, so both the caster and the
+ * people standing in the blast get a marker they can react to. There was no
+ * telegraph of any kind before: Meteor has a 1 s wind-up but its target point
+ * was never replicated, so the first thing a victim saw was the damage.
+ */
+export interface ServerCastTelegraphMessage {
+  casterId: string
+  abilityId: string
+  element: string
+  pos: { x: number; y: number; z: number }
+  radius: number
+  /** Wind-up length — the marker fills over exactly this long. */
+  durationMs: number
+}
+
 export interface ServerZoneExpiredMessage {
   id: string
   atTick: number
@@ -327,6 +345,7 @@ export const MessageTypes = {
   StatusApplied: 'statusApplied',
   StatusExpired: 'statusExpired',
   ZoneSpawned: 'zoneSpawned',
+  CastTelegraph: 'castTelegraph',
   ZoneExpired: 'zoneExpired',
   // Kill streaks
   KillStreak: 'killStreak',

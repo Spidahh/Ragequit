@@ -43,15 +43,13 @@ import {
 import type { StatusRuntime } from './StatusRuntime.js'
 import type { CastTarget, EngineHost } from './ability-engine-host.js'
 import { insideAoe } from './aoe-shape.js'
+import { castTelegraphMessage } from './cast-telegraph.js'
 import { validateCast } from './cast-validation.js'
 import { impactPushDirection } from './combat-geometry.js'
 import { getPlayerMaxima } from './player-maxima.js'
 import { placePointForward, clampPointToRange } from './targeting-geometry.js'
 
-// --- Host interface --------------------------------------------------------
-// Lives in ./ability-engine-host.ts; re-exported so existing importers of
-// AbilityEngine keep working.
-
+// Re-exported so existing importers of AbilityEngine keep working.
 export { insideAoe } from './aoe-shape.js'
 
 export type {
@@ -62,7 +60,6 @@ export type {
 } from './ability-engine-host.js'
 
 // --- Pending windups -------------------------------------------------------
-
 interface PendingCast {
   abilityId: string
   casterId: string
@@ -143,6 +140,9 @@ export class AbilityEngine {
       player.castAbilityId = def.id
       player.castEndsAtTick = endsAt
       this.windups.push({ abilityId: def.id, casterId: sid, target, endsAtTick: endsAt })
+      const center = this.resolveAreaCenter(sid, player, target, def)
+      const tg = center && castTelegraphMessage(sid, def, center, endsAt - now)
+      if (tg) this.host.broadcast(MessageTypes.CastTelegraph, tg)
     } else {
       this.resolveOnCastEffects(sid, def, target)
     }

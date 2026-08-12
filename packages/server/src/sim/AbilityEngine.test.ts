@@ -836,3 +836,46 @@ describe('AbilityEngine — one AoE shape for every effect', () => {
     expect(insideAoe(victimAt(0, 20, 0), { x: 0, y: 0, z: 0 }, 3)).toBe(false)
   })
 })
+
+// Regression: there was no telegraph of any kind. Meteor has a 1 s wind-up but
+// its target point was never replicated, so the first thing a victim saw was
+// the damage landing on them.
+describe('AbilityEngine — wind-up AoE telegraph', () => {
+  const telegraphs = (r: ReturnType<typeof makeRoom>) =>
+    r.broadcasts.filter((b) => b.type === 'castTelegraph')
+
+  it('announces where a wind-up AoE will land, with its real radius', () => {
+    const r = makeRoom()
+    expect(
+      r.engine.tryCast('A', 'meteor', { yaw: 0, pitch: 0, point: { x: 0, y: 0, z: -6 } }),
+    ).toBe(true)
+
+    const sent = telegraphs(r)
+    expect(sent).toHaveLength(1)
+    const msg = sent[0]!.message as {
+      casterId: string
+      abilityId: string
+      radius: number
+      durationMs: number
+      pos: { x: number; z: number }
+    }
+    expect(msg.casterId).toBe('A')
+    expect(msg.abilityId).toBe('meteor')
+    // The marker must be the ability's true blast radius, not a fixed circle.
+    expect(msg.radius).toBeCloseTo(3.5)
+    // It fills over exactly the wind-up, so it finishes as the meteor lands.
+    expect(msg.durationMs).toBeCloseTo(ABILITY_DEFS.meteor!.windupSec * 1000, 0)
+    expect(msg.pos.z).toBeCloseTo(-6)
+  })
+
+  it('stays silent for instant abilities and for wind-ups with no ground area', () => {
+    const instant = makeRoom()
+    instant.engine.tryCast('A', 'fireball', { yaw: 0, pitch: 0 })
+    expect(telegraphs(instant)).toHaveLength(0)
+
+    // frost_pillar has a 0.3 s wind-up but every effect radius is 0.
+    const noArea = makeRoom()
+    noArea.engine.tryCast('A', 'frost_pillar', { yaw: 0, pitch: 0 })
+    expect(telegraphs(noArea)).toHaveLength(0)
+  })
+})
