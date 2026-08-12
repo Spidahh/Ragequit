@@ -30,7 +30,11 @@ type ProjectileKind = 'arrow' | 'bolt'
 type ProjectileStyle = 'arrow' | 'fire' | 'ice' | 'lightning' | 'dark' | 'nature' | 'neutral'
 export type ProjectileProfile =
   | 'arrow'
-  | 'heavyArrow'
+  | 'piercingArrow'
+  | 'pinArrow'
+  | 'marksmanArrow'
+  | 'broadheadArrow'
+  | 'blastArrow'
   | 'orb'
   | 'shard'
   | 'lance'
@@ -130,7 +134,12 @@ export function projectileProfile(
   abilityId?: string,
 ): ProjectileProfile {
   if (kind === 'arrow') {
-    return abilityId === 'marksman_shot' || abilityId === 'blast_arrow' ? 'heavyArrow' : 'arrow'
+    if (abilityId === 'piercing_shot') return 'piercingArrow'
+    if (abilityId === 'pin_shot') return 'pinArrow'
+    if (abilityId === 'marksman_shot') return 'marksmanArrow'
+    if (abilityId === 'broadhead') return 'broadheadArrow'
+    if (abilityId === 'blast_arrow') return 'blastArrow'
+    return 'arrow'
   }
   if (abilityId === 'fireball' || abilityId === 'meteor') return 'orb'
   if (abilityId === 'frost_bolt' || abilityId === 'freeze_target') return 'shard'
@@ -190,8 +199,46 @@ function makeProjectileObject(
     projOutline.scale.copy(baseMesh.scale)
     projOutline.rotation.copy(baseMesh.rotation)
     baseMesh.add(projOutline)
-    if (profile === 'heavyArrow') baseMesh.scale.multiplyScalar(1.35)
+    if (profile === 'marksmanArrow' || profile === 'blastArrow') baseMesh.scale.multiplyScalar(1.35)
     group.add(baseMesh)
+
+    const accentColor =
+      profile === 'pinArrow'
+        ? 0x61d7ff
+        : profile === 'broadheadArrow'
+          ? 0xff3344
+          : profile === 'blastArrow'
+            ? 0xff5a18
+            : profile === 'marksmanArrow'
+              ? 0xfff2a8
+              : 0xffc65c
+    const accentMat = new THREE.MeshBasicMaterial({
+      color: accentColor,
+      transparent: true,
+      opacity: 0.95,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    })
+    let signature: THREE.Mesh | null = null
+    if (profile === 'piercingArrow') {
+      signature = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.85, 6), accentMat)
+      signature.rotation.x = Math.PI / 2
+    } else if (profile === 'pinArrow') {
+      signature = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.035, 6, 14), accentMat)
+    } else if (profile === 'marksmanArrow') {
+      signature = new THREE.Mesh(new THREE.ConeGeometry(0.095, 1.15, 8), accentMat)
+      signature.rotation.x = Math.PI / 2
+    } else if (profile === 'broadheadArrow') {
+      signature = new THREE.Mesh(new THREE.OctahedronGeometry(0.18, 0), accentMat)
+      signature.scale.set(1.8, 0.65, 0.65)
+    } else if (profile === 'blastArrow') {
+      signature = new THREE.Mesh(new THREE.IcosahedronGeometry(0.2, 1), accentMat)
+    }
+    if (signature) {
+      signature.position.z = -0.32
+      if (profile === 'blastArrow' || profile === 'marksmanArrow') signature.layers.enable(1)
+      group.add(signature)
+    }
   } else {
     // The texture supplies energy, while the solid silhouette communicates the
     // mechanic: orb, ice shard, lightning lance, drain halo or thorn.
@@ -306,10 +353,18 @@ function disposeObject(object: THREE.Object3D): void {
   })
 }
 
-function makeTrailLine(style: ProjectileStyle): THREE.Line {
+function projectileTrailColor(style: ProjectileStyle, profile: ProjectileProfile): number {
+  if (profile === 'pinArrow') return 0x61d7ff
+  if (profile === 'broadheadArrow') return 0xff3344
+  if (profile === 'blastArrow') return 0xff5a18
+  if (profile === 'marksmanArrow') return 0xfff2a8
+  return projectileColor(style)
+}
+
+function makeTrailLine(style: ProjectileStyle, profile: ProjectileProfile = 'arrow'): THREE.Line {
   const geo = new THREE.BufferGeometry()
   geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRAIL_LEN * 3), 3))
-  const color = projectileColor(style)
+  const color = projectileTrailColor(style, profile)
 
   const mat = new THREE.LineBasicMaterial({
     color,
@@ -387,7 +442,7 @@ export function initProjectileVisuals({
     object.position.set(msg.origin.x, msg.origin.y, msg.origin.z)
     const light = style !== 'arrow' ? _lightPool.acquire(projectileColor(style)) : null
     if (light) light.position.copy(object.position)
-    const trail = makeTrailLine(style)
+    const trail = makeTrailLine(style, profile)
     scene.add(object)
     scene.add(trail)
     // Cast juice: a short element-tinted puff right where the bolt is born.
@@ -429,7 +484,9 @@ export function initProjectileVisuals({
 
   function onExpired(msg: ServerProjectileExpiredMessage): void {
     const vis = projectileVisuals.get(msg.id)
-    const impactProfile: ImpactProfile = vis?.kind === 'arrow' ? 'pierce' : 'magic'
+    const profile = vis?.profile
+    const impactProfile: ImpactProfile =
+      vis?.kind === 'arrow' && profile !== 'blastArrow' ? 'pierce' : 'magic'
     const style = vis?.style
     if (vis) {
       disposeVisual(vis)
@@ -437,12 +494,15 @@ export function initProjectileVisuals({
     }
     const pos = new THREE.Vector3(msg.pos.x, msg.pos.y, msg.pos.z)
     const elemColor = msg.element ? zoneColorForElement(msg.element) : null
+    const arrowColor = profile ? projectileTrailColor('arrow', profile) : null
     const color =
       elemColor ??
+      arrowColor ??
       (msg.reason === 'victim' ? 0xff6060 : msg.reason === 'terrain' ? 0xaabbcc : 0x80d0ff)
     spawnImpact(pos, color, impactProfile)
     // Element spark burst on top of the pooled 3-layer impact (bolts only).
     if (style && style !== 'arrow') spellParticles.burstImpact(pos, style as SpellStyle)
+    if (profile === 'blastArrow') spellParticles.burstImpact(pos, 'fire')
   }
 
   // Shift existing points toward index 0 (oldest), write new at end.

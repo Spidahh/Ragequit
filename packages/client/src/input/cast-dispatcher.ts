@@ -29,7 +29,8 @@ export interface CastDispatcherOptions {
   hidePlacementVisual: () => void
   sendCast: (abilityId: string, tick: number) => void
   showShootFlash: () => void
-  showAbilityReadout?: (abilityId: string, mode: 'primed' | 'placement' | 'cast') => void
+  showAbilityReadout?: (abilityId: string, mode: 'primed' | 'placement') => void
+  hideAbilityReadout?: () => void
   /** Called immediately when a sword swing is sent — used to trigger
    *  the local swing arc / attack animation without waiting for schema echo. */
   onSwingSent?: () => void
@@ -64,6 +65,7 @@ export function initCastDispatcher({
   sendCast,
   showShootFlash,
   showAbilityReadout,
+  hideAbilityReadout,
   onSwingSent,
 }: CastDispatcherOptions): CastDispatcherController {
   let primedSlotIdx: number | null = null
@@ -72,6 +74,7 @@ export function initCastDispatcher({
   const abilityCastQueue: string[] = []
 
   function cancelPlacementPreview(): void {
+    if (placementAbilityId) hideAbilityReadout?.()
     placementAbilityId = null
     hidePlacementVisual()
   }
@@ -85,10 +88,10 @@ export function initCastDispatcher({
   function activateAbilitySlot(slotIdx: number, fromWheel: boolean): void {
     const id = getLoadout()[slotIdx] ?? ''
     if (!id || !ABILITY_DEFS[id]) return
-    showAbilityReadout?.(id, fromWheel ? 'primed' : isDirectCast(id) ? 'cast' : 'placement')
     if (fromWheel) {
       cancelPlacementPreview()
       primedSlotIdx = slotIdx
+      showAbilityReadout?.(id, 'primed')
       return
     }
     if (isDirectCast(id)) {
@@ -98,6 +101,7 @@ export function initCastDispatcher({
     }
     beginPlacementPreview(id)
     primedSlotIdx = null
+    showAbilityReadout?.(id, 'placement')
   }
 
   function clearQueue(): void {

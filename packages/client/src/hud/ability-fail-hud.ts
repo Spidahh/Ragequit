@@ -13,6 +13,7 @@ export interface AbilityFailHudOptions {
   gcdRingEl: HTMLElement | null
   serverToast: HTMLElement
   cooldownStrip: CooldownStripForFailHud
+  showAbilityFailed?: (abilityId: string, detail: string) => void
 }
 
 export interface AbilityFailHudController {
@@ -25,6 +26,7 @@ export function initAbilityFailHud({
   gcdRingEl,
   serverToast,
   cooldownStrip,
+  showAbilityFailed,
 }: AbilityFailHudOptions): AbilityFailHudController {
   let serverToastTimer: ReturnType<typeof setTimeout> | null = null
   let lastAbilityFailToastAt = 0
@@ -122,6 +124,7 @@ export function initAbilityFailHud({
 
   function onAbilityFailed(msg: ServerAbilityFailedMessage): void {
     cooldownStrip.flashFailed(msg.abilityId)
+    showAbilityFailed?.(msg.abilityId, getAbilityFailText(msg))
 
     if (msg.reason === 'cost') {
       const def = ABILITY_DEFS[msg.abilityId]

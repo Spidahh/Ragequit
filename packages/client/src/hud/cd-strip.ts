@@ -25,6 +25,7 @@ export interface CooldownStripController {
   rebuild: (loadout: ReadonlyArray<string>, classId: ClassId) => void
   signature: (loadout: ReadonlyArray<string>) => string
   updateAbilityCooldowns: (options: {
+    activeWeapon: string
     abilityCooldowns: CooldownLookup | undefined
     placementAbilityId: string | null
     primedSlotIdx: number | null
@@ -36,7 +37,7 @@ export interface CooldownStripController {
 const CD_ARC_R = 18
 const CD_ARC_CIRC = 2 * Math.PI * CD_ARC_R
 
-type HotbarSectionKind = 'weapon' | 'spell' | 'utility'
+export type HotbarSectionKind = 'melee' | 'bow' | 'staff' | 'utility'
 
 interface HotbarSlotMeta {
   kind: HotbarSectionKind
@@ -52,23 +53,41 @@ export function getSlotKeyLabel(slotIdx: number): string {
   return codeToLabel(actionCode(SLOT_ACTIONS[slotIdx]!))
 }
 
+export function hotbarSectionForAbility(abilityId: string): HotbarSectionKind | null {
+  if (!ABILITY_DEFS[abilityId]) return null
+  const family = getAbilitySlotFamily(abilityId)
+  if (family === 'utility') return 'utility'
+  if (family === 'magicBase' || family === 'magicAdvanced') return 'staff'
+  if (family === 'melee') return 'melee'
+  if (family === 'bow') return 'bow'
+  return null
+}
+
 function slotMeta(loadout: ReadonlyArray<string>, slotIdx: number): HotbarSlotMeta | null {
   const id = loadout[slotIdx]
   if (!id) return null
   const family = getAbilitySlotFamily(id)
   const label = getSlotKeyLabel(slotIdx)
   if (family === 'utility') return { kind: 'utility', label, pipClass: 'utility-pip pip-utility' }
-  if (family === 'magicBase') return { kind: 'spell', label, pipClass: 'spell-pip pip-magic' }
+  if (family === 'magicBase') return { kind: 'staff', label, pipClass: 'spell-pip pip-magic' }
   if (family === 'magicAdvanced')
-    return { kind: 'spell', label, pipClass: 'spell-pip pip-magic-adv' }
-  if (family === 'melee') return { kind: 'weapon', label, pipClass: 'ability-pip pip-sword' }
-  if (family === 'bow') return { kind: 'weapon', label, pipClass: 'ability-pip pip-bow' }
+    return { kind: 'staff', label, pipClass: 'spell-pip pip-magic-adv' }
+  if (family === 'melee') return { kind: 'melee', label, pipClass: 'ability-pip pip-sword' }
+  if (family === 'bow') return { kind: 'bow', label, pipClass: 'ability-pip pip-bow' }
   return null
+}
+
+const SECTION_PRESENTATION: Record<HotbarSectionKind, { icon: string; label: string }> = {
+  melee: { icon: '⚔', label: 'SPADA' },
+  bow: { icon: '➶', label: 'ARCO' },
+  staff: { icon: '✦', label: 'STAFF' },
+  utility: { icon: '◆', label: 'UTILITY' },
 }
 
 export function initCooldownStrip(
   root: HTMLElement,
   onSlotClick: (slotIdx: number) => void,
+  crosshair?: HTMLElement,
 ): CooldownStripController {
   const pipEls = new Map<string, HTMLElement>()
   let loadoutRef: ReadonlyArray<string> = []
@@ -84,23 +103,18 @@ export function initCooldownStrip(
     root.replaceChildren()
     pipEls.clear()
 
-    const weaponSection = document.createElement('div')
-    weaponSection.className = 'hotbar-section ability-section'
-    const weaponRail = document.createElement('div')
-    weaponRail.className = 'hotbar-rail'
-    weaponSection.appendChild(weaponRail)
-
-    const spellSection = document.createElement('div')
-    spellSection.className = 'hotbar-section spell-section'
-    const spellRail = document.createElement('div')
-    spellRail.className = 'hotbar-rail'
-    spellSection.appendChild(spellRail)
-
-    const utilitySection = document.createElement('div')
-    utilitySection.className = 'hotbar-section utility-section'
-    const utilityRail = document.createElement('div')
-    utilityRail.className = 'hotbar-rail'
-    utilitySection.appendChild(utilityRail)
+    const sections = new Map<HotbarSectionKind, { section: HTMLElement; rail: HTMLElement }>()
+    for (const kind of ['melee', 'bow', 'staff', 'utility'] as const) {
+      const presentation = SECTION_PRESENTATION[kind]
+      const section = document.createElement('section')
+      section.className = `hotbar-section ${kind}-section`
+      section.dataset['family'] = kind
+      section.innerHTML = `<div class="hotbar-section-head"><b>${presentation.icon} ${presentation.label}</b><span>${kind === 'utility' ? 'SEMPRE' : 'TAB'}</span></div>`
+      const rail = document.createElement('div')
+      rail.className = 'hotbar-rail'
+      section.appendChild(rail)
+      sections.set(kind, { section, rail })
+    }
 
     for (let slotIdx = 0; slotIdx < loadout.length; slotIdx++) {
       const id = loadout[slotIdx] ?? ''
@@ -127,6 +141,7 @@ export function initCooldownStrip(
           : (def?.slot.toUpperCase() ?? '')
       const cdLabel = def ? `${def.cooldownSec}s CD` : ''
       const costLabel = costParts.length > 0 ? costParts.join(' · ') : 'free'
+      const shortName = (def?.name ?? id).split(/\s+/).slice(0, 2).join(' ')
 
       const pip = document.createElement('div')
       pip.className = `cd-pip ready ${meta.pipClass}`
@@ -139,6 +154,7 @@ export function initCooldownStrip(
       pip.innerHTML = `
         <span class="ability-icon">${icon}</span>
         <span class="label">${meta.label}</span>
+        <span class="ability-short-name">${shortName}</span>
         <svg class="cd-arc" viewBox="0 0 44 44" width="44" height="44">
           <circle class="cd-arc-bg" cx="22" cy="22" r="${CD_ARC_R}" fill="none"/>
           <circle class="cd-arc-fill" cx="22" cy="22" r="${CD_ARC_R}" fill="none"
@@ -158,17 +174,12 @@ export function initCooldownStrip(
         e.stopPropagation()
         onSlotClick(slotIdx)
       })
-      ;(meta.kind === 'utility'
-        ? utilityRail
-        : meta.kind === 'spell'
-          ? spellRail
-          : weaponRail
-      ).appendChild(pip)
+      sections.get(meta.kind)?.rail.appendChild(pip)
       pipEls.set(id, pip)
     }
-    if (weaponRail.children.length > 0) root.appendChild(weaponSection)
-    if (spellRail.children.length > 0) root.appendChild(spellSection)
-    if (utilityRail.children.length > 0) root.appendChild(utilitySection)
+    for (const { section, rail } of sections.values()) {
+      if (rail.children.length > 0) root.appendChild(section)
+    }
   }
 
   function markPending(abilityId: string): void {
@@ -187,16 +198,39 @@ export function initCooldownStrip(
   }
 
   function updateAbilityCooldowns({
+    activeWeapon,
     abilityCooldowns,
     placementAbilityId,
     primedSlotIdx,
     tickNow,
   }: {
+    activeWeapon: string
     abilityCooldowns: CooldownLookup | undefined
     placementAbilityId: string | null
     primedSlotIdx: number | null
     tickNow: number
   }): void {
+    const aimedAbilityId =
+      placementAbilityId ?? (primedSlotIdx === null ? '' : (loadoutRef[primedSlotIdx] ?? ''))
+    const aimedDef = ABILITY_DEFS[aimedAbilityId]
+    if (crosshair) {
+      if (aimedDef) {
+        crosshair.dataset['abilityTargeting'] = aimedDef.targeting
+        crosshair.dataset['abilityFamily'] = hotbarSectionForAbility(aimedAbilityId) ?? 'utility'
+      } else {
+        delete crosshair.dataset['abilityTargeting']
+        delete crosshair.dataset['abilityFamily']
+      }
+    }
+    for (const section of root.querySelectorAll<HTMLElement>('.hotbar-section')) {
+      const family = section.dataset['family']
+      const requiredWeapon = family === 'melee' ? 'sword' : family
+      const active = family === 'utility' || requiredWeapon === activeWeapon
+      section.classList.toggle('active-family', active)
+      section.classList.toggle('wrong-weapon', !active)
+      const state = section.querySelector<HTMLElement>('.hotbar-section-head span')
+      if (state) state.textContent = family === 'utility' ? 'SEMPRE' : active ? 'ATTIVA' : 'TAB'
+    }
     for (let slotIdx = 0; slotIdx < loadoutRef.length; slotIdx++) {
       const id = loadoutRef[slotIdx] ?? ''
       const pip = pipEls.get(id)

@@ -22,11 +22,14 @@ export interface FpvStaticViewmodel {
   rebuild(weapon: Weapon): void
   /** The weapon currently shown/loading, or null. */
   getCurrentWeapon(): Weapon | null
+  triggerCast(): void
+  update(now: number): void
 }
 
 export function createFpvStaticViewmodel(): FpvStaticViewmodel {
   const root = new THREE.Group()
   let currentWeapon: Weapon | null = null
+  let castStartedAt = 0
 
   function clear(): void {
     while (root.children.length > 0) {
@@ -124,5 +127,23 @@ export function createFpvStaticViewmodel(): FpvStaticViewmodel {
       })
   }
 
-  return { root, rebuild, getCurrentWeapon: () => currentWeapon }
+  function triggerCast(): void {
+    castStartedAt = performance.now()
+  }
+
+  function update(now: number): void {
+    const elapsed = now - castStartedAt
+    if (castStartedAt === 0 || elapsed >= 360) {
+      root.position.set(0, 0, 0)
+      root.rotation.set(0, 0, 0)
+      castStartedAt = 0
+      return
+    }
+    const kick = elapsed < 90 ? elapsed / 90 : 1 - (elapsed - 90) / 270
+    const eased = Math.max(0, Math.sin(kick * Math.PI * 0.5))
+    root.position.set(0.035 * eased, -0.045 * eased, 0.09 * eased)
+    root.rotation.set(-0.07 * eased, 0.04 * eased, -0.1 * eased)
+  }
+
+  return { root, rebuild, getCurrentWeapon: () => currentWeapon, triggerCast, update }
 }

@@ -36,6 +36,11 @@ Questo documento descrive lo stato vivo.
 - Nameplate posizionate con `transform: translate3d()` (compositor thread).
 - Loading screen con barra di progresso: `#loading-screen` in index.html.
 - Dynamic crosshair: `data-moving="true"` quando WASD attivo, `.kill-confirm` al kill.
+- Hotbar in quattro pannelli arma (`SPADA`, `ARCO`, `STAFF`, `UTILITY`) con
+  arma corrente evidenziata e stato `ATTIVA`/`TAB`.
+- Readout cast autoritativo: selezione, placement, richiesta, windup, rilascio e
+  fallimento sono stati visivi distinti; targeting `forward`, `point` e `self`
+  modifica anche il mirino.
 
 ## Sistemi Client Aggiuntivi
 

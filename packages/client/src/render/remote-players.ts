@@ -137,6 +137,7 @@ export interface RemotePlayersController {
   getWorldPos: (sid: string) => THREE.Vector3 | null
   setDamageBlink: (sid: string, untilMs: number) => void
   triggerRoll: (sid: string, untilMs: number) => void
+  triggerAbilityCast: (sid: string, weapon: string) => void
   setHitStop: (sid: string, untilMs: number) => void
   triggerWeaponRecoil: (sid: string) => void
   getPlayerWorldPos: (sid: string) => { x: number; y: number; z: number } | null
@@ -748,6 +749,18 @@ export function initRemotePlayers({
     if (r) r.rollUntilMs = untilMs
   }
 
+  function triggerAbilityCast(sid: string, weapon: string): void {
+    const r = remotePlayers.get(sid)
+    if (!r) return
+    const untilMs = performance.now() + 420
+    if (weapon === 'sword') {
+      r.arc.visible = true
+      r.arcExpiresAt = untilMs
+    } else if (weapon === 'bow' || weapon === 'staff') {
+      r.rangedReleaseUntilMs = untilMs
+    }
+  }
+
   function setHitStop(sid: string, untilMs: number): void {
     const r = remotePlayers.get(sid)
     if (r) r.hitStopUntilMs = untilMs
@@ -771,6 +784,7 @@ export function initRemotePlayers({
     getWorldPos,
     setDamageBlink,
     triggerRoll,
+    triggerAbilityCast,
     setHitStop,
     triggerWeaponRecoil,
   }

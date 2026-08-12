@@ -66,8 +66,15 @@ Every class has exactly 4 abilities on E and 4 on Q, covering all 8 slots with n
 
 The hotbar shows all 8 active slots, each labeled with its direct key (default
 `1`–`8`). Slots 1–4 are also reachable on the E wheel, slots 5–8 on the Q wheel.
-Border colors follow the family color code (red = melee, green = bow, blue =
-magic, gold = utility). Every ability is always visible with its key mid-fight.
+Abilities are physically grouped in labeled `SWORD`, `BOW`, `STAFF` and
+`UTILITY` panels (red, green, blue and gold). The equipped weapon panel is
+raised and marked `ACTIVE`; inactive weapon panels show `TAB`. Every ability
+stays visible with a short name and key mid-fight.
+
+Priming also changes the reticle by targeting grammar (`forward`, `point`,
+`self`). The centre readout distinguishes selected, placement, server request,
+windup, released and blocked states; a windup is never called released before
+the server-side cast actually resolves.
 
 ## Weapon auto-swap
 

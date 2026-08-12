@@ -310,6 +310,7 @@ const castDispatcher = initCastDispatcher({
   sendCast: (id, tick) => sendAbilityCast(id, tick),
   showShootFlash,
   showAbilityReadout: (id, mode) => abilityReadout.show(id, mode),
+  hideAbilityReadout: () => abilityReadout.hide(),
   // Show swing feedback immediately instead of waiting for the schema echo.
   onSwingSent: () => {
     // Missed swings still need an audible whoosh.
@@ -322,9 +323,10 @@ const castDispatcher = initCastDispatcher({
 })
 
 // --- HUD helpers -----------------------------------------------------------
-
-const cooldownStrip = initCooldownStrip(cdStrip, (slotIdx) =>
-  castDispatcher.activateAbilitySlot(slotIdx, true),
+const cooldownStrip = initCooldownStrip(
+  cdStrip,
+  (slotIdx) => castDispatcher.activateAbilitySlot(slotIdx, true),
+  crosshairEl,
 )
 
 const selfHud = initSelfHud({
@@ -348,7 +350,13 @@ const selfHud = initSelfHud({
   cooldownStrip,
 })
 
-const abilityFailHud = initAbilityFailHud({ statusStrip, gcdRingEl, serverToast, cooldownStrip })
+const abilityFailHud = initAbilityFailHud({
+  statusStrip,
+  gcdRingEl,
+  serverToast,
+  cooldownStrip,
+  showAbilityFailed: (id, detail) => abilityReadout.show(id, 'failed', detail),
+})
 
 onKeybindsChanged(() => {
   radialWheels.refreshAll()
@@ -377,7 +385,6 @@ window.addEventListener(
   { capture: true },
 )
 initTelemetry()
-// Boot Supabase auth in the background — store the promise, wire up after menu is ready
 const _supabaseAuthReady = initSupabaseAuth()
 const statusOverlay = initStatusOverlay({
   getSelfId: () => self?.sessionId,
@@ -394,8 +401,6 @@ const renderer = createRendererOrGate()
 configureGameRenderer(renderer)
 app.appendChild(renderer.domElement)
 
-// Nameplate container — absolutely positioned over the canvas for HP bars /
-// name labels above remote players. Updated each render frame via 3D projection.
 const nameplateContainer = document.createElement('div')
 nameplateContainer.id = 'nameplate-container'
 nameplateContainer.style.cssText =
@@ -543,12 +548,8 @@ const _bloomDarkened: Array<{ mesh: THREE.Mesh; mat: THREE.Material | THREE.Mate
 // objects directly, so they keep working regardless of parent.
 const fpvStatic = createFpvStaticViewmodel()
 viewmodelCamera.add(fpvStatic.root)
-// Animated FPS bow viewmodel (arms + bow + real draw/fire/reload clips).
-// Used for the bow weapon; fpvStatic above is the staff (and other static FPV).
 const fpvBow = createFpvBow()
 viewmodelCamera.add(fpvBow.root)
-// Subtle key light for first-person weapon — gives shape/depth without clipping.
-// Positioned top-left of camera so shadow falls naturally on the grip.
 const fpvKeyLight = new THREE.PointLight(0xd8e8ff, 1.4, 3, 1)
 fpvKeyLight.position.set(-0.4, 0.6, -0.5)
 viewmodelCamera.add(fpvKeyLight)
@@ -807,7 +808,6 @@ let selfPrevOnGround = true
 // First-person bow: tracks charge-held state to fire the shoot animation on release.
 let _prevBowCharging = false
 
-// Roll animation — triggered on dash ability cast confirmation.
 let selfRollingUntilMs = 0
 
 // Directional screen shake — offset the camera toward/away from attacker.
@@ -1386,14 +1386,18 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
         if (msg.casterId === self?.sessionId) {
           soundEngine.playCast(def?.element ?? 'none')
           trackAbilityCast(msg.abilityId, def?.element ?? 'none')
-          // Anchor cast bar to server ack time — eliminates RTT-induced desync.
+          abilityReadout.show(msg.abilityId, def && def.windupSec > 0 ? 'windup' : 'released')
+          if (def?.weapon === 'staff') fpvStatic.triggerCast()
+          if (def?.weapon === 'sword' && selfArc) {
+            selfArc.visible = true
+            selfArcExpiresAt = performance.now() + 420
+          }
           if (def && def.windupSec > 0) castStartedAtMs = performance.now()
-          // Play Roll animation on dash abilities.
           if (isDash) selfRollingUntilMs = performance.now() + 400
         } else {
-          // Remote caster — spatial cast audio (was silent) + roll for dashes.
           const pos = remotePlayerSystem.getPlayerWorldPos?.(msg.casterId)
           if (pos) soundEngine.playRemoteCast(pos.x, pos.y, pos.z, def?.element ?? 'none')
+          remotePlayerSystem.triggerAbilityCast(msg.casterId, def?.weapon ?? 'none')
           if (isDash) remotePlayerSystem.triggerRoll(msg.casterId, performance.now() + 400)
         }
       },
@@ -1809,11 +1813,11 @@ function onKillStreak(msg: ServerKillStreakMessage): void {
 function onChannelInterrupted(msg: ServerChannelInterruptedMessage): void {
   const selfId = self?.sessionId ?? ''
   if (msg.casterId !== selfId) return
-  // Immediately collapse the cast bar and show a brief "INTERRUPTED" label.
   castStartedAtMs = 0
   castBar.classList.remove('active')
   castBarFill.style.width = '0%'
   castBarLabel.textContent = 'INTERROTTO'
+  abilityReadout.show(msg.abilityId, 'failed', 'CAST INTERROTTO')
   castBar.classList.add('interrupted')
   setTimeout(() => castBar.classList.remove('interrupted'), 600)
 }
@@ -2069,9 +2073,8 @@ function sendAbilityCast(abilityId: string, tick: number): void {
   }
   room.send(MessageTypes.Cast, msg)
   cooldownStrip.markPending(abilityId)
-  abilityReadout.show(abilityId, 'cast')
+  abilityReadout.show(abilityId, 'request')
   showShootFlash()
-  // Remember the target for resolution VFX (shown when windup completes).
   lastCastTargetPoint = msg.targetPoint ?? null
 
   recordAbilityCast(selfStats, abilityId)
@@ -2430,8 +2433,8 @@ function _renderInner(now: number): void {
     if (prevSelfCasting && !nowCasting && castStartedAtMs > 0 && lastCastAbilityId) {
       const def = ABILITY_DEFS[lastCastAbilityId]
       if (def && def.windupSec > 0) {
-        // Second sound at resolution so the player knows the spell fired.
         soundEngine.playCast(def.element ?? 'none')
+        abilityReadout.show(lastCastAbilityId, 'released')
         // VFX at target point for point-targeted spells (meteor, zone placement, etc.)
         if (lastCastTargetPoint) {
           const elemColor = (ELEMENT_COLOR[def.element] ?? '#4a90d8').replace('#', '')
@@ -2516,6 +2519,7 @@ function _renderInner(now: number): void {
     selfMesh.visible = !dead && !firstPerson
     fpvBow.setVisible(!dead && cfg.viewModel === 'fpvBow')
     fpvStatic.root.visible = !dead && cfg.viewModel === 'staticViewmodel'
+    fpvStatic.update(now)
     setParryShieldState(selfMesh, !dead && !!selfSchema?.parrying, !!selfSchema?.parryIsHold, now)
     setParryShieldState(
       firstPersonParryShield,
@@ -2654,7 +2658,6 @@ function _renderInner(now: number): void {
     dbgPlayers.textContent = String(getSchemaPlayers()?.size ?? 0)
     dbgPing.textContent = ping > 0 ? ping.toFixed(0) : '-'
   }
-  // Persistent ping HUD (always-visible coloured indicator)
   if (ping > 0) {
     pingValEl.textContent = ping.toFixed(0)
     pingHud.className = ping < 60 ? 'ingame good' : ping < 120 ? 'ingame ok' : 'ingame bad'
@@ -2666,7 +2669,6 @@ function _renderInner(now: number): void {
     dbgSeq.textContent = String(seqCounter)
   }
 
-  // Weapon wheel highlight + debug.
   if (inp.optimisticWeapon && selfSchema?.activeWeapon === inp.optimisticWeapon)
     inp.optimisticWeapon = null
   const activeWeapon: Weapon = currentWeaponForInput()
@@ -2697,7 +2699,6 @@ function _renderInner(now: number): void {
     },
   })
 
-  // Low-HP audio heartbeat — plays at ~0.65 Hz when critically low
   if (self && currentMatchPhase === 'live') {
     const selfSch = getSelfSchemaPlayer()
     if (selfSch && selfSch.alive) {
@@ -2738,7 +2739,6 @@ function _renderInner(now: number): void {
     yourParries: selfStats.parries,
     timeToNextMs: 5000,
   }
-  // Update respawn stats strip while dead
   if (selfSchema && !selfSchema.alive) {
     if (rsDmgDealtEl) rsDmgDealtEl.textContent = String(selfStats.damageDealt)
     if (rsHitsEl) rsHitsEl.textContent = String(selfStats.yourHits)

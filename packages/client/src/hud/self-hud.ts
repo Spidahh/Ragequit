@@ -29,6 +29,7 @@ export interface SelfHudSchema {
   alive: boolean
   respawnAtTick: number
   classId: string
+  activeWeapon: string
   statuses: ReadonlyArray<{ kind: string; stacks: number; remainingSec: number }>
   casting: boolean
   castAbilityId: string
@@ -244,7 +245,9 @@ export function initSelfHud({
       castBarFill.style.width = `${(ratio * 100).toFixed(1)}%`
       const castDef = ABILITY_DEFS[selfSchema.castAbilityId]
       const castName = castDef?.name ?? selfSchema.castAbilityId.toUpperCase()
-      castBarLabel.textContent = `${castName}  ${secLeft.toFixed(1)}s`
+      const castFamily =
+        castDef?.slot === 'utility' ? 'UTILITY' : (castDef?.weapon ?? 'STAFF').toUpperCase()
+      castBarLabel.textContent = `${castFamily}  •  ${castName}  •  ${secLeft.toFixed(1)}s`
       const castElemColor = ELEMENT_COLOR[castDef?.element ?? 'none'] ?? '#4a90d8'
       const castElemDim = castElemColor + '44' // ~27% alpha
       castBarFill.style.background = `linear-gradient(90deg, ${castElemDim} 0%, ${castElemColor} 80%, #fff 100%)`
@@ -280,6 +283,7 @@ export function initSelfHud({
     }
 
     cooldownStrip.updateAbilityCooldowns({
+      activeWeapon: selfSchema.activeWeapon,
       abilityCooldowns: selfSchema.abilityCooldowns,
       placementAbilityId,
       primedSlotIdx,

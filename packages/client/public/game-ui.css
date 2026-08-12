@@ -2423,7 +2423,7 @@ button.locked {
   display: flex;
   flex-direction: row;
   align-items: flex-end;
-  gap: 8px;
+  gap: 18px;
   background: none;
   border: none;
   box-shadow: none;
@@ -2585,26 +2585,74 @@ button.locked {
 
 #cd-strip {
   display: flex;
-  gap: 7px;
-  padding: 4px;
-  background: linear-gradient(180deg, rgba(15, 17, 26, 0.92), rgba(6, 8, 14, 0.9));
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius);
-  backdrop-filter: blur(12px);
+  align-items: flex-end;
+  gap: 10px;
   pointer-events: auto;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
 .hotbar-section {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
+  padding: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-top: 2px solid var(--family-color, rgba(255, 255, 255, 0.2));
+  background: linear-gradient(180deg, rgba(15, 17, 26, 0.96), rgba(5, 7, 12, 0.94));
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.48);
+  transition:
+    border-color 150ms ease,
+    filter 150ms ease,
+    transform 150ms ease;
 }
 
-.hotbar-section.spell-section,
+.hotbar-section.melee-section {
+  --family-color: #ff3344;
+}
+.hotbar-section.bow-section {
+  --family-color: #39ff14;
+}
+.hotbar-section.staff-section {
+  --family-color: #00d0ff;
+}
 .hotbar-section.utility-section {
-  padding-left: 7px;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  --family-color: #ffd260;
+}
+
+.hotbar-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 13px;
+  color: var(--family-color);
+  font: 900 9px/1 var(--font-mono);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.hotbar-section-head span {
+  padding: 2px 4px;
+  border: 1px solid currentColor;
+  color: #8e98aa;
+  font-size: 7px;
+  letter-spacing: 0.06em;
+}
+
+.hotbar-section.active-family {
+  border-color: color-mix(in srgb, var(--family-color) 62%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--family-color) 20%, transparent),
+    0 8px 30px rgba(0, 0, 0, 0.56);
+  transform: translateY(-3px);
+}
+
+.hotbar-section.active-family .hotbar-section-head span {
+  color: var(--family-color);
+  background: color-mix(in srgb, var(--family-color) 12%, transparent);
+}
+
+.hotbar-section.wrong-weapon .hotbar-rail {
+  filter: saturate(0.45) brightness(0.68);
 }
 
 .hotbar-rail {
@@ -2614,11 +2662,11 @@ button.locked {
 
 .cd-pip {
   position: relative;
-  width: 48px;
-  height: 48px;
+  width: 58px;
+  height: 62px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-bottom: 3px solid var(--elem-color, var(--gold));
-  border-radius: 6px;
+  border-bottom: 3px solid var(--family-color, var(--elem-color, var(--gold)));
+  border-radius: 3px;
   background: rgba(0, 0, 0, 0.45);
   transition:
     border-color 150ms ease,
@@ -2627,8 +2675,7 @@ button.locked {
     box-shadow 150ms ease;
 }
 
-/* ── Hotbar family color coding ── */
-/* Bottom border color makes weapon/spell/utility family instantly readable. */
+/* Ability families use shape + labels at section level; the border reinforces them. */
 .cd-pip.pip-sword {
   border-bottom-color: #ff3344;
 } /* sword */
@@ -2646,13 +2693,13 @@ button.locked {
 } /* utility */
 
 .cd-pip.utility-pip {
-  width: 48px;
-  height: 48px;
+  width: 58px;
+  height: 62px;
 }
 
 .cd-pip.spell-pip {
-  width: 48px;
-  height: 48px;
+  width: 58px;
+  height: 62px;
 }
 
 .cd-pip.ready {
@@ -2670,7 +2717,11 @@ button.locked {
   top: 4px;
   left: 5px;
   color: var(--gold);
-  font: 900 9px/1 var(--font-mono);
+  min-width: 16px;
+  padding: 2px 3px;
+  color: #080a10;
+  background: var(--gold);
+  font: 900 10px/1 var(--font-mono);
   z-index: 10;
 }
 
@@ -2701,11 +2752,27 @@ button.locked {
   top: 3px;
   left: 3px;
   right: 3px;
-  bottom: 3px;
+  bottom: 17px;
   display: block;
   overflow: hidden;
-  border-radius: 4px;
+  border-radius: 2px;
   z-index: 2;
+}
+
+.cd-pip .ability-short-name {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  left: 2px;
+  z-index: 12;
+  overflow: hidden;
+  color: #eef3ff;
+  font: 800 7px/11px var(--font-ui);
+  letter-spacing: 0.02em;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .cd-pip .ability-icon img {
@@ -2724,6 +2791,10 @@ button.locked {
 .cd-pip.cooling {
   background: rgba(0, 0, 0, 0.45);
   border-color: rgba(255, 255, 255, 0.06);
+}
+
+.hotbar-section.wrong-weapon .cd-pip:hover {
+  filter: brightness(1.45) saturate(1.4);
 }
 
 .cd-pip .cd-timer {
@@ -3020,7 +3091,25 @@ button.locked {
 }
 
 #cast-bar {
-  top: calc(50% + 70px);
+  top: calc(50% + 54px);
+  width: 320px;
+  height: 30px;
+  margin-left: -160px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-left: 3px solid var(--mana);
+  border-radius: 2px;
+  background: rgba(5, 7, 12, 0.9);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+}
+
+#cast-bar .fill {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 5px;
+  border-radius: 0;
 }
 
 #cast-bar .label {
@@ -3028,8 +3117,11 @@ button.locked {
   inset: 0;
   display: grid;
   place-items: center;
-  color: var(--text);
-  font: 900 8px/1 var(--font-mono);
+  padding-bottom: 5px;
+  color: #f4f7ff;
+  font: 900 10px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-shadow: 0 2px 5px #000;
 }
 
 /* Cast interrupted — brief red flash */
@@ -6332,17 +6424,20 @@ button.locked {
 #ability-readout {
   position: fixed;
   left: 50%;
-  top: calc(50% + 54px);
+  top: calc(50% + 92px);
   z-index: 720;
   display: flex;
   align-items: center;
   gap: 9px;
-  min-width: 250px;
-  max-width: 390px;
-  padding: 8px 11px 8px 8px;
-  border-left: 3px solid var(--gold);
-  background: linear-gradient(90deg, rgba(8, 10, 17, 0.92), rgba(8, 10, 17, 0.66));
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.42);
+  min-width: 330px;
+  max-width: 460px;
+  padding: 7px 8px;
+  border: 1px solid color-mix(in srgb, var(--readout-color, var(--gold)) 48%, transparent);
+  border-left: 4px solid var(--readout-color, var(--gold));
+  background: linear-gradient(90deg, rgba(5, 7, 12, 0.96), rgba(10, 13, 21, 0.86));
+  box-shadow:
+    0 0 22px color-mix(in srgb, var(--readout-color, var(--gold)) 15%, transparent),
+    0 8px 26px rgba(0, 0, 0, 0.5);
   pointer-events: none;
   opacity: 0;
   transform: translate(-50%, 8px) scale(0.98);
@@ -6357,10 +6452,32 @@ button.locked {
 }
 
 #ability-readout.mode-placement {
-  border-left-color: #00d0ff;
+  --readout-color: #00d0ff;
 }
-#ability-readout.mode-cast {
-  border-left-color: #ff3344;
+#ability-readout.mode-request {
+  --readout-color: #ffd260;
+}
+#ability-readout.mode-windup {
+  --readout-color: var(--family-color, #ffd260);
+}
+#ability-readout.mode-released {
+  --readout-color: var(--family-color, #fff);
+}
+#ability-readout.mode-failed {
+  --readout-color: #ff3344;
+}
+
+#ability-readout.family-sword {
+  --family-color: #ff3344;
+}
+#ability-readout.family-bow {
+  --family-color: #39ff14;
+}
+#ability-readout.family-staff {
+  --family-color: #00d0ff;
+}
+#ability-readout.family-utility {
+  --family-color: #ffd260;
 }
 
 .ar-icon {
@@ -6394,9 +6511,31 @@ button.locked {
   text-transform: uppercase;
 }
 .ar-copy span {
+  max-width: 255px;
   color: #aebbd2;
   font: 600 10px/1.25 var(--font-ui);
   white-space: normal;
+}
+
+.ar-family {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  margin-left: auto;
+  padding-left: 10px;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--family-color, var(--gold));
+  font: 900 10px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+}
+
+.ar-family small {
+  color: #93a0b5;
+  font-size: 7px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 /* ── Loading Screen ──────────────────────────────────────────────────────── */
@@ -6484,6 +6623,52 @@ button.locked {
 /* Primed ability accent ring */
 #crosshair[data-primed='true'] {
   box-shadow: 0 0 0 2px rgba(212, 160, 74, 0.55);
+}
+
+/* Selected abilities change the reticle language before LMB: trajectory,
+   ground placement and self-cast must never look like the same action. */
+#crosshair[data-ability-family='melee'] {
+  --ability-aim: #ff3344;
+}
+#crosshair[data-ability-family='bow'] {
+  --ability-aim: #39ff14;
+}
+#crosshair[data-ability-family='staff'] {
+  --ability-aim: #00d0ff;
+}
+#crosshair[data-ability-family='utility'] {
+  --ability-aim: #ffd260;
+}
+
+#crosshair[data-ability-targeting] {
+  border-color: var(--ability-aim);
+  opacity: 1;
+  box-shadow:
+    0 0 0 3px rgba(5, 7, 12, 0.72),
+    0 0 14px color-mix(in srgb, var(--ability-aim) 56%, transparent);
+}
+
+#crosshair[data-ability-targeting='forward'] {
+  border-width: 2px;
+  border-radius: 3px;
+}
+
+#crosshair[data-ability-targeting='point'] {
+  width: 48px;
+  height: 48px;
+  border: 2px dashed var(--ability-aim);
+}
+
+#crosshair[data-ability-targeting='self'] {
+  width: 46px;
+  height: 46px;
+  border: 3px double var(--ability-aim);
+}
+
+#crosshair[data-ability-targeting]::before,
+#crosshair[data-ability-targeting]::after {
+  display: block;
+  background: var(--ability-aim);
 }
 
 /* ── Respawn stats strip ─────────────────────────────────────────────────── */

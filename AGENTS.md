@@ -215,6 +215,15 @@ Se una modifica rompe o ignora anche solo uno dei sistemi collegati, la soluzion
   danno ha una riga dedicata separata da costi/cooldown.
 - Hotbar in-game: bordo rosso `melee`, verde `bow`, blu `staff/magic`, oro
   `utility`.
+- La hotbar compatta in un unico rail e stata rifiutata il 2026-08-12. Gli 8
+  slot devono essere separati in pannelli visibili `SPADA`, `ARCO`, `STAFF` e
+  `UTILITY`; il pannello dell'arma corrente mostra `ATTIVA`, gli altri `TAB`.
+- Il feedback cast distingue sempre selezione, placement, richiesta al server,
+  windup, rilascio e fallimento/interruzione. Nome abilita e arma richiesta
+  restano leggibili vicino al mirino; i cast istantanei hanno comunque una
+  conferma visibile.
+- Il mirino cambia grammatica per targeting `forward`, `point` e `self` quando
+  un'abilita e primata o in placement.
 - Le texture VFX (`public/vfx/*.png`) devono essere RGBA bianco-su-trasparente.
   `colorSpace = NoColorSpace`, `premultiplyAlpha = false`. MAI sfondo scuro o colorato.
   Il sistema usa `instanceColor` tinting additivo — il colore white e il canale alpha
@@ -230,6 +239,12 @@ Se una modifica rompe o ignora anche solo uno dei sistemi collegati, la soluzion
 - Proiettili e zone non possono distinguersi soltanto per colore: l'evento di
   spawn porta `abilityId` e ogni famiglia meccanica deve avere una silhouette o
   firma leggibile mantenendo il bordo della hitbox reale.
+- Le frecce `Piercing Shot`, `Pin Shot`, `Marksman Shot`, `Broadhead` e
+  `Blast Arrow` hanno firme di volo separate; `Blast Arrow` usa anche un impatto
+  esplosivo, non la stessa chiusura delle frecce fisiche.
+- Ogni `AbilityCasted` accettata attiva una posa/release coerente sull'arma:
+  swing per spada, shoot per arco, recoil/cast per staff, anche per i cast
+  istantanei locali e remoti.
 - Il Loadout Forge mostra tutti gli 8 slot senza scroll del build a 1280x720 e,
   per ogni abilita, tasto diretto, wheel alternativa, forma del colpo,
   istruzione di mira e risultato numerico.

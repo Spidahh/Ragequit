@@ -11,8 +11,11 @@ describe('projectile visual identity', () => {
     expect(projectileProfile('bolt', 'nature', 'poison_dart')).toBe('thorn')
   })
 
-  it('makes high-impact arrows larger without changing ordinary arrows', () => {
-    expect(projectileProfile('arrow', 'none', 'marksman_shot')).toBe('heavyArrow')
-    expect(projectileProfile('arrow', 'none', 'piercing_shot')).toBe('arrow')
+  it('gives every bow mechanic its own flight silhouette', () => {
+    expect(projectileProfile('arrow', 'none', 'piercing_shot')).toBe('piercingArrow')
+    expect(projectileProfile('arrow', 'none', 'pin_shot')).toBe('pinArrow')
+    expect(projectileProfile('arrow', 'none', 'marksman_shot')).toBe('marksmanArrow')
+    expect(projectileProfile('arrow', 'none', 'broadhead')).toBe('broadheadArrow')
+    expect(projectileProfile('arrow', 'fire', 'blast_arrow')).toBe('blastArrow')
   })
 })
