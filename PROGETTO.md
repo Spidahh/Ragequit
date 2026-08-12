@@ -884,6 +884,16 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
     barili/casse verde-acqua accesi, che stonano con l'arena rosso-scura. Non sono prop: sono
     geometria dell'arena, quindi il tint "legno invecchiato" dei prop non li tocca. Colorarli è una
     scelta di look, non un bug da correggere di mia iniziativa.
+  - **PISTA APERTA, non risolta — manichino azzurro dentro i personaggi.** Nella cattura di
+    produzione `prodfix-match2.png` due figure si compenetrano: un ninja col modello vero e, dentro
+    di lui, un corpo procedurale piatto azzurro (braccio, gamba e stivale che sporgono). L'azzurro
+    è `0x3a8fde`, il "blu = te stesso" di `character.ts:53`, quindi è un personaggio rimasto col
+    corpo procedurale mentre un altro ha già installato il GLB nello stesso punto. Non è il
+    placeholder di classe (tank=canna di fucile, arciere=verde, mago=viola, ibrido=cremisi: nessuno
+    azzurro). `_installCharacterModel` rimuove il procedurale quando installa il modello, quindi il
+    sospetto è una corsa in caricamento o due entità sullo stesso spawn. NON l'ho corretto: è
+    diagnosi da guardare dal vivo, e tirare a indovinare qui significa rompere il rendering dei
+    personaggi. Prova: `.verify/char.png`.
 
 ## 7. Metodo di lavoro (professionale)
 
