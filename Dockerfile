@@ -3,7 +3,7 @@
 # Build context must be the monorepo root (pnpm workspace).
 
 # ─── Stage 1: deps + build ───────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 # pnpm is needed to install workspace deps.
 RUN corepack enable && corepack prepare pnpm@10.0.0 --activate
@@ -31,7 +31,7 @@ RUN pnpm --filter=@ragequit/shared build
 RUN pnpm --filter=@ragequit/server build
 
 # ─── Stage 2: runtime image ──────────────────────────────────────────────────
-FROM node:20-alpine AS runtime
+FROM node:22-alpine AS runtime
 
 RUN corepack enable && corepack prepare pnpm@10.0.0 --activate
 

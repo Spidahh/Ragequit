@@ -141,8 +141,8 @@ jobs:
         # fails (EUNSUPPORTEDPROTOCOL on link:). `pnpm dlx` runs wrangler in an
         # isolated temp env (Cloudflare's recommended Pages Direct-Upload CI
         # path); as a shell step it has no Node action-runtime deprecation.
-        # Pinned to v3: this job runs on Node 20 (.nvmrc) and wrangler v4 requires
-        # Node >= 22. v3 supports `pages deploy` on Node 18+.
+        # Keep the established v3 Pages Direct-Upload path pinned so deploy
+        # behaviour does not drift independently from application changes.
         run: pnpm dlx wrangler@3 pages deploy packages/client/dist --project-name=ragequit
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

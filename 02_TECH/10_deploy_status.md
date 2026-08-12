@@ -16,14 +16,15 @@ Questo documento raccoglie lo stato reale del deployment. Aggiornarlo ogni volta
 
 ## Server (Fly.io)
 
-| Campo    | Valore                                                     |
-| -------- | ---------------------------------------------------------- |
-| App name | `ragequit-server`                                          |
-| Region   | `ams` (Amsterdam)                                          |
-| Porta    | 8080                                                       |
-| Stato    | **DEPLOYED — health da ripristinare (timeout 2026-08-12)** |
-| Config   | `fly.toml` nella root del repo                             |
-| Scale    | scale-to-zero abilitato                                    |
+| Campo    | Valore                                              |
+| -------- | --------------------------------------------------- |
+| App name | `ragequit-server`                                   |
+| Region   | `ams` (Amsterdam)                                   |
+| Porta    | 8080                                                |
+| Runtime  | Node.js 22 (WebSocket nativo richiesto da Supabase) |
+| Stato    | **DEPLOYING — fix avvio Node 22 (2026-08-12)**      |
+| Config   | `fly.toml` nella root del repo                      |
+| Scale    | scale-to-zero abilitato                             |
 
 Il server si connette su WebSocket. Il monitor Colyseus è disabilitato di default; quando abilitato richiede Basic Auth (env `COLYSEUS_MONITOR_ENABLED`, `COLYSEUS_MONITOR_USER`, `COLYSEUS_MONITOR_PASSWORD`).
 
@@ -81,9 +82,9 @@ da `public/weapons/kaykit/*.glb`. I file `public/weapons/sword.glb`, `bow.glb`,
 - `pnpm check` + build su ogni push/PR.
 - Push su `main` pubblica automaticamente server su Fly.io e client su
   Cloudflare Pages.
-- Il client mostra lo stato reale del server interrogando `/health`; il controllo
-  post-deploy automatico resta da aggiungere con un token GitHub dotato di scope
-  `workflow`.
+- Il client mostra lo stato reale del server interrogando `/health`.
+- Il deploy server fallisce automaticamente se l'endpoint pubblico `/health`
+  non risponde; in quel caso stampa stato e log Fly nel job GitHub.
 
 ## Comandi deploy
 
