@@ -828,9 +828,34 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
     scelta di bilanciamento, tua), ma almeno il giocatore viene informato.
   - Estratti ancora per budget: `cast-telegraph.ts` (client+server), `on-death.ts`,
     `remote-sounds.ts`, `player-maxima.ts`, `aoe-shape.ts`. main.ts 2816→2747 in totale.
-  - **RESTA**: `#shoot-flash` identico per tutte le abilità · ritratti classi dai modelli veri ·
-    pmndrs post-FX · 53 abilità → 3 clip di corpo (serve `animFamily` nel registry + clip nuove,
-    è lavoro di asset oltre che di codice).
+- **2026-08-12 (5ª parte) — «fai tutto e anche di più».** Gate verde 438 test, altri 3 commit.
+  Tutti da finding confermati dell'audit, tutti senza scaricare un solo asset nuovo:
+  - **Terzo fendente**: il combo va a 3 colpi ma erano mappate solo 2 clip d'attacco, quindi il
+    terzo ripeteva il primo. I pack Mixamo ne contengono 4-6 a testa (paladin: attack_2/3/4 +
+    slash_2; ninja: slash/slash_2) e **stavano lì inutilizzate**. Aggiunto `Dagger_Attack3` e il
+    selettore ora cicla su quante varianti il pack ha davvero. Test sui GLB REALI: paladin e ninja
+    risolvono 3 clip DISTINTE.
+  - **Flash element-tinted e pesato**: era un lampo bianco identico per 53 abilità, 3 armi e 5
+    elementi — diceva solo CHE qualcosa era partito, mai cosa. Ora porta il colore dell'elemento e
+    scala col peso (windup = cast impegnativo → più forte; M1 spada/staff restano discreti perché
+    sparano di continuo).
+  - **Hit-confirm dell'attaccante**: colpire non aveva alcuna conferma dedicata — sentivi il corpo
+    dell'impatto, lo stesso che sentono gli spettatori. Aggiunto un tick in banda alta (~4.2/5.1
+    kHz, libera nel mix) con transiente netto e decay 55ms: sopravvive a una mischia senza fango.
+  - **Parata direzionale**: la parata di terzi suonava a volume PIENO a qualsiasi distanza,
+    annullando l'indizio direzionale. Ora spazializzata su chi para.
+  - **Proiettili col loro peso**: `damage` arrivava sul filo e veniva buttato → un colpo da 8 danni
+    era identico a uno da 38. Dimensione e luce ora scalano (regola LoL: un attacco base non deve
+    rivaleggiare visivamente con un finisher).
+  - **Pip "input ricevuto"**: `markPending` metteva una classe che il refresh per-frame toglieva
+    ~16ms dopo → non si vedeva mai. Ora è una scadenza che il refresh rispetta.
+  - Estratti: `attacker-feedback.ts` (e rimosso un `ComboState` che avevo duplicato — esisteva già
+    in `combat-feedback.ts`).
+  - **RESTA, e serve l'UTENTE**: ritratti classi dai modelli veri (già tentato alla cieca in
+    passato e SCARTATO: 2/4 banner brutti — va rifatto con inquadratura dedicata o con lui) ·
+    pmndrs post-FX (cambia il look, va visto dal vivo) · clip d'attacco per l'arciere su
+    paladin/vampire/ninja (serve rieseguire la pipeline Mixamo con Pro Longbow: download) ·
+    i 9 knockup identici (bilanciamento).
 
 ## 7. Metodo di lavoro (professionale)
 
