@@ -242,7 +242,7 @@ export class GameRoom extends Room<{ state: GameState }> {
     this.state.mode = resolvedMode
 
     // FFA supports up to 8 players; 5v5 up to 10; others cap at MAX_CLIENTS (default 2).
-    if (resolvedMode === 'ffa') this.maxClients = Number(process.env['MAX_CLIENTS_FFA'] ?? 8)
+    if (resolvedMode === 'ffa') this.maxClients = Number(process.env['MAX_CLIENTS_FFA'] ?? 10)
     else if (resolvedMode === '5v5') this.maxClients = Number(process.env['MAX_CLIENTS_5V5'] ?? 10)
 
     // Fill lobbies so a solo player always gets a live match (rules in

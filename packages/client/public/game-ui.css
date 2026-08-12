@@ -11,6 +11,18 @@
   font-display: swap;
   src: url("/fonts/inter-var.woff2") format("woff2");
 }
+/* Display face — lapidary roman capitals for titles (dark-fantasy identity
+   without sacrificing legibility). Self-hosted, OFL. */
+@font-face {
+  font-family: "Cinzel";
+  font-style: normal;
+  font-weight: 700 900;
+  font-display: swap;
+  src: url("/fonts/cinzel-var.woff2") format("woff2");
+}
+:root {
+  --font-display: "Cinzel", "Rajdhani", serif;
+}
 @font-face {
   font-family: "Rajdhani";
   font-style: normal;
@@ -5675,4 +5687,19 @@ button.locked {
 #crosshair[data-weapon="sword"]::before,
 #crosshair[data-weapon="sword"]::after {
   display: none; /* no crosshairs lines in TPV melee — ring only */
+}
+
+/* ── Display typography — Cinzel on the major titles (dark-fantasy identity,
+      body text stays Inter/Rajdhani for legibility) ─────────────────────── */
+.loading-logo,
+.tagline,
+.mode-tile-name,
+.forge-tile-name,
+.sb-winner,
+.sb-title,
+.dc-eliminated,
+#respawn .inner h2,
+.phase-label {
+  font-family: var(--font-display);
+  letter-spacing: 0.05em;
 }

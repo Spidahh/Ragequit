@@ -416,13 +416,17 @@ export function buildArena(scene: THREE.Scene, _toonGradient: THREE.DataTexture)
             if (child instanceof THREE.Mesh) {
               child.castShadow = true
               child.receiveShadow = true
-              // Keep the GLB prop's authored PBR material (crates/barrels ship
-              // BaseColor+Normal+ORM) — STILE.md §2. Just ensure double-sided.
-              // No toon ramp, no black outline.
+              // Keep the GLB prop's authored PBR maps (Normal+ORM) but pull the
+              // KayKit paint-bucket tints (fire-red barrels, sky-blue rings)
+              // toward weathered wood/iron — dark-gritty, not carnival.
               const mat = child.material as THREE.MeshStandardMaterial | undefined
               if (mat) {
                 mat.side = THREE.DoubleSide
                 mat.envMapIntensity = 1.1
+                if (s.type.startsWith('barrel') || s.type === 'box_large' || s.type === 'crate') {
+                  mat.color.lerp(new THREE.Color(0x6b5233), 0.65)
+                  mat.roughness = Math.max(mat.roughness ?? 0.8, 0.85)
+                }
               }
             }
           })

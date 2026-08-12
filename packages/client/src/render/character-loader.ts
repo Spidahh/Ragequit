@@ -170,6 +170,18 @@ function _loadGltf(
 }
 
 /** Load all three layers plus animation clips. Results are cached per class. */
+/**
+ * Warm the model cache for a class: the fused Mixamo GLB when the class uses
+ * the single-GLB path, else the modular layer set. Used by the preloader so
+ * players never see the golden placeholder while the real model streams in.
+ */
+export function preloadClassModel(classId: string): Promise<void> {
+  const def = TARGET_CLASS_DEFS[classId as ClassId]
+  const mixamoGlb = def ? (def.visuals as { mixamoGlb?: string }).mixamoGlb : undefined
+  if (mixamoGlb) return _fetchMixamoGlb(mixamoGlb).then(() => undefined)
+  return fetchCharacterData(classId).then(() => undefined)
+}
+
 export function fetchCharacterData(classId = 'hybrid'): Promise<CharacterData> {
   const layers = _getClassLayers(classId)
   const cacheKey = `${layers.base}|${layers.outfit}|${layers.hair}|${layers.accessories.join(',')}`

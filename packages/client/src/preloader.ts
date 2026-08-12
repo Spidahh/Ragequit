@@ -5,7 +5,7 @@
 // Call `preloadMatchAssets(classId)` after connecting to the server
 // and `hideLoadingScreen()` once preload completes and rendering begins.
 
-import { fetchCharacterData } from './render/character-loader.js'
+import { preloadClassModel } from './render/character-loader.js'
 import { fetchWeaponGlb } from './render/character-weapons.js'
 
 let _screen: HTMLElement | null = null
@@ -70,7 +70,7 @@ export async function preloadMatchAssets(
       label: 'Caricamento personaggio...',
       sub: selfClassId.toUpperCase(),
       weight: 40,
-      fn: () => fetchCharacterData(selfClassId).then(() => undefined),
+      fn: () => preloadClassModel(selfClassId),
     },
     {
       label: 'Caricamento armi...',
@@ -117,7 +117,7 @@ export function preloadOtherClassesBackground(selfClassId: string): void {
   const ALL_CLASSES = ['tank', 'archer', 'mage', 'hybrid']
   for (const cls of ALL_CLASSES) {
     if (cls === selfClassId) continue
-    fetchCharacterData(cls).catch((e: unknown) => {
+    preloadClassModel(cls).catch((e: unknown) => {
       console.warn(`[preloader] background preload failed for "${cls}":`, e)
     })
   }
