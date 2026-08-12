@@ -42,6 +42,31 @@ export function countTeams<P extends { team: string }>(
 }
 
 /**
+ * Seed a bot Player's identity from its index: display name, class rotation,
+ * preset loadout and the class's primary weapon. Pure — schema mutation only.
+ */
+export function seedBotIdentity(
+  player: {
+    name: string
+    classId: string
+    activeWeapon: string
+    loadout: { push: (id: string) => void }
+  },
+  botNum: number,
+  names: readonly string[],
+  classIds: readonly string[],
+  presets: Readonly<Record<string, readonly string[]>>,
+  classDefs: Readonly<Record<string, { weapons: readonly string[] }>>,
+): string {
+  player.name = names[botNum % names.length] ?? 'Bot'
+  const classId = classIds[botNum % classIds.length] ?? 'hybrid'
+  player.classId = classId
+  for (const id of presets[classId] ?? []) player.loadout.push(id)
+  player.activeWeapon = classDefs[classId]?.weapons[0] ?? 'sword'
+  return classId
+}
+
+/**
  * Assign `player.team` (balanced pick, 5v5 only — other modes get '') and
  * return the spawn slot for it. Counts exclude the joining player because it
  * is not in the map yet.

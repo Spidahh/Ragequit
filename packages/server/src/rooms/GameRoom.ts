@@ -260,8 +260,7 @@ export class GameRoom extends Room<{ state: GameState }> {
       this.botSpawnAtMatchStart = CLASS_IDS.length
     }
 
-    // FFA/5v5: bots all spawn at onCreate() before any human connects — cap
-    // them so at least 1 human slot stays open even if BOTS >= maxClients.
+    // FFA/5v5: bots spawn before any human — keep ≥1 human slot open.
     if (resolvedMode === 'ffa' || resolvedMode === '5v5') {
       this.botSpawnAtMatchStart = Math.min(this.botSpawnAtMatchStart, this.maxClients - 1)
     }
@@ -515,7 +514,6 @@ export class GameRoom extends Room<{ state: GameState }> {
     player.id = botId
 
     const botNum = Number(botId.replace('bot-', ''))
-    player.name = BOT_NAMES[botNum % BOT_NAMES.length] ?? 'Bot'
     const spawnIndex = this.assignTeamAndSpawn(player)
     let spawn = this.activeMap.spawns[spawnIndex]!
     if (this.difficulty === 'test') spawn = testDummySpawn(spawn, botNum, CLASS_IDS.length)
@@ -524,18 +522,14 @@ export class GameRoom extends Room<{ state: GameState }> {
     player.transform.z = spawn.z
     if (this.difficulty === 'test') player.transform.yaw = Math.PI // face the player (+z)
     player.invulnUntilTick = this.state.tick + SPAWN_INVULN_TICKS
-
-    // Dynamically assign bot class based on bot index
-    const classId = CLASS_IDS[botNum % CLASS_IDS.length] ?? 'hybrid'
-    player.classId = classId
-
-    const presetLoadout = CLASS_PRESET_BUILDS[classId]
-    for (const id of presetLoadout) {
-      player.loadout.push(id)
-    }
-
-    // Set active weapon to the first weapon permitted by the class
-    player.activeWeapon = TARGET_CLASS_DEFS[classId].weapons[0] ?? 'sword'
+    const classId = lobby.seedBotIdentity(
+      player,
+      botNum,
+      BOT_NAMES,
+      CLASS_IDS,
+      CLASS_PRESET_BUILDS,
+      TARGET_CLASS_DEFS,
+    )
 
     this.state.players.set(botId, player)
     this.sim.set(botId, makePlayerSimState(spawn))
@@ -551,15 +545,9 @@ export class GameRoom extends Room<{ state: GameState }> {
         getSelf: (id) => this.state.players.get(id) ?? null,
         getOpponent: (id) => lobby.nearestEnemy(this.state.players, id),
         sendCast: (id, abilityId, yaw, pitch) => {
-          const queue = this.castQueues.get(id)
-          if (queue && queue.length < GameRoom.MAX_CAST_QUEUE) {
-            queue.push({
-              abilityId,
-              atTick: this.state.tick + 1,
-              targetYaw: yaw,
-              targetPitch: pitch,
-            })
-          }
+          const q = this.castQueues.get(id)
+          if (q && q.length < GameRoom.MAX_CAST_QUEUE)
+            q.push({ abilityId, atTick: this.state.tick + 1, targetYaw: yaw, targetPitch: pitch })
         },
         sendInput: (id, moveX, moveZ, yaw, jump = false, m2 = false) => {
           const queue = this.inputQueues.get(id)
@@ -595,9 +583,8 @@ export class GameRoom extends Room<{ state: GameState }> {
         },
       },
       () => this.state.tick,
-      // Pass the specific preset loadout for this class so the bot
-      // AI matches the player schema perfectly.
-      presetLoadout,
+      // The class preset loadout — bot AI must match the player schema.
+      CLASS_PRESET_BUILDS[classId as keyof typeof CLASS_PRESET_BUILDS],
       this.difficulty,
     )
     this.bots.set(botId, bot)
@@ -687,10 +674,8 @@ export class GameRoom extends Room<{ state: GameState }> {
 
   override async onLeave(client: Client, code?: number): Promise<void> {
     const sid = client.sessionId
-    // Real reconnection: a HUMAN dropping unexpectedly mid-match gets a 20 s
-    // grace window in which their player (HP, loadout, score, position) stays
-    // alive in the room. The 0.17 client SDK reconnects the transport
-    // automatically; this is the server half that makes it seamless.
+    // Unexpected mid-match drop → 20 s grace: the player stays in the room
+    // while the 0.17 SDK auto-reconnects. Expired → normal cleanup below.
     const unexpected = code !== CloseCode.CONSENTED && code !== 1000
     if (unexpected && this.state.players.has(sid) && this.state.phase !== 'lobby') {
       try {
@@ -698,7 +683,7 @@ export class GameRoom extends Room<{ state: GameState }> {
         console.info(`[GameRoom ${this.roomId}] ${sid} reconnected — state preserved`)
         return
       } catch {
-        /* grace expired — fall through to normal cleanup */
+        /* grace expired */
       }
     }
     this.state.players.delete(sid)
