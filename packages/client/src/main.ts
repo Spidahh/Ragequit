@@ -45,12 +45,6 @@ import {
   type ClassId,
 } from '@ragequit/shared'
 import * as THREE from 'three'
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
-import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js'
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
-import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 
 import { playStatus, playSwap, tickFootsteps } from './audio/ambience.js'
 import { MusicPlayer } from './audio/music.js'
@@ -129,8 +123,8 @@ import { installArenaEnvironment } from './render/environment.js'
 import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
 import { createFpvBow } from './render/fpv-bow.js'
 import { createFpvStaticViewmodel } from './render/fpv-static-viewmodel.js'
-import { createGradePass } from './render/grade-pass.js'
 import { initPlacementPreview } from './render/placement-preview.js'
+import { createPostPipeline } from './render/post-pipeline.js'
 import { initProjectileVisuals, type SchemaProjectile } from './render/projectile-visuals.js'
 import { initRemotePlayers, type RemotePlayerSchema } from './render/remote-players.js'
 import { initSelfEmissive, STATUS_EMISSIVE } from './render/self-emissive.js'
@@ -451,58 +445,13 @@ viewmodelScene.add(viewmodelCamera)
 viewmodelScene.add(new THREE.HemisphereLight(0xc4d8ff, 0x182238, 1.2))
 scheduleViewmodelPrecompile(renderer, viewmodelScene, viewmodelCamera)
 
-// -----------------------------------------------------------------------
-// Post-processing: selective bloom on emissive elements
-// Layer 0 = normal objects, Layer 1 = bloom-eligible emissive objects
-// -----------------------------------------------------------------------
-const BLOOM_LAYER = new THREE.Layers()
-BLOOM_LAYER.set(1)
-
-const bloomComposer = new EffectComposer(renderer)
-bloomComposer.renderToScreen = false
-const bloomRenderPass = new RenderPass(scene, camera)
-bloomComposer.addPass(bloomRenderPass)
-const bloomPass = new UnrealBloomPass(
-  new THREE.Vector2(window.innerWidth, window.innerHeight),
-  0.45, // strength — subtle, not blown out
-  0.55, // radius
-  0.75, // threshold — only bright emissive gets bloomed
-)
-bloomComposer.addPass(bloomPass)
-// Final composer: full scene render → additive bloom mix → output. The mix pass
-// adds the bloom composer's result (selective: only emissive layer-1 meshes
-// survive the per-frame black-out) onto the base scene. WITHOUT it the bloom was
-// computed and discarded every frame.
-const finalComposer = new EffectComposer(renderer)
-const finalRenderPass = new RenderPass(scene, camera)
-finalComposer.addPass(finalRenderPass)
-const bloomMixPass = new ShaderPass(
-  new THREE.ShaderMaterial({
-    uniforms: {
-      baseTexture: { value: null },
-      bloomTexture: { value: bloomComposer.renderTarget2.texture },
-    },
-    vertexShader:
-      'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader:
-      'uniform sampler2D baseTexture; uniform sampler2D bloomTexture; varying vec2 vUv; void main() { gl_FragColor = texture2D(baseTexture, vUv) + texture2D(bloomTexture, vUv); }',
-  }),
-  'baseTexture',
-)
-bloomMixPass.needsSwap = true
-finalComposer.addPass(bloomMixPass)
-// Cinematic grade in linear HDR (vignette, punch, split-tone, dither) BEFORE the
-// OutputPass tone-maps + encodes sRGB — correct order, no double-decode. See
-// render/grade-pass.ts.
-finalComposer.addPass(createGradePass())
-finalComposer.addPass(new OutputPass())
-// Ground-contact ambient occlusion (GTAO) right after the scene render — soft
-// contact shadows where the cover, props, characters and walls meet, the single
-// biggest "rendered, not flat" upgrade. Inserted before the bloom mix so the AO
-// darkening doesn't eat emissive glow.
-const gtaoPass = new GTAOPass(scene, camera, window.innerWidth, window.innerHeight)
-gtaoPass.blendIntensity = 1.2
-finalComposer.insertPass(gtaoPass, 1)
+// Post-processing chain (selective bloom, GTAO, grade, sRGB out) — see
+// render/post-pipeline.ts for the pass order and why it is that order.
+const {
+  bloomComposer,
+  finalComposer,
+  bloomLayer: BLOOM_LAYER,
+} = createPostPipeline(renderer, scene, camera)
 
 // Dungeon ambient — VERY low, cold. The scene lives in darkness; light comes from
 // the torches, not a flat fill. (Gritty dark-fantasy direction.)
