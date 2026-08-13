@@ -35,3 +35,39 @@ export function isCapsuleBlocked2D(boxes: Boxes, x: number, y: number, z: number
   }
   return false
 }
+
+/**
+ * Hold a body inside the arena's circular boundary.
+ *
+ * The arena is round, so the boundary is a radius, not four AABB walls: a
+ * square perimeter would either cut the corners off the sand or let the player
+ * stand outside the barrier wall on the diagonals.
+ *
+ * Only the OUTWARD component of velocity is removed. Keeping the tangential
+ * part is what makes the wall feel like a wall you can run along rather than
+ * flypaper — the same reason box collision resolves on one axis and not both.
+ * Returns true when the body was actually pushed back.
+ */
+export function clampToArenaBounds(
+  pos: { x: number; z: number },
+  vel: { x: number; z: number } | null,
+  radius: number | undefined,
+): boolean {
+  if (!radius || radius <= 0) return false
+  const limit = radius - CAPSULE_HALF_WIDTH_M
+  const dist = Math.hypot(pos.x, pos.z)
+  if (dist <= limit || dist < 1e-6) return false
+
+  const nx = pos.x / dist
+  const nz = pos.z / dist
+  pos.x = nx * limit
+  pos.z = nz * limit
+  if (vel) {
+    const outward = vel.x * nx + vel.z * nz
+    if (outward > 0) {
+      vel.x -= outward * nx
+      vel.z -= outward * nz
+    }
+  }
+  return true
+}

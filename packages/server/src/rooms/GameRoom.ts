@@ -1,6 +1,5 @@
 import { CloseCode, Room, type Client } from '@colyseus/core'
 import {
-  isCapsuleBlocked2D,
   type ServerZoneExpiredMessage,
   ABILITY_DEFS,
   type StatusKind,
@@ -80,6 +79,7 @@ import {
   impactPushDirection,
 } from '../sim/combat-geometry.js'
 import { applyOutgoingDamageModifiers } from '../sim/damage-modifiers.js'
+import { resolveDisplacement } from '../sim/displacement.js'
 import {
   AbilityEngine,
   BotController,
@@ -384,7 +384,7 @@ export class GameRoom extends Room<{ state: GameState }> {
           this.applyKnockupToPlayer(player, airborneSec, knockback),
         hasLineOfSight: (from, to) => hasLineOfSight(this.activeMap.boxes, from, to),
         resolveDisplacement: (player, dx, dz, cancelOnCollision) =>
-          this.resolveAbilityDisplacement(player, dx, dz, cancelOnCollision),
+          this.displace(player, dx, dz, cancelOnCollision),
         syncSimPos: this.syncSimPos,
         syncSimStamina: this.syncSimStamina,
         getAbilityCooldownMult: (sid) => {
@@ -402,7 +402,7 @@ export class GameRoom extends Room<{ state: GameState }> {
       enqueueDamage: (d) => this.damageQueue.push(d),
       broadcast: (type, message) => this.broadcast(type, message),
       resolveDisplacement: (player, dx, dz, cancelOnCollision) =>
-        this.resolveAbilityDisplacement(player, dx, dz, cancelOnCollision),
+        this.displace(player, dx, dz, cancelOnCollision),
       syncSimPos: this.syncSimPos,
     })
     this.zones = new ZoneSystem({
@@ -416,7 +416,7 @@ export class GameRoom extends Room<{ state: GameState }> {
       state: this.state,
       enqueueDamage: (d) => this.damageQueue.push(d),
       resolveDisplacement: (player, dx, dz, cancelOnCollision) =>
-        this.resolveAbilityDisplacement(player, dx, dz, cancelOnCollision),
+        this.displace(player, dx, dz, cancelOnCollision),
       syncSimPos: this.syncSimPos,
       syncSimStamina: this.syncSimStamina,
       lookupHistory: (playerId, tick) => this.history.lookup(playerId, tick),
@@ -1744,30 +1744,14 @@ export class GameRoom extends Room<{ state: GameState }> {
     }
   }
 
-  private resolveAbilityDisplacement(
+  /** Dash / blink landing — see sim/displacement.ts. */
+  private displace(
     player: Player,
     dx: number,
     dz: number,
     cancelOnCollision: boolean,
   ): { x: number; z: number } {
-    const startX = player.transform.x
-    const startZ = player.transform.z
-    const targetX = startX + dx
-    const targetZ = startZ + dz
-    if (!cancelOnCollision) return { x: targetX, z: targetZ }
-
-    const steps = Math.max(1, Math.ceil(Math.hypot(dx, dz) / 0.25))
-    let lastX = startX
-    let lastZ = startZ
-    for (let i = 1; i <= steps; i++) {
-      const t = i / steps
-      const nx = startX + dx * t
-      const nz = startZ + dz * t
-      if (isCapsuleBlocked2D(this.activeMap.boxes, nx, player.transform.y, nz)) break
-      lastX = nx
-      lastZ = nz
-    }
-    return { x: lastX, z: lastZ }
+    return resolveDisplacement(this.activeMap, player.transform, dx, dz, cancelOnCollision)
   }
 
   // Engine-driven atomic weapon swap.
@@ -1797,12 +1781,7 @@ export class GameRoom extends Room<{ state: GameState }> {
       victim.transform.z,
       attacker.transform.yaw,
     )
-    const resolved = this.resolveAbilityDisplacement(
-      victim,
-      dir.x * distance,
-      dir.z * distance,
-      true,
-    )
+    const resolved = this.displace(victim, dir.x * distance, dir.z * distance, true)
     victim.transform.x = resolved.x
     victim.transform.z = resolved.z
     const simVictim = this.sim.get(victim.id)

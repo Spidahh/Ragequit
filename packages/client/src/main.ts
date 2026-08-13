@@ -147,6 +147,7 @@ import {
   trackDeath,
   trackAbilityCast,
 } from './telemetry.js'
+import { countVerifyFrame, installVerifySeams, isCaptureMode } from './verify-seams.js'
 import { DeathBurst } from './vfx/death-burst.js'
 import { ImpactPool, type ImpactProfile } from './vfx/impact-pool.js'
 import { buildArena } from './world/arena.js'
@@ -509,35 +510,22 @@ const placementPreview = initPlacementPreview({
 })
 scene.add(placementPreview.group)
 
-// Verification seam (tools/verify/aimpreview.mjs). Behind ?capture so it is
-// never present in a real session: a screenshot can show a plausible arena
-// while drawing no preview at all, so the harness has to be able to read what
-// the solver actually produced, not just look at the result.
-const captureMode =
-  typeof location !== 'undefined' && new URLSearchParams(location.search).has('capture')
+// Verification seams — see verify-seams.ts. Behind ?capture, absent otherwise.
+const captureMode = isCaptureMode()
 if (captureMode) {
-  ;(window as unknown as Record<string, unknown>)['__aimShapes'] = () => {
-    const id = castDispatcher.getPlacementAbilityId()
-    return placementPreview.currentShapes().map((s) => ({ ...s, abilityId: id }))
-  }
-  // Why a preview is absent matters as much as that it is: dead, phase not
-  // live, and "nothing drew it" are three different bugs.
-  // Does the drawn lane actually lie on the crosshair? A beam solved from the
-  // wrong origin or a mismatched pitch convention still renders a confident
-  // line — pointing somewhere the shot will not go. Projecting its endpoint
-  // back through the camera is the one check that catches that.
-  ;(window as unknown as Record<string, unknown>)['__laneOnCrosshair'] = () => {
-    const lane = placementPreview.currentShapes().find((s) => s.kind === 'lane')
-    if (!lane) return null
-    const ndc = new THREE.Vector3(lane.to.x, lane.to.y, lane.to.z).project(camera)
-    return { ndcX: ndc.x, ndcY: ndc.y }
-  }
-  ;(window as unknown as Record<string, unknown>)['__castState'] = () => ({
-    placement: castDispatcher.getPlacementAbilityId(),
-    primed: castDispatcher.getPrimedSlotIdx(),
-    phase: currentMatchPhase,
-    dead: !getSelfSchemaPlayer()?.alive,
-    loadout: currentLoadoutArray(),
+  installVerifySeams({
+    camera,
+    getPlacementAbilityId: () => castDispatcher.getPlacementAbilityId(),
+    getPrimedSlotIdx: () => castDispatcher.getPrimedSlotIdx(),
+    getCurrentShapes: () => placementPreview.currentShapes(),
+    getMatchPhase: () => currentMatchPhase,
+    getLoadout: () => currentLoadoutArray(),
+    getPredictedPos: () => (self ? { x: self.sim.pos.x, z: self.sim.pos.z } : null),
+    getReplicatedPos: () => {
+      const schema = getSelfSchemaPlayer()
+      return schema ? { x: schema.transform.x, z: schema.transform.z } : null
+    },
+    isAlive: () => getSelfSchemaPlayer()?.alive === true,
   })
 }
 
@@ -2174,15 +2162,7 @@ function _renderInner(now: number): void {
   // Swap map geometry when the server schema reports a different mapId.
   loadMapGeometry(getSchemaMapId())
   placementPreview.update(now)
-  if (captureMode) {
-    // Frame counter for tools/verify/aimpreview.mjs. Under SwiftShader this
-    // loop runs at 1-4 fps, so a harness that waits in milliseconds samples
-    // between frames and reads a preview that has not been computed yet —
-    // which is exactly how a working preview was reported broken five times.
-    // The harness waits on THIS instead of on the clock.
-    const w = window as unknown as Record<string, number>
-    w['__aimFrames'] = (w['__aimFrames'] ?? 0) + 1
-  }
+  if (captureMode) countVerifyFrame()
 
   // Hit-stop flag — particle animation and camera lerp are frozen during it.
   // Covers both attacker-side (landed a hit) and victim-side (received a hit).

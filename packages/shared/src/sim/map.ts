@@ -2,7 +2,7 @@
 // testing: four cardinal cubes at 8 m distance + one taller central cube to
 // create vertical cover that cannot be cleared by a single base jump.
 
-import { CAPSULE_HALF_HEIGHT_M, GROUND_Y } from '../constants/world.js'
+import { ARENA_BOUNDS_RADIUS_M, CAPSULE_HALF_HEIGHT_M, GROUND_Y } from '../constants/world.js'
 
 import type { AABB, StaticMap, Vec3 } from './types.js'
 
@@ -39,6 +39,7 @@ const SPAWNS: readonly Vec3[] = [
 ]
 
 export const STATIC_MAP: StaticMap = {
+  boundsRadius: ARENA_BOUNDS_RADIUS_M,
   boxes: BOXES as AABB[],
   groundY: GROUND_Y,
   spawns: SPAWNS as Vec3[],
@@ -55,7 +56,16 @@ export const STATIC_MAP: StaticMap = {
 // so the same cover pieces sit in a roomier field (more lanes, longer bow
 // sightlines, real flank routes).
 const DUEL_SPREAD = 1.3
-const FFA_SPREAD = 1.45
+// 1.45 -> 1.27 on 2026-08-13, forced by D20 (00_truth.md): the arena got a real
+// perimeter, and this layout did not fit inside it. At 1.45 the corner platforms
+// reached r = 27.4 and four spawns sat at r = 24.6-28.7, against a sand floor
+// that ends at 24.75 and a barrier wall at 25.05 — i.e. platforms hanging over
+// the void and players spawning outside the building. That was invisible only
+// because nothing stopped you walking out there. 1.27 is the largest spread
+// whose furthest geometry (sqrt(2) * (12s + 2)) still fits the wall.
+// SPACING CHANGE, reversible: raise the shell scale in client/world/arena.ts
+// and ARENA_BOUNDS_RADIUS_M together if the field should be bigger instead.
+const FFA_SPREAD = 1.27
 function dbox(cx: number, cy: number, cz: number, sx: number, sy: number, sz: number): AABB {
   return box(cx * DUEL_SPREAD, cy, cz * DUEL_SPREAD, sx, sy, sz)
 }
@@ -103,6 +113,7 @@ const DUEL_SPAWNS: readonly Vec3[] = [
   { x: 0, y: P_ABOVE_BOX, z: -14.3 },
 ]
 export const DUEL_ARENA: StaticMap = {
+  boundsRadius: ARENA_BOUNDS_RADIUS_M,
   boxes: DUEL_BOXES as AABB[],
   groundY: GROUND_Y,
   spawns: DUEL_SPAWNS as Vec3[],
@@ -158,19 +169,34 @@ const G_BOXES: readonly AABB[] = [
 ]
 const G_LOW_TOP_Y = 2.6 + CAPSULE_HALF_HEIGHT_M + 0.01 // low corner platforms
 const G_SPAWN_Y = GROUND_Y + CAPSULE_HALF_HEIGHT_M + 0.01
+// Spawns are placed ON A RING now instead of by hand-written coordinates. The
+// old list mixed radii of 23, 24.6 and 28.7 with no rule, and the 28.7 pair
+// spawned players 4 m outside the arena's own floor — a thing you could only
+// find by giving the arena an edge. A radius plus an angle cannot drift like
+// that: every spawn is inside by construction, and the test says so.
+const G_RING_R = 22
+const G_PLATFORM_R = 12 * FFA_SPREAD * Math.SQRT2 // centre of a corner platform
+const ring = (deg: number, r: number, y: number): Vec3 => ({
+  x: Number((Math.cos((deg * Math.PI) / 180) * r).toFixed(2)),
+  y,
+  z: Number((Math.sin((deg * Math.PI) / 180) * r).toFixed(2)),
+})
 const G_SPAWNS: readonly Vec3[] = [
-  { x: 23, y: G_SPAWN_Y, z: 0 },
-  { x: -23, y: G_SPAWN_Y, z: 0 },
-  { x: 0, y: G_SPAWN_Y, z: 23 },
-  { x: 0, y: G_SPAWN_Y, z: -23 },
-  { x: 17.4, y: G_LOW_TOP_Y, z: 17.4 },
-  { x: -17.4, y: G_LOW_TOP_Y, z: -17.4 },
-  { x: 20.3, y: G_SPAWN_Y, z: -20.3 },
-  { x: -20.3, y: G_SPAWN_Y, z: 20.3 },
-  { x: 11.6, y: G_SPAWN_Y, z: -11.6 },
-  { x: -11.6, y: G_SPAWN_Y, z: 11.6 },
+  ring(0, G_RING_R, G_SPAWN_Y),
+  ring(180, G_RING_R, G_SPAWN_Y),
+  ring(90, G_RING_R, G_SPAWN_Y),
+  ring(270, G_RING_R, G_SPAWN_Y),
+  // The two LOW corner platforms are spawnable high ground, as before.
+  ring(45, G_PLATFORM_R, G_LOW_TOP_Y),
+  ring(225, G_PLATFORM_R, G_LOW_TOP_Y),
+  ring(135, G_RING_R, G_SPAWN_Y),
+  ring(315, G_RING_R, G_SPAWN_Y),
+  // Inner pair — closer to the keep, a deliberately hotter start.
+  ring(135, G_RING_R * 0.72, G_SPAWN_Y),
+  ring(315, G_RING_R * 0.72, G_SPAWN_Y),
 ]
 export const GLADIATORS_ARENA: StaticMap = {
+  boundsRadius: ARENA_BOUNDS_RADIUS_M,
   boxes: G_BOXES as AABB[],
   groundY: GROUND_Y,
   spawns: G_SPAWNS as Vec3[],
@@ -180,6 +206,7 @@ export const GLADIATORS_ARENA: StaticMap = {
 // one player spawn at +z. GameRoom lines the 4 class dummies up in a row in front.
 const TEST_SPAWN_Y = GROUND_Y + CAPSULE_HALF_HEIGHT_M + 0.01
 export const TEST_ROOM_MAP: StaticMap = {
+  boundsRadius: ARENA_BOUNDS_RADIUS_M,
   boxes: [] as AABB[],
   groundY: GROUND_Y,
   spawns: [{ x: 0, y: TEST_SPAWN_Y, z: 8 }] as Vec3[],

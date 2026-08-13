@@ -870,6 +870,15 @@ any knockback impulse on the frame it lands (see §7.1). Raise to a **hard 14–
 18 bleeding 2 m/s per second" — simulated, it does not converge (20.59 m/s at 5
 hops, 31.03 at 20 and still climbing; the required bleed is ~4.5 m/s²).
 
+**SHIPPED 2026-08-13 at 14.5 (1.61×), after D20.** Measured, not chosen:
+simulating the real controller through chained strafe jumps reaches 14.50
+exactly on the fifth hop at a tight turn rate, and 11.06 at a sloppy one — so
+technique is now worth **+3.44 m/s**, where at 11.7 the sloppy rate already
+saturated the cap and there was nothing above "adequate" to aim at. Four tests
+lock all three properties: reachable, never exceeded at any turn rate, and
+strictly better for a tighter turn. The knockback window still passes an impulse
+through at 2× the cap. `tools/verify/feel.mjs` prints the whole profile.
+
 **D19 · Friction ordering, and no jump buffer** — `controller.ts:88-138` runs
 friction-then-accelerate first and the jump block is section 2 at `:139-152`, so
 friction is applied on the landing tick before the jump can fire: **13.33 % lost per
@@ -892,6 +901,31 @@ standing between this controller and Quake movement.
 (`weapons.ts:48`) is 6.2 m of rewind at 31 m/s in a 28.6 m arena — 22 % of map
 length — so top speed and hit registration are coupled and neither can be raised in
 isolation.
+
+**SHIPPED 2026-08-13.** The arena is a CIRCLE, so the boundary is a radius, not
+four AABB walls — a square perimeter would either cut the corners off the sand
+or let you stand outside the barrier wall on the diagonals.
+`ARENA_BOUNDS_RADIUS_M = 24.5` is derived from the art (shell scale 1.5 × inner
+wall r 16.7 = 25.05; sand ends at 24.75), because a boundary the player cannot
+see feels like a bug. Only the OUTWARD velocity component is removed, so you run
+along the wall instead of sticking to it.
+
+**Giving the arena an edge exposed a defect it had been hiding.** The FFA layout
+did not fit inside its own building: at `FFA_SPREAD = 1.45` the corner platforms
+reached r = 27.4 — hanging over the void past the sand — and four of the ten
+spawns sat at r = 24.6 to 28.7, i.e. players spawning outside the coliseum. Two
+changes, both reversible and both flagged as spacing decisions the owner owns:
+the spread is 1.27 (the largest value whose furthest geometry still fits), and
+the spawns are placed on a RING by angle and radius instead of ten hand-written
+coordinates with no rule. A test now asserts, per map, that every spawn and
+every box corner is inside the declared bound.
+
+Proven end to end, not just in a unit test: `tools/verify/bounds.mjs` joins a
+real match and holds a direction for 12 s — over four arena radii — in all four
+directions. Both reachable directions stop at exactly 24.10 m, and the
+client-predicted position equals the server's to the centimetre. That equality
+is the actual claim: a boundary the client does not predict is not a wall, it is
+a rubber-band, and the two photograph identically.
 
 **D21 · The speed cue is clipped below the interesting range** —
 `client/src/main.ts:2380`: `camFovBase + Math.min(horizSpeed * 1.4, 6)` **saturates
@@ -1004,7 +1038,9 @@ which is stated where it applies.
    the aim solver for `forward` and move abilities. The owner's central ask made
    real: every ability draws where it goes and what it does, `isDirectCast` is
    retired, and the shape lives in `shared` so it cannot drift from the hitbox.
-8. **D18** — the air cap, **after D20** (bounds) exists, as a measured hard cap.
+8. ~~**D18**~~ — **DONE 2026-08-13**, with **D20** (bounds) shipped first as its
+   prerequisite. The air cap is 14.5 (1.61×), measured: reachable on the fifth
+   strafe hop, never exceeded, and worth +3.44 m/s over a sloppy turn.
 9. **D1/D2/D3 + the finisher band** — the TTK correction, in documents plus five
    damage numbers plus the 12 s cooldown ceiling.
 10. **D16 + D17** — retire the passive-systems ban, then the specialisation layer.

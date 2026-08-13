@@ -1014,6 +1014,43 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
      **Mai più misurare questo renderer a orologio.**
 - Gate verde: typecheck, lint, budget (3 tetti abbassati), content, 528 test.
 
+### 2026-08-13 — L'arena ha finalmente un bordo, e la velocità un tetto che si merita (passi 8 di §10)
+
+- **D20 — l'arena non aveva confini.** Nessun muro nella simulazione, nessun clamp, `groundY` un
+  piano infinito: uscivi dal colosseo e continuavi a camminare per sempre sul nulla. Adesso il
+  confine è un RAGGIO (24.5 m), non quattro muri quadrati — l'arena è rotonda, e un perimetro
+  quadrato o taglia gli angoli della sabbia o ti lascia stare fuori dal muro sulle diagonali. Il
+  numero è derivato dall'ARTE che già c'è (shell ×1.5, muro interno a 16.7 → 25.05; sabbia a
+  24.75), perché un confine che non vedi sembra un bug. Viene tolta solo la componente di velocità
+  VERSO il muro, così ci corri lungo invece di restarci incollato.
+- **Dare un bordo all'arena ha scoperto un difetto che il bordo mancante nascondeva**: la mappa FFA
+  non ci stava dentro il proprio edificio. Le piattaforme d'angolo arrivavano a r = 27.4 —
+  sospese sul vuoto oltre la sabbia — e 4 spawn su 10 stavano a r = 24.6-28.7, cioè giocatori che
+  nascevano FUORI dal colosseo. Ho stretto lo spread FFA 1.45 → 1.27 e messo gli spawn su un ANELLO
+  (angolo + raggio) invece di dieci coordinate scritte a mano senza regola. **Sono due scelte di
+  SPAZIATURA e restano tue: si tornano indietro in un commit**, oppure si allarga il colosseo
+  alzando shell scale e raggio insieme.
+- **D18 — il tetto della velocità in aria: 11.7 → 14.5 m/s.** Era 1.30× i 9 m/s base: TUTTO il
+  soffitto di abilità del movimento era +30%, in un gioco il cui secondo pilastro è "il movimento è
+  il soffitto di abilità", contro Quake 3 che non ha tetto. **Misurato, non scelto**: simulando il
+  controller vero su catene di strafe-jump, 14.50 si tocca esatto al quinto salto con una virata
+  stretta, e 11.06 con una virata sciatta. Cioè la tecnica adesso vale **+3.44 m/s**; prima la
+  virata sciatta saturava già il tetto e sopra "sufficiente" non c'era niente a cui puntare.
+  NON ho usato il "soft cap a 18 che perde 2 m/s al secondo" che gira in rete: simulato, non
+  converge (20.59 m/s a 5 salti, 31.03 a 20 e ancora in salita).
+- **Prova end-to-end, non solo unit test**: `tools/verify/bounds.mjs` entra in una partita vera e
+  tiene una direzione per 12 s (oltre quattro raggi d'arena) in tutte e quattro le direzioni. Le due
+  che arrivano al muro si fermano a 24.10 m esatti, e la posizione PREDETTA dal client è uguale a
+  quella del server al centimetro. Quell'uguaglianza è la vera affermazione: un confine che il
+  client non predice non è un muro, è un elastico — e in fotografia sono identici.
+- `tools/verify/feel.mjs` adesso stampa anche tetto in aria, catena di strafe sciatta vs stretta,
+  quanto vale la tecnica e il raggio dell'arena.
+- Estrazioni per stare nei tetti di riga (mai alzati, solo abbassati): `server/sim/displacement.ts`
+  (GameRoom aveva una copia privata del loop del dash — ora chiama lo STESSO solver condiviso che
+  disegna il fantasma, quindi anteprima e corpo non possono più divergere) e
+  `client/verify-seams.ts`. Tre tetti abbassati.
+- Gate verde: typecheck, lint, budget, content, 550 test.
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.

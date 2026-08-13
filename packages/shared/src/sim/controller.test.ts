@@ -13,7 +13,7 @@ import {
 
 import { makePlayerSimState, simulatePlayer } from './controller.js'
 import { STATIC_MAP } from './map.js'
-import type { SimInput } from './types.js'
+import type { SimInput, StaticMap } from './types.js'
 
 const DT = TICK_MS / 1000
 const BASE_Y = GROUND_Y + CAPSULE_HALF_HEIGHT_M
@@ -221,7 +221,11 @@ describe('jump buffer and ordering', () => {
   // timed on the landing tick paid a full friction tick — 13.3% of velocity —
   // which punishes precisely the input the movement system rewards.
   it('keeps full speed through a hop timed on the landing tick', () => {
-    const s = makePlayerSimState({ x: 0, y: BASE_Y, z: 20 })
+    // Start at -z and run TOWARD the origin: the arena has a perimeter now
+    // (D20), and the old start at z=20 running +z reached the wall inside the
+    // 60-tick run-up, so this measured the boundary clamp instead of friction
+    // ordering. x=20 keeps the whole run clear of the cover cluster.
+    const s = makePlayerSimState({ x: 20, y: BASE_Y, z: -12 })
     for (let i = 0; i < 60; i++) simulatePlayer(s, fwd(false), DT, STATIC_MAP)
     const cruising = Math.hypot(s.vel.x, s.vel.z)
     expect(cruising).toBeCloseTo(MOVE_SPEED_MPS, 2)
@@ -284,5 +288,65 @@ describe('knockback window', () => {
     s.momentumTicks = KNOCKBACK_WINDOW_TICKS
     for (let i = 0; i < KNOCKBACK_WINDOW_TICKS + 2; i++) simulatePlayer(s, idle, DT, STATIC_MAP)
     expect(s.momentumTicks).toBe(0)
+  })
+})
+
+// --- D18: the air cap is a ceiling you learn to reach ------------------------
+// 11.7 m/s was 1.30x the 9 m/s base — the entire movement skill ceiling was
+// +30 %, and a sloppy turn rate already saturated it. These tests exist to keep
+// the cap MEASURED: it has to be reachable (or raising it changes nothing) and
+// it has to be earned (or it is a plateau, not a ceiling).
+describe('air speed cap', () => {
+  const OPEN_MAP: StaticMap = { boxes: [], groundY: GROUND_Y, spawns: [] }
+
+  // A strafe jump: hold forward+strafe and turn into the strafe while airborne,
+  // hopping on every landing. The turn rate is the technique.
+  function chainHops(hops: number, turnPerTick: number): number[] {
+    const s = makePlayerSimState({ x: 0, y: BASE_Y, z: 0 })
+    let yaw = 0
+    const run = (moveX: number, jump: boolean): void => {
+      simulatePlayer(s, { moveX, moveZ: -1, yaw, jump, jumpHold: false }, DT, OPEN_MAP)
+    }
+    for (let i = 0; i < 90; i++) run(0, false)
+    const peaks: number[] = []
+    for (let h = 0; h < hops; h++) {
+      run(1, true)
+      let guard = 0
+      while (!s.onGround && guard++ < 200) {
+        yaw += turnPerTick
+        run(1, false)
+      }
+      peaks.push(Math.hypot(s.vel.x, s.vel.z))
+    }
+    return peaks
+  }
+
+  it('is reachable — a cap nobody can touch is not a design', () => {
+    const peaks = chainHops(8, 0.014)
+    expect(Math.max(...peaks)).toBeCloseTo(AIR_SPEED_CAP_MPS, 2)
+  })
+
+  it('is never exceeded, whatever the technique', () => {
+    for (const turn of [0.004, 0.008, 0.014, 0.022, 0.05]) {
+      for (const v of chainHops(8, turn)) {
+        expect(v).toBeLessThanOrEqual(AIR_SPEED_CAP_MPS + 1e-6)
+      }
+    }
+  })
+
+  // The point of raising it. At 11.7 a lazy turn rate already saturated, so
+  // there was nothing above "adequate" to aim at.
+  it('rewards a tighter turn instead of plateauing', () => {
+    const sloppy = Math.max(...chainHops(8, 0.004))
+    const good = Math.max(...chainHops(8, 0.014))
+    expect(good).toBeGreaterThan(sloppy + 2)
+  })
+
+  it('still lets a knockback impulse through its window', () => {
+    const s = makePlayerSimState({ x: 0, y: BASE_Y + 3, z: 0 })
+    s.vel.x = AIR_SPEED_CAP_MPS * 2
+    s.momentumTicks = KNOCKBACK_WINDOW_TICKS
+    simulatePlayer(s, { moveX: 0, moveZ: 0, yaw: 0, jump: false, jumpHold: false }, DT, OPEN_MAP)
+    expect(s.vel.x).toBeCloseTo(AIR_SPEED_CAP_MPS * 2, 4)
   })
 })

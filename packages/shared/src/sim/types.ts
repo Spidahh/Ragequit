@@ -52,4 +52,11 @@ export interface StaticMap {
   groundY: number
   // Spawn points. At least 2 for duel rooms.
   spawns: Vec3[]
+  // Horizontal radius of the arena, in metres, measured from the origin.
+  //
+  // The coliseum's barrier wall has always been there — as ART. The simulation
+  // had no perimeter of any kind: no boxes, no clamp, `groundY` an infinite
+  // plane, so a player could run out of the building and keep going forever
+  // over nothing. Omit for a map that genuinely has no edge.
+  boundsRadius?: number
 }

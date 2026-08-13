@@ -46,7 +46,7 @@ import type { CastTarget, EngineHost } from './ability-engine-host.js'
 import { insideAoe } from './aoe-shape.js'
 import { castTelegraphMessage, TAP_AFTERIMAGE_TICKS } from './cast-telegraph.js'
 import { validateCast } from './cast-validation.js'
-import { knockbackFromCaster, knockbackFromPoint } from './knockback-direction.js'
+import { knockbackFromCaster, knockbackFromPoint } from './displacement.js'
 import { getPlayerMaxima } from './player-maxima.js'
 import { placePointForward, clampPointToRange } from './targeting-geometry.js'
 

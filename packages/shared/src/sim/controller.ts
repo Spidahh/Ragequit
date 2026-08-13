@@ -24,6 +24,7 @@ import {
   STOP_SPEED_MPS,
 } from '../constants/world.js'
 
+import { clampToArenaBounds } from './collision.js'
 import type { AABB, PlayerSimState, SimInput, StaticMap, Vec3 } from './types.js'
 
 // Status-derived movement caps. Both client (prediction) and server (authority)
@@ -190,6 +191,10 @@ export function simulatePlayer(
   for (const box of map.boxes) {
     resolveCapsuleVsBox(state, box)
   }
+
+  // Arena perimeter. Deliberately AFTER the boxes: a body squeezed between a
+  // cover box and the wall must end up inside the arena, not inside the box.
+  clampToArenaBounds(state.pos, state.vel, map.boundsRadius)
 
   // --- 6. Coyote time counter -----------------------------------------
   // Grant the window when naturally leaving ground (not via a jump).

@@ -58,8 +58,44 @@ export const STOP_SPEED_MPS = 3.0 as const
 // to the projection of velocity on the wish direction (never to its magnitude),
 // which is what lets a well-timed strafe gain speed instead of capping it.
 export const AIR_ACCEL_COEF = 1.0 as const
-// Hard ceiling on airborne horizontal speed so chained hops cannot run away.
-export const AIR_SPEED_CAP_MPS = 11.7 as const
+/**
+ * Hard ceiling on airborne horizontal speed.
+ *
+ * 11.7 -> 14.5 on 2026-08-13 (D18, 00_truth.md). 11.7 was 1.30x the 9 m/s base:
+ * the ENTIRE movement skill ceiling was +30 %, in a game whose second pillar is
+ * "movement is the skill ceiling", against a reference (Quake 3) that has no
+ * cap at all and where defrag runs reach 5x. 14.5 is 1.61x — still a hard cap,
+ * because an arena this size with 200 ms of lag compensation cannot afford an
+ * unbounded one, but now worth learning to reach.
+ *
+ * MEASURED, not chosen: simulating the real controller through chained strafe
+ * jumps hits the cap exactly on the fifth hop at plausible turn rates, so this
+ * is a ceiling a player meets rather than a number that never binds. It is a
+ * HARD cap on purpose. The widely-circulated alternative — a soft cap at 18
+ * bleeding 2 m/s per second — was simulated and does NOT converge: 20.59 m/s at
+ * 5 hops, 31.03 at 20 and still climbing. The bleed needed to hold it is
+ * ~4.5 m/s^2, at which point it is a hard cap wearing a costume.
+ *
+ * Coupled to two other numbers, so none of the three moves alone:
+ * ARENA_BOUNDS_RADIUS_M (D20 — a cap is meaningless in an infinite plane) and
+ * LAG_COMP_MAX_COMPENSATE_MS (200 ms is 2.9 m of rewind at this speed, ~6 % of
+ * the 49 m arena; it was 22 % at the speeds D18 originally contemplated).
+ */
+export const AIR_SPEED_CAP_MPS = 14.5 as const
+
+/**
+ * Horizontal radius of the playable arena, in metres.
+ *
+ * DERIVED FROM THE ART, not chosen freely. The coliseum shell renders at
+ * ARENA_SHELL_SCALE = 1.5 with its inner barrier wall at r ≈ 16.7 and its sand
+ * floor at r = 16.5, so the wall stands at 25.05 m and the sand ends at 24.75.
+ * 24.5 leaves the body (CAPSULE_HALF_WIDTH_M = 0.4) reaching 24.9 — hard against
+ * the wall it can see, never off the edge of the sand.
+ *
+ * If the shell scale ever changes, this changes with it. A boundary the player
+ * cannot see is a boundary that feels like a bug.
+ */
+export const ARENA_BOUNDS_RADIUS_M = 24.5 as const
 
 // Ground plane Y (world floor).
 export const GROUND_Y = 0 as const
