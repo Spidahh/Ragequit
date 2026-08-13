@@ -5,6 +5,17 @@ import type { WeaponId } from './weapons.js'
 export const CLASS_IDS = ['tank', 'archer', 'mage', 'hybrid'] as const
 export type ClassId = (typeof CLASS_IDS)[number]
 
+// ── Class-mechanic scale ────────────────────────────────────────────────────
+// The server owns the mechanics; these are the numbers the HUD needs in order
+// to draw them (how many pips, where the threshold mark goes). They live here
+// so the bar cannot drift out of step with the simulation — a client-side copy
+// would silently start lying the day one of them is retuned.
+export const FURY_MAX_STACKS = 5
+export const MOMENTUM_MAX = 100
+/** Above this, the bow charges faster — the mark the archer is playing toward. */
+export const MOMENTUM_BOW_BONUS_THRESHOLD = 60
+export const FLOW_MAX_STACKS = 3
+
 export const TARGET_ABILITY_SLOT_FAMILIES = [
   'melee',
   'bow',

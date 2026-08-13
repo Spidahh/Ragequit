@@ -5,6 +5,7 @@ import { renderDeathcam, type DeathcamData } from '../endgame.js'
 import { statusIcon } from '../icons.js'
 
 import { ELEMENT_COLOR, type CooldownStripController } from './cd-strip.js'
+import { classMechanicView, renderClassMechanic } from './class-mechanic.js'
 
 const RESPAWN_TIPS: readonly string[] = [
   'Tasto destro: tap = finestra di parry, tieni premuto = blocco ripetuto.',
@@ -36,6 +37,15 @@ export interface SelfHudSchema {
   castEndsAtTick: number
   abilityCooldowns: Map<string, number>
   gcdReadyAtTick: number
+  // Class-mechanic state. Replicated on every Player since the mechanics were
+  // written, but nothing read it until the strip existed.
+  furyStacks: number
+  furyNextMeleeIsSurge: boolean
+  momentum: number
+  risonanzaElement: string
+  risonanzaArmedUntilTick: number
+  flowStacks: number
+  flowPendingBonus: boolean
 }
 
 export interface SelfHudOptions {
@@ -103,6 +113,7 @@ export function initSelfHud({
   const hudHpBar = document.getElementById('hud-hp')
   const hudManaBar = document.getElementById('hud-mana')
   const hudStamBar = document.getElementById('hud-stam')
+  const classMechanicEl = document.getElementById('class-mechanic')
   // Signature of the current status set — the strip's DOM is only rebuilt when
   // the set of kinds/stacks changes, not every frame (avoids per-frame layout
   // thrash while any status is active). Timer fills update in place below.
@@ -138,6 +149,22 @@ export function initSelfHud({
     hudHpFill.style.width = `${(hpPct * 100).toFixed(1)}%`
     hudManaFill.style.width = `${(mpPct * 100).toFixed(1)}%`
     hudStamFill.style.width = `${(spPct * 100).toFixed(1)}%`
+    if (classMechanicEl) {
+      renderClassMechanic(
+        classMechanicEl,
+        classMechanicView({
+          classId,
+          furyStacks: selfSchema.furyStacks,
+          furyNextMeleeIsSurge: selfSchema.furyNextMeleeIsSurge,
+          momentum: selfSchema.momentum,
+          risonanzaElement: selfSchema.risonanzaElement,
+          risonanzaArmedUntilTick: selfSchema.risonanzaArmedUntilTick,
+          flowStacks: selfSchema.flowStacks,
+          flowPendingBonus: selfSchema.flowPendingBonus,
+          tickNow,
+        }),
+      )
+    }
     hudHpNum.textContent = `${Math.round(selfSchema.hp)} / ${maxima.hp}`
     hudManaNum.textContent = `${Math.round(selfSchema.mana)} / ${maxima.mana}`
     hudStamNum.textContent = `${Math.round(selfSchema.stamina)} / ${maxima.stamina}`

@@ -1,17 +1,22 @@
-import { TICK_RATE_HZ, type ClassId, type Player } from '@ragequit/shared'
+import {
+  FLOW_MAX_STACKS,
+  FURY_MAX_STACKS,
+  MOMENTUM_BOW_BONUS_THRESHOLD,
+  MOMENTUM_MAX,
+  TICK_RATE_HZ,
+  type ClassId,
+  type Player,
+} from '@ragequit/shared'
 
 export const FURY_STACK_DAMAGE_FRAC = 0.08
 export const FURY_SURGE_DAMAGE_BONUS = 0.4
 export const FLOW_DAMAGE_BONUS_FRAC = 0.2
 
-const FURY_MAX_STACKS = 5
 const FURY_DECAY_DELAY_SEC = 4
 const FURY_DECAY_PER_SEC = 0.5
 const FURY_HITS_PER_STACK = 3
 
-const MOMENTUM_MAX = 100
 const MOMENTUM_GAIN_PER_SEC = 12
-export const MOMENTUM_BOW_BONUS_THRESHOLD = 60
 // Full-charge time once Momentum >= threshold. MUST be below the base
 // BOW_CHARGE_FULL_SEC (0.65 s) or the passive would SLOW the charge instead of
 // speeding it. 0.45 s ≈ 30% faster full charge as the momentum reward.
@@ -20,7 +25,6 @@ const MOMENTUM_MAGIC_CDR_FRAC = 0.15
 
 const RISONANZA_WINDOW_TICKS = Math.round(2.5 * TICK_RATE_HZ)
 
-const FLOW_MAX_STACKS = 3
 const FLOW_DECAY_DELAY_SEC = 8
 
 interface PlayerMechanicState {

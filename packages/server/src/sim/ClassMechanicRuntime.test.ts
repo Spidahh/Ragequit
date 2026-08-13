@@ -1,4 +1,4 @@
-import { Player, type ClassId } from '@ragequit/shared'
+import { MOMENTUM_BOW_BONUS_THRESHOLD, Player, type ClassId } from '@ragequit/shared'
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -6,7 +6,6 @@ import {
   FLOW_DAMAGE_BONUS_FRAC,
   FURY_STACK_DAMAGE_FRAC,
   FURY_SURGE_DAMAGE_BONUS,
-  MOMENTUM_BOW_BONUS_THRESHOLD,
   MOMENTUM_BOW_CHARGE_FAST_SEC,
   type RisonanzaProcRequest,
 } from './ClassMechanicRuntime.js'
