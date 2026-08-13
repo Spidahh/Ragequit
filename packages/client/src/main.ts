@@ -83,6 +83,7 @@ import { showTutorialIfFirstTime } from './hud/tutorial.js'
 import { ensureIconSprite, weaponIcon } from './icons.js'
 import { initCastDispatcher } from './input/cast-dispatcher.js'
 import { initGameInput, makeGameInputState } from './input/game-input.js'
+import { createInputGating } from './input/input-gating.js'
 import { actionLabel, onKeybindsChanged } from './input/keybinds.js'
 import { initRadialWheels } from './input/radial-wheels.js'
 import { sendAbilityCast as sendCast } from './input/send-cast.js'
@@ -321,7 +322,13 @@ const castDispatcher = initCastDispatcher({
     }
   },
   // Bow/staff had no input-frame sound at all: a missed shot was silent.
-  onWeaponFired: (weapon) => soundEngine.playWeaponFire(weapon),
+  onWeaponFired: (weapon) => {
+    soundEngine.playWeaponFire(weapon)
+    // The staff's basic attack moved nothing in your hands — the punch-and-settle
+    // existed but only ability casts could reach it, so rate of fire was
+    // invisible. Half magnitude: a poke should not kick like a committed spell.
+    if (weapon === 'staff') fpvStatic.triggerCast(0.5)
+  },
 })
 
 // --- HUD helpers -----------------------------------------------------------
@@ -604,40 +611,19 @@ let lastCastAbilityId = ''
 // Last target point sent with the most recent cast (for resolution VFX).
 let lastCastTargetPoint: { x: number; y: number; z: number } | null = null
 
-function isPauseMenuOpen(): boolean {
-  return !pauseMenu.classList.contains('hidden')
-}
-
-function isOverlayOpen(el: HTMLElement): boolean {
-  return !el.classList.contains('hidden')
-}
-
-function loadoutStationHidden(): boolean {
-  return document.getElementById('loadout-station')?.classList.contains('hidden') ?? true
-}
-
-function isGameplayInputAllowed(): boolean {
-  return (
-    Boolean(room) &&
-    currentMatchPhase === 'live' &&
-    loadoutStationHidden() &&
-    !isPauseMenuOpen() &&
-    !isOverlayOpen(settingsOverlay) &&
-    !document.body.classList.contains('main-menu-active') &&
-    !document.body.classList.contains('loadout-active')
-  )
-}
-
-function canEngageGameplaySurface(): boolean {
-  return (
-    Boolean(room) &&
-    loadoutStationHidden() &&
-    !isPauseMenuOpen() &&
-    !isOverlayOpen(settingsOverlay) &&
-    !document.body.classList.contains('main-menu-active') &&
-    !document.body.classList.contains('loadout-active')
-  )
-}
+// Input gating (pause menu / overlays / match phase) — see input/input-gating.ts.
+const {
+  isPauseMenuOpen,
+  isOverlayOpen,
+  loadoutStationHidden,
+  canEngageGameplaySurface,
+  isGameplayInputAllowed,
+} = createInputGating({
+  isConnected: () => Boolean(room),
+  matchPhase: () => currentMatchPhase,
+  pauseMenu,
+  settingsOverlay,
+})
 
 function isWeapon(w: string): w is Weapon {
   return (WEAPON_IDS as readonly string[]).includes(w)

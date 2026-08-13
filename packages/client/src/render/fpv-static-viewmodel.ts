@@ -22,7 +22,8 @@ export interface FpvStaticViewmodel {
   rebuild(weapon: Weapon): void
   /** The weapon currently shown/loading, or null. */
   getCurrentWeapon(): Weapon | null
-  triggerCast(): void
+  /** Punch-and-settle. `mag` scales it: an M1 poke should not kick like a cast. */
+  triggerCast(mag?: number): void
   update(now: number): void
 }
 
@@ -30,6 +31,7 @@ export function createFpvStaticViewmodel(): FpvStaticViewmodel {
   const root = new THREE.Group()
   let currentWeapon: Weapon | null = null
   let castStartedAt = 0
+  let castMag = 1
 
   function clear(): void {
     while (root.children.length > 0) {
@@ -127,8 +129,15 @@ export function createFpvStaticViewmodel(): FpvStaticViewmodel {
       })
   }
 
-  function triggerCast(): void {
+  /**
+   * Punch the viewmodel back and let it settle.
+   *
+   * `mag` scales the displacement so a basic attack and a heavy cast do not
+   * kick identically — a poke should read lighter than a committed spell.
+   */
+  function triggerCast(mag = 1): void {
     castStartedAt = performance.now()
+    castMag = Math.max(0, mag)
   }
 
   function update(now: number): void {
@@ -140,7 +149,7 @@ export function createFpvStaticViewmodel(): FpvStaticViewmodel {
       return
     }
     const kick = elapsed < 90 ? elapsed / 90 : 1 - (elapsed - 90) / 270
-    const eased = Math.max(0, Math.sin(kick * Math.PI * 0.5))
+    const eased = Math.max(0, Math.sin(kick * Math.PI * 0.5)) * castMag
     root.position.set(0.035 * eased, -0.045 * eased, 0.09 * eased)
     root.rotation.set(-0.07 * eased, 0.04 * eased, -0.1 * eased)
   }
