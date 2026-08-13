@@ -918,6 +918,41 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
   - Estratto `hud/ffa-ladder.ts` (con test: top3 + te al tuo rango vero, senza duplicarti sul podio)
     per ripagare le righe aggiunte a main.ts — il budget non sale mai.
 
+- **2026-08-13 (notte) — audit multi-agente e cinque batch di upgrade.** 13 agenti su 6 settori
+  (grafica, HUD, abilità, IA, quality-of-life, armi), ognuno con ricerca su come lo risolvono i
+  titoli usciti, poi una passata avversariale a uccidere i findings che non reggevano il contatto
+  col codice: **29 sopravvissuti su ~35**. Backlog ordinato in `.verify/backlog.md`.
+  - **Colore sbagliato su TUTTI i prop dell'arena.** `cloneGltfScene` scambia la map di ogni
+    materiale con una texture condivisa caricata a mano, e `TextureLoader` non imposta il
+    `colorSpace`: quindi l'albedo di torce, barili, casse e stendardi veniva decodificato come
+    lineare. Ecco perché sembravano plasticosi e da luna park accanto al guscio del colosseo, che
+    invece è caricato da GLTFLoader ed era sempre stato giusto. Misurato: il verde-acqua fuori
+    palette sui barili 128 px → 0, con saturazione media della scena INVARIATA (0,879 → 0,880).
+  - **Anisotropia da 4 fissa al massimo hardware (16).** Senza, il filtraggio mip sfoca in poltiglia
+    tutto ciò che si guarda di sbieco — cioè la sabbia dell'arena, che è quasi tutto lo schermo.
+  - **L'antialiasing era spento senza che nessuno lo sapesse.** Il canvas nasce con
+    `antialias: true`, ma quel flag smette di contare nel momento in cui `EffectComposer` possiede i
+    buffer — e li possiede da sempre. Ora il composer finale ha un target multisample. Misurato
+    contando i salti netti di luminanza: **3815 → 2169** su un frame, 3295 → 2580 sull'altro.
+    ⚠ TRAPPOLA: `EffectComposer` deriva la dimensione dal renderer SOLO se costruisce il target da
+    sé; se gliene passi uno, adotta le dimensioni di quello. Costruito 1×1 ha renderizzato tutto il
+    gioco come un unico pixel stirato — beccato subito dalla sonda (frame beige pieno, coverage 100%).
+  - **L'M1 dello staff non muoveva nulla in mano.** Il punch-and-settle del viewmodel esisteva e
+    funzionava, ma era raggiungibile solo da `AbilityCasted`, che sparare non emette. Ora ha una
+    magnitudine: la stoccata calcia a metà di un cast impegnato.
+  - **L'arco della spada era un cerchio alle caviglie**, mentre la lama passava nel petto. Alzato
+    all'altezza di contatto già usata da `hit-impacts.ts`, e tubo 0.14 → 0.05 (una spada lascia una
+    scia larga quanto la lama, non una ciambella). Corretto un commento che dichiarava 120°: la
+    campata è 90°.
+  - **La meccanica di classe ora si vede in partita.** Fury/Momentum/Risonanza/Flow erano simulate e
+    replicate su ogni Player, e il client non le leggeva: il CSS della striscia era già nel repo,
+    inutilizzato. Le costanti di scala erano private del server → spostate in `shared`, così l'HUD
+    disegna gli stessi numeri della simulazione. Barra Momentum con la tacca alla soglia vera
+    (modello Guild Wars 2: leggi la SOGLIA, non il valore).
+  - Estratti per pagare le righe: `render/post-pipeline.ts`, `input/input-gating.ts`,
+    `hud/ffa-ladder.ts`. main.ts 2738 → 2679 righe, budget stretto di conseguenza.
+  - Test 438 → 480. Otto commit, CI verde su ognuno.
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.
