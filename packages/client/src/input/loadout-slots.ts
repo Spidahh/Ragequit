@@ -14,6 +14,7 @@ export function normalizeLoadoutSlots(slots: readonly string[]): string[] {
 export function buildLoadoutMessage(
   slots: readonly string[],
   classId?: string,
+  specializationId?: string,
 ): ClientLoadoutMessage {
   const resolvedClassId = (classId ?? 'hybrid') as ClassId
   const order = getClassSlotOrder(resolvedClassId)
@@ -48,6 +49,7 @@ export function buildLoadoutMessage(
 
   return {
     classId: resolvedClassId,
+    specializationId: specializationId ?? '',
     melee,
     bow,
     magicBase,

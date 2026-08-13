@@ -38,6 +38,7 @@ import {
   abilityReadability,
   splitMechanicLabel,
 } from './loadout/ability-format.js'
+import { createSpecSelector } from './spec-selector.js'
 
 const STORAGE_KEY = 'ragequit.loadout.v6'
 const CLASS_STORAGE_KEY = 'ragequit.loadout.classId'
@@ -60,6 +61,8 @@ export interface LoadoutStationApi {
   open: () => void
   close: () => void
   getLoadout: () => readonly string[]
+  /** The picked specialisation id, or '' for none. Used by sendLoadout. */
+  getSpecializationId: () => string
   /** Returns the active class id for the current build. Used by sendLoadout. */
   getClassId: () => ClassId
 }
@@ -103,6 +106,15 @@ export function initLoadoutStation(
   let poolFilterEl = 'all'
   let poolSearch = ''
   let activeClassId: ClassId = loadClassId()
+  // The third axis (01_DESIGN/08_specializations.md). Built from the shared
+  // registry and mounted next to the class cards.
+  const specSelector = createSpecSelector(() => rerender())
+  const classSelectorEl = document.getElementById('ls-class-selector')
+  if (classSelectorEl?.parentElement) {
+    const host = document.createElement('div')
+    classSelectorEl.parentElement.insertBefore(host, classSelectorEl.nextSibling)
+    specSelector.mount(host)
+  }
 
   function resetPoolFilters(): void {
     poolFilterEl = 'all'
@@ -453,6 +465,7 @@ export function initLoadoutStation(
       hybrid: '#00f0ff',
     }
     overlay.style.setProperty('--class-color', CLASS_COLORS[id])
+    specSelector.setClass(id)
     rerender()
   }
 
@@ -546,7 +559,10 @@ export function initLoadoutStation(
     }
     const room = getRoom()
     if (room) {
-      room.send(MessageTypes.Loadout, buildLoadoutMessage(slots, activeClassId))
+      room.send(
+        MessageTypes.Loadout,
+        buildLoadoutMessage(slots, activeClassId, specSelector.selected()),
+      )
       document.body.classList.remove('loadout-active')
       overlay.classList.add('hidden')
       getCanvas?.()?.focus({ preventScroll: true })
@@ -589,6 +605,7 @@ export function initLoadoutStation(
     },
     getLoadout: () => slots as readonly string[],
     getClassId: () => activeClassId,
+    getSpecializationId: () => specSelector.selected(),
   }
 }
 

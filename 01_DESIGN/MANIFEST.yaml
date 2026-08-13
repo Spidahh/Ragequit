@@ -21,6 +21,7 @@ read_order:
   - 05_abilities_utility.md
   - 06_loadout_build.md
   - 07_modes.md
+  - 08_specializations.md
   - 10_tech_assets.md
   - 99_resolved_ambiguities.md
 
@@ -44,12 +45,14 @@ files:
   05_abilities_utility.md: { section: abilities, status: current }
   06_loadout_build.md: { section: loadout, status: current }
   07_modes.md: { section: modes, status: current }
+  08_specializations.md: { section: loadout, status: current }
   10_tech_assets.md: { section: tech, status: current }
   99_resolved_ambiguities.md: { section: decisions, status: current }
 
 runtime_authority:
   abilities: ../packages/shared/src/abilities/registry.ts
   classes: ../packages/shared/src/constants/classes.ts
+  specializations: ../packages/shared/src/constants/specializations.ts
   loadout_ui: ../packages/client/src/loadout-station.ts
   ui_css: ../packages/client/public/game-ui.css
 

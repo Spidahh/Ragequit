@@ -1092,6 +1092,47 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
   passata di bilanciamento non rompe più test che non parlano di bilanciamento.
 - `tools/verify/ttk.mjs` stampa la tabella completa. Gate verde: 559 test.
 
+### 2026-08-13 — Le specializzazioni: il terzo asse della build (passo 10 di §10)
+
+- **Le tue parole**: "ti scegli una build tra varie combo di classe, abilità o specializzazioni".
+  Di quelle tre ne erano spedite due. Questa è la terza, e prima non esisteva NIENTE: né codice, né
+  schema, né documento.
+- **Prima di ricostruirla ho studiato quella cancellata**, come diceva il piano. C'era un sistema
+  Mastery (`03_mastery_system.md`, cancellato nel commit `6a7839a`): si attivava se 4 delle tue 5
+  slot magiche condividevano l'elemento. **È morto perché era DEDOTTO, non scelto**: nessuno
+  sceglieva una Mastery, te la ritrovavi — o scoprivi di averla persa prendendo la spell che
+  volevi. Non esprimeva una decisione, tassava chi mescolava gli elementi. Per questo la prima
+  regola del sostituto è che si SCEGLIE, nella Forge, accanto alle carte classe.
+- **12 specializzazioni, 4 archetipi, 3 per classe.** Ognuna ha un bonus E un costo, tutti e due
+  scritti sulla carta. Validate lato server come il resto della build e RIFIUTATE con una ragione,
+  non scartate in silenzio: una build corretta di nascosto è una build che scopri in arena.
+- **Nessuna tocca il danno, e il vincolo ha migliorato il design.** Il test della banda TTK gira sul
+  registry base, quindi una spec da +15% danno gli sarebbe passata sotto il naso spingendo
+  l'arciere fuori dal fondo della banda 6-9 s — annullando in silenzio il lavoro di ieri. Quel che
+  resta è più interessante: durata del lancio in aria, cooldown, velocità, vita. "I tuoi lanci in
+  aria durano il 25% in più" è una decisione di build più bella di "+15% danno", e punta al momento
+  che dà identità al gioco invece che altrove.
+- Due dettagli tecnici che tengo a verbale: il moltiplicatore di airtime si legge dal LANCIATORE,
+  non dalla vittima ("i TUOI lanci durano di più" è una proprietà di chi lancia); e il modificatore
+  di velocità entra in `slowFraction` da UNA funzione condivisa che il server usa per l'autorità e
+  il client per la predizione — due copie di quella riga sono un elastico permanente in attesa che
+  qualcuno ne modifichi una sola.
+- **Prova end-to-end** (`tools/verify/spec.mjs`): apre la Forge, legge le carte, ne clicca una,
+  entra in partita e confronta la vita che **il server ha dato** con quella calcolata — 168 per un
+  mago Baluardo, su 150 di base. Una specializzazione che vive solo in un registry non è una
+  feature. Screenshot in `.verify/spec-forge.png`.
+- Il layout è stato sbagliato al primo colpo: la riga finiva dentro la colonna della vitals e le
+  quattro carte si schiacciavano in una fettina illeggibile. L'ho visto perché la prova è
+  renderizzata, non perché un test è passato.
+- **Estrazioni per stare nei tetti** (mai alzati, tre abbassati): `rooms/loadout-validate.ts` —
+  `handleLoadoutSet` erano 155 righe di cui 119 di validazione intrecciata con gli avvisi al client,
+  quindi non testabile senza una stanza, un client e un socket; ora è una funzione pura.
+  Poi `sim/target-selection.ts` e `client/game/movement-caps.ts`.
+- Ritirato il divieto in `06_loadout_build.md` che vietava esattamente questo (restano i divieti su
+  slot extra e trasferimento risorse), scritto `01_DESIGN/08_specializations.md`, registrato nel
+  MANIFEST, cancellato l'artefatto morto `dist/constants/mastery.*`.
+- Gate verde: 572 test.
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.

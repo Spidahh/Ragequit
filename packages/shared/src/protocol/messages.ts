@@ -104,6 +104,9 @@ export interface ClientLoadoutMessage {
   magicBase: string[]
   magicAdvanced: string[]
   utility: string[]
+  /** Specialisation id, or '' for none. Server rejects one that is not legal
+   *  for `classId` — the third axis is validated exactly like the other two. */
+  specializationId?: string
 }
 
 export interface ClientHeartbeatMessage {

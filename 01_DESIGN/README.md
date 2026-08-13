@@ -18,6 +18,7 @@ cancellati o materiale non approvato come autorita.
 - `05_abilities_philosophy.md`
 - `06_loadout_build.md`
 - `07_modes.md`
+- `08_specializations.md` — the third axis of a build (class + abilities + specialisation)
 - `99_resolved_ambiguities.md`
 
 ## Autorita Runtime

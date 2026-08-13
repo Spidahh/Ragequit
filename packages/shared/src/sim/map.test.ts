@@ -21,9 +21,10 @@ describe('every map fits inside its own arena', () => {
       const limit = bound! - CAPSULE_HALF_WIDTH_M
       for (const [i, s] of map.spawns.entries()) {
         const r = Math.hypot(s.x, s.z)
-        expect(r, `${id} spawn ${i} at r=${r.toFixed(2)} is outside ${limit.toFixed(2)}`).toBeLessThanOrEqual(
-          limit,
-        )
+        expect(
+          r,
+          `${id} spawn ${i} at r=${r.toFixed(2)} is outside ${limit.toFixed(2)}`,
+        ).toBeLessThanOrEqual(limit)
       }
     })
 

@@ -1,5 +1,9 @@
 import { CloseCode, Room, type Client } from '@colyseus/core'
 import {
+  CLASS_IDS,
+  getSpecialization,
+  maxHpForBuild,
+  slowFractionWithSpecialization,
   type ServerZoneExpiredMessage,
   ABILITY_DEFS,
   type StatusKind,
@@ -63,10 +67,7 @@ import {
   type SimInput,
   type Weapon,
   ClassId,
-  CLASS_IDS,
   CLASS_PRESET_BUILDS,
-  isAbilityLegalForClass,
-  getAbilitySlotFamily,
   TARGET_CLASS_DEFS,
   launchVyForAirtime,
   MAX_AIRBORNE_SEC,
@@ -106,6 +107,7 @@ import {
 } from '../telemetry.js'
 
 import { resolvePlayerLoadout } from './loadout-resolve.js'
+import { validateLoadoutMessage } from './loadout-validate.js'
 import * as lobby from './lobby-fill.js'
 import { makePendingDamageBridge } from './pending-damage-bridge.js'
 import { resolveMapId, testDummySpawn, testPlayerSpawn, testRoomMaxClients } from './test-room.js'
@@ -389,7 +391,13 @@ export class GameRoom extends Room<{ state: GameState }> {
         syncSimStamina: this.syncSimStamina,
         getAbilityCooldownMult: (sid) => {
           const player = this.state.players.get(sid)
-          return player ? this.mechanics.getMomentumCooldownMult(player) : 1
+          if (!player) return 1
+          // Composes with Momentum rather than replacing it: a specialisation
+          // is a third axis, not a different system.
+          return (
+            this.mechanics.getMomentumCooldownMult(player) *
+            getSpecialization(player.specializationId).cooldownMult
+          )
         },
         getRecoveryHealBonus: (sid, abilityId, now) =>
           this.mechanics.getRecoveryHealBonus(sid, abilityId, now),
@@ -628,7 +636,7 @@ export class GameRoom extends Room<{ state: GameState }> {
       player.classId = resolvedClassId
       const classDef = TARGET_CLASS_DEFS[resolvedClassId]
       const maxima = classDef.resourceMaxima
-      player.hp = maxima.hp
+      player.hp = maxHpForBuild(resolvedClassId, player.specializationId)
       player.mana = maxima.mana
       player.stamina = maxima.stamina
       // Set the class's primary weapon — schema defaults to 'sword' which would
@@ -831,7 +839,10 @@ export class GameRoom extends Room<{ state: GameState }> {
       })),
     )
     const movementCaps = {
-      slowFraction: capsFromStatus.slowFraction,
+      slowFraction: slowFractionWithSpecialization(
+        capsFromStatus.slowFraction,
+        player.specializationId,
+      ),
       movementLocked: capsFromStatus.movementLocked,
       castLocked: capsFromStatus.castLocked,
     }
@@ -1058,7 +1069,7 @@ export class GameRoom extends Room<{ state: GameState }> {
         this.mechanics.onHitTaken(d.victimId, now)
         if (attacker && d.lifestealFraction && d.lifestealFraction > 0) {
           const attackerMaxHp =
-            TARGET_CLASS_DEFS[attacker.classId as ClassId]?.resourceMaxima.hp ?? HP_MAX
+            maxHpForBuild(attacker.classId as ClassId, attacker.specializationId) || HP_MAX
           attacker.hp = Math.min(attackerMaxHp, attacker.hp + applied * d.lifestealFraction)
         }
         if (d.onDamageStatus && victim.hp > 0) {
@@ -1218,7 +1229,7 @@ export class GameRoom extends Room<{ state: GameState }> {
       mana: MANA_MAX,
       stamina: STAMINA_MAX,
     }
-    player.hp = maxima.hp
+    player.hp = maxHpForBuild(classId, player.specializationId) || maxima.hp
     player.mana = maxima.mana
     player.stamina = maxima.stamina
 
@@ -1483,7 +1494,6 @@ export class GameRoom extends Room<{ state: GameState }> {
   private handleLoadoutSet(sid: string, msg: ClientLoadoutMessage): void {
     const player = this.state.players.get(sid)
     if (!player) return
-    // Look up client once — reused for all rejection notices below.
     const client = this.clients.find((c) => c.sessionId === sid)
     if (this.state.phase === 'live') {
       client?.send(MessageTypes.ServerNote, {
@@ -1493,116 +1503,19 @@ export class GameRoom extends Room<{ state: GameState }> {
       return
     }
 
-    // Dynamic Class Validation
-    const classId: ClassId =
-      msg.classId && CLASS_IDS.includes(msg.classId as ClassId)
-        ? (msg.classId as ClassId)
-        : 'hybrid'
-
-    // Reject malformed / oversized payloads before any per-element work. A
-    // legit client sends <= 8 ids total; without this an array of millions of
-    // empty strings would be spread + iterated (the `id === ''` skip below has
-    // no length bound), stalling the single-threaded room tick (event-loop DoS).
-    const MAX_SLOT_IDS = 32
-    const fields = [msg.melee, msg.bow, msg.magicBase, msg.magicAdvanced, msg.utility]
-    let totalIds = 0
-    for (const f of fields) {
-      if (f !== undefined && !Array.isArray(f)) {
-        client?.send(MessageTypes.ServerNote, {
-          kind: 'warn',
-          text: 'loadout rejected: malformed payload',
-        })
-        return
-      }
-      totalIds += f?.length ?? 0
-    }
-    if (totalIds > MAX_SLOT_IDS) {
-      client?.send(MessageTypes.ServerNote, {
-        kind: 'warn',
-        text: 'loadout rejected: too many slots',
-      })
+    // All the rules live in rooms/loadout-validate.ts, as a pure function.
+    const verdict = validateLoadoutMessage(msg)
+    if (!verdict.ok) {
+      client?.send(MessageTypes.ServerNote, { kind: 'warn', text: verdict.reason })
       return
     }
+    const { classId, slots, specializationId } = verdict
 
-    // Build the canonical flat ability list from the class-aware envelope.
-    // Each array contains ids for one slot family; order within arrays is
-    // preserved but the server validates by family budget, not position.
-    const slots: string[] = [
-      ...(msg.melee ?? []),
-      ...(msg.bow ?? []),
-      ...(msg.magicBase ?? []),
-      ...(msg.magicAdvanced ?? []),
-      ...(msg.utility ?? []),
-    ]
-
-    // --- Budget-based family validation ---
-    // Instead of positional slot matching (which breaks for Tank that has 3 melee
-    // but the wire sends them all in different fields), we validate that the
-    // abilities provided fit within the class's declared family budget.
-    //
-    // E.g., Tank: { melee:3, bow:2, magicBase:0, magicAdvanced:0, utility:6 }
-    // We count how many of each family are in the submitted slots and ensure
-    // the class has enough room for each.
-    const classDef = TARGET_CLASS_DEFS[classId]
-    const budget = {
-      melee: classDef.slots.melee,
-      bow: classDef.slots.bow,
-      magicBase: classDef.slots.magicBase,
-      magicAdvanced: classDef.slots.magicAdvanced,
-      utility: classDef.slots.utility,
-    }
-    const used: Record<string, number> = {}
-    const seenIds = new Set<string>()
-
-    for (let i = 0; i < slots.length; i++) {
-      const id = slots[i]!
-      if (id === '') continue
-
-      // 1. Known ability?
-      const def = ABILITY_DEFS[id]
-      if (!def) {
-        client?.send(MessageTypes.ServerNote, {
-          kind: 'warn',
-          text: `loadout rejected: unknown ability "${id}"`,
-        })
-        return
-      }
-
-      // 2. Duplicate?
-      if (seenIds.has(id)) {
-        client?.send(MessageTypes.ServerNote, {
-          kind: 'warn',
-          text: `loadout rejected: duplicate ability "${id}"`,
-        })
-        return
-      }
-      seenIds.add(id)
-
-      // 3. Legal for this class?
-      if (!isAbilityLegalForClass(id, classId)) {
-        client?.send(MessageTypes.ServerNote, {
-          kind: 'warn',
-          text: `loadout rejected: ability "${id}" is not legal for class ${classId}`,
-        })
-        return
-      }
-
-      // 4. Family budget check — does the class have room for one more of this family?
-      const family = getAbilitySlotFamily(id)
-      used[family] = (used[family] ?? 0) + 1
-      if ((used[family] ?? 0) > (budget[family] ?? 0)) {
-        client?.send(MessageTypes.ServerNote, {
-          kind: 'warn',
-          text: `loadout rejected: class ${classId} has no ${family} slot for "${id}" (budget ${budget[family] ?? 0})`,
-        })
-        return
-      }
-    }
-
-    // Commit class selection and resources immediately on server
+    // Commit class, specialisation and resources immediately on server.
     player.classId = classId
+    player.specializationId = specializationId
     const maxima = TARGET_CLASS_DEFS[classId].resourceMaxima
-    player.hp = maxima.hp
+    player.hp = maxHpForBuild(classId, specializationId)
     player.mana = maxima.mana
     player.stamina = maxima.stamina
     player.activeWeapon = TARGET_CLASS_DEFS[classId].weapons[0] ?? player.activeWeapon
@@ -1610,14 +1523,15 @@ export class GameRoom extends Room<{ state: GameState }> {
     player.bowChargeStartTick = 0
     player.staffNextFireTick = 0
 
-    // Commit abilities
     while (player.loadout.length > 0) player.loadout.pop()
     for (const id of slots) player.loadout.push(id)
 
     // Clean slate — clear cooldowns + statuses on loadout change.
     player.abilityCooldowns.clear()
     this.statuses.clearAll(sid)
-    console.info(`[GameRoom ${this.roomId}] loadoutSet ${sid} class=${classId}`)
+    console.info(
+      `[GameRoom ${this.roomId}] loadoutSet ${sid} class=${classId} spec=${specializationId || 'none'}`,
+    )
   }
 
   // --- Risonanza proc resolution --------------------------------------------
@@ -1720,7 +1634,7 @@ export class GameRoom extends Room<{ state: GameState }> {
         // Lifesteal: heal the caster for 8 HP.
         if (casterPlayer?.alive) {
           const maxHp =
-            TARGET_CLASS_DEFS[casterPlayer.classId as ClassId]?.resourceMaxima.hp ?? HP_MAX
+            maxHpForBuild(casterPlayer.classId as ClassId, casterPlayer.specializationId) || HP_MAX
           casterPlayer.hp = Math.min(maxHp, casterPlayer.hp + 8)
         }
         break

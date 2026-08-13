@@ -103,6 +103,11 @@ export class Player extends Schema {
 
   @type('string') classId = 'hybrid'
 
+  // The third axis of a build (01_DESIGN/08_specializations.md). Empty = none.
+  // Replicated rather than kept server-side because a build you cannot see on
+  // your opponent is a build you cannot read, and reading builds is the game.
+  @type('string') specializationId = ''
+
   // --- Class mechanic state ------------------------------------------------
   // Replicated so client HUD can render class identity without extra messages.
   @type('number') furyStacks: number = 0

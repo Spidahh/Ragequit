@@ -57,12 +57,15 @@ describe('loadout station smoke', () => {
     expect(msg['magicBase']).toEqual(['fireball', 'lightning_dash'])
     expect(msg['magicAdvanced']).toEqual(['arc_lift'])
     expect(msg['utility']).toEqual(['adaptive_mend', 'quick_dash'])
+    // Locked as an exact set on purpose: the server validates what it is sent,
+    // so an extra field going out unnoticed is a build the player did not make.
     expect(Object.keys(msg).sort()).toEqual([
       'bow',
       'classId',
       'magicAdvanced',
       'magicBase',
       'melee',
+      'specializationId',
       'utility',
     ])
     expect(api.getLoadout()).toHaveLength(8)

@@ -14,7 +14,7 @@
 // interface that the GameRoom implements. Tests provide a lightweight host.
 
 import {
-  forwardAimRadiusAt,
+  getSpecialization,
   ABILITY_DEFS,
   GCD_SEC,
   KNOCKUP_IMMUNITY_AFTER_LAND_SEC,
@@ -48,6 +48,7 @@ import { castTelegraphMessage, TAP_AFTERIMAGE_TICKS } from './cast-telegraph.js'
 import { validateCast } from './cast-validation.js'
 import { knockbackFromCaster, knockbackFromPoint } from './displacement.js'
 import { getPlayerMaxima } from './player-maxima.js'
+import { findForwardEnemy, findNearestEnemy, type TargetSelectionDeps } from './target-selection.js'
 import { placePointForward, clampPointToRange } from './targeting-geometry.js'
 
 // Re-exported so existing importers of AbilityEngine keep working.
@@ -428,6 +429,13 @@ export class AbilityEngine {
         : this.resolveAnchor(caster, target, def)
     if (!center) return
     const tickNow = this.host.state.tick
+    // The launch belongs to the CASTER, so the specialisation that lengthens it
+    // is read here and not where the victim is thrown: "your launches hang
+    // longer" is a property of who cast, not of who was hit. Still clamped by
+    // MAX_AIRBORNE_SEC downstream, so this can lengthen a launch but never
+    // create an unrecoverable one.
+    const airborneSec =
+      e.airborneSec * getSpecialization(caster.specializationId).knockupAirtimeMult
     if (radius === 0) {
       const nearest = this.resolveSingleTarget(sid, caster, target, def)
       if (!nearest) return
@@ -442,7 +450,7 @@ export class AbilityEngine {
         return
       this.host.applyKnockup(
         victim,
-        e.airborneSec,
+        airborneSec,
         knockbackFromCaster(caster, victim, e, target.yaw),
       )
       return
@@ -457,11 +465,7 @@ export class AbilityEngine {
         victim.airborneUntilTick > 0
       )
         return
-      this.host.applyKnockup(
-        victim,
-        e.airborneSec,
-        knockbackFromPoint(center, victim, e, target.yaw),
-      )
+      this.host.applyKnockup(victim, airborneSec, knockbackFromPoint(center, victim, e, target.yaw))
     })
   }
 
@@ -768,9 +772,9 @@ export class AbilityEngine {
       return target.targetId
     }
     if (def.targeting === 'forward') {
-      return this.findForwardEnemy(sid, origin, target.yaw, target.pitch, def.range)
+      return findForwardEnemy(this.targetDeps(), sid, origin, target.yaw, target.pitch, def.range)
     }
-    return this.findNearestEnemy(sid, origin, def.range)
+    return findNearestEnemy(this.targetDeps(), sid, origin, def.range)
   }
 
   private resolveAreaCenter(
@@ -798,7 +802,8 @@ export class AbilityEngine {
       // post-move position. Non-movement forward AoEs detonate on the aimed target.
       const hasMove = def.effects.some((effect) => effect.kind === 'move')
       if (hasMove) return this.resolveAnchor(caster, target, def)
-      const victimId = this.findForwardEnemy(
+      const victimId = findForwardEnemy(
+        this.targetDeps(),
         sid,
         this.resolveAnchor(caster, target, def),
         target.yaw,
@@ -817,62 +822,9 @@ export class AbilityEngine {
     return this.resolveAnchor(caster, target, def)
   }
 
-  private findForwardEnemy(
-    sid: string,
-    origin: Vec3,
-    yaw: number,
-    pitch: number,
-    range: number,
-  ): string | null {
-    const dir = directionFromYawPitch(yaw, pitch)
-    let bestId: string | null = null
-    let bestAlong = Infinity
-    this.host.state.players.forEach((victim, vid) => {
-      if (vid === sid || !victim.alive) return
-      const vx = victim.transform.x - origin.x
-      const vy = victim.transform.y + PLAYER_CAPSULE_HEIGHT_M / 2 - origin.y
-      const vz = victim.transform.z - origin.z
-      const along = vx * dir.x + vy * dir.y + vz * dir.z
-      if (along < 0 || along > range) return
-      const distSq = vx * vx + vy * vy + vz * vz
-      const lateralSq = Math.max(0, distSq - along * along)
-      // The lane the client draws. Shared formula on purpose — see
-      // shared/abilities/aim.ts: a preview that disagrees with the hitbox
-      // teaches a lie, and two literals in two files always drift eventually.
-      const aimRadius = forwardAimRadiusAt(along)
-      if (lateralSq > aimRadius * aimRadius) return
-      if (
-        this.host.hasLineOfSight &&
-        !this.host.hasLineOfSight(origin, {
-          x: victim.transform.x,
-          y: victim.transform.y + PLAYER_CAPSULE_HEIGHT_M / 2,
-          z: victim.transform.z,
-        })
-      )
-        return
-      if (along < bestAlong) {
-        bestAlong = along
-        bestId = vid
-      }
-    })
-    return bestId
-  }
-
-  private findNearestEnemy(sid: string, anchor: Vec3, range: number): string | null {
-    let bestId: string | null = null
-    let bestDist = Number.POSITIVE_INFINITY
-    this.host.state.players.forEach((p, id) => {
-      if (id === sid || !p.alive) return
-      const dx = p.transform.x - anchor.x
-      const dz = p.transform.z - anchor.z
-      const d = Math.hypot(dx, dz)
-      if (d > range) return
-      if (d < bestDist) {
-        bestId = id
-        bestDist = d
-      }
-    })
-    return bestId
+  /** Deps bundle for sim/target-selection.ts — see the note there. */
+  private targetDeps(): TargetSelectionDeps {
+    return { players: this.host.state.players, hasLineOfSight: this.host.hasLineOfSight }
   }
 
   private canApplyParryableFollowup(def: AbilityDef, victim: Player): boolean {

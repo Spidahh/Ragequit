@@ -745,6 +745,10 @@ button.locked {
   z-index: 2;
   display: grid;
   grid-template-columns: 220px minmax(720px, 1fr) 300px;
+  /* Row 1: class cards. Row 2: specialisation cards, directly beneath them, so
+     the header reads as the order you actually choose in. The title block and
+     the vitals console span both rows. */
+  grid-template-rows: auto auto;
   align-items: stretch;
   overflow: hidden;
   border-bottom: 1px solid rgba(255, 210, 96, 0.18);
@@ -752,6 +756,8 @@ button.locked {
 }
 
 #ls-title-block {
+  grid-column: 1;
+  grid-row: 1 / span 2;
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr);
   grid-template-rows: auto auto;
@@ -787,6 +793,8 @@ button.locked {
 
 /* Class tabs */
 #ls-class-selector {
+  grid-column: 2;
+  grid-row: 1;
   min-height: 86px;
   display: grid;
   grid-template-columns: 126px repeat(4, minmax(132px, 1fr));
@@ -978,6 +986,8 @@ button.locked {
 
 /* Compact vitals bar (header right side) */
 #ls-vitals-bar {
+  grid-column: 3;
+  grid-row: 1 / span 2;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -6912,4 +6922,85 @@ button.locked {
 #ffa-ladder .fl-kills {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+/* --- Specialisation selector (the third axis of a build) -------------------
+   Mirrors the class selector's shell so the Forge reads as one flow: pick a
+   class, pick a specialisation, pick abilities. Text-only cards on purpose —
+   these are numbers with a trade-off, not characters, and giving them portraits
+   would make them compete with the class row for the eye. */
+#ls-spec-selector {
+  grid-column: 2;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: 126px minmax(0, 1fr);
+  overflow: hidden;
+  gap: 8px;
+  align-items: stretch;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 210, 96, 0.16);
+  border-radius: 6px;
+  background:
+    linear-gradient(90deg, rgba(255, 210, 96, 0.08), rgba(0, 0, 0, 0.16)), rgba(8, 10, 18, 0.62);
+}
+#ls-spec-selector > .ls-class-selector-title {
+  min-width: 0;
+}
+/* "SPECIALIZZAZIONE" is one long word in a 126 px column. Shrink it to fit on
+   one line rather than letting it break mid-word — a hyphen-less split reads
+   as a rendering bug, which is the last thing a new system should look like. */
+#ls-spec-selector > .ls-class-selector-title b {
+  font-size: 10px;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.ls-spec-cards {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+}
+.spec-select-card {
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 10px;
+  text-align: left;
+  cursor: pointer;
+  color: #d9d4c6;
+  border: 1px solid rgba(255, 210, 96, 0.18);
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.32);
+  transition:
+    border-color 0.12s ease,
+    background 0.12s ease;
+}
+.spec-select-card:hover {
+  border-color: rgba(255, 210, 96, 0.45);
+  background: rgba(255, 210, 96, 0.07);
+}
+.spec-select-card.active {
+  border-color: var(--class-color, #ffd260);
+  background: rgba(255, 210, 96, 0.12);
+}
+.spec-select-card .spec-name {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 13px;
+  color: var(--class-color, #ffd260);
+}
+.spec-select-card .spec-desc {
+  font-size: 11px;
+  line-height: 1.3;
+  opacity: 0.86;
+}
+/* The cost is deliberately as legible as the bonus. */
+.spec-select-card .spec-malus {
+  font-size: 11px;
+  line-height: 1.3;
+  color: #e08a6a;
 }

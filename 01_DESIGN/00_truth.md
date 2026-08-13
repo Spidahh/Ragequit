@@ -891,12 +891,51 @@ fixed resource-transfer slots."_ Directly forbids specialisations, which
 `00_vision.md` calls part of what the game **is**. Contradicts §8 and
 non-negotiable 1.2. The older line goes.
 
+**SHIPPED 2026-08-13.** The blanket ban on passives is gone; the bans on extra
+ability slots and resource-transfer slots stand, because those were never the
+problem.
+
 **D17 · Specialisations have zero implementation** — `specializ|specialis|talent|
 perk|rune|augment` across `packages/` returns nothing but an unrelated identifier
 and a stale build artefact. One third of the stated soul of the game has no code,
 no schema and no doc. And `packages/shared/dist/constants/mastery.d.ts` proves the
 layer was built once over an 11-slot loadout and deleted (`6a7839a`) — understand
 that before rebuilding it, and delete the artefact either way.
+
+**SHIPPED 2026-08-13**, and understanding the deleted one first is what shaped
+it. Mastery activated when 4 of your 5 magic slots shared an element. It died
+because it was **inferred, not chosen**: a player never picked a Mastery, they
+discovered they had one — or discovered they had lost it by taking the spell they
+wanted. It did not express a decision, it taxed you for mixing elements. So the
+first rule of the replacement is that it is PICKED, in the Forge, next to the
+class cards, and derived from nothing.
+
+Twelve specialisations, four archetypes, three per class, each one bonus and one
+cost with both on the card face. Validated server-side like the rest of the
+build and rejected with a reason rather than silently dropped, because a build
+that is quietly corrected is a build the player finds out about in the arena.
+
+**None of them touches damage, and the constraint improved the design.** D1's
+band test runs against the base registry, so a +15 % damage specialisation would
+have slipped past it and pushed the archer out of the bottom of the 6-9 s band —
+undoing step 9 invisibly. What is left is better anyway: knockup airtime,
+cooldowns, move speed, max HP. "Your launches hang 25 % longer" is a more
+interesting decision than "+15 % damage", and it points at the game's own
+signature moment instead of away from it.
+
+Two implementation notes worth keeping. The airtime multiplier is read from the
+CASTER, not the victim — "your launches hang longer" is a property of who cast.
+And the speed modifier folds into `slowFraction` through one shared function
+that the server runs for authority and the client runs for prediction: two
+copies of that line is a permanent rubber-band waiting for the day one of them
+is edited.
+
+Proven end to end by `tools/verify/spec.mjs`, which opens the Forge, reads the
+cards, picks one, starts a match and compares the HP **the server gave** against
+`maxHpForBuild` — 168 for a Baluardo mage, against a 150 base. A specialisation
+that only exists in a registry is not a feature.
+
+The stale `dist/constants/mastery.*` artefact is deleted.
 
 ### Tier 3 — contradicts a pillar in a smaller way, or is documented drift
 
@@ -1083,7 +1122,10 @@ which is stated where it applies.
    and enforced by a measurement, not a comment; 37 cooldowns compressed under a
    12 s ceiling; the five finishers banded by commitment; the win conditions
    re-derived. All four classes measure inside the band.
-10. **D16 + D17** — retire the passive-systems ban, then the specialisation layer.
+10. ~~**D16 + D17**~~ — **DONE 2026-08-13.** The passive-systems ban is retired and
+    the specialisation layer is live: twelve picks, four archetypes, validated
+    server-side, applied to airtime / cooldowns / speed / HP, and visible in the
+    Forge. The third of the three things the owner says the game IS.
 11. **D22** — the tournament mode.
 12. **D9 + D3.5** — the delivery split and the tightened cone. **Last**, because it
     is the only change that makes the loop harder before it makes it better.

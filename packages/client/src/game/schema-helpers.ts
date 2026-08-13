@@ -51,6 +51,7 @@ export interface SchemaPlayer {
   abilityCooldowns: Map<string, number>
   loadout: ReadonlyArray<string>
   classId: string
+  specializationId: string
   furyStacks: number
   furyNextMeleeIsSurge: boolean
   momentum: number

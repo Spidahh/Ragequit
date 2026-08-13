@@ -16,7 +16,6 @@ import {
   TICK_RATE_HZ,
   WEAPON_IDS,
   makePlayerSimState,
-  movementCapsFromStatuses,
   simulatePlayer,
   type MovementCaps,
   type ServerMatchPhaseMessage,
@@ -27,7 +26,6 @@ import {
   type ServerZoneExpiredMessage,
   type ServerCastTelegraphMessage,
   type ServerZoneSpawnedMessage,
-  type StatusKind,
   type ClientInputMessage,
   type ClientWeaponSwapMessage,
   type PlayerSimState,
@@ -59,6 +57,7 @@ import { spawnHitImpacts } from './game/hit-impacts.js'
 import { accumulateHitStats } from './game/hit-stats.js'
 import { rawCauseId, isAirPunishCause, hitstopAttacker, hitstopVictim } from './game/hitstop.js'
 import { matchSM } from './game/match-state-machine.js'
+import { predictedMovementCaps } from './game/movement-caps.js'
 import { onAbilityCasted } from './game/on-ability-casted.js'
 import { onDeathBroadcast } from './game/on-death.js'
 import { reconcilePrediction } from './game/prediction.js'
@@ -526,6 +525,10 @@ if (captureMode) {
       return schema ? { x: schema.transform.x, z: schema.transform.z } : null
     },
     isAlive: () => getSelfSchemaPlayer()?.alive === true,
+    getBuildState: () => {
+      const p = getSelfSchemaPlayer()
+      return p ? { classId: p.classId, specializationId: p.specializationId, hp: p.hp } : null
+    },
   })
 }
 
@@ -1454,7 +1457,12 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
 }
 
 function pushPersistedLoadout(): void {
-  sendLoadout(room, loadoutStation.getLoadout(), loadoutStation.getClassId())
+  sendLoadout(
+    room,
+    loadoutStation.getLoadout(),
+    loadoutStation.getClassId(),
+    loadoutStation.getSpecializationId(),
+  )
 }
 
 // -----------------------------------------------------------------------
@@ -1972,23 +1980,7 @@ function simStep(): void {
     isOverlayOpen(settingsOverlay) || !loadoutStationHidden() || isPauseMenuOpen()
   const input = sampleInput(airborne, dead, overlayBlockingInput)
 
-  // Build movement caps from the last-known server status state. The schema
-  // lags by ~RTT/2 but this is still far more accurate than ignoring caps
-  // entirely — root/stun prediction matches the server within one round-trip.
-  const statusList = selfSchema
-    ? Array.from(selfSchema.statuses).map((s) => ({
-        kind: s.kind as StatusKind,
-        stacks: s.stacks,
-        remainingSec: s.remainingSec,
-        slowFractionOverride: s.slowFractionOverride > 0 ? s.slowFractionOverride : undefined,
-      }))
-    : []
-  const capsFromStatus = movementCapsFromStatuses(statusList)
-  const caps: MovementCaps = {
-    slowFraction: capsFromStatus.slowFraction,
-    movementLocked: capsFromStatus.movementLocked,
-    castLocked: capsFromStatus.castLocked,
-  }
+  const caps = predictedMovementCaps(selfSchema?.statuses, getSelfSchemaPlayer()?.specializationId)
 
   simulatePlayer(self.sim, input, DT, getMap(getActiveMapId() || 'blockout'), caps)
   tickFootsteps(soundEngine, self.sim.pos.x, self.sim.pos.z, self.sim.onGround, dead, input.jump)

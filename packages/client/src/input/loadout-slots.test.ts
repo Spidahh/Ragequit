@@ -22,6 +22,8 @@ describe('loadout slot helpers', () => {
       magicBase: ['fireball', 'lightning_dash'],
       magicAdvanced: ['arc_lift'],
       utility: ['adaptive_mend', 'quick_dash'],
+      // The third axis travels with the build. '' is the legal "none" pick.
+      specializationId: '',
     })
     // Default classId falls back to 'hybrid'
     expect(buildLoadoutMessage(['quick_dash'])['classId']).toBe('hybrid')

@@ -20,7 +20,15 @@ Class weapon access must follow this grammar:
 - Mago: Magic Base + Magic Advanced.
 - Ibrido: sword + bow + Magic Base + Magic Advanced.
 
-Utility slots are legal utility choices. There are no passive systems, extra slots, or fixed resource-transfer slots.
+Utility slots are legal utility choices. There are no extra ability slots and no
+fixed resource-transfer slots.
+
+> **Corrected 2026-08-13 (D16, `00_truth.md`).** This line used to end "there are
+> no passive systems, extra slots, or fixed resource-transfer slots" — which
+> directly forbade specialisations, one of the three things `00_vision.md` says
+> the game IS. The ban on extra ability slots and resource-transfer slots
+> stands; the blanket ban on passives does not. See
+> `01_DESIGN/08_specializations.md`.
 
 ## Recovery
 

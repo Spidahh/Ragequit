@@ -14,6 +14,9 @@
 //                     because a boundary the client does not predict is not a
 //                     wall — it is a rubber-band, and they photograph the same
 //   __castState       why a preview is absent: dead, round over, or nothing drew it
+//   __buildState      class + specialisation + the HP the SERVER gave, so a
+//                     specialisation can be proven to have crossed the wire
+//                     rather than merely to have been clicked
 //   __aimFrames       how many frames have actually rendered. Under SwiftShader
 //                     this game runs at 1-4 fps, so a harness that waits in
 //                     milliseconds samples between frames. Never sample on a clock.
@@ -33,6 +36,8 @@ export interface VerifySeamDeps {
   /** Server-replicated position, or null before the schema arrives. */
   getReplicatedPos: () => { x: number; z: number } | null
   isAlive: () => boolean
+  /** Class, specialisation and the HP the SERVER gave — for tools/verify/spec.mjs. */
+  getBuildState: () => { classId: string; specializationId: string; hp: number } | null
 }
 
 export const isCaptureMode = (): boolean =>
@@ -66,6 +71,8 @@ export function installVerifySeams(deps: VerifySeamDeps): void {
     if (!predicted || !replicated) return null
     return { px: predicted.x, pz: predicted.z, sx: replicated.x, sz: replicated.z }
   }
+
+  w['__buildState'] = () => deps.getBuildState()
 
   w['__castState'] = () => ({
     placement: deps.getPlacementAbilityId(),
