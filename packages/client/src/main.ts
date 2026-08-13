@@ -111,8 +111,6 @@ import { createAutoQuality } from './render/auto-quality.js'
 import { initCastTelegraph } from './render/cast-telegraph.js'
 import {
   setFirstPersonHead,
-  applyFirstPersonWeaponPose,
-  getEyeWorldPosition,
   makeCharacter,
   applyWeaponProp,
   loadCharacterGlb,
@@ -2343,12 +2341,15 @@ function _renderInner(now: number): void {
     // The eye rides the head bone, so the view inherits the character's own
     // motion. Falls back to the capsule-relative height until the rig loads.
     // One camera, one place, every weapon — nothing teleports when you swap.
-    if (getEyeWorldPosition(selfMesh, _eyeWorld)) camera.position.copy(_eyeWorld)
-    else camera.position.set(x, y + EYE_Y_OFFSET_M, z)
+    // The eye sits on the CAPSULE, not on the head bone. Riding the bone looked
+    // like the elegant answer — the view inherits the character's motion for
+    // free — and it is wrong: the strafe clip's hip sway goes straight into the
+    // camera and reads as the player warping sideways. Shipped first-person
+    // games drive the camera from the collision capsule and add whatever bob
+    // they want deliberately, exactly so the animator's motion cannot shake the
+    // player's view.
+    camera.position.set(x, y + EYE_Y_OFFSET_M, z)
     camera.rotation.set(inp.mousePitch, inp.mouseYaw, 0, 'YXZ')
-    // Hold the weapon where a first-person weapon belongs. Runs after the camera
-    // is final, since the pose is derived from it.
-    applyFirstPersonWeaponPose(selfMesh, camera)
 
     // --- Directional shake — apply current offset to camera, then decay. ---
     if (shakeDecay > 0.001) {

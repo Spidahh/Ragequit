@@ -686,89 +686,16 @@ export function setFirstPersonHead(charGroup: THREE.Group, hidden: boolean): voi
   if (head.scale.x !== target) head.scale.setScalar(target)
 }
 
-const _headWorld = new THREE.Vector3()
-
-/**
- * World position of the character's eyes, for the first-person camera.
- *
- * The camera is placed on the RIG, not at a fixed height above the capsule. That
- * distinction is the whole point: at a fixed offset the camera sits inside the
- * chest and you see the inside of your own torso, which is why "first person
- * with a body" is usually described as attaching the camera to the head bone.
- * Riding the bone also means the head's animation — the bob of a run, the dip of
- * a landing, the recoil of taking a hit — moves the view for free, from the same
- * clips everyone else sees on you.
- *
- * Returns false when the rig has not loaded yet; the caller falls back to the
- * capsule-relative eye height.
- */
-export function getEyeWorldPosition(charGroup: THREE.Group, out: THREE.Vector3): boolean {
-  const head = charGroup.userData['headBone'] as THREE.Bone | null | undefined
-  if (!head) return false
-  head.getWorldPosition(_headWorld)
-  out.copy(_headWorld)
-  return true
-}
-
-// NO first-person guard pose here, and that is a finding, not an omission.
-//
-// The combat idles are authored for a third-person camera: the weapon sits at
-// chest height, below the eye line, so with the camera on the head bone it falls
-// outside the frame. The obvious fix is an additive lift on the arm chain — the
-// technique applyParryArmPose uses. It does not work. Measured by rendering it:
-// at a lift small enough to keep the skinning intact the weapon still reads only
-// as a pauldron in the corner, and at a lift large enough to plant it in frame
-// the shoulder rotates past what the skin weights tolerate and the arm geometry
-// visibly tears apart.
-//
-// That is the ceiling of bending a third-person rig. Shipped first-person games
-// with a visible body (Mordhau, Chivalry, Dying Light) author a SEPARATE
-// first-person arm set for exactly this reason. That is an animation job, not a
-// bigger angle, and faking it with a screen-locked prop is what the deleted
-// viewmodel scene was — a weapon with no body attached to it.
-
 // ---------------------------------------------------------------------------
-// First-person weapon hold (local player only).
+// NO first-person weapon hold here, and this is the second thing that did not
+// work. Composing the weapon's transform from the camera is sound — it is a
+// rigid prop, it cannot deform — but it needs ONE offset and rotation per weapon
+// model, and sword, bow and staff have different pivots and different authored
+// orientations. Tuned against the sword by eye, the same numbers put the bow and
+// the staff visibly wrong, which is worse than showing nothing.
 //
-// The weapon stays parented to the hand bone — it is still on the body, it still
-// moves with the character, opponents still see the authored pose. What changes
-// is that for YOUR view its world transform is driven from the camera, so the
-// weapon is where a first-person weapon has to be: in front of you, held to one
-// side, readable.
-//
-// This is the safe half of the problem. The arm is skinned geometry and tears if
-// you rotate the shoulder far enough to bring it up (see the note above); the
-// weapon is a rigid prop, so posing it cannot deform anything. Solving the arm
-// properly needs authored first-person arms — this makes the game playable and
-// legible in the meantime, without a screen-locked viewmodel scene.
+// The principled version does not hand-tune anything: derive each weapon's own
+// long axis from its bounding box, then build the hold by aligning THAT axis to
+// the camera. It works for any model, including ones added later. That is the
+// way in, and it is not a bigger guess.
 // ---------------------------------------------------------------------------
-const FP_WEAPON_OFFSET = new THREE.Vector3(0.3, -0.26, -0.62)
-const FP_WEAPON_EULER = new THREE.Euler(Math.PI / 2, 0.35, 0.12)
-const _fpTarget = new THREE.Matrix4()
-const _fpParentInv = new THREE.Matrix4()
-const _fpQuat = new THREE.Quaternion()
-const _fpScale = new THREE.Vector3()
-const _fpPos = new THREE.Vector3()
-
-export function applyFirstPersonWeaponPose(charGroup: THREE.Group, camera: THREE.Camera): void {
-  const wg = charGroup.userData['weaponGroup'] as THREE.Group | undefined
-  const parent = wg?.parent
-  if (!wg || !parent) return
-  const keptScale = wg.scale.x
-
-  camera.updateMatrixWorld()
-  parent.updateMatrixWorld()
-
-  _fpQuat.setFromEuler(FP_WEAPON_EULER)
-  _fpTarget.compose(FP_WEAPON_OFFSET, _fpQuat, _fpScale.set(1, 1, 1))
-  _fpTarget.premultiply(camera.matrixWorld)
-  _fpParentInv.copy(parent.matrixWorld).invert()
-  _fpTarget.premultiply(_fpParentInv)
-  _fpTarget.decompose(_fpPos, _fpQuat, _fpScale)
-
-  wg.position.copy(_fpPos)
-  wg.quaternion.copy(_fpQuat)
-  // The decomposed scale carries the bone chain's scale; the grip scale is the
-  // one that sizes the model, so keep it.
-  wg.scale.setScalar(keptScale)
-}
