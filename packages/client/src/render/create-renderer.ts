@@ -55,6 +55,12 @@ export function configureGameRenderer(renderer: THREE.WebGLRenderer): void {
   // ACES filmic tone mapping makes the scene colours pop without over-exposing.
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.toneMappingExposure = 1.3
+  // Anisotropic filtering, for free. Without it, trilinear mip filtering blurs
+  // any surface seen at a grazing angle into grey mush — and in an arena that
+  // is the entire sand floor, which is most of what you look at. This must be
+  // set before textures are created; configureGameRenderer runs during boot,
+  // ahead of the first texture.
+  THREE.Texture.DEFAULT_ANISOTROPY = renderer.capabilities.getMaxAnisotropy()
   renderer.domElement.tabIndex = 0
   renderer.domElement.style.outline = 'none'
 }

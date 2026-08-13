@@ -88,6 +88,15 @@ export function buildArena(scene: THREE.Scene, _toonGradient: THREE.DataTexture)
       const filename = sharedPropTextureNames[index]!
       const sourceName = filename.replace(/\.png$/, '')
       texture.name = sourceName
+      // Colour-space rule: base colour and emissive are sRGB, normal and ORM
+      // are raw linear data. GLTFLoader tags this correctly, but cloneGltfScene
+      // below swaps each material's map for the hand-loaded texture here, and
+      // TextureLoader leaves colorSpace unset — so every prop's albedo was being
+      // decoded as if it were linear. That is what made the torches, barrels and
+      // crates read milky and washed-out next to the coliseum shell, which is
+      // loaded by GLTFLoader and was therefore always right.
+      const isColour = /BaseColor|dungeon_texture/i.test(sourceName)
+      texture.colorSpace = isColour ? THREE.SRGBColorSpace : THREE.NoColorSpace
       sharedPropTextures.set(sourceName, texture)
     })
   })

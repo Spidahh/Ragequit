@@ -83,7 +83,7 @@ export function getStoneTexture(): THREE.Texture {
   tex.wrapS = THREE.RepeatWrapping
   tex.wrapT = THREE.RepeatWrapping
   tex.colorSpace = THREE.SRGBColorSpace
-  tex.anisotropy = 4
+  tex.anisotropy = THREE.Texture.DEFAULT_ANISOTROPY
   cached = tex
   return tex
 }

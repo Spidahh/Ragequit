@@ -108,6 +108,9 @@ export function makeArenaFloorTexture(): THREE.CanvasTexture {
   const tex = new THREE.CanvasTexture(canvas)
   tex.name = 'procedural-arena-floor'
   tex.colorSpace = THREE.SRGBColorSpace
-  tex.anisotropy = 4
+  // The renderer raises the global default to the hardware maximum; a literal 4
+  // here would opt the arena floor — the surface you spend the match looking
+  // along — back down to blur.
+  tex.anisotropy = THREE.Texture.DEFAULT_ANISOTROPY
   return tex
 }
