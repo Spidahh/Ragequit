@@ -78,7 +78,11 @@ export function simulatePlayer(
     mz /= mag
   }
 
-  state.momentumTicks = 0
+  // Knockback window countdown. `momentumTicks` was a replicated field pinned at
+  // zero since momentum was disabled; it now carries the window, which costs no
+  // schema change and reconciles for free.
+  if (state.momentumTicks > 0) state.momentumTicks -= 1
+  const inKnockback = state.momentumTicks > 0
 
   // Rotate by yaw — forward is -Z, right is +X (three.js convention).
   const cos = Math.cos(input.yaw)
@@ -125,7 +129,7 @@ export function simulatePlayer(
   const dirX = clampedMag > 0 ? worldX / clampedMag : 0
   const dirZ = clampedMag > 0 ? worldZ / clampedMag : 0
 
-  if (state.onGround) {
+  if (state.onGround && !inKnockback) {
     const sp = Math.hypot(state.vel.x, state.vel.z)
     if (sp < 0.1) {
       state.vel.x = 0
@@ -154,7 +158,7 @@ export function simulatePlayer(
     state.vel.z += a * dirZ
   }
 
-  if (!state.onGround) {
+  if (!state.onGround && !inKnockback) {
     const sp = Math.hypot(state.vel.x, state.vel.z)
     if (sp > AIR_SPEED_CAP_MPS) {
       state.vel.x *= AIR_SPEED_CAP_MPS / sp

@@ -80,6 +80,16 @@ export const COYOTE_TICKS = 5 as const
 // the input is silently dropped, which is the worst possible lesson to teach.
 export const JUMP_BUFFER_TICKS = 5 as const
 
+// Knockback window. For this many ticks after an external impulse, ground
+// friction and the air-speed cap are both suspended, so the impulse survives
+// long enough to become motion instead of being bled away on the tick it lands.
+// Quake only needs PMF_TIME_KNOCKBACK to kill friction because Quake has no air
+// cap; ours rescales every airborne tick, so it has to be suppressed too.
+// Non-refreshing: a second hit inside the window does not extend it, which is
+// what stops a chain of impulses from turning into an unrecoverable slide.
+// 6 ticks = 100 ms at 60 Hz. See 00_truth.md 7.2.
+export const KNOCKBACK_WINDOW_TICKS = 6 as const
+
 // Spawn points (see sim/map.ts).
 export const SPAWN_Y = CAPSULE_HALF_HEIGHT_M + 0.01 // resting height of capsule
 

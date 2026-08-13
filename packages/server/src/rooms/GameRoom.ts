@@ -24,6 +24,7 @@ import {
   PROJECTILE_MUZZLE_Y_OFFSET_M,
   Player,
   RESPAWN_SEC,
+  KNOCKBACK_WINDOW_TICKS,
   SPAWN_INVULN_SEC,
   STAFF_M1_CADENCE_SEC,
   STAFF_M1_DAMAGE,
@@ -1856,39 +1857,38 @@ export class GameRoom extends Room<{ state: GameState }> {
     player.parryTapEndsAtTick = 0
     player.bowChargeStartTick = 0
     if (player.casting) this.engine.cancelCast(sid, 'damage')
-    if (knockback && knockback.distance > 0) {
-      const resolved = this.resolveAbilityDisplacement(
-        player,
-        knockback.x * knockback.distance,
-        knockback.z * knockback.distance,
-        true,
-      )
-      player.transform.x = resolved.x
-      player.transform.z = resolved.z
-      if (simState) {
-        simState.pos.x = resolved.x
-        simState.pos.z = resolved.z
-      }
-    }
+    // A launch is an IMPULSE: added to what the victim had, never assigned over
+    // it, never a position teleport (00_truth.md 7.1). Zeroing vel deleted the
+    // victim's momentum — a body that stops dead in mid-air is a pinata, not a
+    // punish window. The position snap was also the one event reconciliation
+    // cannot predict, so every launch cost a visible correction, while velocity
+    // is already replicated and replayed through the shared controller. And it
+    // broke a locked rule: 01_arena_fps_air_contract.md:38.
+    // Travel is now emergent (impulse x airtime), so the registry's metres become
+    // the speed that carries the victim that far over the flight.
+    const airtimeSec = uppercutBallisticAirtimeSec()
     if (simState) {
-      simState.vel.y = uppercutInitialVy()
-      simState.vel.x = 0
-      simState.vel.z = 0
+      simState.vel.y = Math.max(simState.vel.y, uppercutInitialVy())
+      if (knockback && knockback.distance > 0) {
+        const impulse = knockback.distance / Math.max(0.05, airtimeSec)
+        simState.vel.x += knockback.x * impulse
+        simState.vel.z += knockback.z * impulse
+      }
       simState.onGround = false
+      // Suspend friction and the air cap briefly, or the impulse is bled away on
+      // the tick it lands. Non-refreshing by construction: this is an assignment,
+      // and the controller only ever counts it down.
+      simState.momentumTicks = KNOCKBACK_WINDOW_TICKS
     }
     player.vy = simState?.vel.y ?? 0
-    player.vx = 0
-    player.vz = 0
+    player.vx = simState?.vel.x ?? 0
+    player.vz = simState?.vel.z ?? 0
+    player.momentumTicks = simState?.momentumTicks ?? 0
     player.onGround = false
-    // The launch velocity is fixed by uppercutInitialVy() (~0.8 s ballistic
-    // airtime, 2 m apex) — the established feel shared by every knockup. Derive
-    // the replicated airborne flag from that REAL airtime so grounded-cast
-    // gating and the post-land immunity window agree with the physics, instead
-    // of expiring early. (A fixed-velocity launch can't honour the registry's
-    // per-ability airborneSec, so it's intentionally not used here —
-    // differentiating airtime would be a balance change, not a bug fix.)
+    // Airtime is still the shared ballistic value; per-ability airborneSec is the
+    // next step (00_truth.md 7.3 / D4) and is deliberately not folded in here, so
+    // this change stays a physics correction rather than a balance change.
     void airborneSec
-    const airtimeSec = uppercutBallisticAirtimeSec()
     player.airborneUntilTick = this.state.tick + Math.max(1, Math.round(airtimeSec * TICK_RATE_HZ))
   }
 }

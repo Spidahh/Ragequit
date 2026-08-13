@@ -3,10 +3,12 @@ import { describe, it, expect } from 'vitest'
 import { JUMP_HEIGHT_TAP_M, MOVE_SPEED_MPS } from '../constants/stats.js'
 import { TICK_MS } from '../constants/tick.js'
 import {
+  AIR_SPEED_CAP_MPS,
   CAPSULE_HALF_HEIGHT_M,
   COYOTE_TICKS,
   GROUND_Y,
   JUMP_BUFFER_TICKS,
+  KNOCKBACK_WINDOW_TICKS,
 } from '../constants/world.js'
 
 import { makePlayerSimState, simulatePlayer } from './controller.js'
@@ -228,5 +230,59 @@ describe('jump buffer and ordering', () => {
     while (!s.onGround) simulatePlayer(s, fwd(false), DT, STATIC_MAP)
     simulatePlayer(s, fwd(true), DT, STATIC_MAP) // hop on the landing tick
     expect(Math.hypot(s.vel.x, s.vel.z)).toBeCloseTo(cruising, 2)
+  })
+})
+
+// --- D5/D7: the knockback window --------------------------------------------
+// A launch is an impulse (00_truth.md 7.1). It only stays one if friction and the
+// air cap let go of it for a moment: applied and then immediately bled away, an
+// impulse is just an expensive way to do nothing.
+describe('knockback window', () => {
+  const idle: SimInput = { moveX: 0, moveZ: 0, yaw: 0, jump: false, jumpHold: false }
+
+  it('suspends ground friction while it is open', () => {
+    const s = makePlayerSimState({ x: 0, y: BASE_Y, z: 20 })
+    s.vel.x = 6
+    s.momentumTicks = KNOCKBACK_WINDOW_TICKS
+    simulatePlayer(s, idle, DT, STATIC_MAP)
+    expect(Math.abs(s.vel.x)).toBeCloseTo(6, 3)
+  })
+
+  it('lets friction take hold again as soon as it closes', () => {
+    const s = makePlayerSimState({ x: 0, y: BASE_Y, z: 20 })
+    s.vel.x = 6
+    s.momentumTicks = 1
+    simulatePlayer(s, idle, DT, STATIC_MAP) // window closes on this tick
+    simulatePlayer(s, idle, DT, STATIC_MAP)
+    expect(Math.abs(s.vel.x)).toBeLessThan(6)
+  })
+
+  // Quake only has to kill friction because Quake has no air cap. Ours rescales
+  // every airborne tick, so it has to be suppressed too or the cap eats the launch.
+  it('does not clamp an airborne impulse to the air cap while open', () => {
+    const s = makePlayerSimState({ x: 0, y: BASE_Y + 4, z: 20 })
+    s.onGround = false
+    s.vel.x = AIR_SPEED_CAP_MPS + 5
+    s.momentumTicks = KNOCKBACK_WINDOW_TICKS
+    simulatePlayer(s, idle, DT, STATIC_MAP)
+    expect(s.vel.x).toBeGreaterThan(AIR_SPEED_CAP_MPS)
+  })
+
+  it('applies the cap again once the window has closed', () => {
+    const s = makePlayerSimState({ x: 0, y: BASE_Y + 4, z: 20 })
+    s.onGround = false
+    s.vel.x = AIR_SPEED_CAP_MPS + 5
+    s.momentumTicks = 0
+    simulatePlayer(s, idle, DT, STATIC_MAP)
+    expect(s.vel.x).toBeCloseTo(AIR_SPEED_CAP_MPS, 3)
+  })
+
+  // Non-refreshing: the controller only ever counts down, so a chain of impulses
+  // cannot hold the window open and turn into an unrecoverable slide.
+  it('counts down and never extends itself', () => {
+    const s = makePlayerSimState({ x: 0, y: BASE_Y, z: 20 })
+    s.momentumTicks = KNOCKBACK_WINDOW_TICKS
+    for (let i = 0; i < KNOCKBACK_WINDOW_TICKS + 2; i++) simulatePlayer(s, idle, DT, STATIC_MAP)
+    expect(s.momentumTicks).toBe(0)
   })
 })
