@@ -56,11 +56,28 @@ export function initSelfEmissive({
     const mat = selfMesh.userData['armorMat'] as THREE.MeshToonMaterial | undefined
     if (!mat) return
 
-    if (hpFrac < 0.25) {
-      const pulse = 0.5 + 0.5 * Math.sin(now * 0.007)
-      mat.color.setHex(pulse > 0.5 ? 0x80c8ff : 0x3a8fde)
-    } else {
-      mat.color.setHex(0x3a8fde)
+    // NEVER repaint the albedo of a textured character.
+    //
+    // `color` multiplies `map`, so writing team blue here every frame took the
+    // paladin's 2048² dark-plate diffuse — steel, gold trim, purple cape — and
+    // turned it into flat blue plastic. Worse, SkeletonUtils clones share their
+    // materials, so painting the local player's material repainted every other
+    // character using the same model: that is why enemies were blue too.
+    //
+    // This code is correct for the procedural character, whose armorMat really
+    // is a flat tint and where team blue IS the identity. It became wrong the
+    // day armorMat was repointed at a real PBR material (characters.ts). For a
+    // textured character, identity is carried by the nameplate and outline; the
+    // low-HP warning moves to emissive below, which reaches the whole model.
+    const isTinted = !mat.map
+    const lowHp = hpFrac < 0.25
+    if (isTinted) {
+      if (lowHp) {
+        const pulse = 0.5 + 0.5 * Math.sin(now * 0.007)
+        mat.color.setHex(pulse > 0.5 ? 0x80c8ff : 0x3a8fde)
+      } else {
+        mat.color.setHex(0x3a8fde)
+      }
     }
 
     const statuses = Array.from(selfSchema.statuses ?? [])
@@ -74,6 +91,14 @@ export function initSelfEmissive({
         tG = Math.max(tG, ((hex >> 8) & 0xff) / 255)
         tB = Math.max(tB, (hex & 0xff) / 255)
       }
+    }
+    // Low HP on a textured character: a red ember pulse through emissive, since
+    // its albedo is art and must not be overwritten.
+    if (lowHp && !isTinted) {
+      const pulse = 0.5 + 0.5 * Math.sin(now * 0.007)
+      tR = Math.max(tR, 0.25 + pulse * 0.55)
+      tG = Math.max(tG, pulse * 0.06)
+      tB = Math.max(tB, pulse * 0.04)
     }
     if (selfSchema.invulnUntilTick > tickNow) {
       const pulse = 0.45 + 0.45 * Math.sin(now * 0.025)
