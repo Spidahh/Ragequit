@@ -47,7 +47,14 @@ export function initCastTelegraph(scene: THREE.Scene): CastTelegraphController {
   function spawn(msg: Parameters<CastTelegraphController['spawn']>[0]): void {
     const color = new THREE.Color(ELEMENT_COLOR[msg.element] ?? ELEMENT_COLOR['none']!)
     const group = new THREE.Group()
-    group.position.set(msg.pos.x, 0.03, msg.pos.z)
+    // Draw at the height the hitbox actually resolves at, not on the floor.
+    // msg.pos.y used to be discarded, which was harmless while the only
+    // telegraphed ability was ground-targeted — but insideAoe measures from
+    // center.y, which for forward targeting is the victim's mid-capsule height.
+    // On the maps' 2-3 m boxes that draws the ring on the floor while the damage
+    // resolves at chest height: precisely the "I was clearly outside that"
+    // failure a single honest shape exists to prevent.
+    group.position.set(msg.pos.x, msg.pos.y + 0.03, msg.pos.z)
 
     const rim = new THREE.Mesh(
       new THREE.RingGeometry(Math.max(0.05, msg.radius - RIM_THICKNESS_M), msg.radius, 48),

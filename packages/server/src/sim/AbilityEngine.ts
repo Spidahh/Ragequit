@@ -43,9 +43,9 @@ import {
 import type { StatusRuntime } from './StatusRuntime.js'
 import type { CastTarget, EngineHost } from './ability-engine-host.js'
 import { insideAoe } from './aoe-shape.js'
-import { castTelegraphMessage } from './cast-telegraph.js'
+import { castTelegraphMessage, TAP_AFTERIMAGE_TICKS } from './cast-telegraph.js'
 import { validateCast } from './cast-validation.js'
-import { impactPushDirection } from './combat-geometry.js'
+import { knockbackFromCaster, knockbackFromPoint } from './knockback-direction.js'
 import { getPlayerMaxima } from './player-maxima.js'
 import { placePointForward, clampPointToRange } from './targeting-geometry.js'
 
@@ -134,18 +134,23 @@ export class AbilityEngine {
     // Mirror the uppercut field used by the HUD.
     if (def.id === 'uppercut') player.uppercutReadyAtTick = player.abilityCooldowns.get(def.id)!
 
+    const windupTicks = Math.round(def.windupSec * TICK_RATE_HZ)
     if (def.windupSec > 0) {
-      const endsAt = now + Math.round(def.windupSec * TICK_RATE_HZ)
+      const endsAt = now + windupTicks
       player.casting = true
       player.castAbilityId = def.id
       player.castEndsAtTick = endsAt
       this.windups.push({ abilityId: def.id, casterId: sid, target, endsAtTick: endsAt })
-      const center = this.resolveAreaCenter(sid, player, target, def)
-      const tg = center && castTelegraphMessage(sid, def, center, endsAt - now)
-      if (tg) this.host.broadcast(MessageTypes.CastTelegraph, tg)
     } else {
       this.resolveOnCastEffects(sid, def, target)
     }
+
+    // ONE telegraph path, not two — see cast-telegraph.ts for why.
+    const center = this.resolveAreaCenter(sid, player, target, def)
+    const tg =
+      center &&
+      castTelegraphMessage(sid, def, center, windupTicks > 0 ? windupTicks : TAP_AFTERIMAGE_TICKS)
+    if (tg) this.host.broadcast(MessageTypes.CastTelegraph, tg)
 
     const msg: ServerAbilityCastedMessage = {
       casterId: sid,
@@ -434,7 +439,11 @@ export class AbilityEngine {
         victim.airborneUntilTick > 0
       )
         return
-      this.host.applyKnockup(victim, e.airborneSec, this.knockbackFrom(caster, victim, e, target))
+      this.host.applyKnockup(
+        victim,
+        e.airborneSec,
+        knockbackFromCaster(caster, victim, e, target.yaw),
+      )
       return
     }
     this.host.state.players.forEach((victim, vid) => {
@@ -450,41 +459,9 @@ export class AbilityEngine {
       this.host.applyKnockup(
         victim,
         e.airborneSec,
-        this.knockbackFromPoint(center, victim, e, target.yaw),
+        knockbackFromPoint(center, victim, e, target.yaw),
       )
     })
-  }
-
-  private knockbackFrom(
-    caster: Player,
-    victim: Player,
-    effect: KnockupEffect,
-    target: CastTarget,
-  ): { x: number; z: number; distance: number } | undefined {
-    return this.knockbackFromPoint(
-      { x: caster.transform.x, y: caster.transform.y, z: caster.transform.z },
-      victim,
-      effect,
-      target.yaw,
-    )
-  }
-
-  private knockbackFromPoint(
-    origin: Vec3,
-    victim: Player,
-    effect: KnockupEffect,
-    fallbackYaw: number,
-  ): { x: number; z: number; distance: number } | undefined {
-    const distance = effect.knockbackDistance ?? 0
-    if (distance <= 0) return undefined
-    const dir = impactPushDirection(
-      origin.x,
-      origin.z,
-      victim.transform.x,
-      victim.transform.z,
-      fallbackYaw,
-    )
-    return { x: dir.x, z: dir.z, distance }
   }
 
   private effectHeal(sid: string, e: HealEffect, abilityId?: string): void {
