@@ -466,12 +466,13 @@ const {
   bloomLayer: BLOOM_LAYER,
 } = createPostPipeline(renderer, scene, camera)
 
-// Dungeon ambient — VERY low, cold. The scene lives in darkness; light comes from
-// the torches, not a flat fill. (Gritty dark-fantasy direction.)
-scene.add(new THREE.HemisphereLight(0x9aa6c8, 0x6a5a3c, 3.4))
-// Key light — a dim, cold moon. Just enough to carve silhouettes and cast shadows;
-// the warm torches are meant to dominate the readable light.
-const dir = new THREE.DirectionalLight(0x9aa6c4, 1.7)
+// Ambient FILL — deliberately weak. It was 3.4 against a 1.7 key: the omnidirectional
+// wash was twice the directional light and the same pale blue, so nothing in the scene
+// had a light direction, which is what made everything read flat. Shipped games run the
+// key several times the ambient; the ratio here is now ~6:1.
+scene.add(new THREE.HemisphereLight(0x9aa6c8, 0x6a5a3c, 0.55))
+// KEY light — the moon. This is what carves form and casts the shadows.
+const dir = new THREE.DirectionalLight(0xbcc8e8, 3.6)
 dir.position.set(12, 28, 14)
 dir.castShadow = true
 dir.shadow.mapSize.width = 2048
@@ -487,8 +488,12 @@ scene.add(dir)
 // Fill / rim light — soft moonlight blue from the opposite side for readable
 // silhouettes. (A cyan/teal rim turned the warm sandstone walls visibly green at
 // grazing angles; moonlight blue reads as the night sky's fill and stays neutral.)
-const rim = new THREE.DirectionalLight(0x3c4768, 0.35)
-rim.position.set(-12, 8, -14)
+// RIM / back light — its job is silhouette separation: a bright edge along the far
+// side of a body so it reads against the arena wall instead of merging into it. At
+// 0.35 it did nothing. Kept moonlight blue on purpose: a cyan/teal rim turns the warm
+// sandstone visibly green at grazing angles.
+const rim = new THREE.DirectionalLight(0x6f80b4, 1.7)
+rim.position.set(-14, 9, -16)
 scene.add(rim)
 // Ground bounce — warm ember glow off the floor, a touch stronger now that the
 // scene is dark so the lower arena stays grounded in firelight.
@@ -1896,6 +1901,7 @@ function initSelfIfNeeded(): void {
     bowChargeServerAcked: false,
   }
   selfMesh = makeCharacter(0x3a8fde, toonGradient) // self = blue (standard: I am blue)
+  ;(globalThis as Record<string, unknown>)['__self'] = selfMesh // verify-harness diag
   scene.add(selfMesh)
   loadCharacterGlb(selfMesh, 0x3a8fde, toonGradient, p.classId)
   selfArc = makeSwingArcMesh()

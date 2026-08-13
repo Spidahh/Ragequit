@@ -386,16 +386,10 @@ function _installSingleGlbModel(
     delete charGroup.userData['mixerStore']
   }
 
-  // Per-asset material brightness lift — dark-authored models (black plate,
-  // dark cloth) read as silhouettes under the arena light without it.
-  const GLB_BRIGHTNESS: Record<string, number> = {
-    medieval_knight: 1.55,
-    paladin: 1.5,
-    ninja: 1.2,
-    erika: 1.15,
-  }
-  const glbFile = (model.userData['singleGlbFile'] as string) ?? ''
-  const lift = GLB_BRIGHTNESS[glbFile] ?? 1
+  // NOTE: the brightness lift used to live here and multiplied every material's
+  // colour on each install. SkeletonUtils clones share materials by reference,
+  // so it compounded on every spawn until the characters were pure white. It now
+  // happens once, on the cached GLTF, in character-loader.ts.
 
   // Register the model's real materials so status flashes (hp pulse / shield /
   // damage blink in self-emissive.ts & remote-players.ts) reach realistic chars too.
@@ -410,7 +404,6 @@ function _installSingleGlbModel(
     if (/bow|arrow|quiver/i.test(child.name)) embeddedBow.push(child)
     for (const m of Array.isArray(child.material) ? child.material : [child.material]) {
       const mm = m as THREE.MeshStandardMaterial
-      if (lift !== 1 && mm?.color) mm.color.multiplyScalar(lift)
       if (mm instanceof THREE.MeshStandardMaterial) glbMaterials.push(mm)
     }
   })

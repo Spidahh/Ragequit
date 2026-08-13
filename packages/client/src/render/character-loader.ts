@@ -258,6 +258,48 @@ type _LoadedGltf = { scene: THREE.Group; animations: THREE.AnimationClip[] }
 const _glbCache = new Map<string, _LoadedGltf>()
 const _glbInflight = new Map<string, Promise<_LoadedGltf>>()
 
+/**
+ * Per-asset brightness lift. These models are authored dark (black plate, dark
+ * cloth) and read as flat silhouettes under the arena's low light without it.
+ *
+ * Applied HERE, once, to the cached GLTF — never at install time. SkeletonUtils
+ * clones share their materials by reference, so a per-install multiply hit the
+ * same material object again on every spawn, respawn, bot and class change. It
+ * compounded: the paladin's colour was measured live at 5.06 (= 1.5^4, four
+ * installs deep), every channel clamped to 1.0. The realistic characters were
+ * rendering as blown-out white mannequins with no texture detail left.
+ */
+const GLB_BRIGHTNESS: Record<string, number> = {
+  // All 1.0 on purpose. These models are authored correctly (the paladin ships a
+  // 2048² sRGB diffuse plus normal and ORM, all bound — verified in the running
+  // game). They looked dark because the scene had almost no directional light,
+  // not because their albedo was wrong, and multiplying baseColor to compensate
+  // for a lighting problem only destroys the texture's own range. Fix light with
+  // light. The hook stays so a genuinely mis-authored asset can be corrected in
+  // one place, once.
+  medieval_knight: 1.0,
+  paladin: 1.0,
+  ninja: 1.0,
+  erika: 1.0,
+}
+
+function _liftGlbBrightness(scene: THREE.Group, file: string): void {
+  const lift = GLB_BRIGHTNESS[file] ?? 1
+  if (lift === 1) return
+  const done = new Set<string>()
+  scene.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return
+    for (const m of Array.isArray(child.material) ? child.material : [child.material]) {
+      const mm = m as THREE.MeshStandardMaterial | undefined
+      // Guard by uuid too: one material is usually shared by several meshes
+      // inside the same model, so a plain traverse would double-apply it.
+      if (!mm?.color || done.has(mm.uuid)) continue
+      done.add(mm.uuid)
+      mm.color.multiplyScalar(lift)
+    }
+  })
+}
+
 function _fetchMixamoGlb(file: string): Promise<_LoadedGltf> {
   const cached = _glbCache.get(file)
   if (cached) return Promise.resolve(cached)
@@ -265,6 +307,7 @@ function _fetchMixamoGlb(file: string): Promise<_LoadedGltf> {
   if (infl) return infl
   const p = _loadGltf(`/characters/${file}.glb`)
     .then((g) => {
+      _liftGlbBrightness(g.scene, file)
       _glbCache.set(file, g)
       _glbInflight.delete(file)
       return g
