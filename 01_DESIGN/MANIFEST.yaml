@@ -3,6 +3,7 @@ status: current
 
 read_order:
   - 00_vision.md
+  - 00_truth.md
   - 00_pillars.md
   - 00_classes.md
   - 01_stats.md
@@ -25,6 +26,7 @@ read_order:
 
 files:
   00_vision.md: { section: core, status: current }
+  00_truth.md: { section: core, status: current }
   00_pillars.md: { section: core, status: current }
   00_classes.md: { section: core, status: current }
   01_stats.md: { section: combat, status: current }

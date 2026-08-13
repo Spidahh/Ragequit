@@ -8,6 +8,7 @@ cancellati o materiale non approvato come autorita.
 - `MANIFEST.yaml`
 - `../GAME_SYSTEM_MODEL.md`
 - `00_vision.md`
+- `00_truth.md`
 - `00_pillars.md`
 - `00_classes.md`
 - `01_controls.md`
