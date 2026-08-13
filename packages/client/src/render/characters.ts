@@ -662,3 +662,50 @@ export function applyParryArmPose(charGroup: THREE.Group, parrying: boolean, dt:
     lower.rotation.z += PARRY_LOWERARM_Z * blend
   }
 }
+
+/**
+ * Collapse (or restore) the local player's head so the first-person camera is
+ * not sitting inside their own skull.
+ *
+ * The standard first-person-with-a-body technique: keep the whole rig — arms,
+ * weapon, shield, legs, all of it animated by the same clips everyone else sees
+ * — and scale the head bone to nothing. Scaling the BONE takes every mesh
+ * weighted to it (helmet, hair, face) with it, so no per-asset mesh list has to
+ * be maintained as characters change.
+ *
+ * Idempotent: safe to call every frame.
+ */
+export function setFirstPersonHead(charGroup: THREE.Group, hidden: boolean): void {
+  const model = charGroup.userData['charModel'] as THREE.Object3D | undefined
+  if (!model) return
+  const cached = charGroup.userData['headBone'] as THREE.Bone | null | undefined
+  const head = cached === undefined ? findBone(model, 'Head') : cached
+  if (cached === undefined) charGroup.userData['headBone'] = head ?? null
+  if (!head) return
+  const target = hidden ? 0.0001 : 1
+  if (head.scale.x !== target) head.scale.setScalar(target)
+}
+
+const _headWorld = new THREE.Vector3()
+
+/**
+ * World position of the character's eyes, for the first-person camera.
+ *
+ * The camera is placed on the RIG, not at a fixed height above the capsule. That
+ * distinction is the whole point: at a fixed offset the camera sits inside the
+ * chest and you see the inside of your own torso, which is why "first person
+ * with a body" is usually described as attaching the camera to the head bone.
+ * Riding the bone also means the head's animation — the bob of a run, the dip of
+ * a landing, the recoil of taking a hit — moves the view for free, from the same
+ * clips everyone else sees on you.
+ *
+ * Returns false when the rig has not loaded yet; the caller falls back to the
+ * capsule-relative eye height.
+ */
+export function getEyeWorldPosition(charGroup: THREE.Group, out: THREE.Vector3): boolean {
+  const head = charGroup.userData['headBone'] as THREE.Bone | null | undefined
+  if (!head) return false
+  head.getWorldPosition(_headWorld)
+  out.copy(_headWorld)
+  return true
+}

@@ -18,7 +18,6 @@ export interface AbilityCastedDeps {
   trackCast: (abilityId: string, element: string) => void
   showReadout: (abilityId: string, mode: 'windup' | 'released') => void
   /** Local first-person staff recoil. */
-  triggerStaffViewmodel: () => void
   /** Local sword swing arc; ms is when it should stop showing. */
   showSelfSwingArc: (untilMs: number) => void
   onSelfWindupStarted: () => void
@@ -42,7 +41,6 @@ export function onAbilityCasted(deps: AbilityCastedDeps, msg: AbilityCastedMessa
     // replaying it would double it a full round-trip late.
     deps.trackCast(msg.abilityId, element)
     deps.showReadout(msg.abilityId, def && def.windupSec > 0 ? 'windup' : 'released')
-    if (def?.weapon === 'staff') deps.triggerStaffViewmodel()
     if (def?.weapon === 'sword') deps.showSelfSwingArc(now + 420)
     if (def && def.windupSec > 0) deps.onSelfWindupStarted()
     if (isDash) deps.onSelfDash(now + 400)

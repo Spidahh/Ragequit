@@ -23,6 +23,19 @@ export const CAPSULE_HALF_HEIGHT_M = CAPSULE_HEIGHT_M / 2
 // giants and the player as a dwarf).
 export const CHARACTER_RENDER_HEIGHT_M = 1.9 as const
 
+/**
+ * Camera eye height, as an offset from the capsule CENTRE (not the feet).
+ *
+ * The game is first person for every weapon, so this is where the player's view
+ * lives, full stop — there is no second camera and no per-weapon variant.
+ *
+ * It is deliberately equal to PROJECTILE_MUZZLE_Y_OFFSET_M: the server spawns
+ * projectiles at that height along the client's aim, so any difference between
+ * the two is a permanent lie between where you look and where your shot comes
+ * from. If one moves, the other moves with it.
+ */
+export const EYE_Y_OFFSET_M = 0.65 as const
+
 // Ground plane Y (world floor).
 export const GROUND_Y = 0 as const
 

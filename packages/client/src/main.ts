@@ -43,6 +43,7 @@ import {
   type SimInput,
   type Weapon,
   type ClassId,
+  EYE_Y_OFFSET_M,
 } from '@ragequit/shared'
 import * as THREE from 'three'
 
@@ -109,13 +110,14 @@ import {
 import { createAutoQuality } from './render/auto-quality.js'
 import { initCastTelegraph } from './render/cast-telegraph.js'
 import {
+  setFirstPersonHead,
+  getEyeWorldPosition,
   makeCharacter,
   applyWeaponProp,
   loadCharacterGlb,
   tickCharacterMixer,
   setCharAnimState,
   disposeCharacterMixer,
-  makeParryShieldVisual,
   setParryShieldState,
   applyParryArmPose,
   triggerWeaponRecoil,
@@ -128,14 +130,11 @@ import {
   SWING_ARC_HEIGHT_M,
   SWING_ARC_YAW_OFFSET,
 } from './render/factories.js'
-import { createFpvBow } from './render/fpv-bow.js'
-import { createFpvStaticViewmodel } from './render/fpv-static-viewmodel.js'
 import { initPlacementPreview } from './render/placement-preview.js'
 import { createPostPipeline } from './render/post-pipeline.js'
 import { initProjectileVisuals, type SchemaProjectile } from './render/projectile-visuals.js'
 import { initRemotePlayers, type RemotePlayerSchema } from './render/remote-players.js'
 import { initSelfEmissive, STATUS_EMISSIVE } from './render/self-emissive.js'
-import { scheduleViewmodelPrecompile } from './render/shader-warmup.js'
 import { initSpellParticles, type SpellStyle } from './render/spell-particles.js'
 import { VfxTextures } from './render/vfx-textures.js'
 import { getWeaponView } from './render/weapon-view.js'
@@ -328,13 +327,7 @@ const castDispatcher = initCastDispatcher({
     }
   },
   // Bow/staff had no input-frame sound at all: a missed shot was silent.
-  onWeaponFired: (weapon) => {
-    soundEngine.playWeaponFire(weapon)
-    // The staff's basic attack moved nothing in your hands — the punch-and-settle
-    // existed but only ability casts could reach it, so rate of fire was
-    // invisible. Half magnitude: a poke should not kick like a committed spell.
-    if (weapon === 'staff') fpvStatic.triggerCast(0.5)
-  },
+  onWeaponFired: (weapon) => soundEngine.playWeaponFire(weapon),
 })
 
 // --- HUD helpers -----------------------------------------------------------
@@ -441,22 +434,6 @@ const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerH
 // rendered after the world with a fresh depth buffer (see render loop), so the
 // weapon never clips into walls and its on-screen size is driven by this camera's
 // FOV — independent of the world camera's dynamic FOV (sprint/charge pulse). The
-// viewmodel camera stays at the origin/identity forever; viewmodels are parented
-// to it so they stay locked to the screen wherever the player looks. Standard FPS
-// technique — see https://discourse.threejs.org/t/rendering-a-gun-on-another-layer/80805
-const viewmodelScene = new THREE.Scene()
-const VIEWMODEL_FOV = 58
-const viewmodelCamera = new THREE.PerspectiveCamera(
-  VIEWMODEL_FOV,
-  window.innerWidth / window.innerHeight,
-  0.01,
-  10,
-)
-viewmodelScene.add(viewmodelCamera)
-// Viewmodel scene has its own lights: hemisphere fill ≈ world ambient; the
-// per-weapon key light (fpvKeyLight) is added to viewmodelCamera below.
-viewmodelScene.add(new THREE.HemisphereLight(0xc4d8ff, 0x182238, 1.2))
-scheduleViewmodelPrecompile(renderer, viewmodelScene, viewmodelCamera)
 
 // Post-processing chain (selective bloom, GTAO, grade, sRGB out) — see
 // render/post-pipeline.ts for the pass order and why it is that order.
@@ -517,21 +494,6 @@ const _blackMat = new THREE.MeshBasicMaterial({ color: 0x000000 })
 // projectiles, zones) are always handled and despawned ones never linger.
 const _bloomDarkened: Array<{ mesh: THREE.Mesh; mat: THREE.Material | THREE.Material[] }> = []
 
-// First-person viewmodels are parented to the dedicated viewmodelCamera (not the
-// world camera) so they render in the separate viewmodel pass with their own
-// depth buffer and FOV. Visibility toggles in the render loop reference these
-// objects directly, so they keep working regardless of parent.
-const fpvStatic = createFpvStaticViewmodel()
-viewmodelCamera.add(fpvStatic.root)
-const fpvBow = createFpvBow()
-viewmodelCamera.add(fpvBow.root)
-const fpvKeyLight = new THREE.PointLight(0xd8e8ff, 1.4, 3, 1)
-fpvKeyLight.position.set(-0.4, 0.6, -0.5)
-viewmodelCamera.add(fpvKeyLight)
-const firstPersonParryShield = makeParryShieldVisual(0.42)
-firstPersonParryShield.position.set(0, -0.03, -0.8)
-firstPersonParryShield.userData['parryShield'] = firstPersonParryShield
-viewmodelCamera.add(firstPersonParryShield)
 scene.add(camera)
 const { loadMapGeometry, getActiveMapId, animateArena } = buildArena(scene, toonGradient)
 
@@ -759,7 +721,6 @@ let selfLandUntilMs = 0
 let selfPrevOnGround = true
 
 // First-person bow: tracks charge-held state to fire the shoot animation on release.
-let _prevBowCharging = false
 
 let selfRollingUntilMs = 0
 
@@ -942,8 +903,6 @@ const SHAKE_DECAY_RATE = 9 // m/s — shake disappears in ~1/SHAKE_DECAY_RATE se
 // Per-weapon camera — smoothly lerped so swapping weapons doesn't snap.
 // sword: third-person melee readability; bow/staff: first-person precision.
 // FOV default is 90°.
-let camBack = 5.5
-let camUp = 1.3
 let camFovBase = 90
 // Settings-driven FOV offset applied on top of camFovBase. Set by the
 // settings panel; persisted by menu.ts via localStorage.
@@ -1327,7 +1286,6 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
             selfSessionId: () => self?.sessionId,
             trackCast: (id, element) => trackAbilityCast(id, element),
             showReadout: (id, mode) => abilityReadout.show(id, mode),
-            triggerStaffViewmodel: () => fpvStatic.triggerCast(),
             showSelfSwingArc: (untilMs) => {
               if (!selfArc) return
               selfArc.visible = true
@@ -2117,6 +2075,7 @@ function reconcileSelf(): void {
 
 const simTimer = setInterval(simStep, TICK_MS)
 
+const _eyeWorld = new THREE.Vector3()
 const renderPos = new THREE.Vector3()
 let renderPosInitialized = false
 
@@ -2361,78 +2320,31 @@ function _renderInner(now: number): void {
       selfLastWeapon = wSchema
       applyWeaponProp(selfMesh, wSchema, toonGradient)
     }
-    // Per-weapon view config (camera mode, offsets, FOV, viewmodel) — single
-    // source of truth in render/weapon-view.ts.
+    // Per-weapon view config — now only the FOV reacts to the weapon. The camera
+    // perspective is NOT a weapon property any more (render/weapon-view.ts).
     const cfg = getWeaponView(wSchema)
-    const firstPerson = cfg.view === 'first'
-    const wBackTarget = cfg.camBack
-    const wUpTarget = cfg.camUp
     const wFovTarget = settingsFovBase + cfg.fovDelta(bowChargeRatio)
     // Frame-rate-independent smoothing (same pattern as the renderPos lerp):
     // ~0.12/frame at 60 fps, but equal convergence in wall-clock at any refresh.
     const CAM_LERP = inHitStop ? 0 : Math.min(1, 7.2 * dt)
-    camBack += (wBackTarget - camBack) * CAM_LERP
-    camUp += (wUpTarget - camUp) * CAM_LERP
     camFovBase += (wFovTarget - camFovBase) * CAM_LERP
 
-    // Self body hidden in first person — derived from view mode alone, so the
-    // character model can never be shown while a viewmodel is active.
-    selfMesh.visible = !dead && !firstPerson
-    fpvBow.setVisible(!dead && cfg.viewModel === 'fpvBow')
-    fpvStatic.root.visible = !dead && cfg.viewModel === 'staticViewmodel'
-    fpvStatic.update(now)
+    // You have a body. It is the same rig, with the same animations, that every
+    // opponent sees — arms, weapon, shield, legs when you look down. The head is
+    // collapsed instead of the whole model being hidden, so the camera sits
+    // inside a real character rather than floating in an empty scene holding a
+    // prop. This is what the game was missing: first person was implemented as a
+    // camera with NO BODY, and the third-person sword existed to paper over it.
+    selfMesh.visible = !dead
+    setFirstPersonHead(selfMesh, true)
     setParryShieldState(selfMesh, !dead && !!selfSchema?.parrying, !!selfSchema?.parryIsHold, now)
-    setParryShieldState(
-      firstPersonParryShield,
-      !dead && firstPerson && !!selfSchema?.parrying,
-      !!selfSchema?.parryIsHold,
-      now,
-    )
-    if (cfg.viewModel === 'staticViewmodel' && fpvStatic.getCurrentWeapon() !== wSchema)
-      fpvStatic.rebuild(wSchema)
 
-    // ── Animated first-person bow ──────────────────────────────────────────
-    // Real arms+bow rig: drive its clips from gameplay state and fire the
-    // shoot→reload one-shot when a charged shot is released.
-    if (cfg.viewModel === 'fpvBow') {
-      const charging = self.bowChargeStartMs > 0 || (selfSchema?.bowChargeStartTick ?? 0) > 0
-      fpvBow.update(dt, { moving: selfSpeed > 0.3, speed: selfSpeed, charging })
-      if (_prevBowCharging && !charging) fpvBow.fire()
-      _prevBowCharging = charging
-    } else {
-      _prevBowCharging = false
-    }
-
-    if (firstPerson) {
-      camera.position.set(x, y + camUp, z)
-      camera.rotation.set(inp.mousePitch, inp.mouseYaw, 0, 'YXZ')
-    } else {
-      // Stable third-person orbit. Yaw controls the shoulder/back position;
-      // pitch controls only the look target so the camera never dives down.
-      const back = new THREE.Vector3(
-        Math.sin(inp.mouseYaw) * camBack,
-        0,
-        Math.cos(inp.mouseYaw) * camBack,
-      )
-      camera.position.set(x + back.x, y + camUp, z + back.z)
-    }
-
-    // Clamp camera above ground so it never clips underground.
-    const groundFloor = getMap(getActiveMapId() || 'blockout').groundY
-    if (camera.position.y < groundFloor + 0.4) camera.position.y = groundFloor + 0.4
-
-    if (!firstPerson) {
-      const aimForward = new THREE.Vector3(0, 0, -1).applyEuler(
-        new THREE.Euler(inp.mousePitch, inp.mouseYaw, 0, 'YXZ'),
-      )
-      const lookDistance = 10
-      const lookY = y + CAPSULE_HALF_HEIGHT_M * 0.85
-      camera.lookAt(
-        x + aimForward.x * lookDistance,
-        lookY + aimForward.y * lookDistance,
-        z + aimForward.z * lookDistance,
-      )
-    }
+    // The eye rides the head bone, so the view inherits the character's own
+    // motion. Falls back to the capsule-relative height until the rig loads.
+    // One camera, one place, every weapon — nothing teleports when you swap.
+    if (getEyeWorldPosition(selfMesh, _eyeWorld)) camera.position.copy(_eyeWorld)
+    else camera.position.set(x, y + EYE_Y_OFFSET_M, z)
+    camera.rotation.set(inp.mousePitch, inp.mouseYaw, 0, 'YXZ')
 
     // --- Directional shake — apply current offset to camera, then decay. ---
     if (shakeDecay > 0.001) {
@@ -2648,12 +2560,6 @@ function _renderInner(now: number): void {
   // above (reusing the prior bloom target), so the graded look stays continuous
   // instead of popping to a bare un-graded render for the freeze's 1-2 frames.
   finalComposer.render()
-  // First-person viewmodel pass: the world (colour + depth) is already on screen.
-  // Clear ONLY the depth buffer and draw the weapon on top in its own scene, so it
-  // never clips into walls. autoClear=false keeps the world colour we just drew.
-  renderer.autoClear = false
-  renderer.clearDepth()
-  renderer.render(viewmodelScene, viewmodelCamera)
   // Update draw call counter (shown in debug panel, ` key) — only when open.
   if (isDebugVisible()) dbgDraws.textContent = String(renderer.info.render.calls)
   _renderErrorCount = 0 // reset error counter on successful frame
@@ -2662,8 +2568,6 @@ function _renderInner(now: number): void {
 addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight
   camera.updateProjectionMatrix()
-  viewmodelCamera.aspect = window.innerWidth / window.innerHeight
-  viewmodelCamera.updateProjectionMatrix()
   renderer.setSize(window.innerWidth, window.innerHeight)
   bloomComposer.setSize(window.innerWidth, window.innerHeight)
   finalComposer.setSize(window.innerWidth, window.innerHeight)

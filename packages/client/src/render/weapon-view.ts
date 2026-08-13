@@ -1,79 +1,53 @@
 // ---------------------------------------------------------------------------
-// Per-weapon view configuration — the single source of truth for how each
-// weapon frames the player.
+// Per-weapon view configuration.
 //
-// Every weapon declares its camera view (first vs third person), camera
-// offsets, FOV delta, and which first-person viewmodel to show. The render
-// loop reads this table instead of scattered inline ternaries, so tuning a
-// weapon's feel happens in ONE place.
+// RAGEQUIT is a first-person game. Every weapon. That was decided long ago
+// (STILE.md §8: "l'utente vuole 1ª persona per tutte — direzione FPS-only
+// intenzionale, stato attuale mixto") and derived from the reference list in
+// PROGETTO.md §5 — Mordhau, Chivalry, Vermintide, Dark Messiah, Hexen, Lunacid,
+// Witchfire — every one of them first-person melee-and-magic. The decision was
+// made and never executed.
 //
-// Invariant: `view: 'first'` weapons hide the player's own character model and
-// show a viewmodel; `view: 'third'` weapons show the character (over-shoulder).
-// The render loop derives self-visibility from `view` alone, so the body can
-// never be shown in first person.
+// What used to be here: the camera PERSPECTIVE was a column in this table. The
+// sword was third person, 5.5 m behind the player; bow and staff were first
+// person. Weapon swap is a key press in the middle of a fight, and it moved the
+// camera 5.5 metres and made the player's own body appear and disappear. No
+// shipped action game does that, and nothing else in the game could be designed
+// coherently while the player's relationship to the world depended on which
+// weapon they were holding.
+//
+// The sword was third person for one reason: a 2.3 s Mixamo swing crushed into a
+// 0.4 s window is unreadable, so the camera was pulled back to hide it. That is
+// a presentation bug that grew a camera. It is fixed where it lives, not here.
+//
+// So this table now holds only what genuinely differs per weapon: how the FOV
+// reacts. Everything else about the view is the same for all of them, because
+// the player is one person with one body.
 // ---------------------------------------------------------------------------
-import { PROJECTILE_MUZZLE_Y_OFFSET_M } from '@ragequit/shared'
 import type { Weapon } from '@ragequit/shared'
 
-export type ViewMode = 'first' | 'third'
-
-/** Which first-person viewmodel object the render loop should reveal. */
-export type ViewModelKind = 'fpvBow' | 'staticViewmodel' | 'none'
-
 export interface WeaponViewConfig {
-  /** First person = camera at the eye, body hidden, viewmodel shown. */
-  view: ViewMode
-  /** Camera orbit distance behind the player (0 in first person). */
-  camBack: number
-  /** Camera height above the player origin (eye height vs shoulder). */
-  camUp: number
   /**
    * World-camera FOV delta vs the player's base FOV. A function so the bow can
-   * narrow further as the shot charges. `charge` is the bow draw ratio 0..1.
+   * narrow further as the shot charges — the one honest aim-down-sights cue in
+   * the game. `charge` is the bow draw ratio 0..1.
    */
   fovDelta: (charge: number) => number
-  /** Which viewmodel to reveal in first person. */
-  viewModel: ViewModelKind
 }
 
 export const WEAPON_VIEW: Record<Weapon, WeaponViewConfig> = {
-  // Melee — third-person over-shoulder so the swing arcs read clearly.
-  sword: {
-    view: 'third',
-    camBack: 5.5,
-    camUp: 1.3,
-    fovDelta: () => 0,
-    viewModel: 'none',
-  },
-  // Bow — first-person, narrows while drawn for an aim-down-sights feel.
-  bow: {
-    view: 'first',
-    camBack: 0,
-    camUp: PROJECTILE_MUZZLE_Y_OFFSET_M,
-    fovDelta: (charge) => -7 - charge * 5,
-    viewModel: 'fpvBow',
-  },
-  // Staff — first-person, a fixed crisp FOV.
-  staff: {
-    view: 'first',
-    camBack: 0,
-    camUp: PROJECTILE_MUZZLE_Y_OFFSET_M,
-    fovDelta: () => -3,
-    viewModel: 'staticViewmodel',
-  },
+  sword: { fovDelta: () => 0 },
+  // Narrows while drawn: the shot gets tighter as you hold it.
+  bow: { fovDelta: (charge) => -7 - charge * 5 },
+  staff: { fovDelta: () => -3 },
 }
 
-/**
- * Look up a weapon's view config. Falls back to the bow config (first-person,
- * body hidden) for an unknown/in-flight weapon key, so a transient bad value
- * can never flash the player's body in first person — it stays hidden until the
- * real weapon resolves.
- */
+/** Look up a weapon's view config; unknown/in-flight weapon keys read as sword. */
 export function getWeaponView(weapon: Weapon | string | null | undefined): WeaponViewConfig {
   return (
     (weapon !== null &&
       weapon !== undefined &&
       (WEAPON_VIEW as Record<string, WeaponViewConfig>)[weapon]) ||
-    WEAPON_VIEW.bow
+    WEAPON_VIEW.sword
   )
 }
