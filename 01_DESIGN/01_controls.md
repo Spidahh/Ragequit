@@ -111,7 +111,14 @@ All binds above are rebindable in Settings. `Z`, `X`, `F`, `V`, `R` and `G` are 
 
 ## Removed from original design
 
-- **No default iframe roll** — evasive play comes from movement and abilities
+- **No default iframe roll as the whole defence model** — evasive play comes from
+  movement, aim denial and abilities; see `00_pillars.md`.
+
+  > **Corrected 2026-08-13 (D29).** This read as an absolute ban on
+  > invulnerability frames, which contradicts `00_pillars.md` and would outlaw
+  > air-tech that the pillars permit. The ban is on a free dodge-roll being the
+  > answer to everything, not on i-frames existing.
+
 - **No Shift sprint** — sprint is always default; Shift is unbound
 
 ## Accessibility notes

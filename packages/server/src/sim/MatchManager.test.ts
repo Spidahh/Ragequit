@@ -1,4 +1,4 @@
-import { GameState, Player } from '@ragequit/shared'
+import { MATCH_TARGET_DURATION_SEC, TICK_RATE_HZ, GameState, Player } from '@ragequit/shared'
 import { describe, expect, it, beforeEach } from 'vitest'
 
 import { MatchManager } from './MatchManager.js'
@@ -162,8 +162,11 @@ describe('kill-cap match timer fallback', () => {
       mm.tick()
     }
     expect(r.state.phase).toBe('live')
-    // 10 minutes of live play with zero kills → matchEnd, not an endless lobby.
-    r.state.tick += 10 * 60 * 60 + 5
+    // A full match of live play with zero kills → matchEnd, not an endless
+    // lobby. Read from the constant, not a literal: this test is about whether
+    // the ceiling fires, and pinning its VALUE here is what let the timer and
+    // the kill counts drift into contradiction in the first place.
+    r.state.tick += Math.round(MATCH_TARGET_DURATION_SEC * TICK_RATE_HZ) + 5
     mm.tick()
     expect(r.state.phase).toBe('matchEnd')
   })

@@ -1189,6 +1189,40 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
   materia di "chi colpisce". Il file è passato da 855 a 752 righe.
 - Gate verde: 595 test.
 
+### 2026-08-13 — Audit di TUTTI i dissensi rimasti: trovato un bug MIO di stanotte
+
+- Ho fatto verificare da 13 agenti in parallelo, uno per gruppo di dissensi, **il CODICE e non il
+  documento** (i marcatori di stato del documento erano vecchi e non ci si poteva fidare), poi ogni
+  verdetto è stato ri-controllato da un secondo agente che doveva provare a smontarlo.
+  21 dissensi verificati, **21 verdetti su 21 hanno retto**.
+- **IL BUG PIÙ GRAVE ERA MIO, di ieri sera.** Avevo ri-derivato le condizioni di vittoria (FFA 45,
+  squadre 150) da una partita di **900 secondi**. Ma `MatchManager` tagliava la partita a **600
+  secondi** con una costante sua, che non avevo controllato. Risultato: **nessuna delle due soglie
+  poteva essere raggiunta**. Ogni partita FFA e 5v5 finiva a tempo e la condizione di vittoria che
+  avevo derivato con tanta cura era codice morto. Due numeri che descrivono la stessa cosa, in due
+  file, in disaccordo — esattamente lo stesso errore del TTK, un piano più in alto.
+  - Corretto: adesso **entrambi** derivano da `MATCH_TARGET_DURATION_SEC`, e tre test verificano che
+    le soglie siano raggiungibili dentro la finestra (e non raggiungibili nel primo minuto).
+    Verificato: FFA 45 = 855 s, squadre 150 = 855 s, finestra 900 s. **Raggiungibili.**
+- **Bugie nei documenti, corrette** (erano attive, non teoriche):
+  - Tre file affermavano ancora il TTK 20-30 s ritirato, tra cui **AGENTS.md**, che è quello che un
+    agente legge come verità: gli si consegnava la finzione come requisito.
+  - `07_modes.md` spediva ancora 75/40 kill in quattro punti e respawn 5s/3s — contraddicendo il
+    codice E la propria nota di correzione tre sezioni più sotto.
+  - `01_stats.md` citava come autorità `01_combat_fundamentals.md`, che nel frattempo ritratta quel
+    numero, mentre quest'ultimo dichiara `deps: [01_stats.md]`: si citavano a vicenda tenendo numeri
+    opposti.
+  - Un commento in `weapons.ts` dichiarava come INTENZIONALE il comportamento anti-Quake che il
+    lavoro sul lancio ha cancellato: chiunque lo leggesse avrebbe ripristinato il bug.
+  - `01_controls.md` vietava in assoluto gli i-frame, contro i pilastri.
+  - Il piano citava dimensioni file vecchie (1927/906 invece di 1790/749).
+- **FOV**: i tre valori pre-init dicevano 90 mentre il default spedito è 100 — qualunque frame prima
+  del callback girava con un campo visivo che il giocatore non ha scelto. Ora c'è `DEFAULT_FOV`.
+- **Nuova sonda `tools/verify/healthcheck.mjs`**: percorre il flusso vero (menu → Forge su tutte e 4
+  le classi → partita → tutti gli input) e conta errori console, errori di pagina e richieste
+  fallite. **Run pulito: 0 errori, 0 richieste fallite.**
+- Gate vero verde: `pnpm check` esce 0 (typecheck, lint, **format:check**, budget, content, 598 test).
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.

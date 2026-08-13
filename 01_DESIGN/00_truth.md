@@ -1152,8 +1152,8 @@ Same document, `01_controls.md:51`: the 10 % movement slow while a wheel is open
 anywhere in the codebase. "Keep it" is actually "build it."
 
 **D30 · The file-budget ratchet blocks additive work on day one** —
-`tools/check-file-budget.mjs` grandfathers `GameRoom.ts` at **1927**,
-`AbilityEngine.ts` at **906** and `registry.ts` at **1508** — their exact current
+`tools/check-file-budget.mjs` grandfathers `GameRoom.ts` at **1790**,
+`AbilityEngine.ts` at **749** and `registry.ts` at **1508** — their exact current
 sizes — and they may only **shrink**. `pnpm check` and CI fail on a single net added
 line. Almost everything in §7 touches `GameRoom.ts` and `AbilityEngine.ts`, and §3.5
 and §7.3 touch `registry.ts`. **Sequencing must be extract-then-change, never

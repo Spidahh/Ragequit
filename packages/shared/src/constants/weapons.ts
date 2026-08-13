@@ -36,7 +36,12 @@ export const MAX_AIRBORNE_SEC = 1.2 as const
 export const UPPERCUT_COST_STAMINA = 40 as const
 export const UPPERCUT_COOLDOWN_SEC = 10 as const
 export const UPPERCUT_RANGE_M = 2.5 as const
-// Lateral velocity is zeroed by the knockup; only vertical impulse matters.
+// A launch ADDS to lateral velocity, it does not replace it (00_truth.md 7.1,
+// and the locked rule at 01_arena_fps_air_contract.md:38). This comment used to
+// say "lateral velocity is zeroed by the knockup; only vertical impulse
+// matters" — which described the behaviour the launch work deleted, and would
+// have told the next person that deleting the victim's momentum was intended.
+// See applyKnockupToPlayer in server/src/rooms/GameRoom.ts.
 // Apex ≈ 2.0 m so the visual "airborne" reads clearly. Derived so that
 // freefall time from apex back to ground = UPPERCUT_AIRBORNE_SEC.
 export const UPPERCUT_APEX_M = 2.0 as const

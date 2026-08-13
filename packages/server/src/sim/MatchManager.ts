@@ -23,6 +23,7 @@ import {
   ROUND_END_HOLD_SEC,
   ROUND_TIMER_SEC,
   TEAM_KILLS_TO_WIN,
+  MATCH_TARGET_DURATION_SEC,
   TICK_RATE_HZ,
   type GameState,
   type ServerMatchPhaseMessage,
@@ -38,7 +39,12 @@ const ROUND_MODES = new Set(['duel_arena', 'blockout', '1v1'])
 const ROUND_TIMER_TICKS = Math.round(ROUND_TIMER_SEC * TICK_RATE_HZ)
 // Kill-cap modes (FFA/5v5) have no round timer — without a match ceiling a
 // cautious lobby can stall forever. After this, the current scores decide.
-const KILLCAP_MATCH_TIMER_TICKS = 10 * 60 * TICK_RATE_HZ
+//
+// Derived from the SAME constant the kill counts are, and that is the point:
+// this was an independent `10 * 60` while FFA_KILLS_TO_WIN and
+// TEAM_KILLS_TO_WIN were derived from 900 s, so neither target could ever be
+// reached and both win conditions were dead code.
+const KILLCAP_MATCH_TIMER_TICKS = Math.round(MATCH_TARGET_DURATION_SEC * TICK_RATE_HZ)
 const COUNTDOWN_TICKS = Math.round(ROUND_COUNTDOWN_SEC * TICK_RATE_HZ)
 const ROUND_END_HOLD_TICKS = Math.round(ROUND_END_HOLD_SEC * TICK_RATE_HZ)
 

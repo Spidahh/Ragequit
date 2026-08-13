@@ -22,7 +22,9 @@ This file contains only current locked decisions.
 - Parry/protection must be visibly readable on the character.
 - No passive abilities, extra slots or RNG procs.
 - Physical hit blood is always `#FF3344`.
-- Real-fight TTK target is 20-30 seconds with active defense.
+- Real-fight TTK band is **6-9 seconds** with active defense — the authority is
+  `TTK_MIN_SEC` / `TTK_MAX_SEC` in `packages/shared/src/constants/combat.ts`,
+  measured and test-enforced. (Was "20-30 seconds"; corrected 2026-08-13, D2.)
 
 ## Classes
 

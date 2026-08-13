@@ -94,7 +94,7 @@ import { initMouseSensitivity } from './input/sensitivity.js'
 import { initLeaderboard } from './leaderboard.js'
 import { initLoadoutStation } from './loadout-station.js'
 import { createAccountUi } from './menu/account-ui.js'
-import { initMenu } from './menu.js'
+import { initMenu, DEFAULT_FOV } from './menu.js'
 import { joinWithRetry } from './net/join-with-retry.js'
 import { sendLoadout } from './net/loadout-sync.js'
 import { wireReconnectFeedback } from './net/reconnect-feedback.js'
@@ -428,7 +428,8 @@ scene.fog = new THREE.FogExp2(0x121622, 0.007)
 // flat-dark. Dark on-palette night env map; see render/environment.ts.
 installArenaEnvironment(scene, renderer)
 
-const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 400)
+// DEFAULT_FOV, never a literal — see its note in menu.ts.
+const camera = new THREE.PerspectiveCamera(DEFAULT_FOV, innerWidth / innerHeight, 0.1, 400)
 
 // First-person weapon "viewmodel" pass. The arms+weapon live in their OWN scene
 // rendered after the world with a fresh depth buffer (see render loop), so the
@@ -925,10 +926,9 @@ const SHAKE_DECAY_RATE = 9 // m/s — shake disappears in ~1/SHAKE_DECAY_RATE se
 // Per-weapon camera — smoothly lerped so swapping weapons doesn't snap.
 // sword: third-person melee readability; bow/staff: first-person precision.
 // FOV default is 90°.
-let camFovBase = 90
-// Settings-driven FOV offset applied on top of camFovBase. Set by the
-// settings panel; persisted by menu.ts via localStorage.
-let settingsFovBase = 90
+let camFovBase = DEFAULT_FOV
+// Settings-driven FOV, set by the settings panel and persisted by menu.ts.
+let settingsFovBase = DEFAULT_FOV
 let pendingLaunchMode: string | null = null
 const draggableHud = initDraggableHud({
   panel: hudPanel,

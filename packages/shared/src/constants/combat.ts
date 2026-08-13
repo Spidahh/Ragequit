@@ -89,6 +89,20 @@ export const BOT_FILLED_MODES: ReadonlySet<string> = new Set([
   'tournament',
 ])
 
+/**
+ * How long a kill-cap match is meant to run, in seconds.
+ *
+ * THE KILL COUNTS ARE DERIVED FROM THIS, AND SO IS THE MATCH TIMER. They were
+ * derived from 900 s while MatchManager independently hard-capped the match at
+ * 600 s, which meant neither FFA_KILLS_TO_WIN nor TEAM_KILLS_TO_WIN could ever
+ * be reached: every match ended on the clock and the win condition was dead
+ * code. Two numbers describing the same thing, in two files, disagreeing — the
+ * same failure as TTK_MIN_SEC, one level up.
+ *
+ * A test asserts the targets stay reachable inside this window.
+ */
+export const MATCH_TARGET_DURATION_SEC = 900 as const
+
 // Kill counters per mode (FFA / Team), kept here for match manager flow.
 //
 // RE-DERIVED 2026-08-13 (D3, 00_truth.md). Both were sized explicitly on the
@@ -103,7 +117,8 @@ export const BOT_FILLED_MODES: ReadonlySet<string> = new Set([
 //   old:  25 + 10 + 5.0 = 40 s        (fictional TTK, RESPAWN_SEC before D13)
 //   new: 7.5 + 10 + 1.5 = 19 s        (measured TTK, RESPAWN_SEC after D13)
 //
-// FFA is first-to-N per PLAYER: 900 s / 19 s = 47 kills for the leader, so 45.
+// FFA is first-to-N per PLAYER: MATCH_TARGET_DURATION_SEC / 19 s = 47 for the
+// leader, so 45.
 // (At the old cycle, 40 kills was a 27-minute match — the "15-minute" claim was
 // already wrong before the TTK correction, not just after it.)
 //

@@ -23,6 +23,15 @@ import { initKeybindLabels, initKeybindSettings } from './input/keybinds.js'
 import { initMenuBackground } from './menu-bg.js'
 import { markQualityManual } from './render/auto-quality.js'
 
+/**
+ * Default field of view.
+ *
+ * Exported because main.ts needs the same number for its pre-init camera: it
+ * hard-coded 90 while this said 100, so any frame before onFovChange fired ran
+ * at a field of view the player never chose.
+ */
+export const DEFAULT_FOV = 100
+
 export type MenuChoice = 'play1v1' | 'training' | 'loadout' | 'stats' | 'settings'
 export type GraphicsQuality = 'low' | 'med' | 'high'
 
@@ -54,7 +63,7 @@ function loadSettings(): SettingsData {
     if (raw)
       return {
         quality: 'med',
-        fov: 100,
+        fov: DEFAULT_FOV,
         sens: 0.0022,
         volume: 0.55,
         musicVol: 0.3,
@@ -66,7 +75,7 @@ function loadSettings(): SettingsData {
   }
   return {
     quality: 'med',
-    fov: 100,
+    fov: DEFAULT_FOV,
     sens: 0.0022,
     volume: 0.55,
     musicVol: 0.3,

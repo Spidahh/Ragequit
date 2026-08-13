@@ -95,7 +95,10 @@ Se una modifica rompe o ignora anche solo uno dei sistemi collegati, la soluzion
   sparare/confermare.
 - Output abilita deterministico. Zero RNG.
 - Sangue fisico rosso `#FF3344`.
-- TTK reale desiderato: 20-30s con difesa attiva.
+- TTK reale: **6-9s** con difesa attiva. L'autorità sono `TTK_MIN_SEC` /
+  `TTK_MAX_SEC` in `packages/shared/src/constants/combat.ts`: si MISURANO sul
+  registry vero (`shared/src/config/ttk.ts`) e un test fallisce se il roster
+  esce dalla banda. (Diceva "20-30s", falso da sempre; corretto 2026-08-13.)
 - Nessun bonus danno condizionale in aria: il knockup e una meccanica di spostamento
   e pressione aim, non apre moltiplicatori di danno lato server.
 - Cast veloci: windup default 0.0-0.2s. Sopra 0.5s solo se il ritardo e il mini-malus

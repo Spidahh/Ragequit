@@ -46,7 +46,18 @@ Respawn times vary by mode — see `07_modes.md`.
 
 ## Damage budget
 
-All damage values across weapons and abilities are tuned against the **20-30 second TTK window** between two skill-matched players at full HP. See `01_combat_fundamentals.md`.
+All damage values across weapons and abilities are tuned against the TTK band in
+`TTK_MIN_SEC` / `TTK_MAX_SEC` (`packages/shared/src/constants/combat.ts`),
+currently **6-9 seconds**, measured off the shipped registry by
+`packages/shared/src/config/ttk.ts` and enforced by a test. See
+`01_combat_fundamentals.md`.
+
+> **Corrected 2026-08-13 (D2).** This line said "20-30 second TTK window" and
+> cited `01_combat_fundamentals.md` as its authority — the same document that
+> now retracts that number, while `01_combat_fundamentals.md` declares
+> `deps: [01_stats.md]`. The two cited each other in a loop holding opposite
+> numbers. It points at the constants now, so the next retune cannot re-open
+> this.
 
 ## Sustain and transfers
 

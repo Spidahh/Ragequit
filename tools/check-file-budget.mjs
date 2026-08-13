@@ -29,7 +29,7 @@ const BUDGET = {
   'packages/client/src/main.ts': 2611,
   'packages/server/src/rooms/GameRoom.ts': 1790,
   'packages/shared/src/abilities/registry.ts': 1508,
-  'packages/server/src/sim/AbilityEngine.ts': 752,
+  'packages/server/src/sim/AbilityEngine.ts': 749,
   'packages/client/src/audio/sound-engine.ts': 796,
 }
 

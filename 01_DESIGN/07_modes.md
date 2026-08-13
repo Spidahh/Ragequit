@@ -25,16 +25,16 @@ This document describes playable modes and locked mode rules.
 
 | Mode            | Team size  | Win condition           | Respawn     | ELO      | Est. duration |
 | --------------- | ---------- | ----------------------- | ----------- | -------- | ------------- |
-| Team Battle 5v5 | 5v5        | 75 kills                | 5 s         | Team ELO | 10-15 min     |
+| Team Battle 5v5 | 5v5        | 150 kills               | 1.5 s       | Team ELO | ~15 min       |
 | 1v1 Ranked      | 1v1        | BO5 rounds (first to 3) | Round-based | Duel ELO | 5-10 min      |
-| FFA 10          | 10 solo    | 40 kills (solo)         | 3 s         | FFA ELO  | 8-12 min      |
+| FFA 10          | 10 solo    | 45 kills (solo)         | 1.5 s       | FFA ELO  | ~15 min       |
 | Training        | 1v1 vs bot | N/A (practice)          | 0 s         | None     | Free          |
 
 ## Team Battle 5v5
 
 - 5 players per side
-- First team to **75 total kills** wins
-- Respawn: **5 s**, 2 s spawn invulnerability
+- First team to **150 total kills** wins
+- Respawn: **1.5 s** (`RESPAWN_SEC`), 2 s spawn invulnerability
 - Map: `gladiators_arena` (the single existing arena, re-textured in new art style)
 - ELO: team-based ELO, K-factor 25, ±100 team balance at matchmaking
 - Scoreboard: dedicated HUD/menu surface shows kills, deaths, damage dealt,
@@ -53,8 +53,8 @@ This document describes playable modes and locked mode rules.
 ## FFA 10
 
 - 10 players, every player for themselves
-- First to **40 kills** wins
-- Respawn: **3 s**, 2 s spawn invulnerability with 3-location random spawn to avoid spawn-camping
+- First to **45 kills** wins
+- Respawn: **1.5 s** (`RESPAWN_SEC`), 2 s spawn invulnerability with 3-location random spawn to avoid spawn-camping
 - Map: `gladiators_arena` (larger spawn distribution)
 - ELO: separate FFA ladder, K-factor 20 (slower convergence because games are more chaotic)
 - Scoreboard: live leaderboard visible on HUD (top 3 + self position)
@@ -128,7 +128,7 @@ disengage_shot`. In a mode where death is final, refusing to lose is the same as
 winning. The cap counts ROLES rather than slots, because that stall build is
 spread across families precisely to slip past a slot rule.
 
-**What it deliberately does not inherit from FFA.** FFA is 40 kills with a
+**What it deliberately does not inherit from FFA.** FFA is 45 kills with a
 respawn: winning a fight gains you a point and costs your opponent about a
 second and a half. That is the opposite of "until one remains", and it is why
 tournament is the only mode where knowing when NOT to take a fight is paid for.

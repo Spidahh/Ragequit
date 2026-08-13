@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest'
 
 import { ABILITY_DEFS } from '../abilities/registry.js'
 import {
+  FFA_KILLS_TO_WIN,
   FINISHER_DAMAGE_MAX,
   FINISHER_DAMAGE_MIN,
+  MATCH_TARGET_DURATION_SEC,
   MAX_ABILITY_COOLDOWN_SEC,
+  TEAM_KILLS_TO_WIN,
   TTK_MAX_SEC,
   TTK_MIN_SEC,
 } from '../constants/combat.js'
@@ -76,5 +79,41 @@ describe('the finisher band', () => {
         `${cur.id} hits harder than ${prev.id} but commits less`,
       ).toBeGreaterThanOrEqual(commitment(prev))
     }
+  })
+})
+
+// The win condition has to be reachable inside the match, or it is dead code
+// and every game ends on the clock. FFA_KILLS_TO_WIN and TEAM_KILLS_TO_WIN were
+// derived from a 900 s match while MatchManager independently capped it at
+// 600 s, so neither target could ever fire — two numbers describing one thing,
+// in two files, disagreeing.
+describe('the win conditions are reachable', () => {
+  // The same per-kill cycle the counts were derived from, written down so the
+  // test fails loudly if the derivation and the constants ever drift again.
+  const KILL_CYCLE_SEC = 19
+  const TEAM_SIZE = 5
+  const TEAM_ENGAGED_FRACTION = 2 / 3
+
+  it('lets an FFA leader actually reach the cap before time runs out', () => {
+    const secondsNeeded = FFA_KILLS_TO_WIN * KILL_CYCLE_SEC
+    expect(
+      secondsNeeded,
+      `${FFA_KILLS_TO_WIN} kills needs ${secondsNeeded} s but the match ends at ${MATCH_TARGET_DURATION_SEC} s`,
+    ).toBeLessThanOrEqual(MATCH_TARGET_DURATION_SEC)
+  })
+
+  it('lets a team actually reach the cap before time runs out', () => {
+    const rate = (TEAM_ENGAGED_FRACTION * TEAM_SIZE) / KILL_CYCLE_SEC
+    const secondsNeeded = TEAM_KILLS_TO_WIN / rate
+    expect(
+      secondsNeeded,
+      `${TEAM_KILLS_TO_WIN} kills needs ${Math.round(secondsNeeded)} s but the match ends at ${MATCH_TARGET_DURATION_SEC} s`,
+    ).toBeLessThanOrEqual(MATCH_TARGET_DURATION_SEC)
+  })
+
+  // Not so low that the cap is hit in the first minute either — a win condition
+  // reached instantly is as meaningless as one never reached.
+  it('does not make the caps trivially reachable', () => {
+    expect(FFA_KILLS_TO_WIN * KILL_CYCLE_SEC).toBeGreaterThan(MATCH_TARGET_DURATION_SEC * 0.5)
   })
 })
