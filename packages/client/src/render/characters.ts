@@ -709,3 +709,20 @@ export function getEyeWorldPosition(charGroup: THREE.Group, out: THREE.Vector3):
   out.copy(_headWorld)
   return true
 }
+
+// NO first-person guard pose here, and that is a finding, not an omission.
+//
+// The combat idles are authored for a third-person camera: the weapon sits at
+// chest height, below the eye line, so with the camera on the head bone it falls
+// outside the frame. The obvious fix is an additive lift on the arm chain — the
+// technique applyParryArmPose uses. It does not work. Measured by rendering it:
+// at a lift small enough to keep the skinning intact the weapon still reads only
+// as a pauldron in the corner, and at a lift large enough to plant it in frame
+// the shoulder rotates past what the skin weights tolerate and the arm geometry
+// visibly tears apart.
+//
+// That is the ceiling of bending a third-person rig. Shipped first-person games
+// with a visible body (Mordhau, Chivalry, Dying Light) author a SEPARATE
+// first-person arm set for exactly this reason. That is an animation job, not a
+// bigger angle, and faking it with a screen-locked prop is what the deleted
+// viewmodel scene was — a weapon with no body attached to it.
