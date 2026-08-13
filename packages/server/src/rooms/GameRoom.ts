@@ -43,8 +43,6 @@ import {
   directionFromYawPitch,
   makePlayerSimState,
   simulatePlayer,
-  uppercutBallisticAirtimeSec,
-  uppercutInitialVy,
   type ClientCastMessage,
   type ClientChargeReleaseMessage,
   type ClientChargeStartMessage,
@@ -70,6 +68,8 @@ import {
   isAbilityLegalForClass,
   getAbilitySlotFamily,
   TARGET_CLASS_DEFS,
+  launchVyForAirtime,
+  MAX_AIRBORNE_SEC,
 } from '@ragequit/shared'
 
 import { verifyToken, upsertPlayer, saveLoadout, recordMatchResult } from '../db/supabase.js'
@@ -129,7 +129,6 @@ import { resolveMapId, testDummySpawn, testPlayerSpawn, testRoomMaxClients } fro
 
 const RESPAWN_TICKS = Math.round(RESPAWN_SEC * TICK_RATE_HZ)
 const SPAWN_INVULN_TICKS = Math.round(SPAWN_INVULN_SEC * TICK_RATE_HZ)
-const UPPERCUT_AIRBORNE_TICKS = Math.round(UPPERCUT_AIRBORNE_SEC * TICK_RATE_HZ)
 const STAFF_CADENCE_TICKS = Math.round(STAFF_M1_CADENCE_SEC * TICK_RATE_HZ)
 const BOW_LIFETIME_TICKS = Math.round(BOW_PROJECTILE_LIFETIME_SEC * TICK_RATE_HZ)
 const STAFF_LIFETIME_TICKS = Math.max(1, Math.round(STAFF_M1_LIFETIME_SEC * TICK_RATE_HZ))
@@ -1007,8 +1006,14 @@ export class GameRoom extends Room<{ state: GameState }> {
       // all knockups are applied via applyKnockupToPlayer (uppercut/eruption/
       // arc_lift/frost_pillar are abilities, resolved in the engine before this
       // drain) and set airborneUntilTick to start this same tick.
-      const victimWasAirborne =
-        now < victim.airborneUntilTick && now > victim.airborneUntilTick - UPPERCUT_AIRBORNE_TICKS
+      // Simply: are they still up? The lower bound used to subtract one FIXED
+      // window (0.8 s) from the deadline, which desynchronises the moment airtimes
+      // become per-ability — on any launch longer than that the opening follow-ups
+      // stopped counting as air punishes, silently killing the hitstop, the popup
+      // and the conversion stat for exactly the launchers designed to be biggest.
+      // airborneUntilTick is cleared on landing (D10), so it is true only while
+      // the victim is genuinely airborne.
+      const victimWasAirborne = victim.airborneUntilTick > 0 && now < victim.airborneUntilTick
 
       // Parry absorbs / reduces whenever the protection state is active. Air
       // displacement is pressure, not an implicit parry shutdown.
@@ -1831,9 +1836,13 @@ export class GameRoom extends Room<{ state: GameState }> {
     // broke a locked rule: 01_arena_fps_air_contract.md:38.
     // Travel is now emergent (impulse x airtime), so the registry's metres become
     // the speed that carries the victim that far over the flight.
-    const airtimeSec = uppercutBallisticAirtimeSec()
+    // Airtime is authored per ability and the velocity follows from it
+    // (00_truth.md 7.3). Nine launchers used to share one fixed value, so a
+    // launch read as a single move instead of a family: a shove, a lift, a
+    // launch and a sky-toss all felt the same.
+    const airtimeSec = airborneSec > 0 ? Math.min(airborneSec, MAX_AIRBORNE_SEC) : UPPERCUT_AIRBORNE_SEC
     if (simState) {
-      simState.vel.y = Math.max(simState.vel.y, uppercutInitialVy())
+      simState.vel.y = Math.max(simState.vel.y, launchVyForAirtime(airtimeSec))
       if (knockback && knockback.distance > 0) {
         const impulse = knockback.distance / Math.max(0.05, airtimeSec)
         simState.vel.x += knockback.x * impulse
@@ -1850,10 +1859,6 @@ export class GameRoom extends Room<{ state: GameState }> {
     player.vz = simState?.vel.z ?? 0
     player.momentumTicks = simState?.momentumTicks ?? 0
     player.onGround = false
-    // Airtime is still the shared ballistic value; per-ability airborneSec is the
-    // next step (00_truth.md 7.3 / D4) and is deliberately not folded in here, so
-    // this change stays a physics correction rather than a balance change.
-    void airborneSec
     player.airborneUntilTick = this.state.tick + Math.max(1, Math.round(airtimeSec * TICK_RATE_HZ))
   }
 }

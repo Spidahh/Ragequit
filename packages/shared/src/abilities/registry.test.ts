@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import { MAX_AIRBORNE_SEC } from '../constants/weapons.js'
+
 import { ABILITY_DEFS, abilityIds, getAbilityDef } from './registry.js'
 import type { AbilityComboRole, AbilityDef } from './types.js'
 
@@ -111,7 +113,7 @@ describe('ability registry', () => {
     const dmg = u.effects.find((e) => e.kind === 'damage')
     expect(dmg && 'amount' in dmg ? dmg.amount : -1).toBe(16)
     const ku = u.effects.find((e) => e.kind === 'knockup')
-    expect(ku && 'airborneSec' in ku ? ku.airborneSec : -1).toBeCloseTo(0.5, 5)
+    expect(ku && 'airborneSec' in ku ? ku.airborneSec : -1).toBeCloseTo(0.7, 5)
   })
 
   it('fireball is staff/fire/projectile with onHit burn application', () => {
@@ -271,6 +273,45 @@ describe('ability effect engine-support invariants', () => {
         if (e.kind === 'channel' && e.perTick.kind === 'heal') {
           expect(e.perTick.overSec ?? 0, `${def.id}: channel heal.overSec`).toBe(0)
         }
+      }
+    }
+  })
+})
+
+// --- 00_truth.md 7.3: airtime is authored, and there are four weights --------
+// Nine launchers used to share one value, so a shove, a lift and a sky-toss all
+// felt identical. These are the weights, and a launch has to be one of them.
+describe('launch weights', () => {
+  const AIRTIME: Record<string, number> = {
+    guard_break: 0.45,
+    thunder_clap: 0.45, // POP — a shove. Below jump height, buys no punish window.
+    uppercut: 0.7,
+    eruption: 0.7,
+    frost_pillar: 0.7,
+    arc_lift: 0.7,
+    void_spike: 0.7, // LIFT — one instant follow-up
+    root_upthrow: 1.0, // LAUNCH — it already refuses airborne targets, so it cannot chain
+    meteor: 1.2, // SKY — it already pays with a 1 s windup, 18 s cooldown and a public telegraph
+  }
+
+  it('gives every launcher one of the four authored weights', () => {
+    for (const [id, expected] of Object.entries(AIRTIME)) {
+      const def = ABILITY_DEFS[id]
+      expect(def, `${id} missing from the registry`).toBeDefined()
+      const ku = def!.effects.find((e) => e.kind === 'knockup')
+      expect(ku, `${id} should still launch`).toBeDefined()
+      const t = ku && 'airborneSec' in ku ? ku.airborneSec : -1
+      expect(t, `${id} airtime`).toBeCloseTo(expected, 5)
+    }
+  })
+
+  it('has no launcher outside the tested envelope', () => {
+    for (const def of Object.values(ABILITY_DEFS)) {
+      for (const e of def.effects) {
+        if (e.kind !== 'knockup' || !('airborneSec' in e)) continue
+        expect(e.airborneSec, `${def.id} exceeds MAX_AIRBORNE_SEC`).toBeLessThanOrEqual(
+          MAX_AIRBORNE_SEC,
+        )
       }
     }
   })

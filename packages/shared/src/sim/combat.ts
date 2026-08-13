@@ -8,6 +8,7 @@ import {
   SWORD_M1_CONE_HALF_ANGLE_RAD,
   SWORD_M1_DAMAGE,
   SWORD_M1_RANGE_M,
+  MAX_AIRBORNE_SEC,
   UPPERCUT_APEX_M,
 } from '../constants/weapons.js'
 import { GRAVITY_MPS2 } from '../constants/world.js'
@@ -76,6 +77,22 @@ export function isInSwordM1Cone(attacker: Vec3, attackerYaw: number, target: Vec
 // Solving apex with fixed t_total: g = 2 * apex / (t_up²) and v0 = g * t_up.
 // We prefer to express the knockup as an initial vy that respects gravity so
 // the existing simulatePlayer handles the trajectory unchanged.
+
+/**
+ * Upward impulse for a launch of a given airtime.
+ *
+ * Symmetric ballistic flight: T = 2*v0/g, so v0 = g*T/2, and the apex follows as
+ * g*T^2/8. ONE formula, so whoever tunes the table next can read an apex straight
+ * off an airtime. (Asymmetric gravity — a heavier descent to front-load the punish
+ * window — is a real technique and is deliberately rejected: under it v0 != g*T/2
+ * and every apex in the table stops being derivable.)
+ *
+ * Airtime is what an ability authors; the velocity is a consequence.
+ */
+export function launchVyForAirtime(airtimeSec: number): number {
+  const t = Math.max(0.05, Math.min(MAX_AIRBORNE_SEC, airtimeSec))
+  return (GRAVITY_MPS2 * t) / 2
+}
 
 export function uppercutInitialVy(): number {
   // v0 chosen so that with gravity g the apex is UPPERCUT_APEX_M.

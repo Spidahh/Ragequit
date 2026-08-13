@@ -93,7 +93,7 @@ export const ABILITY_M3_UPPERCUT: AbilityDef = {
   comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 16 },
-    { at: 'onCast', kind: 'knockup', airborneSec: 0.5, knockbackDistance: 0.8 },
+    { at: 'onCast', kind: 'knockup', airborneSec: 0.7, knockbackDistance: 0.8 },
   ],
   description: 'Rising strike that launches the target briefly Airborne. Strong combo starter.',
   miniMalus: 'Requires a windup — opponents can interrupt or parry.',
@@ -139,7 +139,7 @@ export const ABILITY_M5_GUARD_BREAK: AbilityDef = {
   effects: [
     { at: 'onCast', kind: 'damage', amount: 10 },
     { at: 'onCast', kind: 'applyStatus', status: 'stun', durationSec: 1.5, stacks: 1 },
-    { at: 'onCast', kind: 'knockup', airborneSec: 0.5, knockbackDistance: 1.2 },
+    { at: 'onCast', kind: 'knockup', airborneSec: 0.45, knockbackDistance: 1.2 },
   ],
   description:
     'Crushing blow that Stuns the target and briefly launches them Airborne. Hard CC setup.',
@@ -512,7 +512,7 @@ export const ABILITY_F4_METEOR: AbilityDef = {
       stacks: 1,
       radius: 3.5,
     },
-    { at: 'onLand', kind: 'knockup', airborneSec: 0.65, radius: 3.5, knockbackDistance: 2.8 },
+    { at: 'onLand', kind: 'knockup', airborneSec: 1.2, radius: 3.5, knockbackDistance: 2.8 },
   ],
   description:
     'Massive delayed impact that launches all nearby targets Airborne and applies Burn. Highest AoE damage in fire.',
@@ -535,7 +535,7 @@ export const ABILITY_F5_ERUPTION: AbilityDef = {
   comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 8, radius: 2.4, element: 'fire' },
-    { at: 'onCast', kind: 'knockup', airborneSec: 0.5, radius: 2.4, knockbackDistance: 1.0 },
+    { at: 'onCast', kind: 'knockup', airborneSec: 0.7, radius: 2.4, knockbackDistance: 1.0 },
   ],
   description:
     'Instant detonation under the aimed enemy. Launches nearby targets Airborne. Reliable fire combo starter.',
@@ -708,7 +708,7 @@ export const ABILITY_I5_FROST_PILLAR: AbilityDef = {
   comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 12, element: 'ice' },
-    { at: 'onCast', kind: 'knockup', airborneSec: 0.5, knockbackDistance: 0.6 },
+    { at: 'onCast', kind: 'knockup', airborneSec: 0.7, knockbackDistance: 0.6 },
   ],
   description:
     'Frost pillar that erupts under the target, launching them briefly Airborne. Ice combo starter.',
@@ -765,7 +765,7 @@ export const ABILITY_L2_THUNDER_CLAP: AbilityDef = {
   effects: [
     { at: 'onCast', kind: 'damage', amount: 16, radius: 3.2, element: 'lightning' },
     { at: 'onCast', kind: 'applyStatus', status: 'stun', durationSec: 1.8, stacks: 1, radius: 3.2 },
-    { at: 'onCast', kind: 'knockup', airborneSec: 0.35, radius: 3.2, knockbackDistance: 2.5 },
+    { at: 'onCast', kind: 'knockup', airborneSec: 0.45, radius: 3.2, knockbackDistance: 2.5 },
   ],
   description:
     'Release a shockwave around you that Stuns nearby enemies and blasts them away. Devastating in close range.',
@@ -839,7 +839,7 @@ export const ABILITY_L5_ARC_LIFT: AbilityDef = {
   comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 8, element: 'lightning' },
-    { at: 'onCast', kind: 'knockup', airborneSec: 0.5, knockbackDistance: 1.4 },
+    { at: 'onCast', kind: 'knockup', airborneSec: 0.7, knockbackDistance: 1.4 },
   ],
   description:
     'Instant lightning ray that launches the target Airborne with a backward jolt. Lightning combo starter.',
@@ -977,7 +977,7 @@ export const ABILITY_D5_VOID_SPIKE: AbilityDef = {
   comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 14, element: 'dark' },
-    { at: 'onCast', kind: 'knockup', airborneSec: 0.5, knockbackDistance: 1.0 },
+    { at: 'onCast', kind: 'knockup', airborneSec: 0.7, knockbackDistance: 1.0 },
     { at: 'onCast', kind: 'resourceDrain', resource: 'mana', amount: 12, gainFraction: 0.5 },
   ],
   description:
@@ -1111,7 +1111,7 @@ export const ABILITY_N5_ROOT_UPTHROW: AbilityDef = {
   comboRole: 'starter',
   effects: [
     { at: 'onCast', kind: 'damage', amount: 8, element: 'nature' },
-    { at: 'onCast', kind: 'knockup', airborneSec: 0.5, requiresGroundedTarget: true },
+    { at: 'onCast', kind: 'knockup', airborneSec: 1.0, requiresGroundedTarget: true },
   ],
   description:
     'Erupting vines that launch a grounded target Airborne. Fails if they are already in the air.',

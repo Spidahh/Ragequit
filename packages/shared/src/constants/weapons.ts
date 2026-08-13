@@ -28,6 +28,10 @@ export const SWORD_M1_HIT_FRACTION = 0.5 as const
 export const UPPERCUT_WINDUP_SEC = 0.4 as const
 export const UPPERCUT_DAMAGE = 15 as const
 export const UPPERCUT_AIRBORNE_SEC = 0.8 as const
+
+// Hard ceiling on any authored airtime, so no future ability can exceed the
+// envelope the airborne rules were tested against. 00_truth.md 7.3.
+export const MAX_AIRBORNE_SEC = 1.2 as const
 export const UPPERCUT_COST_STAMINA = 40 as const
 export const UPPERCUT_COOLDOWN_SEC = 10 as const
 export const UPPERCUT_RANGE_M = 2.5 as const
