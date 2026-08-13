@@ -26,7 +26,7 @@ combat.
 
 - Ability and utility wheels are selectors, not launchers.
 - Holding the wheel key opens the wheel; moving the mouse changes the highlighted sector; releasing the key primes the selected slot; LMB fires the primed ability.
-- Every hotbar slot has a direct key (default `1`-`8`, rebindable) that fires it immediately. The `E` and `Q` wheels (4 sectors each, E = slots 1-4, Q = slots 5-8) are an alternative radial input: release primes the selected slot, LMB fires it. Direct key and wheel sector share the same bind.
+- Every hotbar slot has a key (default `1`-`8`, rebindable). **Keydown opens the aim preview; keyup casts** — one path for all 53 abilities, with no branch on targeting mode. The release is matched to the key that was pressed, so rolling across two binds cannot fire the first ability with the second's aim. The `E` and `Q` wheels (4 sectors each, E = slots 1-4, Q = slots 5-8) are an alternative radial input: releasing the wheel key selects a slot and shows its shape, LMB casts it. Key and wheel sector share the same bind.
 - Primed and placement states must update both the ability readout and the
   targeting reticle. Cancelling placement clears both; server acceptance,
   rejection and windup completion advance the same readout lifecycle.

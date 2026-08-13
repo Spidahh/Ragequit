@@ -1,5 +1,6 @@
 import { CloseCode, Room, type Client } from '@colyseus/core'
 import {
+  isCapsuleBlocked2D,
   type ServerZoneExpiredMessage,
   ABILITY_DEFS,
   type StatusKind,
@@ -74,7 +75,6 @@ import {
 
 import { verifyToken, upsertPlayer, saveLoadout, recordMatchResult } from '../db/supabase.js'
 import {
-  isCapsuleBlocked2D,
   hasLineOfSight,
   spellImpactPushDistance,
   impactPushDirection,
@@ -1840,7 +1840,8 @@ export class GameRoom extends Room<{ state: GameState }> {
     // (00_truth.md 7.3). Nine launchers used to share one fixed value, so a
     // launch read as a single move instead of a family: a shove, a lift, a
     // launch and a sky-toss all felt the same.
-    const airtimeSec = airborneSec > 0 ? Math.min(airborneSec, MAX_AIRBORNE_SEC) : UPPERCUT_AIRBORNE_SEC
+    const airtimeSec =
+      airborneSec > 0 ? Math.min(airborneSec, MAX_AIRBORNE_SEC) : UPPERCUT_AIRBORNE_SEC
     if (simState) {
       simState.vel.y = Math.max(simState.vel.y, launchVyForAirtime(airtimeSec))
       if (knockback && knockback.distance > 0) {

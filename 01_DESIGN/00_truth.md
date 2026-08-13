@@ -775,6 +775,13 @@ the maps' 2–3 m boxes, the circle draws on the floor while the hitbox resolves
 chest height. That is exactly the "I was clearly outside that" failure the rule
 of one shape exists to prevent.
 
+**SHIPPED 2026-08-13.** One telegraph path instead of two. A committed cast
+publishes its shape for the whole charge; an instant publishes the same shape AT
+resolution and holds it 220 ms. The after-image costs the victim nothing in the
+moment — they are already hit — and turns a death into a lesson about a shape.
+Both blockers died in the same change: `abilityAreaRadius` now reads nested
+`perTick.radius`, and the client uses `msg.pos.y`.
+
 **D12 · 46 of 53 abilities show nothing before commit** —
 `client/render/placement-preview.ts:143` returns `undefined` unless
 `def.targeting === 'point'`, and `client/src/loadout-station.ts:175-178`
@@ -790,6 +797,40 @@ projectile — two opposite directions, previewed as nothing. Blocker for the GH
 and must move to `shared` first; it is a pure function over AABBs and the client
 already loads the same map, so after the move the ghost can be exact rather than
 approximate.
+
+**SHIPPED 2026-08-13.** The shape is a value now: `shared/abilities/aim.ts`
+turns an AbilityDef plus an aim into a list of AimShapes — lane, disc, wall,
+dash — and both sides read it, so the preview and the hitbox are the same
+numbers rather than two formulas that agree today. `isCapsuleBlocked2D` moved to
+`shared/sim/collision.ts`, so the dash ghost samples the same 0.25 m steps the
+body will and stands exactly where it will stop.
+
+Three things the work changed that the diagnosis had not anticipated:
+
+– **`isDirectCast` is gone entirely**, from the dispatcher and from the loadout
+station. It named a concept — "this ability casts blind" — that no longer
+exists. Press shows the shape, release commits it, for all 53. A tap is still a
+tap, and the cast now carries the aim you had on RELEASE, so what you saw is
+what you threw.
+– **`hunters_flow` is `targeting: 'self'` and dashes 3 m.** Keying the ghost off
+the targeting mode would have left it, and anything like it, with no preview —
+the same class of assumption that caused the original bug. The dash shape is
+solved independently of targeting.
+– **The first lane drawing was correct and unusable.** It painted the lane's real
+volume, a tapered tube from the muzzle; the muzzle is the camera, so it was a
+30 m cone seen from its apex, filling ~60° of screen. The width moved to a ring
+at the impact point, where it is small and where you are already looking.
+
+Proven rendered, not just tested: `tools/verify/aimpreview.mjs` holds each
+hotbar key and reads both the solver's output and the framebuffer. 8/8 for the
+mage and 8/8 for the hybrid, including all three dash types, with every lane
+endpoint projecting to NDC (0.000, 0.000) — the crosshair.
+
+That harness cost five wrong runs first, and the reason is worth keeping: under
+SwiftShader the render loop runs at **1-4 fps**, so waiting 220 ms waits for
+roughly zero frames. The harness was reading a preview that had not been
+computed yet and reporting a working feature as broken. It now waits on a frame
+counter. **Never sample this renderer on a clock.**
 
 **D13 · `RESPAWN_SEC = 5`** — `constants/weapons.ts:42`, used `GameRoom.ts:135`.
 Three times Quake's, a fixed wait, no fire-to-respawn. Contradicts §4. Zero build
@@ -959,8 +1000,10 @@ which is stated where it applies.
 5. **D10** — clear `airborneUntilTick` on landing. Must precede D4.
 6. **D4 + D8** — per-ability airtime and the air-control cap, together, plus the
    `victimWasAirborne` window and the punish-window invariant test.
-7. **D11 + D12** — the telegraph for windup-0 areas, and the aim solver for
-   `forward` and move abilities. This is the owner's central ask made real.
+7. ~~**D11 + D12**~~ — **DONE 2026-08-13.** The telegraph for windup-0 areas, and
+   the aim solver for `forward` and move abilities. The owner's central ask made
+   real: every ability draws where it goes and what it does, `isDirectCast` is
+   retired, and the shape lives in `shared` so it cannot drift from the hitbox.
 8. **D18** — the air cap, **after D20** (bounds) exists, as a measured hard cap.
 9. **D1/D2/D3 + the finisher band** — the TTK correction, in documents plus five
    damage numbers plus the 12 s cooldown ceiling.

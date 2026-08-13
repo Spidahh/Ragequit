@@ -25,7 +25,6 @@ interface RoomLike {
 
 export interface CastDispatcherOptions {
   getLoadout: () => string[]
-  isDirectCast: (id: string) => boolean
   hidePlacementVisual: () => void
   sendCast: (abilityId: string, tick: number) => void
   showShootFlash: (style?: { color?: string; tier?: 'light' | 'normal' | 'heavy' }) => void
@@ -50,6 +49,7 @@ export interface CastDispatchParams {
 
 export interface CastDispatcherController {
   activateAbilitySlot: (slotIdx: number, fromWheel: boolean) => void
+  releaseAbilitySlot: (slotIdx: number) => void
   beginPlacementPreview: (abilityId: string) => void
   cancelPlacementPreview: () => void
   clearQueue: () => void
@@ -62,7 +62,6 @@ const STAFF_FIRE_THROTTLE_MS = STAFF_M1_CADENCE_SEC * 1000
 
 export function initCastDispatcher({
   getLoadout,
-  isDirectCast,
   hidePlacementVisual,
   sendCast,
   showShootFlash,
@@ -73,12 +72,16 @@ export function initCastDispatcher({
 }: CastDispatcherOptions): CastDispatcherController {
   let primedSlotIdx: number | null = null
   let placementAbilityId: string | null = null
+  // Which hotbar key is physically down. Releasing key A must not fire the
+  // ability you re-aimed to with key B, so the release is matched to the press.
+  let heldSlotIdx: number | null = null
   let lastStaffFireMs = 0
   const abilityCastQueue: string[] = []
 
   function cancelPlacementPreview(): void {
     if (placementAbilityId) hideAbilityReadout?.()
     placementAbilityId = null
+    heldSlotIdx = null
     hidePlacementVisual()
   }
 
@@ -88,23 +91,44 @@ export function initCastDispatcher({
     abilityCastQueue.length = 0
   }
 
+  /**
+   * Press: show what the ability will do. Release: do it.
+   *
+   * Every ability goes through this now, not just the seven `point` ones. The
+   * old split fired 46 of 53 on the press edge with nothing drawn, which is
+   * what made a spell an act of faith — you learned an ability's shape by
+   * being killed by it, or by reading the tooltip, never by looking at it.
+   *
+   * A tap is still a tap: press and release land 1-3 frames apart, so the cast
+   * leaves at the same speed it used to and the shape flashes on the way out.
+   * Holding buys aim time at the cost of your own hold, which is a trade the
+   * player makes deliberately — and the cast then carries the aim you were
+   * looking at on RELEASE, so what you saw is what you threw.
+   */
   function activateAbilitySlot(slotIdx: number, fromWheel: boolean): void {
     const id = getLoadout()[slotIdx] ?? ''
     if (!id || !ABILITY_DEFS[id]) return
     if (fromWheel) {
-      cancelPlacementPreview()
+      // The radial wheel is the slow, deliberate way in — so it shows the shape
+      // too and waits for LMB. It used to prime a blind cast, which meant the
+      // careful path taught you less than the fast one.
+      beginPlacementPreview(id)
+      heldSlotIdx = null
       primedSlotIdx = slotIdx
       showAbilityReadout?.(id, 'primed')
       return
     }
-    if (isDirectCast(id)) {
-      cancelPlacementPreview()
-      abilityCastQueue.push(id)
-      return
-    }
     beginPlacementPreview(id)
+    heldSlotIdx = slotIdx
     primedSlotIdx = null
     showAbilityReadout?.(id, 'placement')
+  }
+
+  function releaseAbilitySlot(slotIdx: number): void {
+    if (heldSlotIdx !== slotIdx || !placementAbilityId) return
+    const id = placementAbilityId
+    cancelPlacementPreview()
+    abilityCastQueue.push(id)
   }
 
   function clearQueue(): void {
@@ -126,23 +150,14 @@ export function initCastDispatcher({
       if (placementAbilityId) cancelPlacementPreview()
     }
 
-    // --- Primed ability fire (placement confirm) ---------------------------------
+    // --- Confirm the previewed cast (LMB) ----------------------------------------
+    // One branch for both routes in — key-hold and radial wheel — because after
+    // D12 there is only one state to be in: you are looking at a shape, and
+    // clicking commits it. There is no longer such a thing as a blind cast.
     if (combatLive && inp.lmbPressEdge && placementAbilityId && !dead) {
       sendCast(placementAbilityId, schemaTick + 1)
-      cancelPlacementPreview()
-      inp.lmbPressEdge = false
-      inp.lmbDown = false
-    }
-
-    // --- Primed ability fire (wheel selection) -----------------------------------
-    if (combatLive && inp.lmbPressEdge && primedSlotIdx !== null && !dead) {
-      const loadout = getLoadout()
-      const id = loadout[primedSlotIdx] ?? ''
       primedSlotIdx = null
-      if (id) {
-        if (isDirectCast(id)) sendCast(id, schemaTick + 1)
-        else beginPlacementPreview(id)
-      }
+      cancelPlacementPreview()
       inp.lmbPressEdge = false
       inp.lmbDown = false
     }
@@ -250,6 +265,7 @@ export function initCastDispatcher({
 
   return {
     activateAbilitySlot,
+    releaseAbilitySlot,
     beginPlacementPreview,
     cancelPlacementPreview,
     clearQueue,

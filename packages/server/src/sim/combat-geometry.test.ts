@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 
 import {
   pointInsideWall,
-  isCapsuleBlocked2D,
   hasLineOfSight,
   spellImpactPushDistance,
   impactPushDirection,
@@ -23,21 +22,6 @@ describe('combat-geometry', () => {
     })
     it('point off the wall perpendicular (>0.6) is outside', () => {
       expect(pointInsideWall(1, 0, 0, 2)).toBe(false)
-    })
-  })
-
-  describe('isCapsuleBlocked2D', () => {
-    it('capsule overlapping the box (matching Y) is blocked', () => {
-      expect(isCapsuleBlocked2D(BOXES, 0, 2, 0)).toBe(true)
-    })
-    it('capsule far away is clear', () => {
-      expect(isCapsuleBlocked2D(BOXES, 10, 2, 10)).toBe(false)
-    })
-    it('capsule above the box Y span is clear', () => {
-      expect(isCapsuleBlocked2D(BOXES, 0, 100, 0)).toBe(false)
-    })
-    it('no boxes means never blocked', () => {
-      expect(isCapsuleBlocked2D([], 0, 2, 0)).toBe(false)
     })
   })
 

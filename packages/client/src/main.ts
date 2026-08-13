@@ -309,7 +309,6 @@ const PITCH_DOWN_LIMIT = -Math.PI * 0.36 //  -65° — max look-down angle
 // Cast/fire/weapon dispatcher owns queues, placement and cadence.
 const castDispatcher = initCastDispatcher({
   getLoadout: currentLoadoutArray,
-  isDirectCast: (id) => loadoutStation.isDirectCast(id),
   hidePlacementVisual: () => {
     placementPreview.group.visible = false
   },
@@ -500,13 +499,47 @@ const { loadMapGeometry, getActiveMapId, animateArena } = buildArena(scene, toon
 const placementPreview = initPlacementPreview({
   camera,
   getMouseYaw: () => inp.mouseYaw,
+  getMousePitch: () => inp.mousePitch,
   getSelfPos: () => self?.sim.pos ?? null,
+  getSelfVelocity: () => (self ? { x: self.sim.vel.x, z: self.sim.vel.z } : null),
   getPlacementAbilityId: () => castDispatcher.getPlacementAbilityId(),
   getMapGroundY: (mapId) => getMap(mapId || 'blockout').groundY,
   getActiveMapId,
   getSchemaMapId,
 })
 scene.add(placementPreview.group)
+
+// Verification seam (tools/verify/aimpreview.mjs). Behind ?capture so it is
+// never present in a real session: a screenshot can show a plausible arena
+// while drawing no preview at all, so the harness has to be able to read what
+// the solver actually produced, not just look at the result.
+const captureMode =
+  typeof location !== 'undefined' && new URLSearchParams(location.search).has('capture')
+if (captureMode) {
+  ;(window as unknown as Record<string, unknown>)['__aimShapes'] = () => {
+    const id = castDispatcher.getPlacementAbilityId()
+    return placementPreview.currentShapes().map((s) => ({ ...s, abilityId: id }))
+  }
+  // Why a preview is absent matters as much as that it is: dead, phase not
+  // live, and "nothing drew it" are three different bugs.
+  // Does the drawn lane actually lie on the crosshair? A beam solved from the
+  // wrong origin or a mismatched pitch convention still renders a confident
+  // line — pointing somewhere the shot will not go. Projecting its endpoint
+  // back through the camera is the one check that catches that.
+  ;(window as unknown as Record<string, unknown>)['__laneOnCrosshair'] = () => {
+    const lane = placementPreview.currentShapes().find((s) => s.kind === 'lane')
+    if (!lane) return null
+    const ndc = new THREE.Vector3(lane.to.x, lane.to.y, lane.to.z).project(camera)
+    return { ndcX: ndc.x, ndcY: ndc.y }
+  }
+  ;(window as unknown as Record<string, unknown>)['__castState'] = () => ({
+    placement: castDispatcher.getPlacementAbilityId(),
+    primed: castDispatcher.getPrimedSlotIdx(),
+    phase: currentMatchPhase,
+    dead: !getSelfSchemaPlayer()?.alive,
+    loadout: currentLoadoutArray(),
+  })
+}
 
 function spawnImpact(pos: THREE.Vector3, color: number, profile: ImpactProfile = 'magic'): void {
   impactVfx.spawn(pos, color, profile)
@@ -1146,6 +1179,7 @@ const gameInput = initGameInput(inp, {
   closePauseMenu: (lock) => closePauseMenu(lock),
   cancelPlacementPreview: () => castDispatcher.cancelPlacementPreview(),
   onActivateSlot: (idx: number) => castDispatcher.activateAbilitySlot(idx, false),
+  onReleaseSlot: (idx: number) => castDispatcher.releaseAbilitySlot(idx),
   onClear: () => clearCombatInputEdges(),
 })
 const { engageCanvasInput, requestArenaPointerLock, sampleInput } = gameInput
@@ -2140,6 +2174,15 @@ function _renderInner(now: number): void {
   // Swap map geometry when the server schema reports a different mapId.
   loadMapGeometry(getSchemaMapId())
   placementPreview.update(now)
+  if (captureMode) {
+    // Frame counter for tools/verify/aimpreview.mjs. Under SwiftShader this
+    // loop runs at 1-4 fps, so a harness that waits in milliseconds samples
+    // between frames and reads a preview that has not been computed yet —
+    // which is exactly how a working preview was reported broken five times.
+    // The harness waits on THIS instead of on the clock.
+    const w = window as unknown as Record<string, number>
+    w['__aimFrames'] = (w['__aimFrames'] ?? 0) + 1
+  }
 
   // Hit-stop flag — particle animation and camera lerp are frozen during it.
   // Covers both attacker-side (landed a hit) and victim-side (received a hit).

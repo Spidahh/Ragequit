@@ -24,7 +24,7 @@ status: current
 | -------- | ------------------------------------------------------------------------------------ |
 | WASD     | Movement (sprint is always on — no Shift)                                            |
 | Space    | Jump (fixed tap-height impulse; hold adds no extra height)                           |
-| 1–8      | **Direct ability binds** — one per hotbar slot, fires immediately (rebindable)       |
+| 1–8      | **Ability binds** — one per hotbar slot. Press shows the shape, release casts it (rebindable) |
 | Q (hold) | Open **Q Wheel** — radial alternative for slots 5–8 (see per-class assignment below) |
 | E (hold) | Open **E Wheel** — radial alternative for slots 1–4 (see per-class assignment below) |
 | Tab      | Cycle equipped weapon (rebindable)                                                   |
@@ -35,18 +35,31 @@ rebindable in Settings). The two wheels are an **alternative** radial way to fir
 the same abilities — direct key and wheel sector share the same bind. Slots 1–4
 are also on the E wheel, slots 5–8 on the Q wheel.
 
-## Direct keys
+## Ability keys — press shows, release casts
 
-- Press the slot's key (default `1`–`8`) to fire it immediately.
-- Direct-cast abilities fire on keypress; point-target abilities open the
-  placement preview on keypress, then M1 confirms the point.
-- Pressing a direct key auto-swaps to the ability's weapon when needed (see auto-swap).
+One rule for all 53 abilities, no exceptions by targeting mode.
+
+- **Press** the slot's key (default `1`–`8`): the ability's shape appears in the
+  world — a lane for a forward cast, a circle for an area, a ghost body where a
+  dash will land. See `01_DESIGN/00_truth.md` D12.
+- **Release**: it casts, with the aim you ended up on. What you saw is what you
+  threw.
+- **M1** while previewing also casts. **M2 or Escape** cancels.
+- A tap is still a tap. Press and release land a frame or two apart, so the cast
+  leaves at the speed it always did and the shape flashes on the way out;
+  holding buys aim time at the cost of your own hold.
+- Pressing an ability key auto-swaps to the ability's weapon when needed (see auto-swap).
+
+Until 2026-08-13 this was split: 7 point-target abilities opened a preview and
+the other 46 fired blind on the press edge. That split is the single reason a
+spell was an act of faith, and it is gone — along with the `isDirectCast`
+predicate that expressed it.
 
 ## Wheels — interaction model (alternative)
 
 - Wheel opens when E/Q is pressed and closes on release.
 - Mouse direction selects one of the 4 sectors; releasing the key primes that slot.
-- M1 fires the primed ability (direct cast) or opens placement preview for point-target abilities; a second M1 confirms placement.
+- Selecting a sector shows that ability's shape, exactly as holding its key does; M1 then casts it.
 - Releasing Q/E without selecting a sector cancels without priming.
 - Movement is not blocked while holding Q/E (10% speed reduction for readability; does not prevent firing).
 - The game does NOT pause while a wheel is open — server clock keeps running.
@@ -80,8 +93,7 @@ the server-side cast actually resolves.
 
 When a primed ability requires a different weapon than the currently equipped one, the server performs an automatic swap before casting:
 
-- Swap and cast happen in the same server tick for direct abilities.
-- For point-target abilities, the swap completes first, then placement opens; M1 confirms.
+- The swap completes while the preview is up, so the cast on release is one tick.
 - No swap penalty, no stamina/mana cost for the swap.
 - GCD applies normally to the ability cast.
 - Airborne legality follows `01_arena_fps_air_contract.md`.
@@ -90,7 +102,7 @@ When a primed ability requires a different weapon than the currently equipped on
 
 | Key | Action                                  |
 | --- | --------------------------------------- |
-| 1–8 | Fire hotbar ability slots 1–8           |
+| 1–8 | Hold to aim hotbar slots 1–8, release to cast |
 | E   | E Wheel (radial alternative, slots 1–4) |
 | Q   | Q Wheel (radial alternative, slots 5–8) |
 | Tab | Weapon swap                             |

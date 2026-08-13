@@ -62,7 +62,6 @@ export interface LoadoutStationApi {
   getLoadout: () => readonly string[]
   /** Returns the active class id for the current build. Used by sendLoadout. */
   getClassId: () => ClassId
-  isDirectCast: (abilityId: string) => boolean
 }
 
 export function initLoadoutStation(
@@ -170,12 +169,6 @@ export function initLoadoutStation(
     slots = normalizeLoadoutSlots(CLASS_PRESET_BUILDS[classId])
     setActiveSlot(0)
     save()
-  }
-
-  function isDirectCast(defOrId: AbilityDef | string): boolean {
-    const def = typeof defOrId === 'string' ? ABILITY_DEFS[defOrId] : defOrId
-    if (!def) return true
-    return def.targeting !== 'point'
   }
 
   function requestCanvasPointerLock(): void {
@@ -596,7 +589,6 @@ export function initLoadoutStation(
     },
     getLoadout: () => slots as readonly string[],
     getClassId: () => activeClassId,
-    isDirectCast,
   }
 }
 

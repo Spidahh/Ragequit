@@ -14,6 +14,7 @@
 // interface that the GameRoom implements. Tests provide a lightweight host.
 
 import {
+  forwardAimRadiusAt,
   ABILITY_DEFS,
   GCD_SEC,
   KNOCKUP_IMMUNITY_AFTER_LAND_SEC,
@@ -835,8 +836,10 @@ export class AbilityEngine {
       if (along < 0 || along > range) return
       const distSq = vx * vx + vy * vy + vz * vz
       const lateralSq = Math.max(0, distSq - along * along)
-      // Forgiving but still directional: roughly 10 degrees plus capsule width.
-      const aimRadius = PLAYER_CAPSULE_HEIGHT_M * 0.25 + along * Math.tan(Math.PI / 18)
+      // The lane the client draws. Shared formula on purpose — see
+      // shared/abilities/aim.ts: a preview that disagrees with the hitbox
+      // teaches a lie, and two literals in two files always drift eventually.
+      const aimRadius = forwardAimRadiusAt(along)
       if (lateralSq > aimRadius * aimRadius) return
       if (
         this.host.hasLineOfSight &&

@@ -979,6 +979,41 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
     intanto NON sono stupidi come sembrava: hanno già strafe orbitale, cambio arma per distanza,
     ritirata a HP bassi, schivata sul cast nemico e reazione alla parata (`BotController.ts`).
 
+### 2026-08-13 — Ogni spell adesso si VEDE prima di lanciarla (00_truth.md §10 passo 7)
+
+- **Il punto è la tua richiesta centrale**: "devi capire come castare le spell, come visualizzarle,
+  un sistema semplice ma efficace, che ti fa capire dove andrà la spell visivamente, cosa farà".
+- **Com'era davvero**: 46 abilità su 53 non mostravano NIENTE. `isDirectCast` mandava tutto ciò che
+  non era `point` dritto a un cast alla cieca. Le 8 abilità di movimento non avevano alcuna
+  anteprima: un blink da 6 m era un tiro di dadi su dove saresti finito.
+- **Cosa ho fatto**: la forma di un'abilità adesso è un VALORE, non aritmetica sparsa dentro il
+  server. `shared/abilities/aim.ts` prende l'AbilityDef più la mira e restituisce le forme —
+  corsia, cerchio, muro, fantasma del dash. Il client le disegna e il server risolve sugli stessi
+  numeri: un'anteprima che si scosta dall'hitbox insegna una bugia, e l'unica difesa vera è che
+  esista una formula sola. `isCapsuleBlocked2D` è passata in `shared`, così il fantasma del dash
+  campiona gli stessi passi da 0.25 m del corpo e si ferma esattamente dove si fermerà lui.
+- **Il comando è cambiato, ed è la parte che devi provare tu**: premi il tasto → vedi la forma;
+  rilasci → lancia, con la mira che avevi al RILASCIO. Un tap resta un tap (premi e rilasci a un
+  paio di frame di distanza, quindi la velocità è quella di prima). Tenere premuto ti compra tempo
+  di mira, pagandolo col tuo stesso tempo. È lo standard dei giochi che citi, non una mia invenzione.
+  M1 conferma lo stesso, M2/Esc annulla. **Se questo non ti piace, si torna indietro in un commit:
+  è una scelta di FEEL e resta tua.**
+- **`isDirectCast` è stato eliminato ovunque** — dispatcher, loadout station, test. Nominava un
+  concetto che non esiste più.
+- **Prova renderizzata, non solo test**: `tools/verify/aimpreview.mjs` tiene premuto ogni tasto e
+  legge sia l'output del solver sia il framebuffer. 8/8 col mago e 8/8 con l'ibrido (tutti e tre i
+  tipi di dash), con l'estremità di ogni corsia che proietta a NDC (0.000, 0.000) — il mirino esatto.
+- **Due errori miei, tenuti a verbale perché costano ogni volta**:
+  1. La prima corsia disegnava il volume VERO — un tubo conico dalla bocca dell'arma. Corretto e
+     inguardabile: la corsia parte dalla telecamera, quindi guardavi dentro un cono di 30 m dal suo
+     vertice, ~60° di schermo pieno. La larghezza è finita nell'anello sul punto d'impatto, dove è
+     piccola e dove stai già guardando.
+  2. L'harness ha dichiarato rotta una feature funzionante per cinque run. Sotto SwiftShader il
+     render loop gira a **1-4 fps**: aspettare 220 ms vuol dire aspettare circa zero frame, e stavo
+     leggendo un'anteprima non ancora calcolata. Adesso aspetta un contatore di frame.
+     **Mai più misurare questo renderer a orologio.**
+- Gate verde: typecheck, lint, budget (3 tetti abbassati), content, 528 test.
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.

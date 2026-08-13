@@ -131,16 +131,6 @@ describe('loadout station smoke', () => {
     expect(document.getElementById('ls-confirm')?.textContent).toBe('START TRAINING')
   })
 
-  it('derives cast flow from targeting without persisted cast-mode overrides', () => {
-    const api = initLoadoutStation(() => undefined)
-
-    expect(api.isDirectCast('flame_wall')).toBe(false)
-    expect(api.isDirectCast('fireball')).toBe(true)
-
-    api.open()
-    expect(api.isDirectCast('uppercut')).toBe(true)
-  })
-
   it('does not send or close when build changes are locked', () => {
     const send = vi.fn()
     const room = { send } as never

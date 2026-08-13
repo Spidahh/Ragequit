@@ -81,8 +81,10 @@ export interface GameInputOptions {
   closePauseMenu: (lockPointer: boolean) => void
   cancelPlacementPreview: () => void
   onClear: () => void
-  /** Fire the ability in hotbar slot `slotIdx` (0-7) via its direct key. */
+  /** Hotbar key DOWN: show what slot `slotIdx` is about to do. */
   onActivateSlot: (slotIdx: number) => void
+  /** Hotbar key UP: cast it, with the aim the player ended up on. */
+  onReleaseSlot: (slotIdx: number) => void
 }
 
 export function initGameInput(
@@ -113,6 +115,7 @@ export function initGameInput(
     cancelPlacementPreview,
     onClear,
     onActivateSlot,
+    onReleaseSlot,
   }: GameInputOptions,
 ): GameInputController {
   function engageCanvasInput(): void {
@@ -414,6 +417,16 @@ export function initGameInput(
         engageCanvasInput()
       }
       state.keys.delete(e.code)
+      // The cast leaves on the release edge — see cast-dispatcher. Not gated on
+      // isGameplayInputAllowed: a key pressed while live and released a frame
+      // after the match ended would otherwise stay logically held forever, and
+      // the dispatcher's own combatLive check already drops the cast.
+      for (let slotIdx = 0; slotIdx < SLOT_ACTIONS.length; slotIdx++) {
+        if (matchesAction(e.code, SLOT_ACTIONS[slotIdx]!)) {
+          onReleaseSlot(slotIdx)
+          break
+        }
+      }
       if (radialWheels.isOpen() && e.code === radialWheels.activeKey()) {
         radialWheels.close(true)
       }

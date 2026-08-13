@@ -1,10 +1,34 @@
-import { ABILITY_DEFS } from '@ragequit/shared'
+// ---------------------------------------------------------------------------
+// The aim preview: every ability shows what it is about to do.
+//
+// This used to be a placement reticle for the 7 `point` abilities and nothing
+// at all for the other 46 — `aimPoint` returned undefined unless targeting was
+// 'point', and the input layer routed everything else straight to a blind cast.
+// So 87 % of the roster was fired on faith.
+//
+// It now draws whatever the shared solver says the ability occupies: a lane for
+// forward casts, a disc for areas, a slab for walls, a ghost body for dashes.
+// The geometry comes from @ragequit/shared so the preview and the hitbox are
+// the same numbers, and the drawing lives in ./aim-shapes.ts.
+// ---------------------------------------------------------------------------
+import {
+  ABILITY_DEFS,
+  CAPSULE_HEIGHT_M,
+  EYE_Y_OFFSET_M,
+  getMap,
+  resolveAimPlan,
+  type AimShape,
+} from '@ragequit/shared'
 import * as THREE from 'three'
+
+import { createDashView, createDiscView, createLaneView, createWallView } from './aim-shapes.js'
 
 export interface PlacementPreviewOptions {
   camera: THREE.Camera
   getMouseYaw: () => number
+  getMousePitch: () => number
   getSelfPos: () => { x: number; y: number; z: number } | null
+  getSelfVelocity: () => { x: number; z: number } | null
   getPlacementAbilityId: () => string | null
   getMapGroundY: (mapId: string) => number
   getActiveMapId: () => string
@@ -15,6 +39,8 @@ export interface PlacementPreviewController {
   group: THREE.Group
   update: (now: number) => void
   aimPoint: (abilityId: string) => { x: number; y: number; z: number } | undefined
+  /** The shapes drawn on the last update — the seam tests read through. */
+  currentShapes: () => readonly AimShape[]
 }
 
 function elementColor(element: string): number {
@@ -26,45 +52,12 @@ function elementColor(element: string): number {
   return 0xffd260
 }
 
-function placementFootprint(abilityId: string): {
-  radius: number
-  width: number
-  depth: number
-  wall: boolean
-} {
-  const def = ABILITY_DEFS[abilityId]
-  let radius = 0.85,
-    width = 0,
-    depth = 0,
-    wall = false
-  if (!def) return { radius, width, depth, wall }
-
-  for (const e of def.effects) {
-    if (e.kind === 'zone') {
-      if (e.width && e.width > 0) {
-        wall = true
-        width = Math.max(width, e.width)
-        depth = Math.max(depth, Math.max(0.55, e.radius || 0.8))
-      } else {
-        radius = Math.max(radius, e.radius)
-      }
-    } else if (e.kind === 'damage') {
-      radius = Math.max(radius, e.radius ?? 0)
-    } else if (e.kind === 'projectile') {
-      radius = Math.max(radius, e.splashRadius ?? 0)
-    } else if (e.kind === 'knockup') {
-      radius = Math.max(radius, e.radius ?? 0)
-    } else if (e.kind === 'applyStatus') {
-      radius = Math.max(radius, e.radius ?? 0)
-    }
-  }
-  return { radius: Math.max(0.65, radius), width, depth, wall }
-}
-
 export function initPlacementPreview({
   camera,
   getMouseYaw,
+  getMousePitch,
   getSelfPos,
+  getSelfVelocity,
   getPlacementAbilityId,
   getMapGroundY,
   getActiveMapId,
@@ -73,71 +66,30 @@ export function initPlacementPreview({
   const group = new THREE.Group()
   group.visible = false
 
-  const discMat = new THREE.MeshBasicMaterial({
-    color: 0xffd260,
-    transparent: true,
-    opacity: 0.24,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  })
-  const ringMat = new THREE.MeshBasicMaterial({
-    color: 0xffd260,
-    transparent: true,
-    opacity: 0.92,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  })
-  const disc = new THREE.Mesh(new THREE.CircleGeometry(1, 64), discMat)
-  disc.rotation.x = -Math.PI / 2
-  group.add(disc)
+  const disc = createDiscView()
+  const wall = createWallView()
+  const lane = createLaneView()
+  const dash = createDashView()
+  group.add(disc.group, wall.group, lane.group, dash.group)
 
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.96, 1, 64), ringMat)
-  ring.rotation.x = -Math.PI / 2
-  group.add(ring)
+  let shapes: readonly AimShape[] = []
 
-  const reticleGeom = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(-0.72, 0, 0),
-    new THREE.Vector3(0.72, 0, 0),
-    new THREE.Vector3(0, 0, -0.72),
-    new THREE.Vector3(0, 0, 0.72),
-  ])
-  const reticleMat = new THREE.LineBasicMaterial({
-    color: 0xffd260,
-    transparent: true,
-    opacity: 0.7,
-  })
-  const reticle = new THREE.LineSegments(reticleGeom, reticleMat)
-  reticle.position.y = 0.012
-  group.add(reticle)
-
-  const wall = new THREE.Mesh(
-    new THREE.PlaneGeometry(1, 1),
-    new THREE.MeshBasicMaterial({
-      color: 0xff8a30,
-      transparent: true,
-      opacity: 0.38,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    }),
-  )
-  wall.rotation.x = -Math.PI / 2
-  group.add(wall)
-
-  const lineGeom = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(),
-    new THREE.Vector3(),
-  ])
-  group.add(
-    new THREE.Line(
-      lineGeom,
-      new THREE.LineBasicMaterial({ color: 0xffd260, transparent: true, opacity: 0.78 }),
-    ),
-  )
-
-  function groundY(): number {
-    return getMapGroundY(getActiveMapId() || getSchemaMapId())
+  function mapId(): string {
+    return getActiveMapId() || getSchemaMapId() || 'blockout'
   }
 
+  function groundY(): number {
+    return getMapGroundY(mapId())
+  }
+
+  /**
+   * Where the camera ray meets the ground, clamped to the ability's range.
+   *
+   * `point` abilities send this to the server as the cast target, so it stays
+   * a ray cast against the real camera rather than yaw trigonometry: the two
+   * disagree the moment the player is pitched, and the server clamps whatever
+   * it is given without arguing.
+   */
   function aimPoint(abilityId: string): { x: number; y: number; z: number } | undefined {
     const def = ABILITY_DEFS[abilityId]
     if (!def || def.targeting !== 'point') return undefined
@@ -145,7 +97,6 @@ export function initPlacementPreview({
     if (!selfPos) return undefined
 
     const gY = groundY()
-    const mouseYaw = getMouseYaw()
     const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).normalize()
     const point = new THREE.Vector3()
 
@@ -155,11 +106,8 @@ export function initPlacementPreview({
     }
 
     if (point.lengthSq() === 0) {
-      point.set(
-        selfPos.x - Math.sin(mouseYaw) * def.range,
-        gY,
-        selfPos.z - Math.cos(mouseYaw) * def.range,
-      )
+      const yaw = getMouseYaw()
+      point.set(selfPos.x - Math.sin(yaw) * def.range, gY, selfPos.z - Math.cos(yaw) * def.range)
     }
 
     const dx = point.x - selfPos.x
@@ -174,63 +122,62 @@ export function initPlacementPreview({
     return { x: point.x, y: point.y, z: point.z }
   }
 
-  function previewPoint(abilityId: string): { x: number; y: number; z: number } | undefined {
-    const point = aimPoint(abilityId)
-    if (point) return point
-    const def = ABILITY_DEFS[abilityId]
-    const selfPos = getSelfPos()
-    if (!def || !selfPos) return undefined
-    const mouseYaw = getMouseYaw()
-    const dist = Math.max(1.5, Math.min(def.range || 6, 10))
-    return {
-      x: selfPos.x - Math.sin(mouseYaw) * dist,
-      y: groundY(),
-      z: selfPos.z - Math.cos(mouseYaw) * dist,
-    }
-  }
-
   function update(now: number): void {
-    const placementAbilityId = getPlacementAbilityId()
+    const abilityId = getPlacementAbilityId()
     const selfPos = getSelfPos()
-    if (!placementAbilityId || !selfPos) {
+    const def = abilityId ? ABILITY_DEFS[abilityId] : undefined
+    if (!def || !selfPos) {
+      shapes = []
       group.visible = false
       return
     }
-    const def = ABILITY_DEFS[placementAbilityId]
-    const point = previewPoint(placementAbilityId)
-    if (!def || !point) {
-      group.visible = false
-      return
-    }
-    const footprint = placementFootprint(placementAbilityId)
+
+    const gY = groundY()
+    // sim.pos is the capsule CENTRE (controller floors it at groundY +
+    // CAPSULE_HALF_HEIGHT_M), so the feet are half a body below it. Getting
+    // this wrong puts every ground disc 0.9 m in the air.
+    const feet = { x: selfPos.x, y: selfPos.y - CAPSULE_HEIGHT_M / 2, z: selfPos.z }
+    shapes = resolveAimPlan(def, {
+      feet,
+      // Solve from the eye so the lane is drawn on the crosshair the player is
+      // actually using. The server anchors forward casts at capsule centre +
+      // half height and applies the same offset to victims, so the comparison
+      // is self-consistent there; this offset only decides where the tube is
+      // painted, never who it can hit.
+      eyeOffset: CAPSULE_HEIGHT_M / 2 + EYE_Y_OFFSET_M,
+      yaw: getMouseYaw(),
+      pitch: getMousePitch(),
+      groundY: gY,
+      boxes: getMap(mapId()).boxes,
+      point: aimPoint(abilityId ?? '') ?? null,
+      velocity: getSelfVelocity(),
+    })
+
     const color = elementColor(def.element)
     const pulse = 0.5 + 0.5 * Math.sin(now * 0.008)
-    group.visible = true
-    group.position.set(point.x, point.y + 0.035, point.z)
-    group.rotation.y = getMouseYaw()
-    disc.visible = !footprint.wall
-    ring.visible = !footprint.wall
-    wall.visible = footprint.wall
-    reticle.visible = !footprint.wall
-    discMat.color.setHex(color)
-    ringMat.color.setHex(color)
-    reticleMat.color.setHex(color)
-    ;(wall.material as THREE.MeshBasicMaterial).color.setHex(color)
-    if (footprint.wall) {
-      wall.scale.set(footprint.width, footprint.depth, 1)
-      ;(wall.material as THREE.MeshBasicMaterial).opacity = 0.32 + pulse * 0.14
-    } else {
-      disc.scale.setScalar(footprint.radius)
-      ring.scale.setScalar(footprint.radius)
-      reticle.scale.setScalar(footprint.radius)
-      discMat.opacity = 0.18 + pulse * 0.1
-      ringMat.opacity = 0.72 + pulse * 0.22
+    disc.group.visible = false
+    wall.group.visible = false
+    lane.group.visible = false
+    dash.group.visible = false
+
+    for (const shape of shapes) {
+      if (shape.kind === 'disc') {
+        disc.apply(shape, color, pulse)
+        disc.group.visible = true
+      } else if (shape.kind === 'wall') {
+        wall.apply(shape, color, pulse)
+        wall.group.visible = true
+      } else if (shape.kind === 'lane') {
+        // apply() owns this one's visibility: a degenerate zero-length lane
+        // must stay hidden rather than render as a dot at the muzzle.
+        lane.apply(shape, color, pulse)
+      } else {
+        dash.apply(shape, color, pulse, CAPSULE_HEIGHT_M)
+        dash.group.visible = true
+      }
     }
-    const attr = lineGeom.attributes['position'] as THREE.BufferAttribute
-    attr.setXYZ(0, selfPos.x, point.y + 0.08, selfPos.z)
-    attr.setXYZ(1, point.x, point.y + 0.08, point.z)
-    attr.needsUpdate = true
+    group.visible = true
   }
 
-  return { group, update, aimPoint }
+  return { group, update, aimPoint, currentShapes: () => shapes }
 }
