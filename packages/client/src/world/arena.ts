@@ -61,6 +61,28 @@ function makeBoxMesh(box: AABB, color: number): THREE.Mesh {
   return m
 }
 
+/**
+ * A 32x32 radial-gradient dot, used as the dust sprite.
+ *
+ * Without a map, THREE.PointsMaterial renders each point as a hard square —
+ * which is exactly what it looks like when one passes close to the camera.
+ */
+function makeSoftDotTexture(): HTMLCanvasElement {
+  const c = document.createElement('canvas')
+  c.width = 32
+  c.height = 32
+  const ctx = c.getContext('2d')
+  if (ctx) {
+    const g = ctx.createRadialGradient(16, 16, 0, 16, 16, 16)
+    g.addColorStop(0, 'rgba(255,255,255,1)')
+    g.addColorStop(0.45, 'rgba(255,255,255,0.55)')
+    g.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = g
+    ctx.fillRect(0, 0, 32, 32)
+  }
+  return c
+}
+
 export function buildArena(scene: THREE.Scene, _toonGradient: THREE.DataTexture): ArenaObjects {
   // ── Arena visual group containing all custom decorative fight-league assets ──
   const arenaVisualGroup = new THREE.Group()
@@ -330,14 +352,30 @@ export function buildArena(scene: THREE.Scene, _toonGradient: THREE.DataTexture)
   const dustColorAttr = new THREE.BufferAttribute(new Float32Array(pCount * 3), 3)
   dustColorAttr.usage = THREE.DynamicDrawUsage
   pGeo.setAttribute('color', dustColorAttr)
+  // A soft round sprite, not the default square.
+  //
+  // PointsMaterial with no map draws a SOLID FILLED SQUARE, and with
+  // sizeAttenuation on, three.js computes gl_PointSize = size * pixelRatio *
+  // (height/2) / distance. At size 0.09 on a 1080p screen that is ~109 px at
+  // 1 m and ~219 px at 0.5 m — and these motes are distributed through the
+  // volume the player walks in. Flying through one put an opaque pale square
+  // over a fifth of the screen: half of "there are half-transparent textures
+  // that appear out of nowhere".
+  //
+  // The radial-alpha sprite makes a mote read as a mote, and the size cap
+  // stops any single one from ever owning the frame.
+  const dustSprite = new THREE.CanvasTexture(makeSoftDotTexture())
   const dust = new THREE.Points(
     pGeo,
     new THREE.PointsMaterial({
       color: 0xffffff,
       vertexColors: true,
-      size: 0.09,
+      size: 0.055,
+      map: dustSprite,
+      alphaMap: dustSprite,
       transparent: true,
-      opacity: 0.45,
+      opacity: 0.4,
+      depthWrite: false,
       sizeAttenuation: true,
     }),
   )

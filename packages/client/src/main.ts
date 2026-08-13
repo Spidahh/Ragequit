@@ -124,12 +124,8 @@ import {
 } from './render/characters.js'
 import { configureGameRenderer, createRendererOrGate } from './render/create-renderer.js'
 import { installArenaEnvironment } from './render/environment.js'
-import {
-  makeSwingArcMesh,
-  makeToonGradient,
-  SWING_ARC_HEIGHT_M,
-  SWING_ARC_YAW_OFFSET,
-} from './render/factories.js'
+import { makeToonGradient } from './render/factories.js'
+import { hFovToVFov } from './render/fov.js'
 import { initPlacementPreview } from './render/placement-preview.js'
 import { createPostPipeline } from './render/post-pipeline.js'
 import { initProjectileVisuals, type SchemaProjectile } from './render/projectile-visuals.js'
@@ -321,10 +317,10 @@ const castDispatcher = initCastDispatcher({
   onSwingSent: () => {
     // Missed swings still need an audible whoosh.
     soundEngine.playSwing()
-    if (selfArc) {
-      selfArc.visible = true
-      selfArcExpiresAt = performance.now() + 400
-    }
+    // No world arc in first person: it was a 1.3 m torus at eye height + 0.5 m,
+    // i.e. a bright additive band across the top of the view on every swing,
+    // over the enemy you are hitting. Remote players still show theirs, which
+    // is the half that was ever useful.
   },
   // Bow/staff had no input-frame sound at all: a missed shot was silent.
   onWeaponFired: (weapon) => soundEngine.playWeaponFire(weapon),
@@ -428,8 +424,14 @@ scene.fog = new THREE.FogExp2(0x121622, 0.007)
 // flat-dark. Dark on-palette night env map; see render/environment.ts.
 installArenaEnvironment(scene, renderer)
 
-// DEFAULT_FOV, never a literal — see its note in menu.ts.
-const camera = new THREE.PerspectiveCamera(DEFAULT_FOV, innerWidth / innerHeight, 0.1, 400)
+// DEFAULT_FOV is HORIZONTAL degrees; three.js wants vertical. See render/fov.ts.
+const camAspect0 = innerWidth / innerHeight
+const camera = new THREE.PerspectiveCamera(
+  hFovToVFov(DEFAULT_FOV, camAspect0),
+  camAspect0,
+  0.1,
+  400,
+)
 
 // First-person weapon "viewmodel" pass. The arms+weapon live in their OWN scene
 // rendered after the world with a fresh depth buffer (see render loop), so the
@@ -773,8 +775,6 @@ let lastKillerName = ''
 // Timestamps of self kills for streak detection (ms).
 const recentKillTimes: number[] = []
 let selfMesh: THREE.Group | null = null
-let selfArc: THREE.Mesh | null = null
-let selfArcExpiresAt = 0
 let selfLastWeapon = ''
 let activeRoomMode = 'duel_arena'
 let lastConnectMode = 'duel_arena' // original UI mode (e.g. training_master) for reconnect; activeRoomMode is the resolved one
@@ -927,6 +927,9 @@ const SHAKE_DECAY_RATE = 9 // m/s — shake disappears in ~1/SHAKE_DECAY_RATE se
 // sword: third-person melee readability; bow/staff: first-person precision.
 // FOV default is 90°.
 let camFovBase = DEFAULT_FOV
+// The live horizontal FOV the cue lerps, kept separate from camera.fov so the
+// conversion happens once per frame at the end instead of round-tripping.
+let camHFov = DEFAULT_FOV
 // Settings-driven FOV, set by the settings panel and persisted by menu.ts.
 let settingsFovBase = DEFAULT_FOV
 let pendingLaunchMode: string | null = null
@@ -1080,8 +1083,10 @@ const menu = initMenu({
     launchModeOrForge(lastConnectMode)
   },
   onFovChange: (fov) => {
+    // Horizontal degrees, as the slider is labelled.
     settingsFovBase = fov
-    camFovBase = fov // snap immediately when changed from settings
+    camFovBase = fov
+    camHFov = fov // snap immediately when changed from settings
   },
   onSensChange: (sens) => {
     mouseSensitivity.set(sens)
@@ -1312,11 +1317,6 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
             selfSessionId: () => self?.sessionId,
             trackCast: (id, element) => trackAbilityCast(id, element),
             showReadout: (id, mode) => abilityReadout.show(id, mode),
-            showSelfSwingArc: (untilMs) => {
-              if (!selfArc) return
-              selfArc.visible = true
-              selfArcExpiresAt = untilMs
-            },
             onSelfWindupStarted: () => {
               castStartedAtMs = performance.now()
             },
@@ -1585,18 +1585,27 @@ function onHit(msg: ServerHitMessage): void {
   }
 
   // --- World-space impact VFX — melee, projectile, combo, parry ---
-  spawnHitImpacts(
-    {
-      spawnImpact,
-      burstElement: (pos, element) => spellParticles.burstImpact(pos, toSpellStyle(element)),
-    },
-    msg,
-    {
-      vicPos: getPlayerWorldPos(msg.victimId),
-      attPos: getPlayerWorldPos(msg.attackerId),
-      isAirPunish,
-    },
-  )
+  //
+  // NOT when the victim is you. hitContactPoint puts the contact at victim
+  // y + 1.0 while the local camera sits at y + 0.65, so every hit you TAKE
+  // spawned a 2 m additive plane and an element burst 35 cm in front of your
+  // face, with no depth write — the screen washed out in the element colour
+  // and you could not see who was hitting you. The victim already gets the
+  // screen flash and the directional shake above, which is what a first-person
+  // game uses to say "you were hit, from there".
+  if (!amISelf)
+    spawnHitImpacts(
+      {
+        spawnImpact,
+        burstElement: (pos, element) => spellParticles.burstImpact(pos, toSpellStyle(element)),
+      },
+      msg,
+      {
+        vicPos: getPlayerWorldPos(msg.victimId),
+        attPos: getPlayerWorldPos(msg.attackerId),
+        isAirPunish,
+      },
+    )
 
   const victimPos = getPlayerWorldPos(msg.victimId)
   if (victimPos) {
@@ -1707,13 +1716,6 @@ function clearSelfVisuals(): void {
     disposeObject3D(selfMesh)
     selfMesh = null
   }
-  if (selfArc) {
-    scene.remove(selfArc)
-    selfArc.geometry.dispose()
-    ;(selfArc.material as THREE.Material).dispose()
-    selfArc = null
-  }
-  selfArcExpiresAt = 0
   selfLastWeapon = ''
 }
 
@@ -1893,8 +1895,6 @@ function initSelfIfNeeded(): void {
   ;(globalThis as Record<string, unknown>)['__self'] = selfMesh // verify-harness diag
   scene.add(selfMesh)
   loadCharacterGlb(selfMesh, 0x3a8fde, toonGradient, p.classId)
-  selfArc = makeSwingArcMesh()
-  scene.add(selfArc)
   inp.mouseYaw = p.transform.yaw
 }
 
@@ -2043,11 +2043,7 @@ function simStep(): void {
       now,
       schemaTick,
       (tick) => {
-        if (selfArc && tick !== cachedSelfSwingTick) {
-          cachedSelfSwingTick = tick
-          selfArc.visible = true
-          selfArcExpiresAt = now + 400
-        }
+        if (tick !== cachedSelfSwingTick) cachedSelfSwingTick = tick
       },
     )
   }
@@ -2300,7 +2296,7 @@ function _renderInner(now: number): void {
         moving: selfSpeed > 0.3,
         speed: selfSpeed,
         activeWeapon: wSchema,
-        attacking: !!(selfArc?.visible && now < selfArcExpiresAt),
+        attacking: false,
         attackVariant: selfSchema?.comboIndex ?? 0,
         airborne,
         bowCharging:
@@ -2351,7 +2347,15 @@ function _renderInner(now: number): void {
     // inside a real character rather than floating in an empty scene holding a
     // prop. This is what the game was missing: first person was implemented as a
     // camera with NO BODY, and the third-person sword existed to paper over it.
-    selfMesh.visible = !dead
+    // FIRST PERSON: the local rig is never drawn by the world camera. It used
+    // to be `!dead`, which rendered the whole third-person character inside a
+    // 0.1 m near plane with the camera in its chest — and the GLBs carry
+    // alphaMode:BLEND submeshes (eyelashes, arrow, a transparent vampire
+    // material) that write no depth, which is the "half-transparent textures
+    // that appear". The viewmodel pass the camera comment promises has never
+    // existed; until it does, no body is the honest first-person view, and it
+    // is what every arena shooter renders. Remote players are unaffected.
+    selfMesh.visible = false
     setFirstPersonHead(selfMesh, true)
     setParryShieldState(selfMesh, !dead && !!selfSchema?.parrying, !!selfSchema?.parryIsHold, now)
 
@@ -2398,8 +2402,12 @@ function _renderInner(now: number): void {
     // system invisible. Ground top speed is MOVE_SPEED_MPS, so anything above it
     // was earned in the air; that is the range worth showing.
     const earned = Math.min(1, Math.max(0, (horizSpeed - MOVE_SPEED_MPS) / MOVE_SPEED_MPS))
-    const targetFov = camFovBase + earned * 14 + hitStopFovNarrow
-    camera.fov += (targetFov - camera.fov) * (inHitStop ? 0.35 : 0.08)
+    // camFovBase and the cue are HORIZONTAL degrees — the unit the player set —
+    // and only become vertical at the last step. Lerping in vertical space
+    // would make the same +14 cue feel different on every aspect ratio.
+    const targetHFov = camFovBase + earned * 14 + hitStopFovNarrow
+    camHFov += (targetHFov - camHFov) * (inHitStop ? 0.35 : 0.08)
+    camera.fov = hFovToVFov(camHFov, camera.aspect)
     camera.updateProjectionMatrix()
 
     // Weapon-specific crosshair — drives CSS via data attribute.
@@ -2423,22 +2431,6 @@ function _renderInner(now: number): void {
     const primedIdx = castDispatcher.getPrimedSlotIdx()
     if (primedIdx !== null) crosshairEl.setAttribute('data-primed', 'true')
     else crosshairEl.removeAttribute('data-primed')
-
-    if (selfArc) {
-      if (selfArc.visible && now < selfArcExpiresAt) {
-        const life = 1 - (selfArcExpiresAt - now) / 400
-        selfArc.position.set(x, y + SWING_ARC_HEIGHT_M, z)
-        // SWING_ARC_YAW_OFFSET = π/2 + halfConeAngle centres the TorusGeometry
-        // arc on the player's forward direction (−sin(yaw), 0, −cos(yaw)).
-        // Derivation: arc centre at thetaLength/2 in local XY → after
-        // rotation.set(PI/2, ry, 'YXZ') lands at (cos(ry−half), 0, −sin(ry−half)).
-        // ry = yaw + π/2 + half makes that equal to forward. ✓
-        selfArc.rotation.set(Math.PI / 2, inp.mouseYaw + SWING_ARC_YAW_OFFSET, 0, 'YXZ')
-        ;(selfArc.material as THREE.MeshBasicMaterial).opacity = 0.8 * (1 - life)
-      } else {
-        selfArc.visible = false
-      }
-    }
   }
 
   remotePlayerSystem.renderFrame(now, camera, renderer.domElement)
@@ -2596,6 +2588,9 @@ function _renderInner(now: number): void {
 
 addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight
+  // Reconvert: horizontal->vertical depends on aspect, so resizing the window
+  // without this hands an ultrawide a narrower game than it asked for.
+  camera.fov = hFovToVFov(camHFov, camera.aspect)
   camera.updateProjectionMatrix()
   renderer.setSize(window.innerWidth, window.innerHeight)
   bloomComposer.setSize(window.innerWidth, window.innerHeight)
