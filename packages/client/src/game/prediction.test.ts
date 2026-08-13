@@ -24,10 +24,23 @@ const replay = (sim: PlayerSimState, i: SimInput, _dt: number, _caps: MovementCa
 }
 
 describe('reconcilePrediction', () => {
-  it('returns null when ackSeq is not newer than lastAckSeq', () => {
+  it('ignores an ack that is older than one already applied', () => {
     const state: PredictionState = { sim: simState(5), pending: [], lastAckSeq: 10 }
-    expect(reconcilePrediction(state, simState(0), 10, replay)).toBeNull()
     expect(reconcilePrediction(state, simState(0), 9, replay)).toBeNull()
+  })
+
+  // A REPEATED ack must still reconcile. When no input reaches the server on a
+  // tick it simulates a zero-move step anyway and does not advance the ack, so
+  // the same seq arrives again carrying new state. While velocity was re-derived
+  // from input every frame, skipping that cost nothing and self-healed; now that
+  // velocity persists across ticks, ignoring it leaves the client's integrator
+  // permanently out of step with the server's, and the error compounds on every
+  // dropped packet.
+  it('still reconciles when the same ack repeats, because the state moved on', () => {
+    const state: PredictionState = { sim: simState(5), pending: [], lastAckSeq: 10 }
+    const result = reconcilePrediction(state, simState(42), 10, replay)
+    expect(result).not.toBeNull()
+    expect(result!.sim.pos.x).toBe(42)
   })
 
   it('drops acked inputs and replays only in-flight ones onto the server state', () => {

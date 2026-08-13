@@ -45,7 +45,13 @@ export function reconcilePrediction(
   ackSeq: number,
   replay: ReplayFn,
 ): { sim: PlayerSimState; delta: number } | null {
-  if (ackSeq <= state.lastAckSeq) return null
+  // `<`, not `<=`. When no input arrives on a tick the server still simulates a
+  // zero-move step and does NOT advance lastProcessedInputSeq, so the ack repeats.
+  // While velocity was re-derived from input every frame that cost nothing and
+  // self-healed; now that velocity PERSISTS, skipping the reconcile leaves the
+  // client's integrator permanently out of step with the server's, and it
+  // compounds on every dropped packet.
+  if (ackSeq < state.lastAckSeq) return null
 
   // Drop every input the server has already processed — only replay the ones
   // still in flight (seq > ackSeq).

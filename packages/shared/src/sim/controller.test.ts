@@ -27,20 +27,53 @@ describe('simulatePlayer', () => {
     expect(s.vel.y).toBeCloseTo(0, 4)
   })
 
-  it('moves at MOVE_SPEED_MPS when pressing forward', () => {
+  it('accelerates up to MOVE_SPEED_MPS instead of starting there', () => {
     const s = makePlayerSimState({ x: 0, y: BASE_Y, z: 20 })
-    const TICKS = 20
-    const expectedDisplacement = MOVE_SPEED_MPS * (TICKS * DT)
-    for (let i = 0; i < TICKS; i++) {
-      simulatePlayer(
-        s,
-        { moveX: 0, moveZ: -1, yaw: 0, jump: false, jumpHold: false },
-        DT,
-        STATIC_MAP,
-      )
-    }
-    expect(s.pos.z).toBeCloseTo(20 - expectedDisplacement, 1)
+    const fwd = { moveX: 0, moveZ: -1, yaw: 0, jump: false, jumpHold: false }
+
+    // One tick in, the character is moving but nowhere near top speed. This is
+    // the whole point: velocity accumulates. It used to be assigned, so a single
+    // tick took it from a standstill to 9 m/s.
+    simulatePlayer(s, fwd, DT, STATIC_MAP)
+    const afterOneTick = Math.hypot(s.vel.x, s.vel.z)
+    expect(afterOneTick).toBeGreaterThan(0)
+    expect(afterOneTick).toBeLessThan(MOVE_SPEED_MPS * 0.35)
+
+    // Held, it converges on the speed limit and does not exceed it.
+    for (let i = 0; i < 60; i++) simulatePlayer(s, fwd, DT, STATIC_MAP)
+    expect(Math.hypot(s.vel.x, s.vel.z)).toBeCloseTo(MOVE_SPEED_MPS, 2)
+
+    // Direction is still exactly forward — the ramp must not introduce drift.
     expect(s.pos.x).toBeCloseTo(0, 4)
+    expect(s.pos.z).toBeLessThan(20)
+  })
+
+  it('keeps moving after the key is released, then stops properly', () => {
+    const s = makePlayerSimState({ x: 0, y: BASE_Y, z: 20 })
+    const fwd = { moveX: 0, moveZ: -1, yaw: 0, jump: false, jumpHold: false }
+    const idle = { moveX: 0, moveZ: 0, yaw: 0, jump: false, jumpHold: false }
+    for (let i = 0; i < 60; i++) simulatePlayer(s, fwd, DT, STATIC_MAP)
+
+    const zAtRelease = s.pos.z
+    simulatePlayer(s, idle, DT, STATIC_MAP)
+    // Friction, not a switch: one tick after release you are still moving.
+    expect(Math.hypot(s.vel.x, s.vel.z)).toBeGreaterThan(0)
+
+    for (let i = 0; i < 60; i++) simulatePlayer(s, idle, DT, STATIC_MAP)
+    // ...and it does reach a true zero rather than creeping forever.
+    expect(Math.hypot(s.vel.x, s.vel.z)).toBe(0)
+    // A real stopping distance, which is what gives the character weight.
+    expect(Math.abs(s.pos.z - zAtRelease)).toBeGreaterThan(0.3)
+  })
+
+  it('treats a partial input as a lower target speed, not a shorter direction', () => {
+    // Bots send magnitudes below 1 (BotController uses 0.55). If that vector were
+    // used as the wish DIRECTION the fixed point would move to V/|dir| and they
+    // would accelerate past the speed limit.
+    const s = makePlayerSimState({ x: 0, y: BASE_Y, z: 20 })
+    const half = { moveX: 0, moveZ: -0.5, yaw: 0, jump: false, jumpHold: false }
+    for (let i = 0; i < 120; i++) simulatePlayer(s, half, DT, STATIC_MAP)
+    expect(Math.hypot(s.vel.x, s.vel.z)).toBeCloseTo(MOVE_SPEED_MPS * 0.5, 1)
   })
 
   it('tap jump reaches ~JUMP_HEIGHT_TAP_M apex', () => {

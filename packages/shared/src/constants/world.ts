@@ -36,6 +36,31 @@ export const CHARACTER_RENDER_HEIGHT_M = 1.9 as const
  */
 export const EYE_Y_OFFSET_M = 0.65 as const
 
+// ── Horizontal movement ─────────────────────────────────────────────────────
+// Quake's PM_Friction / PM_Accelerate model. Velocity is ACCUMULATED, not
+// assigned: that is the whole point. Before this, vel was set straight from
+// input every tick — 0 to 9 m/s in one 16 ms frame, zero stopping distance,
+// instant reversal — which is why the character had no weight at all.
+//
+// Real acceleration is COEF x wishSpeed, so haste/slow rescale the ramp for
+// free. GROUND_ACCEL_COEF MUST stay above GROUND_FRICTION: friction runs in the
+// same tick, so the ramp's exponential rate is FRICTION and the reachable top
+// speed is ACCEL*V/FRICTION. Time to full speed = -ln(1 - FRICTION/ACCEL)/FRICTION.
+// At 12/8 that is 137 ms. Setting them equal is the degenerate case: the fixed
+// point lands exactly on V and is only approached asymptotically — 2.7 SECONDS
+// to top speed. Verified by simulating the exact step, not by reading the maths.
+export const GROUND_ACCEL_COEF = 12.0 as const
+export const GROUND_FRICTION = 8.0 as const
+// Below this speed friction becomes a constant deceleration, so you actually
+// reach zero instead of asymptoting toward it. 1/3 of top speed, as in Q3 and CS.
+export const STOP_SPEED_MPS = 3.0 as const
+// Air is a different rule, not a scaled one — 1/12 of ground steering. Applied
+// to the projection of velocity on the wish direction (never to its magnitude),
+// which is what lets a well-timed strafe gain speed instead of capping it.
+export const AIR_ACCEL_COEF = 1.0 as const
+// Hard ceiling on airborne horizontal speed so chained hops cannot run away.
+export const AIR_SPEED_CAP_MPS = 11.7 as const
+
 // Ground plane Y (world floor).
 export const GROUND_Y = 0 as const
 

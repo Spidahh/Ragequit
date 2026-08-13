@@ -10,12 +10,17 @@
 
 import { JUMP_COST_STAMINA, JUMP_HEIGHT_TAP_M, MOVE_SPEED_MPS } from '../constants/stats.js'
 import {
+  AIR_ACCEL_COEF,
+  AIR_SPEED_CAP_MPS,
   CAPSULE_HALF_HEIGHT_M,
   CAPSULE_HALF_WIDTH_M,
   COYOTE_TICKS,
   GRAVITY_MPS2,
+  GROUND_ACCEL_COEF,
   GROUND_EPSILON_M,
+  GROUND_FRICTION,
   MAX_FALL_SPEED_MPS,
+  STOP_SPEED_MPS,
 } from '../constants/world.js'
 
 import type { AABB, PlayerSimState, SimInput, StaticMap, Vec3 } from './types.js'
@@ -72,7 +77,6 @@ export function simulatePlayer(
     mz /= mag
   }
 
-  // Momentum and hold-to-jump are disabled as per gameplay specification.
   state.momentumTicks = 0
 
   // Rotate by yaw — forward is -Z, right is +X (three.js convention).
@@ -81,8 +85,56 @@ export function simulatePlayer(
   const worldX = mx * cos + mz * sin
   const worldZ = -mx * sin + mz * cos
 
-  state.vel.x = worldX * MOVE_SPEED_MPS * speedMul
-  state.vel.z = worldZ * MOVE_SPEED_MPS * speedMul
+  // --- Horizontal: friction, then accelerate (Quake PM_Friction/PM_Accelerate) ---
+  // Velocity ACCUMULATES here. It used to be assigned straight from input every
+  // tick, which is why the character reached full speed in one frame and stopped
+  // dead in one frame: no weight, no momentum, nothing to fight when turning.
+  //
+  // The direction and the throttle are kept apart on purpose. Input magnitude is
+  // only normalised when it exceeds 1, so a partial input (bots send 0.55) must
+  // scale the TARGET SPEED, not the direction — feeding a short vector in as the
+  // wish direction would move the fixed point to V/|dir| and accelerate them well
+  // past the speed limit.
+  const clampedMag = Math.min(mag, 1)
+  const dirX = clampedMag > 0 ? worldX / clampedMag : 0
+  const dirZ = clampedMag > 0 ? worldZ / clampedMag : 0
+
+  if (state.onGround) {
+    const sp = Math.hypot(state.vel.x, state.vel.z)
+    if (sp < 0.1) {
+      state.vel.x = 0
+      state.vel.z = 0
+    } else {
+      // Below STOP_SPEED friction becomes constant, so you reach a true zero
+      // instead of creeping toward it forever.
+      const control = sp < STOP_SPEED_MPS ? STOP_SPEED_MPS : sp
+      const ns = Math.max(0, sp - control * GROUND_FRICTION * dt)
+      state.vel.x *= ns / sp
+      state.vel.z *= ns / sp
+    }
+  }
+
+  const wishSpeed = MOVE_SPEED_MPS * speedMul * clampedMag
+  const coef = state.onGround ? GROUND_ACCEL_COEF : AIR_ACCEL_COEF
+  // The clamp is on the PROJECTION of velocity onto the wish direction, never on
+  // its magnitude. That single choice is what makes air steering work.
+  const cur = state.vel.x * dirX + state.vel.z * dirZ
+  const add = wishSpeed - cur
+  if (add > 0) {
+    // min(a, add) makes the step converge to wishSpeed and never overshoot, at
+    // any dt — so this is tick-rate independent by construction.
+    const a = Math.min(coef * wishSpeed * dt, add)
+    state.vel.x += a * dirX
+    state.vel.z += a * dirZ
+  }
+
+  if (!state.onGround) {
+    const sp = Math.hypot(state.vel.x, state.vel.z)
+    if (sp > AIR_SPEED_CAP_MPS) {
+      state.vel.x *= AIR_SPEED_CAP_MPS / sp
+      state.vel.z *= AIR_SPEED_CAP_MPS / sp
+    }
+  }
 
   // --- 2. Jump: static instant tap jump ------------------------------
   const wasOnGround = state.onGround
