@@ -464,6 +464,17 @@
           </div>
         </div>
 
+        <!-- Camera shake is a motion-sickness trigger, so it gets a real
+             control rather than being forced on. Defaults to off when the OS
+             asks for reduced motion. -->
+        <div class="setting-row">
+          <span class="setting-label">Scuotimento camera</span>
+          <div class="setting-control">
+            <input type="range" id="setting-shake" min="0" max="100" step="5" value="100" />
+            <span class="setting-value" id="setting-shake-val">100%</span>
+          </div>
+        </div>
+
         <div class="setting-row controls-row">
           <span class="setting-label">Comandi</span>
           <div class="controls-grid">

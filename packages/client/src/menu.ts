@@ -33,7 +33,21 @@ interface SettingsData {
   sens: number // raw value (0.0004..0.008)
   volume: number // 0..1
   musicVol: number // 0..1
+  shake: number // 0..1 — camera-shake scale (accessibility)
 }
+/**
+ * Camera shake defaults to off when the OS asks for reduced motion. Someone who
+ * has set that preference should not have to discover a settings panel mid-fight
+ * to stop feeling ill.
+ */
+function defaultShake(): number {
+  try {
+    return globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 0 : 1
+  } catch {
+    return 1
+  }
+}
+
 function loadSettings(): SettingsData {
   try {
     const raw = localStorage.getItem(SETTINGS_STORAGE_KEY)
@@ -44,12 +58,20 @@ function loadSettings(): SettingsData {
         sens: 0.0022,
         volume: 0.55,
         musicVol: 0.3,
+        shake: defaultShake(),
         ...JSON.parse(raw),
       } as SettingsData
   } catch {
     /* ignore */
   }
-  return { quality: 'med', fov: 90, sens: 0.0022, volume: 0.55, musicVol: 0.3 }
+  return {
+    quality: 'med',
+    fov: 90,
+    sens: 0.0022,
+    volume: 0.55,
+    musicVol: 0.3,
+    shake: defaultShake(),
+  }
 }
 function saveSettings(s: SettingsData): void {
   try {
@@ -79,6 +101,8 @@ export function initMenu(handlers: {
   onTraining: (difficulty: 'novice' | 'competent' | 'master' | 'test') => void
   onLoadout: () => void
   onScoreboardBack: () => void
+  /** Camera-shake scale, 0..1. */
+  onShakeChange: (scale01: number) => void
   onRematch: () => void
   onFovChange: (fov: number) => void
   onSensChange: (sens: number) => void
@@ -155,6 +179,8 @@ export function initMenu(handlers: {
   const volSlider = document.getElementById('setting-vol') as HTMLInputElement
   const volVal = document.getElementById('setting-vol-val')!
   const musicSlider = document.getElementById('setting-music') as HTMLInputElement
+  const shakeSlider = document.getElementById('setting-shake') as HTMLInputElement
+  const shakeVal = document.getElementById('setting-shake-val') as HTMLElement
   const musicVal = document.getElementById('setting-music-val')!
   const qualityBtns = document.querySelectorAll<HTMLButtonElement>('.quality-btn')
   initKeybindSettings(settingsOverlay)
@@ -181,6 +207,10 @@ export function initMenu(handlers: {
     musicVal.textContent = `${Math.round(settings.musicVol * 100)}%`
     musicSlider.value = String(Math.round(settings.musicVol * 100))
     handlers.onMusicChange(settings.musicVol)
+    // Camera shake
+    shakeVal.textContent = `${Math.round(settings.shake * 100)}%`
+    shakeSlider.value = String(Math.round(settings.shake * 100))
+    handlers.onShakeChange(settings.shake)
     // Graphics
     qualityBtns.forEach((btn) => {
       btn.classList.toggle('active', btn.dataset['quality'] === settings.quality)
@@ -221,6 +251,14 @@ export function initMenu(handlers: {
     settings.musicVol = parseInt(musicSlider.value) / 100
     musicVal.textContent = `${Math.round(settings.musicVol * 100)}%`
     handlers.onMusicChange(settings.musicVol)
+    saveSettings(settings)
+  })
+
+  // Camera-shake slider
+  shakeSlider.addEventListener('input', () => {
+    settings.shake = parseInt(shakeSlider.value) / 100
+    shakeVal.textContent = `${Math.round(settings.shake * 100)}%`
+    handlers.onShakeChange(settings.shake)
     saveSettings(settings)
   })
 

@@ -36,12 +36,31 @@ export function disposeObject3D(obj: THREE.Object3D): void {
  * If null, the shake direction is random.
  * intensity: multiplier (1 = standard, 2 = heavy).
  */
+// Camera-shake scale, 0..1, from the accessibility setting. Every shake in the
+// game funnels through applyDirectionalShake, so one scalar here is the whole
+// control. 0 means the camera never moves — for players who get motion sick,
+// which is not a niche: shipped shooters have offered this for years.
+let _shakeScale = 1
+
+export function setShakeScale(scale01: number): void {
+  _shakeScale = Math.max(0, Math.min(1, Number.isFinite(scale01) ? scale01 : 1))
+}
+
+export function getShakeScale(): number {
+  return _shakeScale
+}
+
 export function applyDirectionalShake(
   shakeOffset: THREE.Vector3,
   selfPos: { x: number; y: number; z: number } | null,
   attackerWorldPos: THREE.Vector3 | null,
   intensity = 1,
 ): number {
+  intensity *= _shakeScale
+  if (intensity === 0) {
+    shakeOffset.set(0, 0, 0)
+    return 0
+  }
   if (selfPos && attackerWorldPos) {
     const dir = new THREE.Vector3(
       selfPos.x - attackerWorldPos.x,

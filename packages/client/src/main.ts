@@ -66,6 +66,7 @@ import { type MatchStats, emptyMatchStats, recordAbilityCast } from './game/stat
 import {
   disposeObject3D,
   applyDirectionalShake as _applyDirectionalShake,
+  setShakeScale,
 } from './game/visual-helpers.js'
 import { initAbilityFailHud } from './hud/ability-fail-hud.js'
 import { initAbilityReadout } from './hud/ability-readout.js'
@@ -1077,6 +1078,7 @@ const menu = initMenu({
     menu.hideMain()
     loadoutStation.open()
   },
+  onShakeChange: (scale01) => setShakeScale(scale01),
   onScoreboardBack: () => {
     returnToMainMenu({ leaveRoom: true, statusText: 'left match' })
   },
