@@ -44,6 +44,7 @@ import {
   type Weapon,
   type ClassId,
   EYE_Y_OFFSET_M,
+  MOVE_SPEED_MPS,
 } from '@ragequit/shared'
 import * as THREE from 'three'
 
@@ -2377,7 +2378,14 @@ function _renderInner(now: number): void {
     // Also narrows slightly during hit-stop for a "crunch" effect.
     const horizSpeed = Math.hypot(self.sim.vel.x, self.sim.vel.z)
     const hitStopFovNarrow = inHitStop ? -3 : 0
-    const targetFov = camFovBase + Math.min(horizSpeed * 1.4, 6) + hitStopFovNarrow
+    // Speed cue, remapped to start where the skill starts (00_truth.md D21).
+    // It used to be min(v * 1.4, 6), which SATURATES at 4.29 m/s — so 4.3, 9.0 and
+    // 11.7 m/s all rendered at exactly the same FOV. Every metre per second the
+    // player can actually earn looked identical, which made the whole movement
+    // system invisible. Ground top speed is MOVE_SPEED_MPS, so anything above it
+    // was earned in the air; that is the range worth showing.
+    const earned = Math.min(1, Math.max(0, (horizSpeed - MOVE_SPEED_MPS) / MOVE_SPEED_MPS))
+    const targetFov = camFovBase + earned * 14 + hitStopFovNarrow
     camera.fov += (targetFov - camera.fov) * (inHitStop ? 0.35 : 0.08)
     camera.updateProjectionMatrix()
 

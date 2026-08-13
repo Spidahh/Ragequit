@@ -54,7 +54,7 @@ function loadSettings(): SettingsData {
     if (raw)
       return {
         quality: 'med',
-        fov: 90,
+        fov: 100,
         sens: 0.0022,
         volume: 0.55,
         musicVol: 0.3,
@@ -66,7 +66,7 @@ function loadSettings(): SettingsData {
   }
   return {
     quality: 'med',
-    fov: 90,
+    fov: 100,
     sens: 0.0022,
     volume: 0.55,
     musicVol: 0.3,
