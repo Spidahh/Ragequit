@@ -79,6 +79,7 @@ import { initCooldownStrip, ELEMENT_COLOR } from './hud/cd-strip.js'
 import { createCombatFeedHud } from './hud/combat-feed.js'
 import { initCombatOverlayHud } from './hud/combat-overlay-hud.js'
 import { createStatusSetter } from './hud/connection-status.js'
+import { ffaLadderRows, renderFfaLadder } from './hud/ffa-ladder.js'
 import { createHudFlash, shootFlashStyleFor } from './hud/flash.js'
 import { initHitFeedback } from './hud/hit-feedback.js'
 import { initDraggableHud } from './hud/hud-drag.js'
@@ -101,6 +102,7 @@ import { sendLoadout } from './net/loadout-sync.js'
 import { wireReconnectFeedback } from './net/reconnect-feedback.js'
 import { createSchemaReaders } from './net/schema-readers.js'
 import { probeServerAvailability } from './net/server-health.js'
+import { serverStatusKeyword } from './net/server-status.js'
 import { initSupabaseAuth, getAccessToken, getCurrentUserEmail } from './net/supabase-auth.js'
 import {
   showLoadingScreen,
@@ -1199,9 +1201,10 @@ _supabaseAuthReady
     accountUi.initPlayerProfile()
   })
   .catch((e: unknown) => console.warn('[supabase] auth init failed:', e))
-setStatus('offline', 'rgba(200,200,200,0.35)')
+// Not "offline" — we have not asked yet. See net/server-status.ts.
+setStatus(serverStatusKeyword('checking'), '#e4c05a')
 void probeServerAvailability(SERVER_URL).then(
-  (online) => !room && setStatus(online ? 'server online' : 'server offline', ''),
+  (online) => !room && setStatus(serverStatusKeyword(online ? 'online' : 'offline'), ''),
 )
 
 // Register all keyboard/mouse/pointer event handlers now that loadoutStation,
@@ -1783,19 +1786,8 @@ function updateFfaLadder(solo: Record<string, number>, selfId: string): void {
   const el = document.getElementById('ffa-ladder')
   if (!el) return
   const players = getSchemaPlayers()
-  const rows = Object.entries(solo).sort((a, b) => b[1] - a[1])
-  const selfRank = rows.findIndex(([sid]) => sid === selfId)
-  const shown = rows.slice(0, 3)
-  if (selfRank >= 3) shown.push(rows[selfRank]!)
-  el.innerHTML = shown
-    .map(([sid, kills]) => {
-      const rank = rows.findIndex(([s]) => s === sid) + 1
-      const name = players?.get(sid)?.name || sid.slice(0, 6)
-      const self = sid === selfId ? ' self' : ''
-      return `<div class="fl-row${self}"><span class="fl-rank">#${rank}</span><span class="fl-name">${name.replace(/[<>&]/g, '')}</span><span class="fl-kills">${kills}</span></div>`
-    })
-    .join('')
-  el.classList.remove('hidden')
+  const nameOf = (sid: string): string => players?.get(sid)?.name || sid.slice(0, 6)
+  renderFfaLadder(el, ffaLadderRows(solo, selfId, nameOf))
 }
 
 function clearGameplayUi(): void {

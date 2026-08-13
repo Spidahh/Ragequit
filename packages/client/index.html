@@ -400,8 +400,10 @@
         </div>
         <div class="menu-utility-row">
           <!-- Server connection status -->
-          <div id="menu-server-status" class="status-disconnected">
-            <span class="server-status-dot">●</span>offline
+          <!-- Starts as "checking", never "offline": the server scales to zero,
+               so a cold start is a wait, not a verdict. See net/server-status.ts. -->
+          <div id="menu-server-status" class="status-checking-server">
+            <span class="server-status-dot">●</span>checking server
           </div>
           <button class="util-btn" id="menu-leaderboard">
             <span class="util-btn-icon">🏆</span>Classifica

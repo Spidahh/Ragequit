@@ -172,7 +172,8 @@ body.loadout-active #round-hud {
 }
 
 .status-connecting,
-.status-returning {
+.status-returning,
+.status-checking-server {
   color: #e4c05a;
 }
 
@@ -5050,7 +5051,8 @@ button.locked {
 #menu-server-status.status-server-online {
   color: #9be39b;
 }
-#menu-server-status.status-connecting {
+#menu-server-status.status-connecting,
+#menu-server-status.status-checking-server {
   color: #e4c05a;
 }
 #menu-server-status.status-disconnected,
