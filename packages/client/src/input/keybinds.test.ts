@@ -8,13 +8,17 @@ describe('keybind settings', () => {
     resetKeybinds()
   })
 
+  // The wheel actions this used to exercise are deleted. Slots 5 and 6 now sit
+  // on the Q/E the wheels occupied, so the swap rule is checked on them.
   it('swaps conflicting bindings instead of creating duplicate actions', () => {
-    setKeybind('wheelAbility', 'KeyQ')
+    setKeybind('slot5', 'KeyE')
 
-    expect(actionCode('wheelAbility')).toBe('KeyQ')
-    expect(actionCode('wheelUtility')).toBe('KeyE')
-    expect(actionLabel('wheelAbility')).toBe('Q')
-    expect(actionLabel('wheelUtility')).toBe('E')
+    expect(actionCode('slot5')).toBe('KeyE')
+    // slot6 held KeyE, so it must have taken slot5's old key rather than
+    // leaving two actions on one key.
+    expect(actionCode('slot6')).toBe('KeyQ')
+    expect(actionLabel('slot5')).toBe('E')
+    expect(actionLabel('slot6')).toBe('Q')
   })
 
   it('feeds labels from remappable bindings', () => {

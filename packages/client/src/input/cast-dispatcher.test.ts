@@ -123,29 +123,25 @@ describe('LMB confirms whatever is being previewed', () => {
     expect(d.getPlacementAbilityId()).toBeNull()
   })
 
-  // The wheel is the deliberate route in; it shows the shape too now, so the
-  // careful path no longer teaches less than the fast one.
-  it('previews a wheel selection instead of priming a blind cast', () => {
+  // The radial wheels are deleted, and with them the `primedSlotIdx` state that
+  // never expired: it hijacked EVERY left click into casting that spell instead
+  // of firing the weapon, while its only indicator auto-hid after 5 s. That is
+  // both halves of the owner's report — "left click doesn't cast it" and "you
+  // can't tell if a spell is selected". There is now exactly one armed state,
+  // it is the visible aim preview, and it ends when the cast does.
+  it('never leaves a spell armed after the preview ends', () => {
     const { d, sendCast, tick, inp } = setup()
-    d.activateAbilitySlot(2, true)
-    expect(d.getPlacementAbilityId()).toBe('uppercut')
-    expect(d.getPrimedSlotIdx()).toBe(2)
+    d.activateAbilitySlot(0, false)
+    d.releaseAbilitySlot(0)
     tick()
-    expect(sendCast).not.toHaveBeenCalled()
+    expect(sendCast).toHaveBeenCalledTimes(1)
+    expect(d.getPlacementAbilityId()).toBeNull()
+    expect(d.getPrimedSlotIdx()).toBeNull()
+
+    // A later click is the WEAPON, not a leftover spell.
     inp.lmbPressEdge = true
     tick()
-    expect(sendCast).toHaveBeenCalledWith('uppercut', 101)
-    expect(d.getPrimedSlotIdx()).toBeNull()
-  })
-
-  // A wheel pick is not a held key, so letting go of nothing must not fire.
-  it('does not let a stale slot release fire a wheel selection', () => {
-    const { d, sendCast, tick } = setup()
-    d.activateAbilitySlot(2, false)
-    d.activateAbilitySlot(2, true)
-    d.releaseAbilitySlot(2)
-    tick()
-    expect(sendCast).not.toHaveBeenCalled()
+    expect(sendCast).toHaveBeenCalledTimes(1)
   })
 })
 

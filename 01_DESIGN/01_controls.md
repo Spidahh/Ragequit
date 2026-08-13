@@ -2,8 +2,8 @@
 id: controls
 title: Input & Controls
 section: combat
-tags: [input, wheels, binds, mouse, keyboard]
-provides: [wheel_Q, wheel_E, M1, M2, custom_binds, auto_swap]
+tags: [input, binds, mouse, keyboard]
+provides: [M1, M2, custom_binds, auto_swap]
 deps: []
 status: current
 ---
@@ -12,11 +12,11 @@ status: current
 
 ## Mouse
 
-| Button     | Action                                                                                                                                               |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| M1 (left)  | Basic attack of currently equipped weapon, unless a wheel-selected ability is primed. If primed, M1 fires that ability toward the current crosshair. |
-| M2 (right) | Parry. Tap = 0.5s block window. Hold = continuous block while stamina holds out. See `01_combat_fundamentals.md`.                                    |
-| Scroll     | Cycle equipped weapon                                                                                                                                |
+| Button     | Action                                                                                                                                                     |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M1 (left)  | Basic attack of the equipped weapon. It confirms a cast ONLY while an aim preview is visibly up; there is no other state in which M1 means something else. |
+| M2 (right) | Parry. Tap = 0.5s block window. Hold = continuous block while stamina holds out. See `01_combat_fundamentals.md`.                                          |
+| Scroll     | Cycle equipped weapon                                                                                                                                      |
 
 ## Keyboard — core
 
@@ -31,9 +31,24 @@ status: current
 | Escape   | Menu                                                                                          |
 
 Every one of the 8 class abilities has its own direct key (default `1`–`8`,
-rebindable in Settings). The two wheels are an **alternative** radial way to fire
-the same abilities — direct key and wheel sector share the same bind. Slots 1–4
-are also on the E wheel, slots 5–8 on the Q wheel.
+rebindable in Settings). Slots 1–4 are on `1`–`4`; slots 5–8 are on **Q, E, R, F**.
+
+> **The radial wheels are deleted (2026-08-13).** They were an alternative way
+> to fire the same abilities and they cost more than they gave:
+>
+> - selecting from a wheel set a "primed" state that **never expired**, so from
+>   then on every left click fired that spell instead of your weapon, while the
+>   only indicator of it auto-hid after five seconds;
+> - a point-target ability picked from a wheel needed **two** left clicks, and
+>   the second state was silent;
+> - holding a wheel key routed all mouse movement into the wheel, so **you could
+>   not aim while it was open**.
+>
+> Slots 5–8 moved onto the keys the wheels occupied. From the WASD grip the
+> index finger cannot reach `5`–`8` without lifting the hand off the keys, which
+> made half of every build unusable while moving — in the game whose second
+> pillar is that movement is the skill ceiling. Q/E/R/F is the cluster every
+> shipped shooter uses.
 
 ## Ability keys — press shows, release casts
 
@@ -107,7 +122,13 @@ When a primed ability requires a different weapon than the currently equipped on
 | Q   | Q Wheel (radial alternative, slots 5–8)       |
 | Tab | Weapon swap                                   |
 
-All binds above are rebindable in Settings. `Z`, `X`, `F`, `V`, `R` and `G` are not used.
+All binds above are rebindable in Settings.
+
+> **Corrected 2026-08-13.** This line reserved `Z`, `X`, `F`, `V`, `R` and `G`
+> as unusable. It was inherited from a layout that no longer exists and it
+> forbade exactly the keys an eight-slot hotbar needs: `R` and `F` now carry
+> ability slots 7 and 8. A rule that reserves six keys on a keyboard this
+> crowded is a rule that has to justify itself, and this one could not.
 
 ## Removed from original design
 

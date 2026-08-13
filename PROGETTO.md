@@ -1223,6 +1223,56 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
   fallite. **Run pulito: 0 errori, 0 richieste fallite.**
 - Gate vero verde: `pnpm check` esce 0 (typecheck, lint, **format:check**, budget, content, 598 test).
 
+### 2026-08-13 (sera) — La prima persona non esisteva, e le wheel erano la causa del bug del click
+
+Dopo il tuo "RESTYLING TOTALE" ho fatto studiare TUTTO da 13 agenti in parallelo, contro il codice.
+Il risultato non e' una lista di dettagli, e' una causa strutturale.
+
+**LA PRIMA PERSONA NON ESISTEVA.** In `main.ts` c'e' un commento che descrive una pass viewmodel
+dedicata (braccia + arma in una scena separata col proprio depth buffer). **Finisce a meta' frase e
+nessuno l'ha mai implementata.** Quindi il gioco disegnava il rig in TERZA persona per intero dentro
+l'occhio, con la camera nel petto e il near plane a 10 cm. Da li' viene:
+
+- **"texture mezze trasparenti che appaiono"**: `erika.glb` e `vampire.glb` hanno sottomesh
+  `alphaMode:BLEND` (ciglia, una freccia, un materiale trasparente) tenute com'erano e con
+  `frustumCulled=false`. Stanno a 10-40 cm dalla camera, non scrivono depth, e ci si vede il mondo
+  attraverso mentre l'animazione le sbatte dentro e fuori dal near plane.
+- Adesso il rig locale non viene piu' disegnato dalla camera del mondo. E' quello che rendono Quake,
+  CS e ogni arena shooter. I giocatori remoti non sono toccati.
+
+**IL FOV ERA UN FISHEYE.** three.js vuole il FOV **verticale**; ogni FPS del mondo lo presenta
+**orizzontale**. Il valore entrava crudo: slider su 100 = **129,5 gradi orizzontali** a 16:9, e con
+la velocita' superava i 140. A quell'angolo un nemico a 15 m e' una manciata di pixel e i
+pixel-per-grado sul mirino collassano: la mira libera, che e' un pilastro, era fisicamente
+impossibile. Ora `render/fov.ts` fa la conversione, fuori di li' si parla solo di orizzontale, e il
+resize riconverte (un ultrawide stava zitto zitto giocando a un gioco diverso).
+
+**Due effetti ti sparavano in faccia**: ogni colpo SUBITO generava un piano additivo da 2 m a 35 cm
+dai tuoi occhi (schermo lavato del colore dell'elemento, non vedevi chi ti picchiava), e l'arco della
+spada era un toro da 1,3 m mezzo metro sopra l'occhio — fatto per la telecamera in terza persona che
+e' stata cancellata. Il primo e' soppresso per te, il secondo e' eliminato (i remoti tengono il loro,
+che era la meta' utile). **La polvere** erano quadrati pieni da 219 px a mezzo metro: ora e' uno
+sprite radiale.
+
+**LE WHEEL SONO ELIMINATE, ed erano la causa del tuo bug.** Selezionare da una wheel metteva uno
+stato "primed" che **non scadeva mai**: da li' in poi ogni click sinistro lanciava quella spell
+invece dell'arma, mentre l'unico indicatore spariva dopo 5 secondi. Una spell a terra presa dalla
+wheel richiedeva **due** click e il secondo stato era muto. E tenendo aperta la wheel **non potevi
+mirare**, perche' tutto il mouse finiva dentro la ruota. Una causa sola, tutte e tre le tue frasi.
+
+**Tasti riposizionati**: gli slot 5-8 erano su Digit5-8, che dalla presa WASD **non si raggiungono
+senza staccare la mano** — meta' build inutilizzabile mentre ti muovi, nel gioco il cui secondo
+pilastro e' che il movimento e' il soffitto di abilita'. Ora sono su **Q, E, R, F**, il cluster che
+usa ogni shooter, liberato proprio dalle wheel.
+
+**Paletti vecchi ritirati**: la riga che riservava `Z X F V R G` come inutilizzabili (vietava
+esattamente i tasti che servono) e il divieto assoluto sui passivi in `AGENTS.md`, che vietava le
+specializzazioni gia' spedite.
+
+Verificato: `pnpm check` esce 0, healthcheck 0 errori, 8/8 abilita' disegnano l'anteprima sui tasti
+nuovi. Restano aperti: HUD (vitals e barra abilita' si sovrappongono, niente scala col viewport) e
+la leggibilita' della cura.
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.

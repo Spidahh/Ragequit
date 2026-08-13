@@ -70,7 +70,6 @@ export function initCastDispatcher({
   onSwingSent,
   onWeaponFired,
 }: CastDispatcherOptions): CastDispatcherController {
-  let primedSlotIdx: number | null = null
   let placementAbilityId: string | null = null
   // Which hotbar key is physically down. Releasing key A must not fire the
   // ability you re-aimed to with key B, so the release is matched to the press.
@@ -105,22 +104,11 @@ export function initCastDispatcher({
    * player makes deliberately — and the cast then carries the aim you were
    * looking at on RELEASE, so what you saw is what you threw.
    */
-  function activateAbilitySlot(slotIdx: number, fromWheel: boolean): void {
+  function activateAbilitySlot(slotIdx: number, _fromWheel = false): void {
     const id = getLoadout()[slotIdx] ?? ''
     if (!id || !ABILITY_DEFS[id]) return
-    if (fromWheel) {
-      // The radial wheel is the slow, deliberate way in — so it shows the shape
-      // too and waits for LMB. It used to prime a blind cast, which meant the
-      // careful path taught you less than the fast one.
-      beginPlacementPreview(id)
-      heldSlotIdx = null
-      primedSlotIdx = slotIdx
-      showAbilityReadout?.(id, 'primed')
-      return
-    }
     beginPlacementPreview(id)
     heldSlotIdx = slotIdx
-    primedSlotIdx = null
     showAbilityReadout?.(id, 'placement')
   }
 
@@ -133,7 +121,6 @@ export function initCastDispatcher({
 
   function clearQueue(): void {
     abilityCastQueue.length = 0
-    primedSlotIdx = null
   }
 
   function dispatch({
@@ -151,12 +138,18 @@ export function initCastDispatcher({
     }
 
     // --- Confirm the previewed cast (LMB) ----------------------------------------
-    // One branch for both routes in — key-hold and radial wheel — because after
-    // D12 there is only one state to be in: you are looking at a shape, and
-    // clicking commits it. There is no longer such a thing as a blind cast.
+    // LMB only ever means "your weapon" — EXCEPT while an aim preview is
+    // actually up, which is bounded and visible.
+    //
+    // There used to be a second, invisible state: a wheel or hotbar-pip
+    // selection set `primedSlotIdx`, which NEVER EXPIRED, so from then on every
+    // left click fired that spell instead of your weapon — while the only
+    // indicator of it auto-hid after five seconds. That is both halves of the
+    // owner's report: "when you switch spell, left click doesn't do it" and
+    // "you can't tell whether a spell is selected". The wheels are gone and so
+    // is the state.
     if (combatLive && inp.lmbPressEdge && placementAbilityId && !dead) {
       sendCast(placementAbilityId, schemaTick + 1)
-      primedSlotIdx = null
       cancelPlacementPreview()
       inp.lmbPressEdge = false
       inp.lmbDown = false
@@ -269,7 +262,7 @@ export function initCastDispatcher({
     beginPlacementPreview,
     cancelPlacementPreview,
     clearQueue,
-    getPrimedSlotIdx: () => primedSlotIdx,
+    getPrimedSlotIdx: () => null,
     getPlacementAbilityId: () => placementAbilityId,
     dispatch,
   }

@@ -26,58 +26,6 @@
     <div id="shoot-flash"></div>
     <div id="weapon-banner"></div>
 
-    <!-- Utility wheel: hold Q -->
-    <div id="utility-wheel" class="radial-menu">
-      <div class="radial-bg"></div>
-      <div class="radial-dividers"></div>
-      <div class="radial-slot" data-dir="top" data-slot="4">
-        <span class="r-icon">⚡</span>
-        <span class="r-key"></span>
-        <span class="r-name r-empty">empty</span>
-        <span class="r-cd"></span>
-      </div>
-      <div class="radial-slot" data-dir="right" data-slot="5">
-        <span class="r-icon">⚡</span>
-        <span class="r-key"></span>
-        <span class="r-name r-empty">empty</span>
-        <span class="r-cd"></span>
-      </div>
-      <div class="radial-slot" data-dir="bottom" data-slot="6">
-        <span class="r-icon">⚡</span>
-        <span class="r-key"></span>
-        <span class="r-name r-empty">empty</span>
-        <span class="r-cd"></span>
-      </div>
-      <div class="radial-slot" data-dir="left" data-slot="7">
-        <span class="r-icon">⚡</span>
-        <span class="r-key"></span>
-        <span class="r-name r-empty">empty</span>
-        <span class="r-cd"></span>
-      </div>
-      <div class="radial-center">Q</div>
-    </div>
-    <!-- Ability wheel: hold E -->
-    <div id="ability-wheel" class="radial-menu">
-      <div class="radial-bg"></div>
-      <div class="radial-dividers"></div>
-      <div class="radial-slot" data-dir="top" data-slot="0">
-        <span class="r-icon">⚔</span><span class="r-key"></span
-        ><span class="r-name r-empty">empty</span><span class="r-cd"></span>
-      </div>
-      <div class="radial-slot" data-dir="right" data-slot="1">
-        <span class="r-icon">✦</span><span class="r-key"></span
-        ><span class="r-name r-empty">empty</span><span class="r-cd"></span>
-      </div>
-      <div class="radial-slot" data-dir="bottom" data-slot="2">
-        <span class="r-icon">✦</span><span class="r-key"></span
-        ><span class="r-name r-empty">empty</span><span class="r-cd"></span>
-      </div>
-      <div class="radial-slot" data-dir="left" data-slot="3">
-        <span class="r-icon">✦</span><span class="r-key"></span
-        ><span class="r-name r-empty">empty</span><span class="r-cd"></span>
-      </div>
-      <div class="radial-center">E</div>
-    </div>
     <div id="gcd-ring"></div>
     <div id="parry-ring"></div>
     <div id="bow-charge"><div class="fill"></div></div>
@@ -248,11 +196,13 @@
           <div><b data-keybind-label="swapWeapon">Tab</b><span>Cambia arma</span></div>
           <div>
             <b
-              ><span data-keybind-label="wheelAbility">E</span> /
-              <span data-keybind-label="wheelUtility">Q</span> hold</b
-            ><span>Ruote</span>
+              ><span data-keybind-label="slot1">1</span>-<span data-keybind-label="slot4">4</span>
+              <span data-keybind-label="slot5">Q</span>
+              <span data-keybind-label="slot6">E</span>
+              <span data-keybind-label="slot7">R</span>
+              <span data-keybind-label="slot8">F</span></b
+            ><span>Abilita 1-8</span>
           </div>
-          <div><b data-keybind-label="wheelUtility">Q</b><span>Ruota utility</span></div>
           <div><b data-keybind-label="openLoadout">L</b><span>Loadout Forge</span></div>
         </div>
       </div>
@@ -506,14 +456,8 @@
             <div class="keybind-row">
               <button class="keybind-btn" data-keybind-action="swapWeapon"></button> Cicla arma
             </div>
-            <div class="keybind-row">
-              <button class="keybind-btn" data-keybind-action="wheelAbility"></button> Ruota E
-              (armi/magie)
-            </div>
-            <div class="keybind-row">
-              <button class="keybind-btn" data-keybind-action="wheelUtility"></button> Ruota Q
-              (utility/magie)
-            </div>
+            <div class="keybind-row">(armi/magie)</div>
+            <div class="keybind-row">(utility/magie)</div>
             <div class="keybind-row">
               <button class="keybind-btn" data-keybind-action="slot1"></button> Abilità 1 (E ↑)
             </div>
@@ -637,7 +581,7 @@
           <div class="ls-section">
             <div class="ls-section-label">
               <span>2 · Build Combat</span>
-              <span class="ls-key" id="ls-ability-wheel-key">E HOLD</span>
+              <span class="ls-key" id="ls-ability-wheel-key"></span>
             </div>
             <div class="slot-list" id="ls-melee"></div>
             <div class="slot-list" id="ls-bow"></div>
@@ -647,7 +591,7 @@
           <div class="ls-section">
             <div class="ls-section-label">
               <span>3 · Utility / Recovery</span>
-              <span class="ls-key" id="ls-utility-wheel-key">Q HOLD</span>
+              <span class="ls-key" id="ls-utility-wheel-key"></span>
             </div>
             <div class="slot-list" id="ls-utility"></div>
           </div>

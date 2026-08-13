@@ -166,8 +166,13 @@ async function frames(n) {
     .catch(() => {})
 }
 
+// Slots 5-8 moved off Digit5-8 onto the Q/E/R/F cluster when the radial wheels
+// were deleted: from the WASD grip the index finger cannot reach 5-8 without
+// lifting the hand, which made half of every build unusable while moving.
+const SLOT_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'KeyQ', 'KeyE', 'KeyR', 'KeyF']
+
 for (let slot = 1; slot <= 8; slot++) {
-  await page.keyboard.down(`Digit${slot}`)
+  await page.keyboard.down(SLOT_KEYS[slot - 1])
   await frames(2)
   const shapes = await page.evaluate(() => window.__aimShapes?.() ?? null)
   const state = (await page.evaluate(() => window.__castState?.() ?? null)) ?? {}
@@ -182,7 +187,7 @@ for (let slot = 1; slot <= 8; slot++) {
     () => window.__aimShapes?.().find((s) => s.kind === 'lane') ?? null,
   )
   const shot = await grab()
-  await page.keyboard.up(`Digit${slot}`)
+  await page.keyboard.up(SLOT_KEYS[slot - 1])
   // Let the cast resolve and the world settle before the next slot, or the
   // previous spell's VFX counts as this one's preview.
   await frames(3)

@@ -88,7 +88,10 @@ Se una modifica rompe o ignora anche solo uno dei sistemi collegati, la soluzion
 - Tutte le armi possono agire in aria.
 - Airborne non e hard CC.
 - Parry/protezione deve avere scudo leggibile sul personaggio.
-- Nessun sistema passivo o slot extra fuori loadout.
+- Nessuno slot abilita extra fuori loadout, e nessun trasferimento fisso di
+  risorse. **Le specializzazioni SONO passive e sono spedite** (vedi
+  `01_DESIGN/08_specializations.md`): il vecchio divieto assoluto sui passivi e
+  stato ritirato il 2026-08-13, era una regola di un impianto cancellato.
 - Classi vive: Tank, Arciere, Mago, Ibrido.
 - Sprint e movimento base, non toggle e non costa Stamina di default.
 - Wheel abilita/utility: hold, seleziona, rilascia per primare, LMB per

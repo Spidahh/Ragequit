@@ -14,7 +14,6 @@ import {
   TARGET_CLASS_DEFS,
   getMap,
   TICK_MS,
-  TICK_RATE_HZ,
   WEAPON_IDS,
   makePlayerSimState,
   simulatePlayer,
@@ -88,7 +87,6 @@ import { initCastDispatcher } from './input/cast-dispatcher.js'
 import { initGameInput, makeGameInputState } from './input/game-input.js'
 import { createInputGating } from './input/input-gating.js'
 import { actionLabel, onKeybindsChanged } from './input/keybinds.js'
-import { initRadialWheels } from './input/radial-wheels.js'
 import { sendAbilityCast as sendCast } from './input/send-cast.js'
 import { initMouseSensitivity } from './input/sensitivity.js'
 import { initLeaderboard } from './leaderboard.js'
@@ -248,8 +246,6 @@ for (const [weapon, slot] of Object.entries(weaponSlots) as Array<[Weapon, HTMLE
 }
 const shootFlashEl = document.getElementById('shoot-flash')!
 const weaponBannerEl = document.getElementById('weapon-banner')!
-const utilityWheelEl = document.getElementById('utility-wheel')!
-const abilityWheelEl = document.getElementById('ability-wheel')!
 const pauseMenu = document.getElementById('pause-menu')!
 const pauseResumeBtn = document.getElementById('pause-resume') as HTMLButtonElement
 const pauseLoadoutBtn = document.getElementById('pause-loadout') as HTMLButtonElement
@@ -363,7 +359,6 @@ const abilityFailHud = initAbilityFailHud({
 })
 
 onKeybindsChanged(() => {
-  radialWheels.refreshAll()
   cooldownStrip.rebuild(currentLoadoutArray(), getCurrentClassId())
   refreshKeybindHudLabels()
 })
@@ -651,13 +646,11 @@ function clearCombatInputEdges(): void {
   inp.weaponSwapRequest = null
   inp.optimisticWeapon = null
   castDispatcher.clearQueue()
-  radialWheels.refreshAll()
   castDispatcher.cancelPlacementPreview()
 }
 
 function openPauseMenu(): void {
   if (!room || isPauseMenuOpen()) return
-  if (radialWheels.isOpen()) radialWheels.close(false)
   gameInput.disengageCanvasInput()
   clearCombatInputEdges()
   loadoutStation.close()
@@ -1002,26 +995,6 @@ function getCurrentClassId(): ClassId {
   return loadoutStation.getClassId()
 }
 
-const radialWheels = initRadialWheels({
-  abilityWheelEl,
-  getLoadout: currentLoadoutArray,
-  getPrimedSlot: () => castDispatcher.getPrimedSlotIdx(),
-  onPrimeSlot: (slotIdx) => castDispatcher.activateAbilitySlot(slotIdx, true),
-  utilityWheelEl,
-  getCooldownSec: (abilityId) => {
-    const players = getSchemaPlayers()
-    const selfId = self?.sessionId
-    if (!selfId || !players) return 0
-    const schema = players.get(selfId)
-    if (!schema) return 0
-    const readyAtTick = schema.abilityCooldowns.get(abilityId) ?? 0
-    const currentTick = (room?.state as { tick?: number })?.tick ?? 0
-    const remaining = (readyAtTick - currentTick) / TICK_RATE_HZ
-    return Math.max(0, remaining)
-  },
-  getClassId: getCurrentClassId,
-})
-
 async function connectWithMode(mode: string, reopenLoadout = true): Promise<void> {
   if (!room) {
     await connect(mode, reopenLoadout)
@@ -1145,11 +1118,10 @@ void probeServerAvailability(SERVER_URL).then(
 )
 
 // Register all keyboard/mouse/pointer event handlers now that loadoutStation,
-// radialWheels, and menu are fully initialised.
+// and menu are fully initialised.
 const gameInput = initGameInput(inp, {
   rendererDomElement: renderer.domElement,
   mouseSensitivity,
-  radialWheels,
   pitchLimits: { up: PITCH_UP_LIMIT, down: PITCH_DOWN_LIMIT },
   getCurrentClassId,
   hint,
@@ -1752,7 +1724,6 @@ function clearGameplayUi(): void {
 }
 
 function clearGameplayInputState(): void {
-  if (radialWheels.isOpen()) radialWheels.close(false)
   inp.keys.clear()
   inp.jumpEdgeQueued = false
   inp.lmbPressEdge = false
@@ -1764,7 +1735,6 @@ function clearGameplayInputState(): void {
   inp.weaponSwapRequest = null
   inp.optimisticWeapon = null
   castDispatcher.clearQueue()
-  radialWheels.refreshAll()
 }
 
 function clearLocalMatchState(): void {

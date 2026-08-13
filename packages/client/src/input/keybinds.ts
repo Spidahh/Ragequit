@@ -5,8 +5,6 @@ export type KeybindAction =
   | 'moveRight'
   | 'jump'
   | 'swapWeapon'
-  | 'wheelUtility'
-  | 'wheelAbility'
   | 'openLoadout'
   | 'sensDown'
   | 'sensUp'
@@ -50,8 +48,6 @@ export const DEFAULT_KEYBINDS: Record<KeybindAction, KeybindDef> = {
   moveRight: { action: 'moveRight', label: 'Move right', code: 'KeyD' },
   jump: { action: 'jump', label: 'Jump', code: 'Space' },
   swapWeapon: { action: 'swapWeapon', label: 'Swap weapon', code: 'Tab' },
-  wheelUtility: { action: 'wheelUtility', label: 'Utility wheel', code: 'KeyQ' },
-  wheelAbility: { action: 'wheelAbility', label: 'Ability wheel', code: 'KeyE' },
   openLoadout: { action: 'openLoadout', label: 'Loadout', code: 'KeyL' },
   sensDown: { action: 'sensDown', label: 'Sensitivity down', code: 'BracketLeft' },
   sensUp: { action: 'sensUp', label: 'Sensitivity up', code: 'BracketRight' },
@@ -59,10 +55,18 @@ export const DEFAULT_KEYBINDS: Record<KeybindAction, KeybindDef> = {
   slot2: { action: 'slot2', label: 'Ability 2', code: 'Digit2' },
   slot3: { action: 'slot3', label: 'Ability 3', code: 'Digit3' },
   slot4: { action: 'slot4', label: 'Ability 4', code: 'Digit4' },
-  slot5: { action: 'slot5', label: 'Ability 5', code: 'Digit5' },
-  slot6: { action: 'slot6', label: 'Ability 6', code: 'Digit6' },
-  slot7: { action: 'slot7', label: 'Ability 7', code: 'Digit7' },
-  slot8: { action: 'slot8', label: 'Ability 8', code: 'Digit8' },
+  // Slots 5-8 sit on the Q/E/R/F cluster, not Digit5-8.
+  //
+  // From the WASD grip the index finger reaches 1-4 with a stretch and CANNOT
+  // reach 5-8 without lifting the hand off the keys — which in a game whose
+  // second pillar is "movement is the skill ceiling" means half your build is
+  // unusable while moving. Q/E/R/F are the ability cluster every shipped
+  // shooter uses (Overwatch Q/E/Shift, Apex Q/Tactical, every MOBA's QWER)
+  // and they are free now that the radial wheels are deleted.
+  slot5: { action: 'slot5', label: 'Ability 5', code: 'KeyQ' },
+  slot6: { action: 'slot6', label: 'Ability 6', code: 'KeyE' },
+  slot7: { action: 'slot7', label: 'Ability 7', code: 'KeyR' },
+  slot8: { action: 'slot8', label: 'Ability 8', code: 'KeyF' },
 }
 
 export const keybinds: Record<KeybindAction, KeybindDef> = loadKeybinds()

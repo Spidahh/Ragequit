@@ -218,15 +218,22 @@ export function initLoadoutStation(
     return action ? actionLabel(action) : String(idx + 1)
   }
 
+  /**
+   * The key this slot is actually on.
+   *
+   * Used to say "ruota E ↑ · alternativa radiale", which described the radial
+   * wheels. They are deleted: they hijacked LMB into a spell that never
+   * expired, froze the camera while open, and were the reason the owner could
+   * not tell whether a spell was selected. A slot has ONE key now, and this
+   * label is that key.
+   */
   function slotRouteLabel(_slot: TargetAbilitySlotFamily, idx: number): string {
-    const directions = ['↑', '→', '↓', '←']
-    const wheel = idx < 4 ? actionLabel('wheelAbility') : actionLabel('wheelUtility')
-    return `${wheel} ${directions[idx % 4]} · alternativa radiale`
+    return `TASTO ${slotKeyLabel(idx)}`
   }
 
   function refreshSectionKeyLabels(): void {
-    if (abilityWheelKey) abilityWheelKey.textContent = `${actionLabel('wheelAbility')} HOLD`
-    if (utilityWheelKey) utilityWheelKey.textContent = `${actionLabel('wheelUtility')} HOLD`
+    if (abilityWheelKey) abilityWheelKey.textContent = ''
+    if (utilityWheelKey) utilityWheelKey.textContent = ''
   }
 
   function makeSlotEl(idx: number): HTMLElement {

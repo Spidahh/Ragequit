@@ -1,7 +1,6 @@
 import { type SimInput, type Weapon, TARGET_CLASS_DEFS, type ClassId } from '@ragequit/shared'
 
 import { actionCode, matchesAction, SLOT_ACTIONS } from './keybinds.js'
-import { type RadialWheelController } from './radial-wheels.js'
 import { type MouseSensitivityController } from './sensitivity.js'
 
 // Mutable input state shared with the game loop. main.ts holds the reference
@@ -58,7 +57,6 @@ export interface GameInputController {
 export interface GameInputOptions {
   rendererDomElement: HTMLElement
   mouseSensitivity: MouseSensitivityController
-  radialWheels: RadialWheelController
   pitchLimits: { up: number; down: number }
   getCurrentClassId: () => ClassId
   hint: HTMLElement
@@ -92,7 +90,6 @@ export function initGameInput(
   {
     rendererDomElement,
     mouseSensitivity,
-    radialWheels,
     pitchLimits,
     getCurrentClassId,
     hint,
@@ -178,8 +175,6 @@ export function initGameInput(
       actionCode('moveRight'),
       actionCode('jump'),
       actionCode('swapWeapon'),
-      actionCode('wheelUtility'),
-      actionCode('wheelAbility'),
       actionCode('openLoadout'),
       actionCode('sensDown'),
       actionCode('sensUp'),
@@ -239,11 +234,6 @@ export function initGameInput(
   }
 
   function handleGameplayPointerMove(e: PointerEvent | MouseEvent): void {
-    if (radialWheels.isOpen()) {
-      if (state.pointerLocked) radialWheels.relativeMove(e.movementX, e.movementY)
-      else radialWheels.pointMove(e.clientX, e.clientY)
-      return
-    }
     if (state.pointerLocked) {
       state.mouseYaw -= e.movementX * mouseSensitivity.value
       state.mousePitch -= e.movementY * mouseSensitivity.value
@@ -282,10 +272,6 @@ export function initGameInput(
         e.preventDefault()
         if (getPlacementAbilityId()) {
           cancelPlacementPreview()
-          return
-        }
-        if (radialWheels.isOpen()) {
-          radialWheels.close(false)
           return
         }
         if (isOverlayOpen(settingsOverlay)) {
@@ -334,7 +320,6 @@ export function initGameInput(
       if (matchesAction(k, 'openLoadout')) {
         e.preventDefault()
         onClear()
-        if (radialWheels.isOpen()) radialWheels.close(false)
         if (getRoom() && getCurrentMatchPhase() === 'live') {
           openPauseMenu()
           return
@@ -375,19 +360,9 @@ export function initGameInput(
       for (let slotIdx = 0; slotIdx < SLOT_ACTIONS.length; slotIdx++) {
         if (matchesAction(k, SLOT_ACTIONS[slotIdx]!)) {
           e.preventDefault()
-          if (radialWheels.isOpen()) radialWheels.close(false)
           onActivateSlot(slotIdx)
           return
         }
-      }
-
-      if (matchesAction(k, 'wheelUtility')) {
-        e.preventDefault()
-        radialWheels.openUtility(k)
-      }
-      if (matchesAction(k, 'wheelAbility')) {
-        e.preventDefault()
-        radialWheels.openAbility(k)
       }
 
       if (matchesAction(k, 'swapWeapon')) {
@@ -426,9 +401,6 @@ export function initGameInput(
           onReleaseSlot(slotIdx)
           break
         }
-      }
-      if (radialWheels.isOpen() && e.code === radialWheels.activeKey()) {
-        radialWheels.close(true)
       }
     },
     { capture: true },
@@ -520,13 +492,11 @@ export function initGameInput(
     onClear()
     // onClear clears keys, so the wheel's keyup-close would never fire — close it
     // here or a wheel held at blur stays stuck open.
-    radialWheels.close(false)
   })
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       onClear()
-      radialWheels.close(false)
     }
   })
 
