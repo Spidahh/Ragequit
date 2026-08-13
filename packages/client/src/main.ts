@@ -1014,20 +1014,23 @@ async function connectWithMode(mode: string, reopenLoadout = true): Promise<void
   }
 }
 
-// Shared mode-tile behaviour: with a configured loadout launch straight into the
-// match; otherwise route through the Forge, remembering the requested mode.
+// Pressing a mode starts a FIGHT. Always.
+//
+// It used to send anyone without a saved build to the Loadout Forge first — a
+// screen with 53 abilities, filters and slots — before they had ever seen the
+// game move. The references this game is built from (Quake 3, Darkfall, Mordhau,
+// Dark Messiah) put you in a fight in seconds; none of them opens with a
+// spreadsheet. The server already resolves a legal default loadout for anyone who
+// has not chosen one, which is exactly how the headless probes have always played.
+// The Forge is still there for players who want to build — it is no longer a toll
+// gate in front of the game.
 function launchModeOrForge(mode: string): void {
   loadoutReturnsToPause = false
   menu.hideMain()
-  if (localStorage.getItem('ragequit.profile.configured') === 'true') {
-    pendingLaunchMode = null
-    engageCanvasInput()
-    requestArenaPointerLock()
-    void connectWithMode(mode, false)
-  } else {
-    pendingLaunchMode = mode
-    loadoutStation.open()
-  }
+  pendingLaunchMode = null
+  engageCanvasInput()
+  requestArenaPointerLock()
+  void connectWithMode(mode, false)
 }
 
 const menu = initMenu({
