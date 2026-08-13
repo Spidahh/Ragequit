@@ -105,7 +105,9 @@ describe('ability registry', () => {
   it('uppercut keeps the melee launcher contract', () => {
     const u = getAbilityDef('uppercut')!
     expect(u.windupSec).toBe(0.4)
-    expect(u.cooldownSec).toBe(10)
+    // 10 -> 8.5 with the D1 cooldown ceiling: the whole tail above 8 s was
+    // compressed into the 12 s cap, preserving order. See constants/combat.ts.
+    expect(u.cooldownSec).toBe(8.5)
     expect(u.costStamina).toBe(40)
     expect(u.range).toBe(2.5)
     expect(u.canParry).toBe(true)

@@ -1051,6 +1051,47 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
   `client/verify-seams.ts`. Tre tetti abbassati.
 - Gate verde: typecheck, lint, budget, content, 550 test.
 
+### 2026-08-13 — Il TTK: il documento mentiva, non il gioco (passo 9 di §10)
+
+- **La cosa più importante da capire**: `TTK_MIN_SEC = 20` / `TTK_MAX_SEC = 30` stavano lì da
+  sempre col commento "tutti i valori di danno/CD/costo sono tarati su questo". **Era falso**: il
+  registry uccide in circa sei secondi. E nessuno importava quelle due costanti — erano
+  documentazione travestita da codice, quindi sbagliare di 3-5× non costava niente e nessuno se ne
+  accorgeva. **Il documento è cambiato, non la tabella dei danni.**
+- Un rescale ×3 dei danni era la tentazione ovvia ed è stato RIFIUTATO: cure (50, 60) e scudi
+  (`stacks: 20`) sono numeri piatti fuori da qualsiasi moltiplicatore, quindi triplicare i danni non
+  conserva il bilanciamento — cancella le cure.
+- **Adesso il TTK si MISURA** (`shared/config/ttk.ts`) e un test fallisce se il roster esce dalla
+  banda 6-9 s. Per avere un numero onesto ho dovuto correggere prima il modello: sommare DPS delle
+  abilità e DPS dell'arma al 100% presuppone che tu lanci tutto E meni di continuo negli stessi
+  secondi — sono due giocatori, non una rotazione, e leggeva ~25% più veloce del reale. Ora ogni
+  abilità paga il proprio tempo di cast e l'arma riempie solo quello che resta.
+  Risultato: tank 6.53 / arciere 6.31 / mago 7.88 / ibrido 6.63 s. **Tutti dentro.**
+- **Tetto ai cooldown 12 s**: 24 abilità lo superavano, fino a 22 s. A TTK 6-9 s un cooldown da 22 s
+  parte una volta ogni TRE scontri, quindi una build a sei slot ne esprimeva due o tre e il resto
+  era arredamento. La coda sopra 8 s è COMPRESSA nel tetto, non tagliata di netto, così l'ordine
+  relativo sopravvive invece di far diventare 24 abilità identiche a 12. Mediana 12 → 9.
+  Curiosità utile: **non ha accorciato il TTK**, perché più uptime = più tempo a lanciare = meno
+  tempo a menare.
+- **Banda finisher 40-55**, ordinata per IMPEGNO (windup + cooldown), non cinque numeri uguali.
+- **`fireball` è il caso che insegna qualcosa**: portato a 40 rispettava la lettera della banda e ne
+  rompeva la ragione. Senza windup e con 5 s di cooldown diventava il bottone col DPS più alto del
+  gioco (7.55), presente in 3 build preset su 4, e buttava arciere e ibrido fuori dal fondo della
+  banda TTK. La banda è un tetto di CONVERSIONE (la punizione dopo il lancio in aria), quindi il
+  danno dentro la banda si paga con l'impegno: cooldown 5 → 8.5. Un test adesso impone l'ordine —
+  chi picchia più forte deve impegnarsi di più.
+- **Condizioni di vittoria ri-derivate**: FFA 40 → 45, squadre 75 → 150, con il modello scritto nero
+  su bianco (`TTK + avvicinamento + respawn`: vecchio 40 s, nuovo 19 s). **Il numero delle squadre è
+  quello debole** — dipende da quanti dei 5 stanno combattendo davvero, e lo dice solo il playtest.
+  Nota: col vecchio ciclo, 40 kill FFA erano una partita da 27 minuti, quindi il "partite da 15
+  minuti" di `07_modes.md` era già sbagliato PRIMA della correzione del TTK.
+- Corretti i quattro punti che citavano il numero vecchio come autorità (`weapons.ts`, `stats.ts`,
+  `05_abilities_philosophy.md`, `01_combat_fundamentals.md`) incluso il suo dato sbagliato
+  ("Sword M1 a 17.5 DPS" contro i 15.0 delle costanti).
+- Due test del server smettono di incollare numeri di bilanciamento: leggono dal registry, così una
+  passata di bilanciamento non rompe più test che non parlano di bilanciamento.
+- `tools/verify/ttk.mjs` stampa la tabella completa. Gate verde: 559 test.
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.

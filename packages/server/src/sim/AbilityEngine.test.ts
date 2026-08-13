@@ -502,7 +502,11 @@ describe('AbilityEngine — Fireball (auto-swap to staff + projectile)', () => {
     expect(r.projectiles.length).toBe(1)
     expect(r.projectiles[0]!.abilityId).toBe('fireball')
     expect(r.projectiles[0]!.comboRole).toBe('finisher')
-    expect(r.projectiles[0]!.damage).toBe(24)
+    // Read from the registry, not hard-coded: this test is about the auto-swap
+    // and the projectile spawn, and pinning a balance number here made every
+    // damage pass break a test that has nothing to do with damage.
+    const spec = ABILITY_DEFS.fireball!.effects.find((e) => e.kind === 'projectile')!
+    expect(r.projectiles[0]!.damage).toBe(spec.damage)
     expect(r.projectiles[0]!.splashRadius).toBe(2.6)
   })
 })
@@ -518,8 +522,12 @@ describe('AbilityEngine — finisher deals flat damage (no air bonus)', () => {
     r.state.tick += Math.round(ABILITY_DEFS.meteor!.windupSec * 60) + 1
     r.engine.tickWindups()
 
-    // Meteor base damage is 44; knockup is just displacement, no damage multiplier.
-    expect(r.pendingDamage.find((d) => d.cause === 'ability:meteor')?.amount).toBeCloseTo(44)
+    // The claim is "no air multiplier", so the expectation is the registry's own
+    // number rather than a copy of it that drifts on the next balance pass.
+    const base = ABILITY_DEFS.meteor!.effects.find((e) => e.kind === 'damage')!
+    expect(r.pendingDamage.find((d) => d.cause === 'ability:meteor')?.amount).toBeCloseTo(
+      base.amount,
+    )
   })
 })
 

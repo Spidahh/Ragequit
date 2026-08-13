@@ -12,21 +12,41 @@ status: current
 
 ## TTK (time to kill)
 
-**Real window: 20-30 seconds** full-HP duel between two skill-matched players
-who are actively defending through aim, movement, aerial responses, parry/shield
-windows, ability choices and sustain.
+**Band: 6-9 seconds**, measured as the floor of a full-HP fight — a class's
+preset build on cooldown plus its weapon filling the time left over, against
+the toughest class in the game. Real fights run longer, because movement,
+misses, cover and sustain all add friction. `packages/shared/src/config/ttk.ts`
+computes it from the shipped registry and a test fails when the roster leaves
+the band.
 
-This is the _effective_ TTK in real play — not the theoretical minimum. An
-inactive target can be killed faster (Sword M1 at 17.5 DPS = ~11s theoretical
-minimum), but any competent player parries, evades, and heals. The 20-30s window
-emerges from the friction of defense, not from low damage numbers.
+> **Corrected 2026-08-13 (D1/D2, `00_truth.md`).** This document said "Real
+> window: 20-30 seconds" and called long TTK deliberate, with four
+> justifications. It was the document the code cited as its authority, and the
+> code obeyed it in comments only: the shipped registry has always killed in
+> about six seconds. Its own supporting figure was also wrong — "Sword M1 at
+> 17.5 DPS" against constants that give **15.0** ((5+5+8)/3 ÷ 0.4 s).
+>
+> The band moved to match the game rather than the game moving to match the
+> band, because a flat damage rescale would have destroyed
+> damage-vs-everything-else: heals (50, 60) and shields (`stacks: 20`) are flat
+> numbers off any multiplier, so tripling damage does not preserve balance, it
+> deletes healing.
 
-Long TTK is deliberate — it:
+Short TTK is deliberate — it:
 
-- Rewards positioning and resource management over burst-and-pray
-- Gives class mechanics, resources and sustain room to matter
-- Gives parry/shield and movement responses room to affect the fight
-- Lets combo execution (knockup → follow-up) be impactful without being instant-kill
+- Makes speed matter: if a mistake costs the round in seconds, every metre of
+  positioning is load-bearing
+- Helps build diversity rather than hurting it — a long TTK lets every build
+  grind out the same attrition win, so the differences average away
+- Keeps movement from being decorative; nobody can be caught out of position
+  when the punish takes twenty seconds
+- Makes the combo (knockup → follow-up) the point: one clean conversion is
+  30-35 % of a bar, so three of them kill
+
+What long TTK was said to buy — room for class mechanics, resources, sustain,
+parry and aerial responses — is bought instead by the cooldown ceiling: with no
+ability above 12 s (`MAX_ABILITY_COOLDOWN_SEC`), every slot is available in
+every engagement, so a build expresses all of itself in a short fight.
 
 ## Global Cooldown (GCD)
 

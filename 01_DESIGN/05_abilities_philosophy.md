@@ -44,7 +44,7 @@ The mini-malus is always a measurable, play-visible property — never invisible
 1. **Readability first** — every ability has a visual wind-up, element color flash, and audio cue so the opponent can react
 2. **Counter-play always exists** — no ability is undodgeable, un-parriable, or un-counterable in principle
 3. **No hard counter at loadout-lock** — no combination of abilities makes another build unwinnable before the match starts
-4. **TTK alignment** — all damage values align with the 20-30 s TTK window (`01_combat_fundamentals.md`)
+4. **TTK alignment** — all damage values align with the 6-9 s TTK band (`01_combat_fundamentals.md`), and `packages/shared/src/config/ttk.ts` measures every class preset against the shipped registry so the claim can fail
 5. **Opportunity cost visible** — the mini-malus is on the tooltip, not hidden
 
 ## Combo Combat 2.0

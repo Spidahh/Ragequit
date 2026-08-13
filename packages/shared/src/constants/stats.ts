@@ -14,7 +14,7 @@ export const STAMINA_MAX = 100 as const
 // Mana regen only triggers after a 2 s pause from last mana spend.
 // Stamina regen differs standing vs moving.
 //
-// Balance rationale (TTK target 20-30 s):
+// Balance rationale (TTK band 6-9 s — see TTK_MIN_SEC in ./combat.ts):
 //   OOC HP regen: 0.5→2.0/s — 0.5 was invisible noise; 2/s = 100s to full,
 //   still slow but means being at 180 HP after a skirmish recovery break.
 //   Mana regen: 8.0/s + 0.5 s delay — sustainable casting; a mage can

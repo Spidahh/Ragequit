@@ -1,6 +1,7 @@
 // Weapon & ability constants.
 // Authority: 01_DESIGN/02_weapon_*.md + 01_DESIGN/05_abilities_melee.md.
-// All timings in seconds; damages are raw HP numbers tuned to the 20-30 s TTK window.
+// All timings in seconds; damages are raw HP numbers tuned to the 6-9 s TTK band
+// (TTK_MIN_SEC / TTK_MAX_SEC in ./combat.ts, enforced by config/ttk.ts).
 
 // --- Sword M1 ---------------------------------------------------------------
 // 3-hit combo, 0.4 s per swing. The hit chain advances only on a landed

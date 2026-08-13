@@ -108,4 +108,20 @@ Both at launch is a pillar decision (see `00_pillars.md`). Reason:
 
 ## Win condition design notes
 
-Kill counts are high (75 / 40) on purpose — with TTK 20-30s, this creates 15-minute matches and gives every player many fight opportunities, not just decisive one-teamfight outcomes.
+Kill counts are sized so a match runs about **15 minutes**, which is the actual
+intent; the counts themselves are a consequence, not a design goal. Every player
+should get many fight opportunities rather than one decisive teamfight.
+
+> **Re-derived 2026-08-13 (D3, `00_truth.md`).** This line used to read "kill
+> counts are high (75 / 40) on purpose — with TTK 20-30s, this creates
+> 15-minute matches". TTK was never 20-30 s, so both counts were solving the
+> wrong equation — and at the old cycle, 40 FFA kills was a 27-minute match, so
+> the 15-minute claim was already wrong before the TTK correction.
+>
+> Model, per kill: `TTK + approach + respawn`. Old `25 + 10 + 5.0 = 40 s`;
+> new `7.5 + 10 + 1.5 = 19 s`. FFA is first-to-N per player, so `900 / 19 ≈ 47`
+> → **45**. Team is N per five-player team with roughly two thirds engaged at
+> any moment, so `(2/3 × 5 / 19) × 900 ≈ 158` → **150**, about 14 minutes.
+>
+> The team number is the soft one: its engagement fraction is a guess only
+> playtest data can settle. The FFA number needs no such assumption.

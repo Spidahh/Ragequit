@@ -697,6 +697,44 @@ Echoed in three more places that must move with it: `constants/weapons.ts:3`
 `05_abilities_philosophy.md:47` (_"TTK alignment — all damage values align with the
 20-30 s TTK window"_).
 
+**SHIPPED 2026-08-13.** The band is 6–9 s, and it is **enforced**:
+`shared/config/ttk.ts` measures every class preset against the shipped registry
+and a test fails when the roster leaves it. That is the actual fix — the old
+pair was wrong by 3–5× for the life of the project precisely because nothing
+imported it, so nothing could notice.
+
+Getting an honest number required correcting the model first. Summing full
+ability DPS and full weapon DPS assumes you cast everything AND swing
+continuously in the same seconds, which is two players rather than a rotation
+and read about 25 % faster than anything reachable. Charging each ability its
+cast time and letting the weapon fill only what is left gives 6.53 / 6.31 /
+7.88 / 6.63 s for tank / archer / mage / hybrid — **the registry was already in
+band before any damage moved.** The document was the only thing that was wrong.
+
+Three of the prescribed changes landed with it:
+
+– **Cooldown ceiling 12 s.** 24 abilities were over it, up to 22 s. The tail
+above 8 s is compressed into the ceiling rather than clamped flat, so relative
+ordering survives instead of 24 abilities becoming identical at 12. Median 12 →
+9, max 22 → 12. Notably this did **not** shorten TTK: more ability uptime buys
+more casting, and casting is time you are not attacking.
+– **Finisher band 40–55**, ordered by commitment (windup + cooldown), not five
+equal numbers.
+– **The win conditions**, re-derived on a stated per-kill cycle model. FFA 40 →
+45; team 75 → 150. Recorded honestly: the team number rests on an engagement
+fraction that only playtest data can settle, and at the OLD cycle 40 FFA kills
+was a 27-minute match, so `07_modes.md`'s "15-minute matches" was wrong before
+the TTK correction as well as after it.
+
+**What the work exposed that the diagnosis did not predict.** `fireball` at 40
+damage obeyed the band's letter and broke its rationale: with no windup and a
+5 s cooldown it became the highest-DPS button in the game at 7.55, in three of
+four preset builds, and pushed the archer and hybrid straight out of the bottom
+of the TTK band. The band is a CONVERSION ceiling — a punish after a launch —
+so damage inside it has to be bought with commitment. Its cooldown is 8.5,
+matching `marksman_shot`'s DPS at the same damage tier, and a test now asserts
+the ordering: a finisher that hits harder must commit more.
+
 **D2 · `01_combat_fundamentals.md:15-29`** — _"Real window: 20-30 seconds"_ plus
 _"Long TTK is deliberate"_ and its four justifications. This is the document the
 code cites as authority. Its own supporting figure is also wrong: line 20 says
@@ -1041,8 +1079,10 @@ which is stated where it applies.
 8. ~~**D18**~~ — **DONE 2026-08-13**, with **D20** (bounds) shipped first as its
    prerequisite. The air cap is 14.5 (1.61×), measured: reachable on the fifth
    strafe hop, never exceeded, and worth +3.44 m/s over a sloppy turn.
-9. **D1/D2/D3 + the finisher band** — the TTK correction, in documents plus five
-   damage numbers plus the 12 s cooldown ceiling.
+9. ~~**D1/D2/D3 + the finisher band**~~ — **DONE 2026-08-13.** The band is 6–9 s
+   and enforced by a measurement, not a comment; 37 cooldowns compressed under a
+   12 s ceiling; the five finishers banded by commitment; the win conditions
+   re-derived. All four classes measure inside the band.
 10. **D16 + D17** — retire the passive-systems ban, then the specialisation layer.
 11. **D22** — the tournament mode.
 12. **D9 + D3.5** — the delivery split and the tightened cone. **Last**, because it
