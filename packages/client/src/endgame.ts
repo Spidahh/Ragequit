@@ -204,9 +204,10 @@ export function renderDeathcam(host: HTMLElement, data: DeathcamData): void {
           </div>
         </div>
       </div>
-      <div class="dc-replay">
-        <span class="k">SPC</span><span>SKIP</span>
-      </div>
+      <!-- No "SPC · SKIP" prompt here. Respawn is timed by the server
+           (self-hud reads respawnAtTick), so nothing the player presses can
+           shorten it — the prompt promised a control that does not exist. A
+           prompt that cannot be honoured is worse than no prompt. -->
       <div class="dc-watermark">UNDERGROUND · FIGHT · LEAGUE</div>
     </div>
   `

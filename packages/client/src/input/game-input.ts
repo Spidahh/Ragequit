@@ -289,6 +289,19 @@ export function initGameInput(
           closeSettingsOverlayToReturnTarget()
           return
         }
+        // The results screen is the one place your ELO delta, kills and damage
+        // are ever shown. Escape used to fall straight through to the pause
+        // menu — and with no room left, to a main menu that renders BEHIND it
+        // (scoreboard z-index 850, menu 800) — and the teardown then wiped the
+        // numbers with no way back to them. Leave through the same door the
+        // button uses, so leaving is deliberate and complete. If a mode's end
+        // screen has no such control, Escape does nothing here, which is still
+        // better than destroying the only copy of the result.
+        const scoreboardEl = document.getElementById('scoreboard')
+        if (scoreboardEl && !scoreboardEl.classList.contains('hidden')) {
+          scoreboardEl.querySelector<HTMLElement>('#scoreboard-back')?.click()
+          return
+        }
         if (!loadoutStationHidden()) {
           loadoutStation.close()
           const lrtp = getLoadoutReturnsToPause()
