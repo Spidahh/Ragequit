@@ -38,20 +38,59 @@ type Boxes = StaticMap['boxes']
 // arithmetic used to be two literals buried in findForwardEnemy, which is
 // precisely why no preview could match it.
 
-/** Half-angle the forward lane opens by, in radians (10°). */
+/**
+ * How an ability reaches its target — 00_truth.md §3.5.
+ *
+ *   CONE — melee-range swing. Keeps the forgiving 10°: at 2.5 m that is 0.89 m,
+ *          about one body, which is what a swing should catch.
+ *   RAY  — instant ranged. 3°, so 0.97 m at 10 m: one capsule, not a funnel.
+ *   BOLT — a real projectile. No widening at all; the projectile IS the aim
+ *          test, and any non-projectile rider on the same cast must not be
+ *          more forgiving than a ray.
+ */
+export type DeliveryClass = 'cone' | 'ray' | 'bolt'
+
+/** Half-angle a melee CONE opens by, in radians (10°). */
 export const FORWARD_AIM_CONE_RAD = Math.PI / 18
+/** Half-angle an instant RAY opens by, in radians (3°). */
+export const FORWARD_AIM_RAY_RAD = Math.PI / 60
+/** Longest range that still counts as a melee swing. */
+export const CONE_MAX_RANGE_M = 2.5
 
 /** Lane radius at the muzzle — a body's width, so point-blank is forgiving. */
 export const FORWARD_AIM_BASE_RADIUS_M = PLAYER_CAPSULE_HEIGHT_M * 0.25
+
+/**
+ * Which delivery class an ability belongs to.
+ *
+ * DERIVED, not authored. Every input is already declared on the def, so there
+ * is no 53-entry table to keep in sync with the registry and no way to add an
+ * ability that quietly has no class. A projectile makes it a BOLT; melee reach
+ * makes it a CONE; everything else is a RAY.
+ */
+export function deliveryClass(def: AbilityDef): DeliveryClass {
+  if (def.effects.some((e) => e.kind === 'projectile')) return 'bolt'
+  if (def.range <= CONE_MAX_RANGE_M) return 'cone'
+  return 'ray'
+}
 
 /**
  * Radius of the forward-aim lane `along` metres down the aim axis.
  *
  * SINGLE SOURCE OF TRUTH. The server's hit test and the client's preview both
  * call this; if the lane is ever retuned, both move together or neither does.
+ *
+ * The old single 10° rule captured **3.09 m laterally at 15 m** on 32 of 53
+ * abilities, nearest-first — a soft lock-on in a game whose vision document
+ * says "you hit what you point at and you miss what you do not" (D9). It could
+ * not shrink until the airborne work shipped, because the lane measures lateral
+ * offset in 3D and a launched victim at a 2 m apex was captured for free by a
+ * level crosshair.
  */
-export function forwardAimRadiusAt(along: number): number {
-  return FORWARD_AIM_BASE_RADIUS_M + Math.max(0, along) * Math.tan(FORWARD_AIM_CONE_RAD)
+export function forwardAimRadiusAt(along: number, delivery: DeliveryClass = 'cone'): number {
+  if (delivery === 'bolt') return FORWARD_AIM_BASE_RADIUS_M
+  const halfAngle = delivery === 'ray' ? FORWARD_AIM_RAY_RAD : FORWARD_AIM_CONE_RAD
+  return FORWARD_AIM_BASE_RADIUS_M + Math.max(0, along) * Math.tan(halfAngle)
 }
 
 // --- Shapes -----------------------------------------------------------------
@@ -321,12 +360,13 @@ function forwardShapes(def: AbilityDef, ctx: AimContext): AimShape[] {
     z: origin.z + dir.z * range * reach,
   }
   const laneLen = range * reach
+  const delivery = deliveryClass(def)
   shapes.push({
     kind: 'lane',
     from: origin,
     to: end,
-    startRadius: forwardAimRadiusAt(0),
-    endRadius: forwardAimRadiusAt(laneLen),
+    startRadius: forwardAimRadiusAt(0, delivery),
+    endRadius: forwardAimRadiusAt(laneLen, delivery),
     blocked: reach < 0.999,
   })
 

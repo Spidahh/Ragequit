@@ -29,11 +29,7 @@ import {
   type ServerScoreMessage,
 } from '@ragequit/shared'
 
-import {
-  highestHpSurvivor,
-  tournamentOutcome,
-  type TournamentPlayerView,
-} from './tournament.js'
+import { highestHpSurvivor, tournamentOutcome, type TournamentPlayerView } from './tournament.js'
 
 // Modes that use BO5 round logic. Training stays live so players can test input,
 // weapons, and abilities without the bot ending the session.

@@ -785,6 +785,37 @@ Resolution in §3.5, and it ships **last** — tightening the cone before the ai
 work makes the launch loop strictly worse, because the cone measures lateral offset
 in 3D and a 2 m apex is currently captured for free.
 
+**SHIPPED 2026-08-13, last, after the airborne work.** The delivery class is
+**derived, not authored**: a projectile makes it a BOLT, melee reach makes it a
+CONE, everything else is a RAY. That matters more than it sounds — a 53-entry
+table would have to be kept in sync with the registry by hand, and an ability
+added without an entry would quietly have no class.
+
+| Class | Abilities | Half-angle | Capture |
+| ----- | --------- | ---------- | ------- |
+| CONE  | 3 (uppercut, bleed_strike, guard_break) | 10° | 0.89 m at 2.5 m — one body, which is what a swing should catch |
+| RAY   | 19 instant ranged | 3° | 0.97 m at 10 m, 1.24 m at 15 m |
+| BOLT  | 10 with real projectiles | none | 0.45 m flat: the projectile IS the aim test |
+
+Measured in the live client, not asserted: the preview reads the same function
+as the hit test, so `tools/verify/aimpreview.mjs` now prints the drawn capture
+radius per ability. `chain_bolt` at 15 m reads **1.24 m** where it captured
+3.09 m; `eruption` and `frost_pillar` read **0.97 m** where they captured
+2.21 m; `fireball` and `frost_bolt` read **0.45 m**.
+
+**Not done, and deliberately:** the BOLT half of §3.5 — converting the ranged
+launchers from instant to real projectiles you have to lead — needs two engine
+capabilities that do not exist (`at: 'onLand'` effects on a projectile-bearing
+ability are skipped at cast and never resolved; `ProjectileSystem` has no
+knockup path at impact). Those are additive and safe; the retune that follows
+them is not, and it belongs after the owner has played the tightened cone.
+
+Seven RAY abilities exceed §3.5's intended 10 m ceiling (`ignite`,
+`freeze_target`, `chain_bolt`, `arc_lift`, `curse_of_weakness`, `life_drain` at
+12-15 m, `ping_mark` at 30 m). Their ranges were left alone: the aim tolerance
+is the D9 fix, and shortening ranges is a balance change with no measurement
+behind it yet.
+
 ### Tier 2 — makes the signature mechanic unreadable, unfair, or untrue
 
 **D10 · `airborneUntilTick` is never cleared on landing** — set in
@@ -1161,5 +1192,6 @@ which is stated where it applies.
     Forge. The third of the three things the owner says the game IS.
 11. ~~**D22**~~ — **DONE 2026-08-13.** Torneo: no respawn, last one standing, one
     defensive pick. The third of the three modes `00_vision.md` says stay.
-12. **D9 + D3.5** — the delivery split and the tightened cone. **Last**, because it
-    is the only change that makes the loop harder before it makes it better.
+12. ~~**D9 + D3.5**~~ — **the cone is tightened (DONE 2026-08-13)**; the BOLT
+    conversion is not, because it needs two engine capabilities that do not
+    exist and a retune that should follow a playtest, not precede one.

@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
-import { validateLoadoutMessage, TOURNAMENT_MAX_DEFENSIVE_PICKS } from '../rooms/loadout-validate.js'
+import {
+  validateLoadoutMessage,
+  TOURNAMENT_MAX_DEFENSIVE_PICKS,
+} from '../rooms/loadout-validate.js'
 
 import { highestHpSurvivor, survivors, tournamentOutcome } from './tournament.js'
 
-const lobby = (...players: Array<[string, boolean, number]>): Map<
-  string,
-  { alive: boolean; hp: number }
-> => new Map(players.map(([id, alive, hp]) => [id, { alive, hp }]))
+const lobby = (
+  ...players: Array<[string, boolean, number]>
+): Map<string, { alive: boolean; hp: number }> =>
+  new Map(players.map(([id, alive, hp]) => [id, { alive, hp }]))
 
 describe('until one remains', () => {
   it('ends when a single player is left alive', () => {

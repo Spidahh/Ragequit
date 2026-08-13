@@ -19,7 +19,6 @@ import {
   GCD_SEC,
   KNOCKUP_IMMUNITY_AFTER_LAND_SEC,
   MessageTypes,
-  PLAYER_CAPSULE_HEIGHT_M,
   TICK_RATE_HZ,
   directionFromYawPitch,
   isElementId,
@@ -48,7 +47,12 @@ import { castTelegraphMessage, TAP_AFTERIMAGE_TICKS } from './cast-telegraph.js'
 import { validateCast } from './cast-validation.js'
 import { knockbackFromCaster, knockbackFromPoint } from './displacement.js'
 import { getPlayerMaxima } from './player-maxima.js'
-import { findForwardEnemy, findNearestEnemy, type TargetSelectionDeps } from './target-selection.js'
+import {
+  resolveAnchor,
+  resolveAreaCenter,
+  resolveSingleTarget,
+  type TargetSelectionDeps,
+} from './target-selection.js'
 import { placePointForward, clampPointToRange } from './targeting-geometry.js'
 
 // Re-exported so existing importers of AbilityEngine keep working.
@@ -148,7 +152,7 @@ export class AbilityEngine {
     }
 
     // ONE telegraph path, not two — see cast-telegraph.ts for why.
-    const center = this.resolveAreaCenter(sid, player, target, def)
+    const center = resolveAreaCenter(this.targetDeps(), sid, player, target, def)
     const tg =
       center &&
       castTelegraphMessage(sid, def, center, windupTicks > 0 ? windupTicks : TAP_AFTERIMAGE_TICKS)
@@ -336,8 +340,8 @@ export class AbilityEngine {
     const radius = e.radius ?? 0
     const center =
       radius > 0
-        ? this.resolveAreaCenter(sid, caster, target, def)
-        : this.resolveAnchor(caster, target, def)
+        ? resolveAreaCenter(this.targetDeps(), sid, caster, target, def)
+        : resolveAnchor(this.targetDeps(), caster, target, def)
     if (!center) return 0
     const element: ElementId | undefined =
       e.element ?? (isElementId(def.element) ? def.element : undefined)
@@ -347,7 +351,7 @@ export class AbilityEngine {
     const amount = e.amount
     let totalDealt = 0
     if (radius === 0) {
-      const victimId = this.resolveSingleTarget(sid, caster, target, def)
+      const victimId = resolveSingleTarget(this.targetDeps(), sid, caster, target, def)
       const victim = victimId ? this.host.state.players.get(victimId) : undefined
       // A whiff used to be silent — cost and CD spent, a successful cast
       // broadcast — so a miss was indistinguishable from a bug. Cost still
@@ -369,7 +373,7 @@ export class AbilityEngine {
     }
 
     const primaryVictimId = e.excludePrimary
-      ? this.resolveSingleTarget(sid, caster, target, def)
+      ? resolveSingleTarget(this.targetDeps(), sid, caster, target, def)
       : null
     this.host.state.players.forEach((victim, vid) => {
       if (!victim.alive) return
@@ -396,13 +400,13 @@ export class AbilityEngine {
     const radius = e.radius ?? 0
     const center =
       radius > 0
-        ? this.resolveAreaCenter(sid, caster, target, def)
-        : this.resolveAnchor(caster, target, def)
+        ? resolveAreaCenter(this.targetDeps(), sid, caster, target, def)
+        : resolveAnchor(this.targetDeps(), caster, target, def)
     if (!center) return
     const dur = e.durationSec
     if (radius === 0) {
       // Apply to the resolved single target (forward = aimed enemy in range).
-      const nearest = this.resolveSingleTarget(sid, caster, target, def)
+      const nearest = resolveSingleTarget(this.targetDeps(), sid, caster, target, def)
       if (nearest) {
         const victim = this.host.state.players.get(nearest)
         if (victim && this.canApplyParryableFollowup(def, victim)) {
@@ -425,8 +429,8 @@ export class AbilityEngine {
     const radius = e.radius ?? 0
     const center =
       radius > 0
-        ? this.resolveAreaCenter(sid, caster, target, def)
-        : this.resolveAnchor(caster, target, def)
+        ? resolveAreaCenter(this.targetDeps(), sid, caster, target, def)
+        : resolveAnchor(this.targetDeps(), caster, target, def)
     if (!center) return
     const tickNow = this.host.state.tick
     // The launch belongs to the CASTER, so the specialisation that lengthens it
@@ -437,7 +441,7 @@ export class AbilityEngine {
     const airborneSec =
       e.airborneSec * getSpecialization(caster.specializationId).knockupAirtimeMult
     if (radius === 0) {
-      const nearest = this.resolveSingleTarget(sid, caster, target, def)
+      const nearest = resolveSingleTarget(this.targetDeps(), sid, caster, target, def)
       if (!nearest) return
       const victim = this.host.state.players.get(nearest)
       if (!victim) return
@@ -492,7 +496,7 @@ export class AbilityEngine {
     const radius = e.radius ?? 0
     const victimIds: string[] = []
     if (radius > 0) {
-      const center = this.resolveAreaCenter(sid, caster, target, def)
+      const center = resolveAreaCenter(this.targetDeps(), sid, caster, target, def)
       if (!center) return
       this.host.state.players.forEach((victim, vid) => {
         if (!victim.alive || vid === sid) return
@@ -501,7 +505,7 @@ export class AbilityEngine {
         if (Math.hypot(dx, dz) <= radius) victimIds.push(vid)
       })
     } else {
-      const victimId = this.resolveSingleTarget(sid, caster, target, def)
+      const victimId = resolveSingleTarget(this.targetDeps(), sid, caster, target, def)
       if (victimId) victimIds.push(victimId)
     }
 
@@ -728,99 +732,6 @@ export class AbilityEngine {
   }
 
   // --- helpers --------------------------------------------------------------
-
-  private resolveAnchor(player: Player, target: CastTarget, def: AbilityDef): Vec3 {
-    const halfH = PLAYER_CAPSULE_HEIGHT_M / 2
-    if (def.targeting === 'self') {
-      return { x: player.transform.x, y: player.transform.y + halfH, z: player.transform.z }
-    }
-    if (def.targeting === 'point' && target.point) {
-      return clampPointToRange(player.transform, target.point, def.range)
-    }
-    if (def.targeting === 'target' && target.targetId) {
-      const t = this.host.state.players.get(target.targetId)
-      if (t) return { x: t.transform.x, y: t.transform.y + halfH, z: t.transform.z }
-    }
-    // forward fallback — anchor at the caster (range checks happen per-victim)
-    return { x: player.transform.x, y: player.transform.y + halfH, z: player.transform.z }
-  }
-
-  private resolveSingleTarget(
-    sid: string,
-    caster: Player,
-    target: CastTarget,
-    def: AbilityDef,
-  ): string | null {
-    const origin = this.resolveAnchor(caster, target, def)
-    if (def.targeting === 'self') return sid
-    if (def.targeting === 'target' && target.targetId) {
-      const victim = this.host.state.players.get(target.targetId)
-      if (!victim?.alive || target.targetId === sid) return null
-      const dx = victim.transform.x - origin.x
-      const dy = victim.transform.y + PLAYER_CAPSULE_HEIGHT_M / 2 - origin.y
-      const dz = victim.transform.z - origin.z
-      if (Math.hypot(dx, dy, dz) > def.range) return null
-      if (
-        this.host.hasLineOfSight &&
-        !this.host.hasLineOfSight(origin, {
-          x: victim.transform.x,
-          y: victim.transform.y + PLAYER_CAPSULE_HEIGHT_M / 2,
-          z: victim.transform.z,
-        })
-      )
-        return null
-      return target.targetId
-    }
-    if (def.targeting === 'forward') {
-      return findForwardEnemy(this.targetDeps(), sid, origin, target.yaw, target.pitch, def.range)
-    }
-    return findNearestEnemy(this.targetDeps(), sid, origin, def.range)
-  }
-
-  private resolveAreaCenter(
-    sid: string,
-    caster: Player,
-    target: CastTarget,
-    def: AbilityDef,
-  ): Vec3 | null {
-    if (def.targeting === 'self') return this.resolveAnchor(caster, target, def)
-    if (def.targeting === 'point') {
-      return target.point ? clampPointToRange(caster.transform, target.point, def.range) : null
-    }
-    if (def.targeting === 'target' && target.targetId) {
-      const victim = this.host.state.players.get(target.targetId)
-      return victim?.alive
-        ? {
-            x: victim.transform.x,
-            y: victim.transform.y + PLAYER_CAPSULE_HEIGHT_M / 2,
-            z: victim.transform.z,
-          }
-        : null
-    }
-    if (def.targeting === 'forward') {
-      // Movement abilities with an AoE follow-up detonate around the caster's
-      // post-move position. Non-movement forward AoEs detonate on the aimed target.
-      const hasMove = def.effects.some((effect) => effect.kind === 'move')
-      if (hasMove) return this.resolveAnchor(caster, target, def)
-      const victimId = findForwardEnemy(
-        this.targetDeps(),
-        sid,
-        this.resolveAnchor(caster, target, def),
-        target.yaw,
-        target.pitch,
-        def.range,
-      )
-      const victim = victimId ? this.host.state.players.get(victimId) : undefined
-      return victim?.alive
-        ? {
-            x: victim.transform.x,
-            y: victim.transform.y + PLAYER_CAPSULE_HEIGHT_M / 2,
-            z: victim.transform.z,
-          }
-        : null
-    }
-    return this.resolveAnchor(caster, target, def)
-  }
 
   /** Deps bundle for sim/target-selection.ts — see the note there. */
   private targetDeps(): TargetSelectionDeps {

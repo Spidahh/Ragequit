@@ -37,10 +37,7 @@ export type LoadoutValidation =
   | { ok: true; classId: ClassId; slots: string[]; specializationId: string }
   | { ok: false; reason: string }
 
-export function validateLoadoutMessage(
-  msg: ClientLoadoutMessage,
-  mode = '',
-): LoadoutValidation {
+export function validateLoadoutMessage(msg: ClientLoadoutMessage, mode = ''): LoadoutValidation {
   // Dynamic Class Validation
   const classId: ClassId =
     msg.classId && CLASS_IDS.includes(msg.classId as ClassId) ? (msg.classId as ClassId) : 'hybrid'

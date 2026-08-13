@@ -1162,6 +1162,33 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
   dichiarava "inconcludente" una volta su due — un verdetto a testa o croce non prova niente.
 - Gate verde: 587 test.
 
+### 2026-08-13 — Mira libera davvero: il cono si stringe (passo 12 di §10)
+
+- **La contraddizione più grossa del repository**: `00_vision.md` dice "colpisci quello che punti e
+  manchi quello che non punti, niente auto-aim", e il server aveva un cono di ±10° che catturava
+  **3,09 m di lato a 15 metri** su 32 abilità su 53, prendendo il più vicino. Era un lock-on morbido.
+- **Tre classi di consegna, DEDOTTE e non scritte a mano**: se ha un proiettile è BOLT, se ha
+  portata da mischia è CONE, tutto il resto è RAY. Una tabella da 53 voci andrebbe tenuta in sincro
+  a mano e un'abilità nuova finirebbe senza classe senza che nessuno se ne accorga.
+  - CONE (3): resta a 10° → 0,89 m a 2,5 m, un corpo. È quello che una spadata deve prendere.
+  - RAY (19): 3° → 0,97 m a 10 m, una capsula.
+  - BOLT (10): nessun aiuto laterale, 0,45 m fissi. Il proiettile È la prova di mira.
+- **L'anteprima si è stretta insieme all'hitbox da sola**, perché legge la stessa identica funzione.
+  Misurato nel client vero, non affermato: `chain_bolt` a 15 m adesso segna **1,24 m** dove ne
+  catturava 3,09; `eruption` e `frost_pillar` segnano **0,97 m** dove ne catturavano 2,21.
+- **Cosa NON ho fatto, e perché**: la metà BOLT del piano — trasformare i lanciatori a distanza in
+  proiettili veri da anticipare — richiede due capacità del motore che non esistono (gli effetti
+  `onLand` su un'abilità con proiettile vengono saltati e mai risolti; `ProjectileSystem` non ha
+  alcun percorso per il knockup all'impatto). Quelle sono additive e sicure; il ribilanciamento che
+  ne segue no, e va fatto DOPO che l'hai provato, non prima.
+- Sette abilità RAY superano il tetto di 10 m previsto dal piano (fino a 15 m, `ping_mark` 30 m).
+  Ho lasciato stare le portate: la tolleranza di mira è la correzione, accorciare le portate è un
+  ribilanciamento senza ancora una misura dietro.
+- Per pagare le righe: estratte da `AbilityEngine` anche `resolveAnchor` / `resolveSingleTarget` /
+  `resolveAreaCenter` in `sim/target-selection.ts` — "dove si risolve questa abilità" è la stessa
+  materia di "chi colpisce". Il file è passato da 855 a 752 righe.
+- Gate verde: 595 test.
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.

@@ -10,6 +10,7 @@ import {
   abilityWallFootprint,
   clampToRange,
   dashLanding,
+  deliveryClass,
   forwardAimRadiusAt,
   resolveAimPlan,
   segmentReach,
@@ -34,6 +35,67 @@ describe('the forward lane', () => {
 
   it('never reports a negative radius behind the caster', () => {
     expect(forwardAimRadiusAt(-5)).toBe(FORWARD_AIM_BASE_RADIUS_M)
+  })
+})
+
+// D9: the single 10 degree rule captured 3.09 m laterally at 15 m on 32 of 53
+// abilities, nearest-first — a soft lock-on in a game whose vision document says
+// "you hit what you point at and you miss what you do not".
+describe('delivery classes', () => {
+  it('derives the class from what the ability already declares', () => {
+    expect(deliveryClass(ABILITY_DEFS['fireball']!)).toBe('bolt')
+    expect(deliveryClass(ABILITY_DEFS['uppercut']!)).toBe('cone')
+    expect(deliveryClass(ABILITY_DEFS['arc_lift']!)).toBe('ray')
+  })
+
+  it('classifies every forward ability without a table to maintain', () => {
+    const forward = Object.values(ABILITY_DEFS).filter((d) => d.targeting === 'forward')
+    expect(forward.length).toBeGreaterThan(30)
+    for (const def of forward) {
+      expect(['cone', 'ray', 'bolt'], def.id).toContain(deliveryClass(def))
+    }
+  })
+
+  it('keeps a melee swing forgiving — about one body at reach', () => {
+    expect(forwardAimRadiusAt(2.5, 'cone')).toBeCloseTo(0.89, 2)
+  })
+
+  // The number the vision document was asking for: one capsule, not a funnel.
+  it('tightens an instant ray to about one capsule at 10 m', () => {
+    expect(forwardAimRadiusAt(10, 'ray')).toBeCloseTo(0.97, 2)
+  })
+
+  it('gives a projectile no lateral help at all', () => {
+    expect(forwardAimRadiusAt(0, 'bolt')).toBe(FORWARD_AIM_BASE_RADIUS_M)
+    expect(forwardAimRadiusAt(30, 'bolt')).toBe(FORWARD_AIM_BASE_RADIUS_M)
+  })
+
+  it('is strictly tighter than the old rule at every range past the muzzle', () => {
+    for (const along of [5, 10, 15, 20]) {
+      expect(forwardAimRadiusAt(along, 'ray')).toBeLessThan(forwardAimRadiusAt(along, 'cone'))
+      expect(forwardAimRadiusAt(along, 'bolt')).toBeLessThan(forwardAimRadiusAt(along, 'ray'))
+    }
+  })
+
+  // The old capture that D9 names, so the regression is legible if it returns.
+  it('no longer captures 3 m laterally at 15 m on a ranged instant', () => {
+    expect(forwardAimRadiusAt(15, 'cone')).toBeCloseTo(3.09, 2)
+    expect(forwardAimRadiusAt(15, 'ray')).toBeLessThan(1.3)
+  })
+
+  // The preview reads the same function, so it has to narrow with the hitbox.
+  it('draws the tightened lane in the preview too', () => {
+    const rayLane = resolveAimPlan(ABILITY_DEFS['arc_lift']!, OPEN).find((s) => s.kind === 'lane')
+    const coneLane = resolveAimPlan(ABILITY_DEFS['uppercut']!, OPEN).find((s) => s.kind === 'lane')
+    const along = (l: AimLane): number => Math.hypot(l.to.x - l.from.x, l.to.z - l.from.z)
+    expect((rayLane as AimLane).endRadius).toBeCloseTo(
+      forwardAimRadiusAt(along(rayLane as AimLane), 'ray'),
+      6,
+    )
+    expect((coneLane as AimLane).endRadius).toBeCloseTo(
+      forwardAimRadiusAt(along(coneLane as AimLane), 'cone'),
+      6,
+    )
   })
 })
 

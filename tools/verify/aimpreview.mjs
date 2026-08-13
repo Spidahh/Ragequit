@@ -175,6 +175,12 @@ for (let slot = 1; slot <= 8; slot++) {
   // still renders a confident beam — pointing somewhere the shot will not go.
   // Its endpoint must project to the crosshair.
   const ndc = await page.evaluate(() => window.__laneOnCrosshair?.() ?? null)
+  // D9: the lane's END radius is the soft-lock the vision document forbids.
+  // Reading it off the drawn shape is how "the preview narrowed with the
+  // hitbox" stays a fact rather than a claim — they are the same function.
+  const lane = await page.evaluate(
+    () => window.__aimShapes?.().find((s) => s.kind === 'lane') ?? null,
+  )
   const shot = await grab()
   await page.keyboard.up(`Digit${slot}`)
   // Let the cast resolve and the world settle before the next slot, or the
@@ -190,6 +196,7 @@ for (let slot = 1; slot <= 8; slot++) {
     dead: state.dead ? 'dead' : '',
     bound: state.loadout?.[slot - 1] ?? '(unbound)',
     aim: ndc ? Math.max(Math.abs(ndc.ndcX), Math.abs(ndc.ndcY)) : null,
+    capture: lane?.endRadius ?? null,
   })
   if (shot) save(`aimpreview-slot${slot}.png`, shot)
 }
@@ -203,7 +210,8 @@ for (const r of rows) {
   console.log(
     `  ${r.slot}   ${String(r.bound).padEnd(18)} ${r.kinds.padEnd(17)} ` +
       `${(r.delta * 100).toFixed(2).padStart(6)}%  ` +
-      `${(r.aim === null ? 'n/a' : r.aim.toFixed(4)).padStart(9)}      ` +
+      `${(r.aim === null ? 'n/a' : r.aim.toFixed(4)).padStart(8)} ` +
+      `${(r.capture === null ? 'n/a' : r.capture.toFixed(2) + ' m').padStart(8)}  ` +
       `${ok ? 'DRAWN' : !aimed ? 'OFF-AIM' : r.dead || 'NOTHING'}`,
   )
 }
