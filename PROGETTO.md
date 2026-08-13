@@ -963,7 +963,21 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
     `prefers-reduced-motion`. Era obbligatorio: chi soffre di motion sickness non poteva giocare.
     A zero la camera non si muove per NIENTE, non "si muove meno" — è il punto della funzione, ed è
     fissato da un test.
-  - Test 438 → 485. Dieci commit, CI verde su ognuno.
+  - **L'anello di cast nemico ora dice COSA arriva e QUANTO manca.** Era un cerchio dorato che si
+    accendeva e spegneva: comunicava che stava succedendo qualcosa, mai cosa né entro quando —
+    quindi interromperlo non era un'abilità, era fortuna. Ora prende il colore dell'elemento e si
+    stringe da pieno a nucleo mentre il windup si risolve, schiarendo nell'ultimo quarto. Le
+    abilità istantanee restano APERTE invece di ricevere un finto conto alla rovescia che le
+    farebbe leggere tutte come "sta per colpire". Zero stato nuovo: il tick d'inizio si ricava dal
+    windup dell'abilità stessa.
+  - Per farlo ho dovuto estrarre `render/remote-nameplate.ts`: `remote-players.ts` era ESATTAMENTE
+    sul limite duro di 800 righe, quindi non ci si poteva aggiungere niente. Ora è a 711.
+  - Test 438 → 492. Undici commit, CI verde su ognuno.
+  - **NON fatto stanotte, e perché**: IA dei bot (B8/B9 del backlog) — richiede di estrarre l'host
+    dei bot da `GameRoom.ts`, che è al suo tetto di 1927 righe: è chirurgia sul file più delicato
+    del server e non la volevo fare alle 5 del mattino senza nessuno che potesse guardare. I bot
+    intanto NON sono stupidi come sembrava: hanno già strafe orbitale, cambio arma per distanza,
+    ritirata a HP bassi, schivata sul cast nemico e reazione alla parata (`BotController.ts`).
 
 ## 7. Metodo di lavoro (professionale)
 
