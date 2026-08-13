@@ -951,7 +951,19 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
     (modello Guild Wars 2: leggi la SOGLIA, non il valore).
   - Estratti per pagare le righe: `render/post-pipeline.ts`, `input/input-gating.ts`,
     `hud/ffa-ladder.ts`. main.ts 2738 → 2679 righe, budget stretto di conseguenza.
-  - Test 438 → 480. Otto commit, CI verde su ognuno.
+  - **ESC sulla schermata dei risultati DISTRUGGEVA il risultato.** È l'unico posto dove vedi il tuo
+    delta ELO, uccisioni e danno. ESC non aveva un caso per lei: cadeva nel ramo del menu di pausa e,
+    finita la room, su un menu principale che si disegna DIETRO (z-index 850 contro 800) — e il
+    teardown cancellava i numeri senza modo di tornarci. Ora esce dalla stessa porta del pulsante.
+    Verificato sul client vivo: un ESC = un click di uscita, zero menu di pausa.
+  - **Tolto il prompt "SPC · SKIP" del deathcam** (e il suo CSS): il respawn è temporizzato dal
+    server, quindi nessun tasto poteva accorciarlo. Un prompt che non si può onorare è peggio di
+    nessun prompt.
+  - **Scuotimento camera regolabile** (0-100%), con default a 0 se il sistema chiede
+    `prefers-reduced-motion`. Era obbligatorio: chi soffre di motion sickness non poteva giocare.
+    A zero la camera non si muove per NIENTE, non "si muove meno" — è il punto della funzione, ed è
+    fissato da un test.
+  - Test 438 → 485. Dieci commit, CI verde su ognuno.
 
 ## 7. Metodo di lavoro (professionale)
 
