@@ -31,6 +31,28 @@ import { VfxTextures } from './vfx-textures.js'
 
 export type SpellStyle = 'fire' | 'ice' | 'lightning' | 'dark' | 'nature' | 'neutral'
 
+const SPELL_STYLES: ReadonlySet<string> = new Set([
+  'fire',
+  'ice',
+  'lightning',
+  'dark',
+  'nature',
+  'neutral',
+])
+
+/**
+ * Turn any element-ish string into a style this module can actually draw.
+ *
+ * Callers used to write `element as SpellStyle`, which is a lie the compiler
+ * accepts and the runtime does not: an AbilityDef's element may be `'none'`,
+ * `STYLE_RGB['none']` is undefined, and `const [r, g, b] = undefined` throws
+ * "undefined is not iterable" — killing the frame on impact. Five separate
+ * casts made the same promise; this is the one place that keeps it.
+ */
+export function toSpellStyle(value: string | undefined | null): SpellStyle {
+  return value && SPELL_STYLES.has(value) ? (value as SpellStyle) : 'neutral'
+}
+
 export interface EmberHandle {
   /** Parent this to the moving projectile object. */
   emitter: THREE.Object3D

@@ -3,6 +3,7 @@
 
 import { Client, type Room } from '@colyseus/sdk'
 import {
+  BOT_FILLED_MODES,
   ABILITY_DEFS,
   CLASS_IDS,
   BOW_CHARGE_FULL_SEC,
@@ -134,7 +135,7 @@ import { createPostPipeline } from './render/post-pipeline.js'
 import { initProjectileVisuals, type SchemaProjectile } from './render/projectile-visuals.js'
 import { initRemotePlayers, type RemotePlayerSchema } from './render/remote-players.js'
 import { initSelfEmissive, STATUS_EMISSIVE } from './render/self-emissive.js'
-import { initSpellParticles, type SpellStyle } from './render/spell-particles.js'
+import { initSpellParticles, toSpellStyle } from './render/spell-particles.js'
 import { VfxTextures } from './render/vfx-textures.js'
 import { getWeaponView } from './render/weapon-view.js'
 import { initZoneVisuals, zoneColorForElement } from './render/zone-visuals.js'
@@ -146,7 +147,7 @@ import {
   trackDeath,
   trackAbilityCast,
 } from './telemetry.js'
-import { countVerifyFrame, installVerifySeams, isCaptureMode } from './verify-seams.js'
+import { countAlive, countVerifyFrame, installVerifySeams, isCaptureMode } from './verify-seams.js'
 import { DeathBurst } from './vfx/death-burst.js'
 import { ImpactPool, type ImpactProfile } from './vfx/impact-pool.js'
 import { buildArena } from './world/arena.js'
@@ -524,11 +525,8 @@ if (captureMode) {
       const schema = getSelfSchemaPlayer()
       return schema ? { x: schema.transform.x, z: schema.transform.z } : null
     },
-    isAlive: () => getSelfSchemaPlayer()?.alive === true,
-    getBuildState: () => {
-      const p = getSelfSchemaPlayer()
-      return p ? { classId: p.classId, specializationId: p.specializationId, hp: p.hp } : null
-    },
+    getSelfPlayer: () => getSelfSchemaPlayer(),
+    getPopulation: () => countAlive(room?.state.players),
   })
 }
 
@@ -1062,6 +1060,7 @@ const menu = initMenu({
   onPlay: () => launchModeOrForge('duel_arena'),
   onFfa: () => launchModeOrForge('ffa'),
   onTeam: () => launchModeOrForge('5v5'),
+  onTournament: () => launchModeOrForge('tournament'),
   onTraining: (difficulty) => launchModeOrForge(`training_${difficulty}`),
   onLoadout: () => {
     loadoutReturnsToPause = false
@@ -1200,10 +1199,9 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
     const roomOptions: Record<string, unknown> = {
       mode: resolvedMode,
       difficulty,
-      // Every online mode asks for bot-fill so a solo player always gets a live
-      // match (duel: 1 bot; FFA: small brawl; 5v5: both teams filled). Humans
-      // joining later take the remaining open slots.
-      botFill: resolvedMode === 'duel_arena' || resolvedMode === 'ffa' || resolvedMode === '5v5',
+      // Bot-fill so a solo player always gets a live match; humans joining
+      // later take the remaining open slots. See BOT_FILLED_MODES.
+      botFill: BOT_FILLED_MODES.has(resolvedMode),
     }
     roomOptions['name'] = initialName || 'PLAYER'
     if (token) roomOptions['token'] = token
@@ -1590,7 +1588,7 @@ function onHit(msg: ServerHitMessage): void {
   spawnHitImpacts(
     {
       spawnImpact,
-      burstElement: (pos, element) => spellParticles.burstImpact(pos, element as SpellStyle),
+      burstElement: (pos, element) => spellParticles.burstImpact(pos, toSpellStyle(element)),
     },
     msg,
     {

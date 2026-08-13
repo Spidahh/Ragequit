@@ -34,7 +34,7 @@ export function resolveMapId(
 ): string {
   if (mode === 'training' && difficulty === 'test') return 'test_room'
   if (optionMapId) return optionMapId
-  if (mode === '5v5' || mode === 'ffa') return 'gladiators_arena'
+  if (mode === '5v5' || mode === 'ffa' || mode === 'tournament') return 'gladiators_arena'
   if (mode === 'blockout') return 'blockout'
   return 'duel_arena'
 }

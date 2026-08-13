@@ -246,8 +246,7 @@ export class GameRoom extends Room<{ state: GameState }> {
     this.state.mode = resolvedMode
 
     // FFA supports up to 8 players; 5v5 up to 10; others cap at MAX_CLIENTS (default 2).
-    if (resolvedMode === 'ffa') this.maxClients = Number(process.env['MAX_CLIENTS_FFA'] ?? 10)
-    else if (resolvedMode === '5v5') this.maxClients = Number(process.env['MAX_CLIENTS_5V5'] ?? 10)
+    this.maxClients = lobby.maxClientsForMode(resolvedMode, this.maxClients, process.env)
 
     // Fill lobbies so a solo player always gets a live match (rules in
     // lobby-fill.ts); humans who join later take the remaining open slots.
@@ -264,8 +263,8 @@ export class GameRoom extends Room<{ state: GameState }> {
       this.botSpawnAtMatchStart = CLASS_IDS.length
     }
 
-    // FFA/5v5: bots spawn before any human — keep ≥1 human slot open.
-    if (resolvedMode === 'ffa' || resolvedMode === '5v5') {
+    // Bot-filled modes: bots spawn before any human — keep >=1 human slot open.
+    if (lobby.CROWD_FILLED_MODES.has(resolvedMode)) {
       this.botSpawnAtMatchStart = Math.min(this.botSpawnAtMatchStart, this.maxClients - 1)
     }
 
@@ -1125,7 +1124,7 @@ export class GameRoom extends Room<{ state: GameState }> {
 
       if (victim.hp <= 0) {
         victim.alive = false
-        victim.respawnAtTick = now + RESPAWN_TICKS
+        victim.respawnAtTick = lobby.respawnTickFor(this.state.mode, now, RESPAWN_TICKS)
         this.engine.cancelCast(d.victimId, 'death')
         victim.casting = false
         victim.castAbilityId = ''
@@ -1504,7 +1503,7 @@ export class GameRoom extends Room<{ state: GameState }> {
     }
 
     // All the rules live in rooms/loadout-validate.ts, as a pure function.
-    const verdict = validateLoadoutMessage(msg)
+    const verdict = validateLoadoutMessage(msg, this.state.mode)
     if (!verdict.ok) {
       client?.send(MessageTypes.ServerNote, { kind: 'warn', text: verdict.reason })
       return

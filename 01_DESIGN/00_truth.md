@@ -1033,6 +1033,39 @@ dark_barrier + healing_totem` and a Tank `brace_recovery + barrier + phase_shift
 disengage_shot`.) A cap of **one** `survival`/`counter` pick among the four in hand
 is the right instrument in tournament.
 
+**SHIPPED 2026-08-13.** The mode is three rules: no respawn, the match ends when
+one is left, and the clock falls to the healthiest survivor (an exact tie has no
+winner rather than an arbitrary one). Everything else about tournament balance
+stays speculation until it is played, which is why the implementation is
+deliberately small.
+
+The carried design question is answered: it inherits **none** of FFA's economy.
+`respawnTickFor` returns 0 for tournament, so `alive` stays false for good.
+
+The defensive cap is in, counting ROLES rather than slots — the stall build the
+diagnosis names is spread across `magicAdvanced` and `utility` precisely to slip
+past a slot rule. It has a consequence worth stating: every build must carry a
+Recovery and every Recovery is `survival`, so **in tournament your Recovery is
+your one defensive pick** and everything else has to fight.
+
+Two things the live run found that no unit test could:
+
+– **The lobby never started.** `botFillTarget` returns 0 unless the client asks
+for a fill, and the client's list of modes that ask was a hand-written `||`
+chain that did not include tournament. 40 samples, all in `lobby`. The mode set
+is shared now, so client and server cannot disagree about it again.
+– **A real crash in the particle system**, unrelated to this mode and live for
+anyone whose ability element is `'none'`: `element as SpellStyle` let a non-style
+through, `STYLE_RGB['none']` is undefined, and `const [r, g, b] = undefined`
+throws on every impact burst. Five separate casts made the same unchecked
+promise; there is one resolver now and no casts.
+
+Proven by `tools/verify/tournament.mjs`, which watches the whole lobby rather
+than the probe: 8 players, alive 7 → 4 over the match, **never up**. The first
+version depended on a bot choosing to kill the probe and reported
+"inconclusive" half the time — a harness whose verdict is a coin flip proves
+nothing.
+
 **D23 · Class mechanics are drawn on the caster and nowhere on the enemy** —
 `client/src/hud/class-mechanic.ts` renders all four (Fury pips with a surge flag,
 Momentum bar with its threshold notch, Risonanza sigil, Flow pips), with tests. But
@@ -1126,6 +1159,7 @@ which is stated where it applies.
     the specialisation layer is live: twelve picks, four archetypes, validated
     server-side, applied to airtime / cooldowns / speed / HP, and visible in the
     Forge. The third of the three things the owner says the game IS.
-11. **D22** — the tournament mode.
+11. ~~**D22**~~ — **DONE 2026-08-13.** Torneo: no respawn, last one standing, one
+    defensive pick. The third of the three modes `00_vision.md` says stay.
 12. **D9 + D3.5** — the delivery split and the tightened cone. **Last**, because it
     is the only change that makes the loop harder before it makes it better.

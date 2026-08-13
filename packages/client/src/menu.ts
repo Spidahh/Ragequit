@@ -98,6 +98,8 @@ export function initMenu(handlers: {
   onPlay: () => void
   onFfa: () => void
   onTeam: () => void
+  /** Last one standing — no respawn (01_DESIGN/07_modes.md). */
+  onTournament: () => void
   onTraining: (difficulty: 'novice' | 'competent' | 'master' | 'test') => void
   onLoadout: () => void
   onScoreboardBack: () => void
@@ -132,6 +134,9 @@ export function initMenu(handlers: {
   document.getElementById('menu-play')?.addEventListener('click', () => handlers.onPlay())
   document.getElementById('menu-ffa')?.addEventListener('click', () => handlers.onFfa())
   document.getElementById('menu-5v5')?.addEventListener('click', () => handlers.onTeam())
+  document
+    .getElementById('menu-tournament')
+    ?.addEventListener('click', () => handlers.onTournament())
 
   // Toggle the training options sub-menu container
   const menuTrain = document.getElementById('menu-train')!

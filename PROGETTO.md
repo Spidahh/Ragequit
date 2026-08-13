@@ -1133,6 +1133,35 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
   MANIFEST, cancellato l'artefatto morto `dist/constants/mastery.*`.
 - Gate verde: 572 test.
 
+### 2026-08-13 — Torneo: ne resta uno solo (passo 11 di §10)
+
+- `00_vision.md` elencava il torneo tra le TRE modalità che restano, e non esisteva. Adesso c'è, ed
+  è volutamente piccolo: **niente respawn** (la morte è eliminazione), la partita finisce quando ne
+  resta uno, e se scade il tempo vince il più sano tra i vivi — un pareggio esatto non ha vincitore
+  invece di darlo a caso.
+- **Cosa NON eredita dall'FFA, che era la domanda aperta del piano**: l'economia. In FFA vincere uno
+  scontro ti dà un punto e costa all'avversario un secondo e mezzo. È l'opposto di "ne resta uno".
+  Qui uno scontro perso costa la partita, ed è l'unica modalità dove sapere quando NON prendere un
+  duello si paga.
+- **Tetto di 1 abilità difensiva** (survival/counter). Una build con quattro difensive è legale
+  ovunque e lì è solo lenta; dove la morte è definitiva, rifiutarsi di perdere equivale a vincere.
+  Il tetto conta i RUOLI, non le slot, perché la build-muro è sparsa tra `magicAdvanced` e `utility`
+  proprio per aggirare una regola sulle slot. Conseguenza da sapere: siccome ogni build deve avere
+  una Recovery e ogni Recovery è survival, **in torneo la tua Recovery È la tua unica difensiva**.
+- **Due cose che ha trovato la prova dal vivo e che nessun test poteva trovare**:
+  1. **La lobby non partiva mai.** Il client chiede il riempimento con i bot solo per una lista di
+     modalità scritta a mano, e il torneo non c'era: 40 campioni, tutti in `lobby`. Adesso quella
+     lista è condivisa, così client e server non possono più essere in disaccordo.
+  2. **Un crash vero nelle particelle**, che non c'entra col torneo ed era vivo per chiunque usasse
+     un'abilità con elemento `'none'`: `element as SpellStyle` faceva passare una stringa che non è
+     uno stile, `STYLE_RGB['none']` è undefined e `const [r,g,b] = undefined` esplode a ogni
+     impatto. C'erano CINQUE cast identici che promettevano la stessa cosa senza verificarla: ora
+     c'è un resolver solo e zero cast.
+- **La prova guarda tutta la lobby, non me**: 8 giocatori, vivi 7 → 4 nel corso della partita, e
+  **mai in salita**. La prima versione dipendeva dal fatto che un bot decidesse di uccidermi e
+  dichiarava "inconcludente" una volta su due — un verdetto a testa o croce non prova niente.
+- Gate verde: 587 test.
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.

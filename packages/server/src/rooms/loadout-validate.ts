@@ -21,11 +21,26 @@ import {
   type ClientLoadoutMessage,
 } from '@ragequit/shared'
 
+/**
+ * How many `survival` / `counter` abilities a build may bring to a TOURNAMENT.
+ *
+ * A four-defensive build is legal everywhere else and merely slow. In a mode
+ * where death is final it is the dominant strategy, because refusing to lose is
+ * the same as winning: a Mago can field `arcane_rebind + phase_shift +
+ * dark_barrier + healing_totem`, a Tank `brace_recovery + barrier + phase_shift
+ * + disengage_shot`. 00_truth.md D22 names this as the right instrument, and
+ * this is the one mode that needs it.
+ */
+export const TOURNAMENT_MAX_DEFENSIVE_PICKS = 1
+
 export type LoadoutValidation =
   | { ok: true; classId: ClassId; slots: string[]; specializationId: string }
   | { ok: false; reason: string }
 
-export function validateLoadoutMessage(msg: ClientLoadoutMessage): LoadoutValidation {
+export function validateLoadoutMessage(
+  msg: ClientLoadoutMessage,
+  mode = '',
+): LoadoutValidation {
   // Dynamic Class Validation
   const classId: ClassId =
     msg.classId && CLASS_IDS.includes(msg.classId as ClassId) ? (msg.classId as ClassId) : 'hybrid'
@@ -121,6 +136,21 @@ export function validateLoadoutMessage(msg: ClientLoadoutMessage): LoadoutValida
     return {
       ok: false,
       reason: `loadout rejected: specialisation "${specId}" is not legal for ${classId}`,
+    }
+  }
+
+  if (mode === 'tournament') {
+    const defensive = slots.filter((id) => {
+      const role = ABILITY_DEFS[id]?.comboRole
+      return role === 'survival' || role === 'counter'
+    })
+    if (defensive.length > TOURNAMENT_MAX_DEFENSIVE_PICKS) {
+      return {
+        ok: false,
+        reason:
+          `loadout rejected: in torneo puoi portare al massimo ${TOURNAMENT_MAX_DEFENSIVE_PICKS} ` +
+          `abilità difensiva (survival/counter), ne hai ${defensive.length}`,
+      }
     }
   }
 

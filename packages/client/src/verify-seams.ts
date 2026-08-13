@@ -13,7 +13,10 @@
 //   __selfPos         predicted position AND replicated position, together,
 //                     because a boundary the client does not predict is not a
 //                     wall — it is a rubber-band, and they photograph the same
-//   __castState       why a preview is absent: dead, round over, or nothing drew it
+//   __castState       why a preview is absent: dead, round over, or nothing drew
+//                     it — plus the alive/total population, which is how the
+//                     tournament probe watches finality across the whole lobby
+//                     instead of depending on a bot choosing to kill it
 //   __buildState      class + specialisation + the HP the SERVER gave, so a
 //                     specialisation can be proven to have crossed the wire
 //                     rather than merely to have been clicked
@@ -35,13 +38,45 @@ export interface VerifySeamDeps {
   getPredictedPos: () => { x: number; z: number } | null
   /** Server-replicated position, or null before the schema arrives. */
   getReplicatedPos: () => { x: number; z: number } | null
-  isAlive: () => boolean
-  /** Class, specialisation and the HP the SERVER gave — for tools/verify/spec.mjs. */
-  getBuildState: () => { classId: string; specializationId: string; hp: number } | null
+  /** How many players are alive right now, and how many are in the room. */
+  getPopulation: () => { alive: number; total: number }
+  /** The replicated local player — the source for both build state and aliveness. */
+  getSelfPlayer: () =>
+    | {
+        classId: string
+        specializationId: string
+        hp: number
+        alive: boolean
+      }
+    | null
+    | undefined
 }
 
 export const isCaptureMode = (): boolean =>
   typeof location !== 'undefined' && new URLSearchParams(location.search).has('capture')
+
+/**
+ * Alive vs total, over whatever player collection the room exposes.
+ *
+ * Lives here rather than in main because it is only ever a verification
+ * concern: the tournament probe watches this across the whole lobby, so
+ * "death is final" is checked on seven bots instead of on whether one of them
+ * happened to kill the probe.
+ */
+export function countAlive(
+  players: { forEach: (fn: (p: { alive: boolean }) => void) => void } | undefined | null,
+): {
+  alive: number
+  total: number
+} {
+  let alive = 0
+  let total = 0
+  players?.forEach((p) => {
+    total += 1
+    if (p.alive) alive += 1
+  })
+  return { alive, total }
+}
 
 /** Bump once per rendered frame. Cheap enough to call unconditionally. */
 export function countVerifyFrame(): void {
@@ -72,13 +107,17 @@ export function installVerifySeams(deps: VerifySeamDeps): void {
     return { px: predicted.x, pz: predicted.z, sx: replicated.x, sz: replicated.z }
   }
 
-  w['__buildState'] = () => deps.getBuildState()
+  w['__buildState'] = () => {
+    const p = deps.getSelfPlayer()
+    return p ? { classId: p.classId, specializationId: p.specializationId, hp: p.hp } : null
+  }
 
   w['__castState'] = () => ({
     placement: deps.getPlacementAbilityId(),
     primed: deps.getPrimedSlotIdx(),
     phase: deps.getMatchPhase(),
-    dead: !deps.isAlive(),
+    dead: deps.getSelfPlayer()?.alive !== true,
     loadout: deps.getLoadout(),
+    ...deps.getPopulation(),
   })
 }

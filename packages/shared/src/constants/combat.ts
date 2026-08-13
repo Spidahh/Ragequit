@@ -74,6 +74,21 @@ export const ELO_STARTING = 1000 as const
 export const ELO_K_RANKED = 25 as const
 export const ELO_K_FFA = 20 as const
 
+/**
+ * Modes whose lobby is filled with bots so a solo player gets a live match.
+ *
+ * Shared because both sides need the same answer: the client asks for the fill
+ * on join, the server performs it. A tournament missing from this set is a
+ * lobby that never starts — which is exactly what the first live run of
+ * tools/verify/tournament.mjs found, 40 samples all in `lobby`.
+ */
+export const BOT_FILLED_MODES: ReadonlySet<string> = new Set([
+  'duel_arena',
+  'ffa',
+  '5v5',
+  'tournament',
+])
+
 // Kill counters per mode (FFA / Team), kept here for match manager flow.
 //
 // RE-DERIVED 2026-08-13 (D3, 00_truth.md). Both were sized explicitly on the

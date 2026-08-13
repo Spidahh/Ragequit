@@ -106,6 +106,33 @@ Both at launch is a pillar decision (see `00_pillars.md`). Reason:
 - Players rotate between modes based on mood and time available
 - Balance data from both informs the calibration passes
 
+## Torneo — ne resta uno solo
+
+Added 2026-08-13 (D22, `00_truth.md`). `00_vision.md` names
+tournament-until-one-remains as one of three modes that stay, and it did not
+exist.
+
+- **No respawn.** Death is elimination. This is the entire mode.
+- Up to 8 players (`MAX_CLIENTS_TOURNAMENT`), bot-filled so a solo player gets a
+  real lobby.
+- The match ends when one player is left alive. If the clock runs out first, the
+  healthiest survivor wins; an exact tie has no winner rather than an arbitrary one.
+- **At most one `survival`/`counter` ability in the build.** Every build must
+  already carry a Recovery, and every Recovery is `survival`, so in tournament
+  **your Recovery is your one defensive pick** and everything else has to fight.
+
+**Why the cap.** A four-defensive build is legal everywhere else and merely
+slow: a Mago can field `arcane_rebind + phase_shift + dark_barrier +
+healing_totem`, a Tank `brace_recovery + barrier + phase_shift +
+disengage_shot`. In a mode where death is final, refusing to lose is the same as
+winning. The cap counts ROLES rather than slots, because that stall build is
+spread across families precisely to slip past a slot rule.
+
+**What it deliberately does not inherit from FFA.** FFA is 40 kills with a
+respawn: winning a fight gains you a point and costs your opponent about a
+second and a half. That is the opposite of "until one remains", and it is why
+tournament is the only mode where knowing when NOT to take a fight is paid for.
+
 ## Win condition design notes
 
 Kill counts are sized so a match runs about **15 minutes**, which is the actual

@@ -29,6 +29,12 @@ import {
   type ServerScoreMessage,
 } from '@ragequit/shared'
 
+import {
+  highestHpSurvivor,
+  tournamentOutcome,
+  type TournamentPlayerView,
+} from './tournament.js'
+
 // Modes that use BO5 round logic. Training stays live so players can test input,
 // weapons, and abilities without the bot ending the session.
 const ROUND_MODES = new Set(['duel_arena', 'blockout', '1v1'])
@@ -79,6 +85,12 @@ export class MatchManager {
   private get isRoundMode(): boolean {
     return ROUND_MODES.has(this.mode)
   }
+  /** Last one standing — no respawn, so a lost fight costs the match (D22). */
+  private get isTournament(): boolean {
+    return this.mode === 'tournament'
+  }
+  /** How many players the tournament actually started with. */
+  private tournamentStartedWith = 0
 
   // Get / seed in-memory ELO for a player.
   ratingFor(sid: string): number {
@@ -94,6 +106,20 @@ export class MatchManager {
 
     if (this.isRoundMode) {
       this.endRound(killerId)
+      return
+    }
+
+    if (this.isTournament) {
+      // The kill still counts for the scoreboard — you want to know who did the
+      // work — but nothing about the SCORE decides a tournament. Being alive does.
+      const cur = this.host.state.soloKills.get(killerId) ?? 0
+      this.host.state.soloKills.set(killerId, cur + 1)
+      this.broadcastScore()
+      const outcome = tournamentOutcome(this.playerViews(), this.tournamentStartedWith)
+      if (outcome.over) {
+        this.tournamentWinnerId = outcome.winnerId
+        this.enterMatchEnd(this.host.state.tick)
+      }
       return
     }
 
@@ -146,7 +172,9 @@ export class MatchManager {
             this.endRound(winner)
           }
         } else if (tickNow >= this.roundStartTick + KILLCAP_MATCH_TIMER_TICKS) {
-          // FFA/5v5 fallback: time is up — whoever leads now wins.
+          // Time is up. FFA/5v5: whoever leads on kills. Tournament: whoever is
+          // alive with the most HP, because kills never decided it.
+          if (this.isTournament) this.tournamentWinnerId = highestHpSurvivor(this.playerViews())
           this.enterMatchEnd(tickNow)
         }
         break
@@ -177,7 +205,18 @@ export class MatchManager {
   private enterLive(tickNow: number): void {
     this.host.state.phase = 'live'
     this.roundStartTick = tickNow
+    // Recorded at the bell, not read live: a naive "one survivor left" check
+    // fires the instant the first player joins an empty lobby and declares them
+    // champion of a tournament that never happened.
+    if (this.isTournament) this.tournamentStartedWith = this.host.state.players.size
     this.broadcastPhase('live')
+  }
+
+  /** Minimal alive/HP view of the lobby, for sim/tournament.ts. */
+  private playerViews(): Map<string, TournamentPlayerView> {
+    const out = new Map<string, TournamentPlayerView>()
+    this.host.state.players.forEach((p, id) => out.set(id, { alive: p.alive, hp: p.hp }))
+    return out
   }
 
   private enterRoundEnd(tickNow: number): void {
@@ -186,6 +225,9 @@ export class MatchManager {
     this.broadcastPhase('roundEnd', ROUND_END_HOLD_SEC * 1000)
     this.broadcastScore()
   }
+
+  /** Set when a tournament resolves, so the end screen names the survivor. */
+  private tournamentWinnerId = ''
 
   private enterMatchEnd(_tickNow: number): void {
     this.host.state.phase = 'matchEnd'

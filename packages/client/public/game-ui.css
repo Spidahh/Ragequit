@@ -4977,6 +4977,29 @@ button.locked {
   color: #ff6b7a;
 }
 
+/* Torneo — gold, because it is the mode where surviving is the whole point and
+   nothing else in the menu should read as more final than it. */
+.mode-tile--tournament::before {
+  background: #ffd260;
+  box-shadow: 2px 0 10px rgba(255, 210, 96, 0.45);
+}
+
+.mode-tile--tournament .mode-tile-glow {
+  background:
+    linear-gradient(90deg, rgba(255, 210, 96, 0.1), transparent 52%),
+    radial-gradient(circle at 88% 18%, rgba(255, 210, 96, 0.07), transparent 30%);
+}
+
+.mode-tile--tournament .mode-tile-icon {
+  border-color: rgba(255, 210, 96, 0.32);
+  background: rgba(255, 210, 96, 0.08);
+  color: #ffd260;
+}
+
+.mode-tile--tournament:hover:not(:disabled):not(.locked) .mode-tile-name {
+  color: #ffd260;
+}
+
 .mode-tile--training::before {
   background: var(--mana);
   box-shadow: 2px 0 10px rgba(0, 208, 255, 0.4);

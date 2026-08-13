@@ -15,9 +15,45 @@ export function botFillTarget(
 ): number {
   if (mode !== 'training' && !botFill) return 0
   if (mode === 'ffa') return Math.min(Number(ffaFillEnv ?? 5), maxClients - 1)
+  // A tournament with one opponent is a duel. Fill it so "until one remains"
+  // means something the first time somebody presses the button.
+  if (mode === 'tournament') return maxClients - 1
   if (mode === '5v5') return maxClients - 1
   return 1
 }
+
+/**
+ * How many clients a mode's room holds.
+ *
+ * Lives here with the rest of the lobby shape rather than as a chain of `if`s
+ * in the room: how many people a mode seats is the same kind of fact as how
+ * many bots fill it.
+ */
+export function maxClientsForMode(mode: string, fallback: number, env: NodeJS.ProcessEnv): number {
+  if (mode === 'ffa') return Number(env['MAX_CLIENTS_FFA'] ?? 10)
+  if (mode === '5v5') return Number(env['MAX_CLIENTS_5V5'] ?? 10)
+  if (mode === 'tournament') return Number(env['MAX_CLIENTS_TOURNAMENT'] ?? 8)
+  return fallback
+}
+
+/**
+ * When the victim gets back up, in ticks — or 0 for never.
+ *
+ * Tournament is the one mode where a lost fight costs the MATCH: no respawn is
+ * scheduled, so `alive` stays false for good. Every other mode inherits FFA's
+ * economy, where winning a fight costs the loser about a second and a half,
+ * which is the opposite of what "until one remains" means (00_truth.md D22).
+ */
+export function respawnTickFor(mode: string, now: number, respawnTicks: number): number {
+  return mode === 'tournament' ? 0 : now + respawnTicks
+}
+
+/**
+ * Modes where bots pre-fill the MULTIPLAYER lobby and must leave a human slot
+ * open. Narrower than the shared BOT_FILLED_MODES, which also covers duel: a
+ * duel room seats two, so reserving a slot there would leave room for nobody.
+ */
+export const CROWD_FILLED_MODES = new Set(['ffa', '5v5', 'tournament'])
 
 /** Join the smaller team; red wins ties. Keeps 5v5 balanced in any join order. */
 export function pickBalancedTeam(red: number, blue: number): 'red' | 'blue' {

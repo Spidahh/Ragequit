@@ -7,7 +7,8 @@ import * as THREE from 'three'
 import type { ImpactProfile } from '../vfx/impact-pool.js'
 
 import { makeProjectileMesh } from './factories.js'
-import type { EmberHandle, SpellParticles, SpellStyle } from './spell-particles.js'
+import { toSpellStyle } from './spell-particles.js'
+import type { EmberHandle, SpellParticles } from './spell-particles.js'
 import { VfxTextures } from './vfx-textures.js'
 
 export interface SchemaProjectile {
@@ -472,7 +473,7 @@ export function initProjectileVisuals({
     scene.add(trail)
     // Cast juice: a short element-tinted puff right where the bolt is born.
     if (style !== 'arrow') {
-      spellParticles.muzzleFlash(object.position.clone(), style as SpellStyle)
+      spellParticles.muzzleFlash(object.position.clone(), toSpellStyle(style))
     }
     const buf = new Float32Array(TRAIL_LEN * 3)
     for (let i = 0; i < TRAIL_LEN; i++) {
@@ -491,7 +492,7 @@ export function initProjectileVisuals({
       style,
       profile,
       light,
-      embers: style !== 'arrow' ? spellParticles.attachEmbers(style as SpellStyle, object) : null,
+      embers: style !== 'arrow' ? spellParticles.attachEmbers(toSpellStyle(style), object) : null,
     })
   }
 
@@ -526,7 +527,7 @@ export function initProjectileVisuals({
       (msg.reason === 'victim' ? 0xff6060 : msg.reason === 'terrain' ? 0xaabbcc : 0x80d0ff)
     spawnImpact(pos, color, impactProfile)
     // Element spark burst on top of the pooled 3-layer impact (bolts only).
-    if (style && style !== 'arrow') spellParticles.burstImpact(pos, style as SpellStyle)
+    if (style && style !== 'arrow') spellParticles.burstImpact(pos, toSpellStyle(style))
     if (profile === 'blastArrow') spellParticles.burstImpact(pos, 'fire')
   }
 
@@ -591,7 +592,7 @@ export function initProjectileVisuals({
           profile,
           light,
           embers:
-            style !== 'arrow' ? spellParticles.attachEmbers(style as SpellStyle, object) : null,
+            style !== 'arrow' ? spellParticles.attachEmbers(toSpellStyle(style), object) : null,
         }
         projectileVisuals.set(id, vis)
       }
