@@ -18,45 +18,57 @@ status: final
 > Mistfall Hunter**. They were filed under "§4 Direzione artistica" in
 > PROGETTO.md, and treated as a description of how the game should LOOK.
 >
-> They are not. They describe how it should PLAY. And the previous version of
-> this document said the opposite of every one of them:
+> They are not. They describe how it should PLAY, and that distinction had never
+> been drawn — so every polish pass improved the wrong things, well.
 >
-> - _"Build-crafting IS the gameplay"_ — Quake 3 has no build. Darkfall has no
->   loadout screen. Mordhau's identity is the weapon in your hands.
-> - _"Class identity plus build diversity"_ — none of the references has classes.
-> - _"Long TTK (20-30s) ... resource management"_ — Quake 3 kills in 1-3 seconds.
+> **CORRECTED on 2026-08-13 by the owner, directly.** A first pass at this rewrite
+> concluded that build-crafting should be demoted. That was wrong, and he said so:
+> the game IS choosing a build out of many combinations of class, abilities and
+> specialisations, and then taking it into an arena.
 >
-> The code obeyed this document, faithfully: 4 classes, 53 cooldown abilities, a
-> Loadout Forge you had to fill in before you were allowed to fight, mana bars and
-> a global cooldown. Every polish pass since has been improving the wrong game,
-> which is exactly why none of them moved the needle.
+> Classes and build-crafting stay, and may be redesigned to work better. What
+> comes from the references is everything around them — and he was specific about
+> which part each one contributes: Quake 3 gives movement and speed, Darkfall
+> gives launch-into-the-air magic and free aim, Mistfall Hunter gives how spells
+> and classes are used and presented.
+>
+> What the old document got wrong was not the build system. It was "Long TTK
+> (20-30s), resource management", which fights every reference on the list.
 
 ## What RAGEQUIT is
 
 A fast first-person arena fighter for the browser. Dark, gritty, medieval-fantasy.
-You move, you aim, you swing and you cast — with your own hands, in real time,
-against another person.
 
-Movement and aim ARE the game. Everything else serves them.
+You build a fighter — class, abilities, specialisations — and take it into an arena
+against other people: solo, in squads, or in a tournament where one is left standing.
+
+The build decides what you bring. Movement and aim decide what you do with it.
 
 ## What makes it different
 
-1. **The weapon in your hands is your identity.** Not a class, not a build. What
-   you can do right now is determined by what you are holding and where you are
-   standing — readable to you and to your opponent, instantly, without a menu.
+1. **The build is the identity, the arena is the test.** Class, abilities and
+   specialisations combine into a fighter that is yours; the fight is then decided
+   by movement, aim and reads, never by the sheet. Two players on the same build
+   are separated entirely by how they play it.
 2. **Movement is the skill ceiling.** Acceleration, friction, air control and
    momentum are real and learnable. A better player out-moves you before they
    out-aim you. (See `packages/shared/src/sim/controller.ts` — velocity
    accumulates; it is not assigned.)
 3. **Free aim, no lock-on.** You hit what you point at and you miss what you do
    not. No target lock, no auto-aim, no dice.
-4. **Short, decisive fights.** Seconds, not half a minute. A duel is a handful of
-   committed decisions, and a mistake costs you the round.
-5. **The arena is a participant.** Verticality, sightlines, cover, pickups. Map
-   knowledge is power, the way it is in Quake.
-6. **Server-authoritative, zero-trust.** The simulation lives on the server. The
+4. **Short, decisive fights.** Quake's band, not an MMO's. A duel is a handful of
+   committed decisions and a mistake costs you the round. The old rule — "Long TTK
+   (20-30s), resource management" — is the clearest case of an inherited line that
+   fought the references, and it is gone.
+5. **Launch, then punish.** Darkfall's moment, which this game already half has: a
+   spell knocks the target into the air like a Quake rocket, and if you are good you
+   hit them up there with an instant cast. The victim keeps answers — it must never
+   become a stun-lock.
+6. **The arena is a participant.** Verticality, sightlines, cover. Map knowledge is
+   power, the way it is in Quake.
+7. **Server-authoritative, zero-trust.** The simulation lives on the server. The
    client predicts; the server decides. No client trust, no RNG in outcomes.
-7. **No paywalls.** Nothing bought, nothing gated behind grind.
+8. **No paywalls.** Nothing bought, nothing gated behind grind.
 
 ## Game Feel
 
@@ -69,23 +81,26 @@ Movement and aim ARE the game. Everything else serves them.
 - **Fast.** Press play, be fighting within seconds. No configuration screen
   between a player and the game.
 
-## What this costs — the honest list
+## What has to change, and what does not
 
-Adopting the references means the following stop being the game. They are not
-deleted from the repository blindly; they are demoted from "the point of the
-game" to "systems that exist", and cut where they fight the pillars above:
+**Stays, and is the point:** classes, abilities, specialisations, the build assembled
+before the arena, and the three modes — solo, squads, tournament-until-one-remains.
 
-- **Build-crafting as the core loop.** The Loadout Forge is no longer a gate in
-  front of playing (`main.ts launchModeOrForge`). Whether it survives at all is
-  an open decision.
-- **53 cooldown abilities.** A weapon-identity game needs a small number of
-  deeply distinct actions, not a spreadsheet where most entries are a stat line.
-- **Long TTK and resource management.** Mana pools and a 20-30 s duel belong to
-  the design this document used to describe.
-- **Class mechanics** (Fury / Momentum / Risonanza / Flow) — they exist and are
-  now visible in the HUD, but they are a class-game idea in a weapon game.
+**Changes, because it fights the references:**
 
-None of the above is a small change, and none of it should be done in one pass.
-The order that respects the pillars: movement first (done), then the weapon in
-frame and what it can do, then the arena, then subtract everything that is still
-asking the player to read instead of fight.
+- **TTK.** "20-30 s of resource management" is an MMO duel. The references kill fast.
+  This number drives everything else.
+- **How a spell is cast and READ.** The owner's central ask, in his words: a simple
+  but effective system that makes you understand visually where the spell will go and
+  what it will do. Today 53 abilities largely announce themselves the same way. This
+  is the main design work.
+- **How many abilities are live at once.** A deep build space does not require a wide
+  hotbar. What lives on the weapon versus in the build has to be decided.
+- **The airborne rules.** Knockups exist and all nine share an identical airtime, so a
+  launch reads as one move rather than a family. Launch height, hang time and what the
+  victim can still do are what make the Darkfall moment work.
+
+**Already done:** movement accumulates velocity (Quake PM_Accelerate / PM_Friction)
+instead of being assigned — 133 ms to full speed, 0.81 m of stopping distance, 183 ms
+to reverse. Pressing a mode starts a fight; the Forge is where you build, not a toll
+gate in front of the game.

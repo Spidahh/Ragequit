@@ -13,12 +13,13 @@ status: final
 ## Rules (what we always do)
 
 1. **Skill over stats**. Outcomes are determined by input quality, positioning, and decision-making. Never by grind or cosmetics.
-2. **The weapon is the identity, not the build.** What a player can do is
-   determined by what they are holding and where they are standing, readable
-   without a menu. This replaces "class identity plus build diversity", which
-   came from a vision that contradicted every reference game the owner named —
-   Quake 3, Darkfall, Mordhau and Dark Messiah have no builds. See
-   `00_vision.md`, rewritten 2026-08-13.
+2. **Class identity plus build diversity.** Tank, Arciere, Mago and Ibrido have
+   different slot grammars and resource emphasis; each still needs multiple viable
+   builds rather than one solved loadout. Confirmed by the owner on 2026-08-13:
+   this IS the game. What the references contribute is everything around it —
+   Quake 3's speed, Darkfall's launch-and-punish magic, Mistfall Hunter's spell and
+   class presentation. A build must never be legible only on a sheet: it has to be
+   legible in the fight, to both players.
 3. **Immediate feedback**. Every hit, every miss, every proc has a visual and audio tell. Damage numbers are optional but impact VFX is mandatory.
 4. **Server-authoritative**. The simulation lives on the server. The client predicts for responsiveness; the server confirms. Any discrepancy resolves in the server's favor.
 5. **No elemental counter**. Elements differ in _effect_, never in counter-relationships. A Fire build is never weak to an Ice build on principle.
