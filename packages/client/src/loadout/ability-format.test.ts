@@ -11,6 +11,7 @@ import {
   abilityReadability,
   abilityPrimaryStat,
   abilityShapeGlyph,
+  splitMechanicLabel,
 } from './ability-format.js'
 
 const def = (over: Record<string, unknown>) => ({ costMana: 0, costStamina: 0, ...over }) as never
@@ -160,5 +161,25 @@ describe('ability-format', () => {
       expect(onSelf).toBe('◉')
       expect(projectile).not.toBe(onSelf)
     })
+  })
+})
+
+describe('splitMechanicLabel', () => {
+  // The chip shrinks in a flex row, so feeding it the whole sentence left a box
+  // containing one emoji — the class mechanic was never actually readable.
+  it('keeps the mechanic name for the chip and the sentence for the tooltip', () => {
+    const { short, full } = splitMechanicLabel(
+      '🌀 RISONANZA — due spell dello stesso elemento entro 2.5s attivano una proc.',
+    )
+    expect(short).toBe('🌀 RISONANZA')
+    expect(full).toContain('proc.')
+  })
+
+  it('leaves a label with no explanation alone', () => {
+    expect(splitMechanicLabel('⚡ FLOW').short).toBe('⚡ FLOW')
+  })
+
+  it('does not split on a dash that is not the separator', () => {
+    expect(splitMechanicLabel('🔥 FURY—X').short).toBe('🔥 FURY—X')
   })
 })

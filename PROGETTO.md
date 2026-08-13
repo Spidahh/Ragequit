@@ -895,6 +895,29 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
     diagnosi da guardare dal vivo, e tirare a indovinare qui significa rompere il rendering dei
     personaggi. Prova: `.verify/char.png`.
 
+- **2026-08-13 (notte) — l'utente va a dormire e dà autonomia piena, STILE COMPRESO** ("puoi
+  decidere quello che vuoi, ma deve essere figo"). Ogni scelta di gusto presa qui è annotata sotto
+  perché lui possa bocciarla; nulla è irreversibile.
+  - **Il menu dichiarava OFFLINE a chiunque aprisse il gioco.** Lo stato partiva da "offline" e si
+    correggeva solo quando rispondeva la health probe — che ha un timeout di 20s, e il server ha lo
+    scale-to-zero, quindi il primo visitatore pagava il cold start leggendo che il gioco era morto.
+    Ora "non lo so ancora" è uno stato suo: ambra `checking server` finché la probe non risponde.
+    Verificato tenendo aperta la /health (è ciò che si vede con la macchina addormentata): l'etichetta
+    resta `checking server` a 0ms, 1.5s e 6s. L'"offline" neutro dopo un'uscita volontaria è INVARIATO
+    — lì c'è un commento che lo difende come scelta.
+  - **Forge: 8 nodi di testo fisicamente tagliati, misurati non discussi** (`.verify/trunc.mjs`).
+    4 erano le descrizioni delle abilità equipaggiate ("bruciatura…", "lancia in ari…"): non potevi
+    leggere cosa avevi in mano. Causa: `text-transform: uppercase` su una FRASE — il maiuscolo costa
+    circa un quinto di larghezza in più e toglie le forme delle parole. Tolto, più clamp 2→3 righe.
+    Ora 8→5 nodi, e le descrizioni 4→1 (resta METEOR, che ha quattro clausole).
+  - **La meccanica di classe non era leggibile da nessuna parte.** La targhetta in alto sta in una
+    riga flex `overflow: hidden` con `flex: 1 1 0` e collassava a una scatoletta con dentro la sola
+    emoji. Provato a farla andare a capo: peggio, si riduceva a due caratteri — RIPRISTINATA com'era.
+    La colonna sinistra del Forge aveva un'area morta sotto gli slot Utility: la spiegazione vive lì
+    ora, per esteso e in minuscolo. Verificato su mage (RISONANZA) e tank (FURY).
+  - Estratto `hud/ffa-ladder.ts` (con test: top3 + te al tuo rango vero, senza duplicarti sul podio)
+    per ripagare le righe aggiunte a main.ts — il budget non sale mai.
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.

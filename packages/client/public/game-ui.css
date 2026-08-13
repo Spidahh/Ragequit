@@ -987,6 +987,32 @@ button.locked {
   overflow: hidden;
 }
 
+/* Class-mechanic explainer in the Forge's left column (see index.html). */
+.ls-mechanic-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 210, 96, 0.14);
+  border-left: 2px solid rgba(255, 210, 96, 0.45);
+  border-radius: 4px;
+  background: rgba(255, 210, 96, 0.04);
+}
+
+.lsm-title {
+  color: var(--gold);
+  font: 800 9px/1 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.lsm-body {
+  color: var(--text-soft);
+  /* A sentence, so no all-caps and no mono: this one is meant to be read. */
+  font: 500 12px/1.45 var(--font-ui);
+}
+
 .vitals-class-tag {
   padding: 3px 7px;
   border: 1px solid rgba(255, 210, 96, 0.22);
@@ -1010,6 +1036,11 @@ button.locked {
   color: rgba(180, 195, 230, 0.88);
   font: 600 10px/1.4 var(--font-ui);
   text-transform: none;
+  /* Stays on one line with an ellipsis. Letting it wrap looks like the obvious
+     fix for the cut-off sentence, but this sits in a flex row next to the vitals
+     and with `flex: 1 1 0` it then collapses to a two-character stub instead —
+     worse than the truncation. Explaining the class mechanic properly needs a
+     different home, not a wider box here. */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1653,13 +1684,17 @@ button.locked {
 .ls-slot-nature {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   overflow: hidden;
   color: var(--text-soft);
   font: 700 11px/1.25 var(--font-mono);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  /* No uppercase here. This line is a sentence ("linea di mira · 22 danni ·
+     10 danni in 6 m"), not a label: all-caps costs roughly a fifth of the width
+     and strips the word shapes you read by, so four of the equipped abilities
+     were being clipped mid-description — you could not tell what you had
+     equipped. The source text is already cased deliberately. */
+  letter-spacing: 0;
 }
 
 .ls-slot-route {

@@ -36,6 +36,7 @@ import {
   targetingLabel,
   slotPoolTitle,
   abilityReadability,
+  splitMechanicLabel,
 } from './loadout/ability-format.js'
 
 const STORAGE_KEY = 'ragequit.loadout.v6'
@@ -485,7 +486,13 @@ export function initLoadoutStation(
     const { hp, mana, stamina } = classDef.resourceMaxima
     if (vitalsClassName) vitalsClassName.textContent = classDef.label.toUpperCase()
     const mechanicEl = document.getElementById('ls-vitals-mechanic')
-    if (mechanicEl) mechanicEl.textContent = CLASS_MECHANIC_LABEL[activeClassId] ?? ''
+    const mech = splitMechanicLabel(CLASS_MECHANIC_LABEL[activeClassId] ?? '')
+    if (mechanicEl) {
+      mechanicEl.textContent = mech.short
+      mechanicEl.title = mech.full
+    }
+    const mechanicBody = document.getElementById('ls-mechanic-body')
+    if (mechanicBody) mechanicBody.textContent = mech.full
     if (vitalsValHp) vitalsValHp.textContent = String(hp)
     if (vitalsValMana) vitalsValMana.textContent = String(mana)
     if (vitalsValStam) vitalsValStam.textContent = String(stamina)

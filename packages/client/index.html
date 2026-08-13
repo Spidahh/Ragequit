@@ -628,6 +628,15 @@
             </div>
             <div class="slot-list" id="ls-utility"></div>
           </div>
+          <!-- The class mechanic, somewhere it can actually be read. The chip up
+               in the vitals row sits in an overflow-hidden flex line and gets
+               squeezed down to its emoji, so the rule that defines how your
+               class plays was effectively invisible. This column had dead space
+               under the utility slots; it lives here now. -->
+          <div class="ls-mechanic-panel">
+            <span class="lsm-title">Meccanica di classe</span>
+            <span class="lsm-body" id="ls-mechanic-body"></span>
+          </div>
           <button class="btn ls-preset-btn" id="ls-load-preset" type="button">
             ⚙ PRESET INIZIALE
           </button>

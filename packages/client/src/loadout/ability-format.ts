@@ -413,6 +413,19 @@ export function abilityShapeGlyph(def: AbilityDef): string {
   return SHAPE_GLYPH[abilityReadability(def).shape]
 }
 
+/**
+ * Split a class-mechanic label ("🌀 RISONANZA — due spell dello stesso…") into
+ * the short name for the chip and the full sentence for its tooltip.
+ *
+ * The chip lives in a flex row next to the vitals and shrinks to nothing, so
+ * feeding it the whole sentence collapsed it to a box containing one emoji —
+ * the class mechanic was, in practice, never readable anywhere.
+ */
+export function splitMechanicLabel(label: string): { short: string; full: string } {
+  const dash = label.indexOf(' — ')
+  return { short: dash > 0 ? label.slice(0, dash) : label, full: label }
+}
+
 export function slotPoolTitle(slot: TargetAbilitySlotFamily, _idx: number): string {
   if (slot === 'melee') return 'Abilita Spada'
   if (slot === 'bow') return 'Abilita Arco'
