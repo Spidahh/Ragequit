@@ -791,11 +791,11 @@ CONE, everything else is a RAY. That matters more than it sounds — a 53-entry
 table would have to be kept in sync with the registry by hand, and an ability
 added without an entry would quietly have no class.
 
-| Class | Abilities | Half-angle | Capture |
-| ----- | --------- | ---------- | ------- |
-| CONE  | 3 (uppercut, bleed_strike, guard_break) | 10° | 0.89 m at 2.5 m — one body, which is what a swing should catch |
-| RAY   | 19 instant ranged | 3° | 0.97 m at 10 m, 1.24 m at 15 m |
-| BOLT  | 10 with real projectiles | none | 0.45 m flat: the projectile IS the aim test |
+| Class | Abilities                               | Half-angle | Capture                                                        |
+| ----- | --------------------------------------- | ---------- | -------------------------------------------------------------- |
+| CONE  | 3 (uppercut, bleed_strike, guard_break) | 10°        | 0.89 m at 2.5 m — one body, which is what a swing should catch |
+| RAY   | 19 instant ranged                       | 3°         | 0.97 m at 10 m, 1.24 m at 15 m                                 |
+| BOLT  | 10 with real projectiles                | none       | 0.45 m flat: the projectile IS the aim test                    |
 
 Measured in the live client, not asserted: the preview reads the same function
 as the hit test, so `tools/verify/aimpreview.mjs` now prints the drawn capture

@@ -20,15 +20,15 @@ status: current
 
 ## Keyboard — core
 
-| Key      | Action                                                                               |
-| -------- | ------------------------------------------------------------------------------------ |
-| WASD     | Movement (sprint is always on — no Shift)                                            |
-| Space    | Jump (fixed tap-height impulse; hold adds no extra height)                           |
+| Key      | Action                                                                                        |
+| -------- | --------------------------------------------------------------------------------------------- |
+| WASD     | Movement (sprint is always on — no Shift)                                                     |
+| Space    | Jump (fixed tap-height impulse; hold adds no extra height)                                    |
 | 1–8      | **Ability binds** — one per hotbar slot. Press shows the shape, release casts it (rebindable) |
-| Q (hold) | Open **Q Wheel** — radial alternative for slots 5–8 (see per-class assignment below) |
-| E (hold) | Open **E Wheel** — radial alternative for slots 1–4 (see per-class assignment below) |
-| Tab      | Cycle equipped weapon (rebindable)                                                   |
-| Escape   | Menu                                                                                 |
+| Q (hold) | Open **Q Wheel** — radial alternative for slots 5–8 (see per-class assignment below)          |
+| E (hold) | Open **E Wheel** — radial alternative for slots 1–4 (see per-class assignment below)          |
+| Tab      | Cycle equipped weapon (rebindable)                                                            |
+| Escape   | Menu                                                                                          |
 
 Every one of the 8 class abilities has its own direct key (default `1`–`8`,
 rebindable in Settings). The two wheels are an **alternative** radial way to fire
@@ -100,12 +100,12 @@ When a primed ability requires a different weapon than the currently equipped on
 
 ## Direct Binds
 
-| Key | Action                                  |
-| --- | --------------------------------------- |
+| Key | Action                                        |
+| --- | --------------------------------------------- |
 | 1–8 | Hold to aim hotbar slots 1–8, release to cast |
-| E   | E Wheel (radial alternative, slots 1–4) |
-| Q   | Q Wheel (radial alternative, slots 5–8) |
-| Tab | Weapon swap                             |
+| E   | E Wheel (radial alternative, slots 1–4)       |
+| Q   | Q Wheel (radial alternative, slots 5–8)       |
+| Tab | Weapon swap                                   |
 
 All binds above are rebindable in Settings. `Z`, `X`, `F`, `V`, `R` and `G` are not used.
 

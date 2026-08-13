@@ -59,24 +59,24 @@ on a mage are different builds because a tank and a mage are different, and
 inventing twelve unrelated mechanics would make the choice unlearnable rather
 than deep.
 
-| Archetype     | Gives                          | Costs                 |
-| ------------- | ------------------------------ | --------------------- |
-| **Impatto**   | knockup airtime ×1.25          | max HP ×0.92          |
-| **Baluardo**  | max HP ×1.12                   | move speed ×0.94      |
-| **Cadenza**   | cooldowns ×0.85                | max HP ×0.90          |
-| **Slancio**   | move speed ×1.08               | max HP ×0.90          |
+| Archetype    | Gives                 | Costs            |
+| ------------ | --------------------- | ---------------- |
+| **Impatto**  | knockup airtime ×1.25 | max HP ×0.92     |
+| **Baluardo** | max HP ×1.12          | move speed ×0.94 |
+| **Cadenza**  | cooldowns ×0.85       | max HP ×0.90     |
+| **Slancio**  | move speed ×1.08      | max HP ×0.90     |
 
 Authoritative source: `packages/shared/src/constants/specializations.ts`. The
 Forge builds its cards from that registry, so adding one is a data change.
 
 ## Where it applies
 
-| Modifier         | Applied in                                                    |
-| ---------------- | ------------------------------------------------------------- |
-| `maxHpMult`      | `maxHpForBuild()` — the single source for spawn, respawn, loadout commit, lifesteal and heal clamps |
-| `cooldownMult`   | `GameRoom.getAbilityCooldownMult`, composed with Momentum      |
+| Modifier             | Applied in                                                                                                                                                            |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `maxHpMult`          | `maxHpForBuild()` — the single source for spawn, respawn, loadout commit, lifesteal and heal clamps                                                                   |
+| `cooldownMult`       | `GameRoom.getAbilityCooldownMult`, composed with Momentum                                                                                                             |
 | `knockupAirtimeMult` | `AbilityEngine.effectKnockup`, read from the **caster** — "your launches hang longer" is a property of who cast, not who was hit. Still clamped by `MAX_AIRBORNE_SEC` |
-| `moveSpeedMult`  | `slowFractionWithSpecialization()`, run identically on the server for authority and on the client for prediction |
+| `moveSpeedMult`      | `slowFractionWithSpecialization()`, run identically on the server for authority and on the client for prediction                                                      |
 
 That last row is load-bearing: a speed modifier the client does not predict is a
 permanent rubber-band, so the fold-in is one shared function rather than two

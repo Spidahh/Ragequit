@@ -4,3 +4,9 @@ build
 coverage
 _archive
 pnpm-lock.yaml
+
+# Local-only scratch that is not in git. Without this the local gate is
+# permanently red on a file CI never sees — and a gate that always fails is a
+# gate you stop reading, which is how two red pushes got past me.
+.backup-untracked/
+.verify/

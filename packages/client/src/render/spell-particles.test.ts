@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest'
 
 import { toSpellStyle } from './spell-particles.js'
 
-
-
 // A live tournament run crashed here: `element as SpellStyle` let 'none' — a
 // legal AbilityDef element — reach STYLE_RGB, which returned undefined, and
 // `const [r, g, b] = undefined` threw "undefined is not iterable" on every
