@@ -726,3 +726,49 @@ export function getEyeWorldPosition(charGroup: THREE.Group, out: THREE.Vector3):
 // first-person arm set for exactly this reason. That is an animation job, not a
 // bigger angle, and faking it with a screen-locked prop is what the deleted
 // viewmodel scene was — a weapon with no body attached to it.
+
+// ---------------------------------------------------------------------------
+// First-person weapon hold (local player only).
+//
+// The weapon stays parented to the hand bone — it is still on the body, it still
+// moves with the character, opponents still see the authored pose. What changes
+// is that for YOUR view its world transform is driven from the camera, so the
+// weapon is where a first-person weapon has to be: in front of you, held to one
+// side, readable.
+//
+// This is the safe half of the problem. The arm is skinned geometry and tears if
+// you rotate the shoulder far enough to bring it up (see the note above); the
+// weapon is a rigid prop, so posing it cannot deform anything. Solving the arm
+// properly needs authored first-person arms — this makes the game playable and
+// legible in the meantime, without a screen-locked viewmodel scene.
+// ---------------------------------------------------------------------------
+const FP_WEAPON_OFFSET = new THREE.Vector3(0.3, -0.26, -0.62)
+const FP_WEAPON_EULER = new THREE.Euler(Math.PI / 2, 0.35, 0.12)
+const _fpTarget = new THREE.Matrix4()
+const _fpParentInv = new THREE.Matrix4()
+const _fpQuat = new THREE.Quaternion()
+const _fpScale = new THREE.Vector3()
+const _fpPos = new THREE.Vector3()
+
+export function applyFirstPersonWeaponPose(charGroup: THREE.Group, camera: THREE.Camera): void {
+  const wg = charGroup.userData['weaponGroup'] as THREE.Group | undefined
+  const parent = wg?.parent
+  if (!wg || !parent) return
+  const keptScale = wg.scale.x
+
+  camera.updateMatrixWorld()
+  parent.updateMatrixWorld()
+
+  _fpQuat.setFromEuler(FP_WEAPON_EULER)
+  _fpTarget.compose(FP_WEAPON_OFFSET, _fpQuat, _fpScale.set(1, 1, 1))
+  _fpTarget.premultiply(camera.matrixWorld)
+  _fpParentInv.copy(parent.matrixWorld).invert()
+  _fpTarget.premultiply(_fpParentInv)
+  _fpTarget.decompose(_fpPos, _fpQuat, _fpScale)
+
+  wg.position.copy(_fpPos)
+  wg.quaternion.copy(_fpQuat)
+  // The decomposed scale carries the bone chain's scale; the grip scale is the
+  // one that sizes the model, so keep it.
+  wg.scale.setScalar(keptScale)
+}
