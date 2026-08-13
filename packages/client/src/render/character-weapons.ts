@@ -5,6 +5,7 @@
 // `weapons/kaykit/` (see AGENTS.md). The legacy `.gltf`/`.bin`/`.png` sources
 // were removed; only the `.glb` are shipped.
 // ---------------------------------------------------------------------------
+import { ABILITY_DEFS, TICK_RATE_HZ } from '@ragequit/shared'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 
@@ -416,6 +417,44 @@ export function updateShieldAttachment(charGroup: THREE.Group): void {
 }
 
 /** Cast ring shown above casting players. */
+/**
+ * Drive an opponent's cast ring: identity by colour, progress by size.
+ *
+ * The ring used to be one gold circle that blinked on and off, so an enemy cast
+ * told you only THAT something was coming — never what, and never how long you
+ * had. Interrupting is only a skill if the tell carries both. The element tints
+ * it and it closes from full to a tight core as the windup resolves, brightening
+ * in the last quarter, so the moment to react is the moment it looks urgent.
+ *
+ * Both fields are already replicated; the start tick is derived from the
+ * ability's own windup rather than stored, so this needs no new state.
+ */
+export function updateCastRing(
+  ring: THREE.Mesh,
+  cast: { casting: boolean; castAbilityId?: string; castEndsAtTick: number },
+  tickNow: number,
+): void {
+  const active = !!cast.casting && cast.castEndsAtTick > tickNow
+  ring.visible = active
+  if (!active) {
+    ring.scale.setScalar(1)
+    return
+  }
+  const def = ABILITY_DEFS[cast.castAbilityId ?? '']
+  const mat = ring.material as THREE.MeshBasicMaterial
+  mat.color.setHex(ELEMENT_COLORS[(def?.element ?? 'none') as ElementId] ?? ELEMENT_COLORS.none)
+
+  const windupTicks = Math.max(1, Math.round((def?.windupSec ?? 0) * TICK_RATE_HZ))
+  // An instant ability has no windup to show; leave the ring open rather than
+  // inventing a countdown that would always read as "about to land".
+  const progress =
+    def && def.windupSec > 0
+      ? Math.max(0, Math.min(1, 1 - (cast.castEndsAtTick - tickNow) / windupTicks))
+      : 0
+  ring.scale.setScalar(1 - 0.6 * progress)
+  mat.opacity = progress > 0.75 ? 1 : 0.85
+}
+
 export function makeCastRing(): THREE.Mesh {
   const geo = new THREE.RingGeometry(0.28, 0.38, 24)
   geo.rotateX(-Math.PI / 2)
