@@ -38,8 +38,11 @@ export const UPPERCUT_APEX_M = 2.0 as const
 
 // --- Damage / death ---------------------------------------------------------
 
-// Respawn delay in Training / 1v1 local match flow.
-export const RESPAWN_SEC = 5 as const
+// Respawn delay. Quake's is ~1.7 s; five was three times that, and a fixed wait
+// in a game whose whole point is being back in the fight. A death should cost you
+// the fight you just lost, not the next thirty seconds of the match.
+// See 01_DESIGN/00_truth.md §4 and D13.
+export const RESPAWN_SEC = 1.5 as const
 
 // --- Lag compensation -------------------------------------------------------
 // 400 ms ring buffer of past positions per entity, used to rewind melee hit

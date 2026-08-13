@@ -74,6 +74,12 @@ export const MAX_FALL_SPEED_MPS = 60 as const
 // still initiate a jump. At 60 Hz, 5 ticks ≈ 83 ms — standard for 3D platformers.
 export const COYOTE_TICKS = 5 as const
 
+// Jump buffer: a jump pressed this many ticks BEFORE touchdown still fires on
+// landing. The exact mirror of coyote time, which has always existed for the
+// leaving-the-ground case — without it, the better your timing the more often
+// the input is silently dropped, which is the worst possible lesson to teach.
+export const JUMP_BUFFER_TICKS = 5 as const
+
 // Spawn points (see sim/map.ts).
 export const SPAWN_Y = CAPSULE_HALF_HEIGHT_M + 0.01 // resting height of capsule
 

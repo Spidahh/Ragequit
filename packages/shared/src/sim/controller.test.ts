@@ -2,7 +2,12 @@ import { describe, it, expect } from 'vitest'
 
 import { JUMP_HEIGHT_TAP_M, MOVE_SPEED_MPS } from '../constants/stats.js'
 import { TICK_MS } from '../constants/tick.js'
-import { CAPSULE_HALF_HEIGHT_M, COYOTE_TICKS, GROUND_Y } from '../constants/world.js'
+import {
+  CAPSULE_HALF_HEIGHT_M,
+  COYOTE_TICKS,
+  GROUND_Y,
+  JUMP_BUFFER_TICKS,
+} from '../constants/world.js'
 
 import { makePlayerSimState, simulatePlayer } from './controller.js'
 import { STATIC_MAP } from './map.js'
@@ -170,5 +175,58 @@ describe('simulatePlayer', () => {
     expect(a.pos.y).toBe(b.pos.y)
     expect(a.pos.z).toBe(b.pos.z)
     expect(a.vel.y).toBe(b.vel.y)
+  })
+})
+
+// --- D19: jump ordering and the input buffer -------------------------------
+// 00_truth.md §10 step 2. Both of these punish good timing when absent.
+describe('jump buffer and ordering', () => {
+  const air = (jump: boolean): SimInput => ({ moveX: 0, moveZ: 0, yaw: 0, jump, jumpHold: false })
+  // +z runs away from the cover cluster around the origin; hitting a box mid-flight
+  // zeroes velocity and would make this test measure collision, not friction order.
+  const fwd = (jump: boolean): SimInput => ({ moveX: 0, moveZ: 1, yaw: 0, jump, jumpHold: false })
+
+  /** Jump, then fall, pressing jump exactly `pressAt` ticks before touchdown. */
+  function hopWithEarlyPress(pressAt: number): boolean {
+    // z: 20 like the tests above — the origin sits inside a cover box.
+    const s = makePlayerSimState({ x: 0, y: BASE_Y, z: 20 })
+    simulatePlayer(s, air(true), DT, STATIC_MAP)
+    // How long is the flight? Measure it on a clone that never presses again.
+    const probe = structuredClone(s)
+    let flight = 0
+    while (!probe.onGround && flight < 300) {
+      simulatePlayer(probe, air(false), DT, STATIC_MAP)
+      flight++
+    }
+    for (let t = 0; t < flight; t++) {
+      simulatePlayer(s, air(t === flight - pressAt), DT, STATIC_MAP)
+    }
+    // The tick after touchdown, with NO fresh press: only a buffered jump can fire.
+    simulatePlayer(s, air(false), DT, STATIC_MAP)
+    return s.vel.y > 0
+  }
+
+  it('fires a jump pressed just before touchdown', () => {
+    expect(hopWithEarlyPress(1)).toBe(true)
+    expect(hopWithEarlyPress(3)).toBe(true)
+  })
+
+  it('lets the buffer expire rather than queueing a jump forever', () => {
+    expect(hopWithEarlyPress(JUMP_BUFFER_TICKS + 6)).toBe(false)
+  })
+
+  // Quake calls PM_CheckJump before PM_Friction. With the order reversed a hop
+  // timed on the landing tick paid a full friction tick — 13.3% of velocity —
+  // which punishes precisely the input the movement system rewards.
+  it('keeps full speed through a hop timed on the landing tick', () => {
+    const s = makePlayerSimState({ x: 0, y: BASE_Y, z: 20 })
+    for (let i = 0; i < 60; i++) simulatePlayer(s, fwd(false), DT, STATIC_MAP)
+    const cruising = Math.hypot(s.vel.x, s.vel.z)
+    expect(cruising).toBeCloseTo(MOVE_SPEED_MPS, 2)
+
+    simulatePlayer(s, fwd(true), DT, STATIC_MAP)
+    while (!s.onGround) simulatePlayer(s, fwd(false), DT, STATIC_MAP)
+    simulatePlayer(s, fwd(true), DT, STATIC_MAP) // hop on the landing tick
+    expect(Math.hypot(s.vel.x, s.vel.z)).toBeCloseTo(cruising, 2)
   })
 })

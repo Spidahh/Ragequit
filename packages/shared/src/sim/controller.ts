@@ -19,6 +19,7 @@ import {
   GROUND_ACCEL_COEF,
   GROUND_EPSILON_M,
   GROUND_FRICTION,
+  JUMP_BUFFER_TICKS,
   MAX_FALL_SPEED_MPS,
   STOP_SPEED_MPS,
 } from '../constants/world.js'
@@ -85,6 +86,31 @@ export function simulatePlayer(
   const worldX = mx * cos + mz * sin
   const worldZ = -mx * sin + mz * cos
 
+  // --- Jump. Deliberately BEFORE friction ----------------------------
+  // Quake's PM_WalkMove calls PM_CheckJump and returns into PM_AirMove before it
+  // ever reaches PM_Friction, so a hop timed on the landing tick keeps its speed.
+  // With the order reversed every perfectly-timed jump paid a full friction tick
+  // - 13.3% of velocity at GROUND_FRICTION 8 - which punishes exactly the input
+  // the movement system is meant to reward.
+  const wasOnGround = state.onGround
+  const canJump = state.onGround || state.coyoteTicksLeft > 0
+  let didJump = false
+
+  // Buffer a jump pressed just before touchdown: the mirror of coyote time,
+  // which has always existed for the leaving-the-ground case.
+  if (input.jump) state.jumpHoldTicksLeft = JUMP_BUFFER_TICKS
+  else if (state.jumpHoldTicksLeft > 0) state.jumpHoldTicksLeft -= 1
+  const wantsJump = input.jump || state.jumpHoldTicksLeft > 0
+
+  if (wantsJump && canJump && state.stamina >= JUMP_COST_STAMINA && !locked) {
+    state.vel.y = JUMP_TAP_VY
+    state.onGround = false
+    state.coyoteTicksLeft = 0
+    state.stamina = Math.max(0, state.stamina - JUMP_COST_STAMINA)
+    state.jumpHoldTicksLeft = 0
+    didJump = true
+  }
+
   // --- Horizontal: friction, then accelerate (Quake PM_Friction/PM_Accelerate) ---
   // Velocity ACCUMULATES here. It used to be assigned straight from input every
   // tick, which is why the character reached full speed in one frame and stopped
@@ -135,20 +161,6 @@ export function simulatePlayer(
       state.vel.z *= AIR_SPEED_CAP_MPS / sp
     }
   }
-
-  // --- 2. Jump: static instant tap jump ------------------------------
-  const wasOnGround = state.onGround
-  const canJump = state.onGround || state.coyoteTicksLeft > 0
-  let didJump = false
-
-  if (input.jump && canJump && state.stamina >= JUMP_COST_STAMINA && !locked) {
-    state.vel.y = JUMP_TAP_VY
-    state.onGround = false
-    state.coyoteTicksLeft = 0
-    state.stamina = Math.max(0, state.stamina - JUMP_COST_STAMINA)
-    didJump = true
-  }
-  state.jumpHoldTicksLeft = 0
 
   // --- 3. Gravity (constant standard gravity) ------------------------
   state.vel.y -= GRAVITY_MPS2 * dt
