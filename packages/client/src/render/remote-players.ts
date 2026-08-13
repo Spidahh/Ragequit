@@ -16,7 +16,7 @@ import {
   applyParryArmPose,
   triggerWeaponRecoil as charWeaponRecoil,
 } from './characters.js'
-import { SWING_ARC_YAW_OFFSET, makeSwingArcMesh } from './factories.js'
+import { SWING_ARC_HEIGHT_M, SWING_ARC_YAW_OFFSET, makeSwingArcMesh } from './factories.js'
 
 // Minimal schema shape consumed by this module.
 export interface RemotePlayerSchema {
@@ -642,7 +642,7 @@ export function initRemotePlayers({
       r.mesh.rotation.y = yawNow
       if (r.arc.visible && now < r.arcExpiresAt) {
         const life = 1 - (r.arcExpiresAt - now) / 400
-        r.arc.position.set(x, y, z)
+        r.arc.position.set(x, y + SWING_ARC_HEIGHT_M, z)
         r.arc.rotation.set(Math.PI / 2, yawNow + SWING_ARC_YAW_OFFSET, 0, 'YXZ')
         ;(r.arc.material as THREE.MeshBasicMaterial).opacity = 0.8 * (1 - life)
       } else {

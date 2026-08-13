@@ -121,7 +121,12 @@ import {
 } from './render/characters.js'
 import { configureGameRenderer, createRendererOrGate } from './render/create-renderer.js'
 import { installArenaEnvironment } from './render/environment.js'
-import { makeSwingArcMesh, makeToonGradient, SWING_ARC_YAW_OFFSET } from './render/factories.js'
+import {
+  makeSwingArcMesh,
+  makeToonGradient,
+  SWING_ARC_HEIGHT_M,
+  SWING_ARC_YAW_OFFSET,
+} from './render/factories.js'
 import { createFpvBow } from './render/fpv-bow.js'
 import { createFpvStaticViewmodel } from './render/fpv-static-viewmodel.js'
 import { initPlacementPreview } from './render/placement-preview.js'
@@ -2473,7 +2478,7 @@ function _renderInner(now: number): void {
     if (selfArc) {
       if (selfArc.visible && now < selfArcExpiresAt) {
         const life = 1 - (selfArcExpiresAt - now) / 400
-        selfArc.position.set(x, y, z)
+        selfArc.position.set(x, y + SWING_ARC_HEIGHT_M, z)
         // SWING_ARC_YAW_OFFSET = π/2 + halfConeAngle centres the TorusGeometry
         // arc on the player's forward direction (−sin(yaw), 0, −cos(yaw)).
         // Derivation: arc centre at thetaLength/2 in local XY → after

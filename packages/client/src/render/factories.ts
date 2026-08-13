@@ -34,12 +34,24 @@ export function makeToonGradient(): THREE.DataTexture {
 // Arc span must equal the full hitbox cone (2 × half-angle) so the visual
 // matches what the server checks.  The rotation formula in main.ts offsets
 // by (π/2 + SWORD_M1_CONE_HALF_ANGLE_RAD) to centre the arc on forward.
-export const SWING_ARC_SPAN = SWORD_M1_CONE_HALF_ANGLE_RAD * 2 // 120° = full cone
+export const SWING_ARC_SPAN = SWORD_M1_CONE_HALF_ANGLE_RAD * 2 // 90° = full cone
 export const SWING_ARC_YAW_OFFSET = Math.PI / 2 + SWORD_M1_CONE_HALF_ANGLE_RAD // ≈ 2.618
+
+/**
+ * Height above the feet to draw the swing arc.
+ *
+ * It used to be drawn at the capsule base, so a sword swing appeared as a ring
+ * around the ankles while the blade went through the opponent's chest. This
+ * matches the contact height that hit-impacts.ts already uses, so the arc, the
+ * impact and the animation finally agree about where the sword is.
+ */
+export const SWING_ARC_HEIGHT_M = 1.15
 
 export function makeSwingArcMesh(): THREE.Mesh {
   VfxTextures.init()
-  const geo = new THREE.TorusGeometry(SWORD_M1_RANGE_M * 0.72, 0.14, 8, 22, SWING_ARC_SPAN)
+  // Thin tube: at 0.14 this read as a solid hoop rotating around the player.
+  // A sword leaves a blade-width sweep, not a doughnut.
+  const geo = new THREE.TorusGeometry(SWORD_M1_RANGE_M * 0.72, 0.05, 8, 22, SWING_ARC_SPAN)
   const mat = new THREE.MeshBasicMaterial({
     map: VfxTextures.slash,
     color: 0xffd260, // glowing gold tint matching active weapon palette
