@@ -13,11 +13,7 @@ import {
   BOW_SPEED_MIN_MPS,
   GameState,
   HP_MAX,
-  HP_REGEN_OOC_DELAY_SEC,
-  HP_REGEN_PER_SEC_OOC,
   MANA_MAX,
-  MANA_REGEN_DELAY_SEC,
-  MANA_REGEN_PER_SEC,
   MessageTypes,
   PARRY_HOLD_BLOCK_FRAC,
   PARRY_TAP_BLOCK_FRAC,
@@ -33,8 +29,6 @@ import {
   STAFF_M1_MANA_COST,
   STAFF_M1_SPEED_MPS,
   STAMINA_MAX,
-  STAMINA_REGEN_PER_SEC_IDLE,
-  STAMINA_REGEN_PER_SEC_MOVING,
   STATIC_MAP,
   getMap,
   type StaticMap,
@@ -102,7 +96,7 @@ import {
   type PendingDamage,
 } from '../sim/index.js'
 import { findChainVictims } from '../sim/projectile-collision.js'
-import { regenResource } from '../sim/resource-regen.js'
+import { tickPlayerRegen } from '../sim/resource-regen.js'
 import { bestSpawnIndex } from '../sim/spawn-selection.js'
 import {
   trackMatchStarted,
@@ -136,8 +130,6 @@ import { resolveMapId, testDummySpawn, testPlayerSpawn, testRoomMaxClients } fro
 const RESPAWN_TICKS = Math.round(RESPAWN_SEC * TICK_RATE_HZ)
 const SPAWN_INVULN_TICKS = Math.round(SPAWN_INVULN_SEC * TICK_RATE_HZ)
 const UPPERCUT_AIRBORNE_TICKS = Math.round(UPPERCUT_AIRBORNE_SEC * TICK_RATE_HZ)
-const OOC_DELAY_TICKS = Math.round(HP_REGEN_OOC_DELAY_SEC * TICK_RATE_HZ)
-const MANA_DELAY_TICKS = Math.round(MANA_REGEN_DELAY_SEC * TICK_RATE_HZ)
 const STAFF_CADENCE_TICKS = Math.round(STAFF_M1_CADENCE_SEC * TICK_RATE_HZ)
 const BOW_LIFETIME_TICKS = Math.round(BOW_PROJECTILE_LIFETIME_SEC * TICK_RATE_HZ)
 const STAFF_LIFETIME_TICKS = Math.max(1, Math.round(STAFF_M1_LIFETIME_SEC * TICK_RATE_HZ))
@@ -917,6 +909,10 @@ export class GameRoom extends Room<{ state: GameState }> {
     if (player.vy !== simState.vel.y) player.vy = simState.vel.y
     if (player.vz !== simState.vel.z) player.vz = simState.vel.z
     if (player.onGround !== simState.onGround) player.onGround = simState.onGround
+    // Landing ends the airborne window. Cleared only on death/respawn before, so a
+    // body standing on the floor still counted as airborne and every hit on it read
+    // as an air punish: doubled hitstop and the "AIR" nameplate. 00_truth.md D10.
+    if (player.onGround && player.airborneUntilTick > 0) player.airborneUntilTick = 0
     if (player.stamina !== simState.stamina) player.stamina = simState.stamina
     if (player.momentumTicks !== simState.momentumTicks)
       player.momentumTicks = simState.momentumTicks
@@ -1172,41 +1168,10 @@ export class GameRoom extends Room<{ state: GameState }> {
   }
 
   private tickRegen(sid: string, player: Player, now: number): void {
-    const dt = TICK_MS / 1000
-    const classId = player.classId as ClassId
-    const maxima = TARGET_CLASS_DEFS[classId]?.resourceMaxima ?? {
-      hp: HP_MAX,
-      mana: MANA_MAX,
-      stamina: STAMINA_MAX,
-    }
-
-    player.hp = regenResource(
-      player.hp,
-      maxima.hp,
-      now - player.lastDamageAtTick,
-      OOC_DELAY_TICKS,
-      HP_REGEN_PER_SEC_OOC,
-      dt,
-    )
-    player.mana = regenResource(
-      player.mana,
-      maxima.mana,
-      now - player.lastManaSpendAtTick,
-      MANA_DELAY_TICKS,
-      MANA_REGEN_PER_SEC,
-      dt,
-    )
-    const vxz2 = player.vx * player.vx + player.vz * player.vz
-    const moving = vxz2 > 0.25
-    const rate = moving ? STAMINA_REGEN_PER_SEC_MOVING : STAMINA_REGEN_PER_SEC_IDLE
-    // Hold-parry drains stamina continuously; don't regen at the same time or
-    // the drain has zero net effect. The drain itself runs in tickParry.
-    if (!(player.parrying && player.parryIsHold)) {
-      // No delay gate for stamina — it regenerates whenever not hold-parrying.
-      player.stamina = regenResource(player.stamina, maxima.stamina, 0, 0, rate, dt)
+    tickPlayerRegen(player, now, (stamina) => {
       const simState = this.sim.get(sid)
-      if (simState) simState.stamina = player.stamina
-    }
+      if (simState) simState.stamina = stamina
+    })
   }
 
   // Picks the spawn point that is farthest from all living opponents — the
