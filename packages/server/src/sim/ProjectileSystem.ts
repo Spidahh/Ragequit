@@ -54,6 +54,17 @@ export interface ProjectileMeta {
   velDirX: number
   velDirZ: number
   knockbackDistance?: number
+  /**
+   * Airtime, in seconds, for a knockup applied AT IMPACT.
+   *
+   * This is the capability a BOLT launcher needs and the engine did not have
+   * (00_truth.md 3.5): a projectile could push a victim but never lift one, so
+   * "throw a real projectile that launches them" was unimplementable and every
+   * launcher had to be an instant hitscan with a soft-lock cone. No shipped
+   * ability combined the two, which is why it read as a missing capability
+   * rather than a live bug.
+   */
+  knockupSec?: number
 }
 
 /** The slice of GameRoom the projectile subsystem needs to do its work. */
@@ -73,6 +84,15 @@ export interface ProjectileSystemHost {
   ): { x: number; z: number }
   /** Mirror an authoritative position change into the player's sim state. */
   syncSimPos(playerId: string, x: number, z: number): void
+  /**
+   * Launch a victim into the air. Optional so a host without launch support
+   * (tests, a headless sim) simply never lifts anyone instead of crashing.
+   */
+  applyKnockup?(
+    victim: Player,
+    airborneSec: number,
+    knockback?: { x: number; z: number; distance: number },
+  ): void
 }
 
 export class ProjectileSystem {
@@ -106,6 +126,8 @@ export class ProjectileSystem {
     lifestealFraction?: number
     knockbackDistance?: number
     onHitStatus?: { kind: StatusKind; durationSec: number; stacks: number; slowFraction?: number }
+    /** Airtime for a knockup applied at impact. See ProjectileMeta.knockupSec. */
+    knockupSec?: number
     chainTargets?: number
     chainRadius?: number
     chainDamage?: number
@@ -150,6 +172,7 @@ export class ProjectileSystem {
       splashRadius: params.splashRadius ?? 0,
       lifestealFraction: params.lifestealFraction,
       onHitStatus: params.onHitStatus,
+      knockupSec: params.knockupSec,
       chainTargets: params.chainTargets,
       chainRadius: params.chainRadius,
       chainDamage: params.chainDamage,
@@ -213,6 +236,7 @@ export class ProjectileSystem {
       splashRadius: req.splashRadius ?? 0,
       lifestealFraction: req.lifestealFraction,
       onHitStatus: req.onHitStatus,
+      knockupSec: req.knockupSec,
       velDirX: req.vel.x / reqSpd2D,
       velDirZ: req.vel.z / reqSpd2D,
       knockbackDistance: req.knockbackDistance,
@@ -440,6 +464,13 @@ export class ProjectileSystem {
         victim.transform.x = resolved.x
         victim.transform.z = resolved.z
         this.host.syncSimPos(victimId, resolved.x, resolved.z)
+      }
+
+      // A projectile that LAUNCHES. The knockback above is a shove along the
+      // ground; this is the vertical impulse that opens a punish window, and
+      // until now the projectile path had no way to express it at all.
+      if (meta.knockupSec && meta.knockupSec > 0 && !victim.parrying) {
+        this.host.applyKnockup?.(victim, meta.knockupSec)
       }
     }
 

@@ -510,7 +510,6 @@ if (captureMode) {
   installVerifySeams({
     camera,
     getPlacementAbilityId: () => castDispatcher.getPlacementAbilityId(),
-    getPrimedSlotIdx: () => castDispatcher.getPrimedSlotIdx(),
     getCurrentShapes: () => placementPreview.currentShapes(),
     getMatchPhase: () => currentMatchPhase,
     getLoadout: () => currentLoadoutArray(),
@@ -521,6 +520,7 @@ if (captureMode) {
     },
     getSelfPlayer: () => getSelfSchemaPlayer(),
     getPopulation: () => countAlive(room?.state.players),
+    getTargeting: (id) => ABILITY_DEFS[id]?.targeting,
   })
 }
 
@@ -2515,7 +2515,6 @@ function _renderInner(now: number): void {
     tickNow,
     castStartedAtMs,
     placementAbilityId: castDispatcher.getPlacementAbilityId(),
-    primedSlotIdx: castDispatcher.getPrimedSlotIdx(),
     lastKillerName,
     selfMesh,
     getCurrentLoadout: currentLoadoutArray,

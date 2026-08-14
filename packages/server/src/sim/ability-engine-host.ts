@@ -26,6 +26,15 @@ export interface ProjectileSpawnRequest {
   element?: string
   knockbackDistance?: number
   onHitStatus?: { kind: StatusKind; durationSec: number; stacks: number; slowFraction?: number }
+  /**
+   * Airtime for a knockup applied when the projectile lands.
+   *
+   * The BOLT capability (00_truth.md 3.5): a projectile could shove a victim
+   * along the ground but never lift one, so "a launcher that throws a real
+   * projectile you have to lead" could not be built and every launcher stayed
+   * an instant hitscan inside a soft-lock cone.
+   */
+  knockupSec?: number
 }
 
 export interface ZoneSpawnRequest {

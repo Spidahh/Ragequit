@@ -838,12 +838,12 @@ export const ABILITY_L5_ARC_LIFT: AbilityDef = {
   targeting: 'forward',
   comboRole: 'starter',
   effects: [
-    { at: 'onCast', kind: 'damage', amount: 8, element: 'lightning' },
-    { at: 'onCast', kind: 'knockup', airborneSec: 0.7, knockbackDistance: 1.4 },
+    { at: 'onCast', kind: 'projectile', speedMps: 30, gravityMps2: 0, damage: 8 },
+    { at: 'onLand', kind: 'knockup', airborneSec: 0.7, knockbackDistance: 1.4 },
   ],
   description:
-    'Instant lightning ray that launches the target Airborne with a backward jolt. Lightning combo starter.',
-  miniMalus: 'Requires line of sight.',
+    'Lightning bolt at 30 m/s that launches whoever it hits Airborne. Lightning combo starter.',
+  miniMalus: 'Travels — you have to lead a moving target.',
   isKnockup: true,
 }
 

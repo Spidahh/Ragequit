@@ -32,7 +32,6 @@ export interface CooldownStripController {
     activeWeapon: string
     abilityCooldowns: CooldownLookup | undefined
     placementAbilityId: string | null
-    primedSlotIdx: number | null
     tickNow: number
     /** Current resources — a pip off cooldown you cannot pay for is NOT ready. */
     mana?: number
@@ -224,7 +223,6 @@ export function initCooldownStrip(
     activeWeapon,
     abilityCooldowns,
     placementAbilityId,
-    primedSlotIdx,
     tickNow,
     mana,
     stamina,
@@ -233,15 +231,13 @@ export function initCooldownStrip(
     activeWeapon: string
     abilityCooldowns: CooldownLookup | undefined
     placementAbilityId: string | null
-    primedSlotIdx: number | null
     tickNow: number
     mana?: number
     stamina?: number
     gcdReadyAtTick?: number
   }): void {
     const gcdActive = (gcdReadyAtTick ?? 0) > tickNow
-    const aimedAbilityId =
-      placementAbilityId ?? (primedSlotIdx === null ? '' : (loadoutRef[primedSlotIdx] ?? ''))
+    const aimedAbilityId = placementAbilityId ?? ''
     const aimedDef = ABILITY_DEFS[aimedAbilityId]
     if (crosshair) {
       if (aimedDef) {
@@ -310,7 +306,7 @@ export function initCooldownStrip(
       }
       pip.classList.toggle('unaffordable', unaffordable)
       pip.classList.toggle('gcd-locked', gcdActive && readyTick <= tickNow)
-      pip.classList.toggle('primed', slotIdx === primedSlotIdx)
+      pip.classList.toggle('primed', id === placementAbilityId)
       pip.classList.toggle('placing', id === placementAbilityId)
     }
   }

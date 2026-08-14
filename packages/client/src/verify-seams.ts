@@ -30,7 +30,6 @@ import * as THREE from 'three'
 export interface VerifySeamDeps {
   camera: THREE.Camera
   getPlacementAbilityId: () => string | null
-  getPrimedSlotIdx: () => number | null
   getCurrentShapes: () => readonly AimShape[]
   getMatchPhase: () => string
   getLoadout: () => string[]
@@ -38,6 +37,8 @@ export interface VerifySeamDeps {
   getPredictedPos: () => { x: number; z: number } | null
   /** Server-replicated position, or null before the schema arrives. */
   getReplicatedPos: () => { x: number; z: number } | null
+  /** Targeting mode of an ability id, for the aim-preview probe. */
+  getTargeting: (abilityId: string) => string | undefined
   /** How many players are alive right now, and how many are in the room. */
   getPopulation: () => { alive: number; total: number }
   /** The replicated local player — the source for both build state and aliveness. */
@@ -112,9 +113,12 @@ export function installVerifySeams(deps: VerifySeamDeps): void {
     return p ? { classId: p.classId, specializationId: p.specializationId, hp: p.hp } : null
   }
 
+  // Targeting mode by ability id — the probe has to know which contract to
+  // check, and "no preview" is the correct answer for 46 of 53.
+  w['__abilityTargeting'] = (id: string) => deps.getTargeting(id)
+
   w['__castState'] = () => ({
     placement: deps.getPlacementAbilityId(),
-    primed: deps.getPrimedSlotIdx(),
     phase: deps.getMatchPhase(),
     dead: deps.getSelfPlayer()?.alive !== true,
     loadout: deps.getLoadout(),

@@ -53,7 +53,6 @@ export interface CastDispatcherController {
   beginPlacementPreview: (abilityId: string) => void
   cancelPlacementPreview: () => void
   clearQueue: () => void
-  getPrimedSlotIdx: () => number | null
   getPlacementAbilityId: () => string | null
   dispatch: (params: CastDispatchParams) => void
 }
@@ -286,7 +285,6 @@ export function initCastDispatcher({
     beginPlacementPreview,
     cancelPlacementPreview,
     clearQueue,
-    getPrimedSlotIdx: () => null,
     getPlacementAbilityId: () => placementAbilityId,
     dispatch,
   }

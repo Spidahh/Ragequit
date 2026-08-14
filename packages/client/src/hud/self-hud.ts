@@ -75,7 +75,6 @@ export interface SelfHudUpdateParams {
   tickNow: number
   castStartedAtMs: number
   placementAbilityId: string | null
-  primedSlotIdx: number | null
   lastKillerName: string
   selfMesh: THREE.Group | null
   getCurrentLoadout: () => string[]
@@ -125,7 +124,6 @@ export function initSelfHud({
     tickNow,
     castStartedAtMs,
     placementAbilityId,
-    primedSlotIdx,
     lastKillerName,
     selfMesh,
     getCurrentLoadout,
@@ -313,7 +311,6 @@ export function initSelfHud({
       activeWeapon: selfSchema.activeWeapon,
       abilityCooldowns: selfSchema.abilityCooldowns,
       placementAbilityId,
-      primedSlotIdx,
       tickNow,
       // Cooldown alone is not "castable": an off-cooldown ability you cannot
       // afford, or one blocked by the global cooldown, still refuses to fire.

@@ -1,4 +1,19 @@
-// aimpreview.mjs — proves D12: every ability shows its shape before it commits.
+// aimpreview.mjs — proves each ability shows the RIGHT thing, which is not the
+// same thing for all of them.
+//
+// This used to assert that HOLDING any hotbar key put geometry on screen. That
+// contract is gone and its removal was the point: holding-to-preview was a
+// modal aim state imposed on 46 abilities that aim with the crosshair, and it
+// produced exactly the owner's three complaints (the shape flashed and
+// vanished, the cast had already left so the next click was the weapon, and
+// "armed" had no persistent indicator).
+//
+// The contract now:
+//   * a `point` ability arms a preview that PERSISTS until you click or cancel;
+//   * everything else leaves NOTHING armed — pressing the key casts it.
+//
+// Both halves are checked, because "no preview" is a correct answer here and a
+// probe that cannot tell it from "the preview is broken" proves nothing.
 //
 // The claim under test is not "a preview exists" but "holding ANY hotbar key
 // puts geometry on screen, and the shapes differ by ability". So this does two
@@ -175,6 +190,11 @@ for (let slot = 1; slot <= 8; slot++) {
   await page.keyboard.down(SLOT_KEYS[slot - 1])
   await frames(2)
   const shapes = await page.evaluate(() => window.__aimShapes?.() ?? null)
+  const isPoint = await page.evaluate((slot) => {
+    const st = window.__castState?.() ?? {}
+    const id = st.loadout?.[slot - 1]
+    return window.__abilityTargeting?.(id) === 'point'
+  }, slot)
   const state = (await page.evaluate(() => window.__castState?.() ?? null)) ?? {}
   // A lane drawn from the wrong origin, or with a flipped pitch convention,
   // still renders a confident beam — pointing somewhere the shot will not go.
@@ -201,6 +221,7 @@ for (let slot = 1; slot <= 8; slot++) {
     dead: state.dead ? 'dead' : '',
     bound: state.loadout?.[slot - 1] ?? '(unbound)',
     aim: ndc ? Math.max(Math.abs(ndc.ndcX), Math.abs(ndc.ndcY)) : null,
+    isPoint,
     capture: lane?.endRadius ?? null,
   })
   if (shot) save(`aimpreview-slot${slot}.png`, shot)
@@ -210,17 +231,19 @@ console.log('\nslot  ability             shapes            pixels    result')
 let drawn = 0
 for (const r of rows) {
   const aimed = r.aim === null || r.aim < 0.02
-  const ok = r.delta > 0.004 && r.kinds !== '—' && aimed
+  // A ground-targeted ability must ARM and stay armed. Everything else must
+  // leave nothing behind — that is the fix, not a failure.
+  const ok = r.isPoint ? r.kinds !== '—' && aimed : r.kinds === '—'
   if (ok) drawn++
   console.log(
     `  ${r.slot}   ${String(r.bound).padEnd(18)} ${r.kinds.padEnd(17)} ` +
       `${(r.delta * 100).toFixed(2).padStart(6)}%  ` +
       `${(r.aim === null ? 'n/a' : r.aim.toFixed(4)).padStart(8)} ` +
       `${(r.capture === null ? 'n/a' : r.capture.toFixed(2) + ' m').padStart(8)}  ` +
-      `${ok ? 'DRAWN' : !aimed ? 'OFF-AIM' : r.dead || 'NOTHING'}`,
+      `${r.isPoint ? (ok ? 'ARMED (persists)' : 'FAILED TO ARM') : ok ? 'instant, nothing armed' : 'LEFT SOMETHING ARMED'}`,
   )
 }
-console.log(`\n${drawn}/${rows.length} slots draw a preview while their key is held.`)
+console.log(`\n${drawn}/${rows.length} slots behave correctly for their targeting mode.`)
 console.log(
   errors.length ? 'ERRORS:\n  ' + [...new Set(errors)].slice(0, 8).join('\n  ') : 'no page errors',
 )

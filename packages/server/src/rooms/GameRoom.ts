@@ -408,9 +408,9 @@ export class GameRoom extends Room<{ state: GameState }> {
       getMapBoxes: () => this.activeMap.boxes,
       enqueueDamage: (d) => this.damageQueue.push(d),
       broadcast: (type, message) => this.broadcast(type, message),
-      resolveDisplacement: (player, dx, dz, cancelOnCollision) =>
-        this.displace(player, dx, dz, cancelOnCollision),
+      resolveDisplacement: (p, dx, dz, cancel) => this.displace(p, dx, dz, cancel),
       syncSimPos: this.syncSimPos,
+      applyKnockup: (v, sec) => this.applyKnockupToPlayer(v, sec),
     })
     this.zones = new ZoneSystem({
       state: this.state,

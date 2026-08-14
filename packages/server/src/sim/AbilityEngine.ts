@@ -15,6 +15,7 @@
 
 import {
   getSpecialization,
+  knockupAirtimeOnLand,
   ABILITY_DEFS,
   GCD_SEC,
   KNOCKUP_IMMUNITY_AFTER_LAND_SEC,
@@ -47,6 +48,7 @@ import { castTelegraphMessage, TAP_AFTERIMAGE_TICKS } from './cast-telegraph.js'
 import { validateCast } from './cast-validation.js'
 import { knockbackFromCaster, knockbackFromPoint } from './displacement.js'
 import { getPlayerMaxima } from './player-maxima.js'
+import { onHitStatusOf } from './projectile-spawn.js'
 import {
   resolveAnchor,
   resolveAreaCenter,
@@ -569,14 +571,11 @@ export class AbilityEngine {
       lifestealFraction: lifestealFraction > 0 ? lifestealFraction : undefined,
       element,
       knockbackDistance: e.knockbackDistance,
-      onHitStatus: e.onHitStatus
-        ? {
-            kind: e.onHitStatus.status,
-            durationSec: e.onHitStatus.durationSec,
-            stacks: e.onHitStatus.stacks ?? 1,
-            slowFraction: e.onHitStatus.slowFraction,
-          }
-        : undefined,
+      // Carried WITH the projectile so a BOLT can launch on contact — see
+      // knockupAirtimeOnLand.
+      knockupSec:
+        knockupAirtimeOnLand(def) * getSpecialization(caster.specializationId).knockupAirtimeMult,
+      onHitStatus: onHitStatusOf(e),
     })
   }
 

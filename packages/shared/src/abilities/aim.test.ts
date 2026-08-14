@@ -45,7 +45,12 @@ describe('delivery classes', () => {
   it('derives the class from what the ability already declares', () => {
     expect(deliveryClass(ABILITY_DEFS['fireball']!)).toBe('bolt')
     expect(deliveryClass(ABILITY_DEFS['uppercut']!)).toBe('cone')
-    expect(deliveryClass(ABILITY_DEFS['arc_lift']!)).toBe('ray')
+    // eruption: ranged, instant, no projectile. arc_lift used to be the RAY
+    // example here and is a BOLT now — it was converted into a real projectile
+    // launcher, which is exactly the reclassification this derivation exists to
+    // make automatic.
+    expect(deliveryClass(ABILITY_DEFS['eruption']!)).toBe('ray')
+    expect(deliveryClass(ABILITY_DEFS['arc_lift']!)).toBe('bolt')
   })
 
   it('classifies every forward ability without a table to maintain', () => {
@@ -85,7 +90,7 @@ describe('delivery classes', () => {
 
   // The preview reads the same function, so it has to narrow with the hitbox.
   it('draws the tightened lane in the preview too', () => {
-    const rayLane = resolveAimPlan(ABILITY_DEFS['arc_lift']!, OPEN).find((s) => s.kind === 'lane')
+    const rayLane = resolveAimPlan(ABILITY_DEFS['eruption']!, OPEN).find((s) => s.kind === 'lane')
     const coneLane = resolveAimPlan(ABILITY_DEFS['uppercut']!, OPEN).find((s) => s.kind === 'lane')
     const along = (l: AimLane): number => Math.hypot(l.to.x - l.from.x, l.to.z - l.from.z)
     expect((rayLane as AimLane).endRadius).toBeCloseTo(

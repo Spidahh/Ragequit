@@ -181,6 +181,23 @@ export function abilityWallFootprint(def: AbilityDef): { width: number; depth: n
   return null
 }
 
+/**
+ * Airtime of a knockup that resolves ON LAND, or 0.
+ *
+ * This is the BOLT capability's data half (00_truth.md 3.5). An `onLand`
+ * knockup on a projectile-bearing ability was skipped at cast — "deferred to
+ * impact" — and then never resolved, because the projectile path had no
+ * knockup at all. Nothing shipped combined the two, so it read as a missing
+ * capability rather than a bug; it is the reason every launcher had to be an
+ * instant hitscan inside a soft-lock cone.
+ */
+export function knockupAirtimeOnLand(def: AbilityDef): number {
+  for (const e of def.effects) {
+    if (e.kind === 'knockup' && e.at === 'onLand') return e.airborneSec
+  }
+  return 0
+}
+
 /** The move effect an ability carries, if any. */
 export function abilityMoveEffect(
   def: AbilityDef,
