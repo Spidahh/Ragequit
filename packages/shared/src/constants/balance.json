@@ -9,7 +9,7 @@
     "bow_damage_min": 4,
     "bow_damage_full": 22,
     "staff_m1_damage": 8,
-    "staff_m1_mana_cost": 2,
+    "staff_m1_mana_cost": 0,
     "staff_m1_cadence_sec": 0.4
   },
   "parry": {

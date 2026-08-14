@@ -33,7 +33,19 @@ export const MOVE_SPEED_MPS = 9.0 as const
 
 // Jump.
 export const JUMP_HEIGHT_TAP_M = 1.5 as const
-export const JUMP_COST_STAMINA = 10 as const
+/**
+ * Stamina a jump costs. ZERO, deliberately.
+ *
+ * It was 10, and the controller REFUSED to jump below that — movement gated on
+ * a combat resource, in the game whose second pillar is "movement is the skill
+ * ceiling". The input was swallowed with no failure feedback of any kind, so at
+ * low stamina the character simply stopped responding to the space bar and you
+ * could not tell why.
+ *
+ * Kept as a constant rather than deleted so the knob survives if the owner ever
+ * wants jumping to cost something again — but it must never GATE.
+ */
+export const JUMP_COST_STAMINA = 0 as const
 
 // Spawn protection.
 export const SPAWN_INVULN_SEC = 2 as const

@@ -95,7 +95,14 @@ export const TARGET_CLASS_DEFS = {
     id: 'archer',
     label: 'Arciere',
     resourceMaxima: { hp: 175, mana: 80, stamina: 110 },
-    slots: { melee: 0, bow: 4, magicBase: 2, magicAdvanced: 0, utility: 2 },
+    // magicAdvanced 0 -> 1, taken from magicBase, so the total stays 8.
+    //
+    // The Arciere could only launch with thunder_clap: `self`, range 3, a panic
+    // button for when someone is already on top of you. At BOW range it had no
+    // access to the game's signature mechanic at all, which is a whole class
+    // locked out of the fifth pillar. One advanced slot fixes that without
+    // touching any ability's family or any other class's preset.
+    slots: { melee: 0, bow: 4, magicBase: 1, magicAdvanced: 1, utility: 2 },
     weapons: ['bow', 'staff'],
     recoveryId: 'hunters_flow',
     visuals: {
@@ -165,7 +172,7 @@ export const CLASS_PRESET_BUILDS: Record<ClassId, readonly string[]> = {
     'disengage_shot', // slot 2 — bow (spacing response)
     'volley', // slot 3 — bow (volley of arrows)
     'frost_bolt', // slot 4 — magicBase (control projectile)
-    'fireball', // slot 5 — magicBase (splash projectile)
+    'arc_lift', // slot 5 — magicAdvanced (the ranged launcher)
     'hunters_flow', // slot 6 — utility (Recovery)
     'quick_dash', // slot 7 — utility
   ]),
@@ -244,7 +251,9 @@ const ABILITY_LEGAL_CLASSES: Record<string, readonly ClassId[]> = {
   freeze_target: ['mage', 'hybrid'],
   frost_pillar: ['mage', 'hybrid'],
   storm_field: ['mage', 'hybrid'],
-  arc_lift: ['mage', 'hybrid'],
+  // Archer too: now that arc_lift is a 30 m/s projectile you have to lead, it
+  // is an archer's problem more than a mage's.
+  arc_lift: ['archer', 'mage', 'hybrid'],
   curse_of_weakness: ['mage', 'hybrid'],
   life_drain: ['mage', 'hybrid'],
   void_spike: ['mage', 'hybrid'],

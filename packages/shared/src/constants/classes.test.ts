@@ -11,6 +11,7 @@ import {
   isAbilityLegalForClass,
   loadoutHasRecovery,
   targetClassSlotCount,
+  CLASS_PRESET_BUILDS,
 } from './classes.js'
 
 describe('target class definitions', () => {
@@ -104,7 +105,9 @@ describe('ability slot family and class legality', () => {
   it('infers a persisted class only when the loadout still fits a class grammar', () => {
     expect(inferClassFromLoadout(['brace_recovery', 'uppercut'])).toBe('tank')
     expect(
-      inferClassFromLoadout(['pin_shot', 'marksman_shot', 'volley', 'frost_bolt', 'fireball']),
+      // The Arciere is bow 4 / magicBase 1 / magicAdvanced 1 now: it traded a
+      // second base spell for the ranged launcher it did not have.
+      inferClassFromLoadout(['pin_shot', 'marksman_shot', 'volley', 'frost_bolt', 'arc_lift']),
     ).toBe('archer')
     expect(inferClassFromLoadout(['uppercut', 'fireball', 'arc_lift', 'adaptive_mend'])).toBe(
       'hybrid',
@@ -138,52 +141,13 @@ describe('ability slot family and class legality', () => {
   })
 
   it('validates the preset build family budgets for all four classes', () => {
-    // Verify each preset build satisfies its class slot budget.
-    // These are the same builds used by the client presets and DEFAULT_LOADOUT.
-    const presets: Record<string, string[]> = {
-      tank: [
-        'uppercut',
-        'gap_closer',
-        'guard_break',
-        'whirlwind',
-        'piercing_shot',
-        'brace_recovery',
-        'barrier',
-        'quick_dash',
-      ],
-      archer: [
-        'pin_shot',
-        'marksman_shot',
-        'disengage_shot',
-        'volley',
-        'frost_bolt',
-        'fireball',
-        'hunters_flow',
-        'quick_dash',
-      ],
-      mage: [
-        'fireball',
-        'frost_bolt',
-        'chain_bolt', // 3 magicBase
-        'eruption',
-        'meteor',
-        'frost_pillar', // 3 magicAdvanced
-        'arcane_rebind',
-        'phase_shift', // 2 utility
-      ],
-      hybrid: [
-        'uppercut',
-        'gap_closer', // 2 melee
-        'marksman_shot', // 1 bow
-        'fireball',
-        'lightning_dash', // 2 magicBase
-        'arc_lift', // 1 magicAdvanced
-        'adaptive_mend',
-        'quick_dash', // 2 utility
-      ],
-    }
-
-    for (const [classId, build] of Object.entries(presets)) {
+    // Read the REAL presets, never a copy.
+    //
+    // This test used to hold its own hard-coded duplicate of all four builds,
+    // which meant it could not detect drift — only become stale, which it did
+    // the moment the Arciere traded a base spell for the ranged launcher it did
+    // not have. A test that copies the data it validates validates the copy.
+    for (const [classId, build] of Object.entries(CLASS_PRESET_BUILDS)) {
       // 1. All abilities are legal for this class
       for (const id of build) {
         expect(

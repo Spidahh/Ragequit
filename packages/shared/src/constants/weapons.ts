@@ -12,7 +12,19 @@ export const SWORD_M1_RANGE_M = 1.8 as const
 // Half-angle of the hit cone (radians). 90° arc = 45° each side.
 export const SWORD_M1_CONE_HALF_ANGLE_RAD = Math.PI / 4
 export const SWORD_M1_DAMAGE = [5, 5, 8] as const
-export const SWORD_M1_COST_STAMINA = 8 as const
+/**
+ * Stamina a sword swing costs. ZERO.
+ *
+ * At 8 it was 20 stamina/s against STAMINA_REGEN_PER_SEC_MOVING = 5 on a 150
+ * pool, while the Tank's own preset abilities amortise to ~18.65/s and a parry
+ * tap costs 20 — the Tank ran dry in about 4.5 s, SHORTER THAN THE TTK. Against
+ * a free bow and a 2-mana staff, that is three weapons with three incompatible
+ * economies, and the melee class was the one being punished for attacking.
+ *
+ * Basic attacks are free on every weapon now. Resources gate ABILITIES, which
+ * is where a build decision actually lives.
+ */
+export const SWORD_M1_COST_STAMINA = 0 as const
 // Inactivity timeout that resets the combo counter to 0. (This is the only
 // combo window: a swing within this gap continues the chain, otherwise it
 // restarts at index 0 — see advanceSwordCombo.)
@@ -95,7 +107,8 @@ export const BOW_EFFECTIVE_RANGE_FULL_M = 40 as const
 
 export const STAFF_M1_CADENCE_SEC = 0.4 as const // slight rate up: 2→2.5 bolts/s
 export const STAFF_M1_DAMAGE = 8 as const
-export const STAFF_M1_MANA_COST = 2 as const // 5→2: sustainable rapid fire
+/** Mana a staff bolt costs. ZERO — see SWORD_M1_COST_STAMINA. */
+export const STAFF_M1_MANA_COST = 0 as const
 export const STAFF_M1_SPEED_MPS = 75 as const // 50→75: faster bolts, easier to land
 export const STAFF_M1_MAX_RANGE_M = 50 as const // 30→50: longer effective range
 // Staff bolt uses tiny gravity for a flatter path than bow. Makes it a

@@ -107,7 +107,8 @@ export function simulatePlayer(
   else if (state.jumpHoldTicksLeft > 0) state.jumpHoldTicksLeft -= 1
   const wantsJump = input.jump || state.jumpHoldTicksLeft > 0
 
-  if (wantsJump && canJump && state.stamina >= JUMP_COST_STAMINA && !locked) {
+  // No stamina gate: a jump is never refused. See JUMP_COST_STAMINA.
+  if (wantsJump && canJump && !locked) {
     state.vel.y = JUMP_TAP_VY
     state.onGround = false
     state.coyoteTicksLeft = 0
