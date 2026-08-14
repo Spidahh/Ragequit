@@ -65,7 +65,7 @@ describe('the defensive-pick cap', () => {
   // A Mago can legally field four defensive picks. Everywhere else that is
   // merely slow; where death is final, refusing to lose is the same as winning.
   const stallBuild = {
-    classId: 'mage',
+    classId: 'warden',
     melee: [],
     bow: [],
     magicBase: ['fireball', 'frost_bolt'],

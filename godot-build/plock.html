@@ -1,0 +1,18 @@
+<!doctype html><meta charset="utf-8"><title>plock</title>
+<style>html,body{margin:0;height:100%;background:#12213a;color:#cfe;font:13px system-ui}
+#c{width:100%;height:100%;display:grid;place-items:center;cursor:pointer;user-select:none}</style>
+<div id="c">clicca qui</div>
+<script>
+const c=document.getElementById('c');
+const tell=(m)=>{parent.postMessage({plock:m,origin:location.origin},'*');c.textContent=m};
+c.addEventListener('click',async()=>{
+  try{
+    const p=c.requestPointerLock({unadjustedMovement:false});
+    if(p&&p.then){await p;}
+    setTimeout(()=>tell(document.pointerLockElement?'LOCK OK':'LOCK NEGATO (nessun elemento)'),250);
+  }catch(e){tell('LOCK ERRORE: '+e.name+' — '+e.message)}
+});
+document.addEventListener('pointerlockerror',()=>tell('LOCK ERRORE (evento pointerlockerror)'));
+document.addEventListener('pointerlockchange',()=>{if(document.pointerLockElement)tell('LOCK OK')});
+tell('pronto');
+</script>

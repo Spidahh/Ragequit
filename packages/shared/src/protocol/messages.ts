@@ -1,4 +1,4 @@
-// Event-channel message types (see 02_TECH/03_network_protocol.md).
+// Event-channel message types (protocollo: vedi lo schema in packages/shared/src/schema/).
 // Colyseus state-sync handles structural state; these are one-shot events.
 
 export type Weapon = 'sword' | 'bow' | 'staff'
@@ -97,7 +97,7 @@ export interface ClientParryReleaseMessage {
  * and uniqueness — not wire array positions.
  */
 export interface ClientLoadoutMessage {
-  /** Class id the player is building for. Required; defaults to 'hybrid' if absent or invalid. */
+  /** Class id the player is building for. Required; defaults to 'drift' if absent or invalid. */
   classId: string
   melee: string[]
   bow: string[]

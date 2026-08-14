@@ -349,7 +349,7 @@ export function initRemotePlayers({
         r = spawnRemote(p, sid)
         remotePlayers.set(sid, r)
       } else if (r.mesh) {
-        const currentClassId = p.classId || 'hybrid'
+        const currentClassId = p.classId || 'drift'
         if (r.mesh.userData['loadedClassId'] !== currentClassId) {
           loadCharacterGlb(r.mesh, resolveRemoteColor(p), toonGradient, currentClassId)
           r.hpMax =

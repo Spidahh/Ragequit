@@ -16,7 +16,7 @@ export function buildLoadoutMessage(
   classId?: string,
   specializationId?: string,
 ): ClientLoadoutMessage {
-  const resolvedClassId = (classId ?? 'hybrid') as ClassId
+  const resolvedClassId = (classId ?? 'drift') as ClassId
   const order = getClassSlotOrder(resolvedClassId)
 
   const melee: string[] = []

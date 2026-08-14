@@ -24,7 +24,7 @@ describe('cooldown strip castability states', () => {
     const root = document.createElement('div')
     document.body.appendChild(root)
     const strip = initCooldownStrip(root, () => {})
-    strip.rebuild(['fireball'], 'mage')
+    strip.rebuild(['fireball'], 'warden')
     const pip = root.querySelector<HTMLElement>('.cd-pip')!
     return { root, strip, pip }
   }

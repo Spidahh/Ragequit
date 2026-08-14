@@ -10,3 +10,8 @@ pnpm-lock.yaml
 # gate you stop reading, which is how two red pushes got past me.
 .backup-untracked/
 .verify/
+
+# Export web di Godot: runtime generato. E i dati esportati per il progetto
+# Godot sono generati da tools, non scritti a mano.
+godot-build/
+godot/data/

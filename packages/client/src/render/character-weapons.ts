@@ -112,8 +112,8 @@ export function getWeaponGrip(
   mixamoRig = false,
 ): WeaponGrip {
   if (mixamoRig) return _mixamoGripConfig[weaponId]
-  const c = (classId || 'hybrid').toLowerCase()
-  const defs = _weaponGripConfig[c] || _weaponGripConfig['hybrid']!
+  const c = (classId || 'drift').toLowerCase()
+  const defs = _weaponGripConfig[c] || _weaponGripConfig['drift']!
   return defs[weaponId]!
 }
 
@@ -288,7 +288,7 @@ export function applyWeaponProp(
       // there would shrink + misplace the weapon at the body origin for a few
       // frames. Install re-applies the grip after re-parenting, so skipping is safe.
       if (wg.parent && wg.parent !== charGroup) {
-        const classId = (charGroup.userData['loadedClassId'] as string) || 'hybrid'
+        const classId = (charGroup.userData['loadedClassId'] as string) || 'drift'
         const grip = getWeaponGrip(
           weaponId,
           classId,
@@ -382,7 +382,7 @@ export function updateShieldAttachment(charGroup: THREE.Group): void {
   }
   sg.visible = true
 
-  const classId = ((charGroup.userData['loadedClassId'] as string) || 'hybrid').toLowerCase()
+  const classId = ((charGroup.userData['loadedClassId'] as string) || 'drift').toLowerCase()
   // Strap the shield to the FOREARM, not the hand: the hand bone twirls with
   // every idle/swing micro-motion, so a hand-strapped shield dances around. The
   // forearm is the realistic strap point and far more stable.
@@ -397,7 +397,7 @@ export function updateShieldAttachment(charGroup: THREE.Group): void {
   // rigs, and the shield inherits it through the hand bone — compensate, or the
   // shield doubles in size on realistic characters.
   const isSingleGlb = !!model.userData['singleGlb']
-  const scale = (classId === 'tank' ? 0.7 : 0.55) * (isSingleGlb ? 0.45 : 1)
+  const scale = (classId === 'breaker' ? 0.7 : 0.55) * (isSingleGlb ? 0.45 : 1)
   sg.scale.setScalar(scale)
 
   // shield_A is modelled upright (long axis +Y, broad face ±Z), so it needs NO

@@ -1,5 +1,5 @@
 // Base character stats at spawn / full reset.
-// Authority: 01_DESIGN/01_stats.md.
+// Authority: VERITA.md.
 // Any magic number in sim code referencing player stats MUST come from here.
 
 export const HP_MAX = 200 as const

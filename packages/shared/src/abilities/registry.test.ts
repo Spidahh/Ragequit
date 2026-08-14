@@ -6,8 +6,8 @@ import { ABILITY_DEFS, abilityIds, getAbilityDef } from './registry.js'
 import type { AbilityComboRole, AbilityDef } from './types.js'
 
 describe('ability registry', () => {
-  it('has the full ability library (53 abilities total)', () => {
-    expect(abilityIds().length).toBe(53)
+  it('has the full ability library (67 abilities total)', () => {
+    expect(abilityIds().length).toBe(67)
   })
 
   it('has the correct count per slot', () => {
@@ -17,7 +17,7 @@ describe('ability registry', () => {
       const def = ABILITY_DEFS[id]!
       bySlot[def.slot] += 1
     }
-    expect(bySlot).toEqual({ melee: 6, bow: 8, magic: 27, utility: 12 })
+    expect(bySlot).toEqual({ melee: 14, bow: 14, magic: 27, utility: 12 })
   })
 
   it('has abilities per element across the magic slots', () => {

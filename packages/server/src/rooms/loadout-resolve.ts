@@ -1,5 +1,5 @@
 // Resolves a joining player's persisted loadout + class, server-authoritative.
-// Extracted out of GameRoom.onJoin (file-budget: 02_TECH/08_project_governance.md).
+// Extracted out of GameRoom.onJoin (file-budget: AGENTS.md).
 
 import {
   type ClassId,
@@ -48,7 +48,7 @@ export async function resolvePlayerLoadout(
   if (!classId) {
     // Saved loadout cannot be classified — reset to hybrid default and notify.
     loadout = DEFAULT_LOADOUT
-    classId = 'hybrid'
+    classId = 'drift'
     notify(
       'Il tuo loadout salvato non era compatibile con nessuna classe — ripristinato al preset Ibrido.',
     )

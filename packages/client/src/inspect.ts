@@ -20,7 +20,7 @@ import {
 import { makeToonGradient } from './render/factories.js'
 
 const params = new URLSearchParams(location.search)
-const classId = params.get('class') ?? 'tank'
+const classId = params.get('class') ?? 'breaker'
 const weapon = params.get('weapon') ?? 'sword'
 const parry = params.get('parry') === '1'
 const team = params.get('team') === 'enemy' ? 0xe04a4a : 0x3a8fde

@@ -135,12 +135,12 @@ export function initSelfHud({
   }: SelfHudUpdateParams): void {
     if (!selfSchema) return
 
-    const classId = (selfSchema.classId ?? 'hybrid') as ClassId
+    const classId = (selfSchema.classId ?? 'drift') as ClassId
     const isValidClass =
-      classId === 'tank' || classId === 'archer' || classId === 'mage' || classId === 'hybrid'
+      classId === 'breaker' || classId === 'talon' || classId === 'warden' || classId === 'drift'
     const maxima = isValidClass
       ? TARGET_CLASS_DEFS[classId].resourceMaxima
-      : TARGET_CLASS_DEFS.hybrid.resourceMaxima
+      : TARGET_CLASS_DEFS.drift.resourceMaxima
     const hpPct = Math.max(0, Math.min(1, selfSchema.hp / maxima.hp))
     const mpPct = Math.max(0, Math.min(1, selfSchema.mana / maxima.mana))
     const spPct = Math.max(0, Math.min(1, selfSchema.stamina / maxima.stamina))
@@ -163,9 +163,15 @@ export function initSelfHud({
         }),
       )
     }
-    hudHpNum.textContent = `${Math.round(selfSchema.hp)} / ${maxima.hp}`
-    hudManaNum.textContent = `${Math.round(selfSchema.mana)} / ${maxima.mana}`
-    hudStamNum.textContent = `${Math.round(selfSchema.stamina)} / ${maxima.stamina}`
+    // Current value only. "200 / 200" is a number the player never needs: the
+    // maximum is fixed by the class and the bar's own length already shows the
+    // ratio. Printing the fraction is what made the vitals read as a debug
+    // readout instead of a HUD. Mana and stamina carry no number at all — CSS
+    // hides their labels — but they are still written so a settings toggle or a
+    // future readout has live text to show.
+    hudHpNum.textContent = String(Math.round(selfSchema.hp))
+    hudManaNum.textContent = String(Math.round(selfSchema.mana))
+    hudStamNum.textContent = String(Math.round(selfSchema.stamina))
     hudHpBar?.classList.toggle('warn', hpPct < 0.25)
     hudManaBar?.classList.toggle('warn', mpPct < 0.2)
     hudStamBar?.classList.toggle('warn', spPct < 0.15)
@@ -255,7 +261,7 @@ export function initSelfHud({
     const currentLoadout = getCurrentLoadout()
     const currentLoadoutSig = cooldownStrip.signature(currentLoadout)
     if (currentLoadoutSig !== cooldownStrip.currentSignature()) {
-      cooldownStrip.rebuild(currentLoadout, getCurrentClassId?.() ?? 'hybrid')
+      cooldownStrip.rebuild(currentLoadout, getCurrentClassId?.() ?? 'drift')
       clearPrimedSlot()
       cancelPlacementPreview()
     }

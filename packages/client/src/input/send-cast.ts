@@ -1,5 +1,5 @@
 // Sending an ability cast, plus the feedback that must fire on the SAME frame
-// as the input. Extracted from main.ts (file-budget: 02_TECH/08).
+// as the input. Extracted from main.ts (file-budget: AGENTS.md).
 //
 // The feedback split matters: previously every keypress flashed "fired" before
 // any check, so an ability on cooldown or one the player could not afford

@@ -1,5 +1,5 @@
 // The post-processing chain: selective bloom, ground-contact AO, cinematic
-// grade, sRGB output. Extracted out of main.ts (file-budget: 02_TECH/08).
+// grade, sRGB output. Extracted out of main.ts (file-budget: AGENTS.md).
 //
 // Order matters and is not arbitrary:
 //   scene render → GTAO → bloom mix → grade (linear HDR) → OutputPass (sRGB)
@@ -47,9 +47,13 @@ export function createPostPipeline(
   bloomComposer.addPass(
     new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      0.45, // strength — subtle, not blown out
+      0.62, // strength
       0.55, // radius
-      0.75, // threshold — only bright emissive gets bloomed
+      // Threshold was 0.75, above what the torch flames actually reach, so the
+      // one warm light source in the arena never bloomed and the frame had no
+      // highlight at all (measured peak 179/255). 0.55 lets fire and spell
+      // emissives through — bloom is where a dark scene gets its brights.
+      0.55,
     ),
   )
 

@@ -1,5 +1,5 @@
 // The FFA ladder in the top-right corner: the top three, plus you if you are
-// not in it. Extracted out of main.ts (file-budget: 02_TECH/08).
+// not in it. Extracted out of main.ts (file-budget: AGENTS.md).
 //
 // Row selection is kept separate from the DOM write so the "who is shown, and
 // at what rank" rule can be tested without a document.

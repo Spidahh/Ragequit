@@ -4,7 +4,7 @@
 // RAGEQUIT is a first-person game. Every weapon. That was decided long ago
 // (STILE.md §8: "l'utente vuole 1ª persona per tutte — direzione FPS-only
 // intenzionale, stato attuale mixto") and derived from the reference list in
-// PROGETTO.md §5 — Mordhau, Chivalry, Vermintide, Dark Messiah, Hexen, Lunacid,
+// STILE.md — Mordhau, Chivalry, Vermintide, Dark Messiah, Hexen, Lunacid,
 // Witchfire — every one of them first-person melee-and-magic. The decision was
 // made and never executed.
 //

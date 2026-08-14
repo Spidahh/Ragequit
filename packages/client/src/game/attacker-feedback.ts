@@ -1,5 +1,5 @@
 // Escalating feedback when YOU land a hit: confirm tick, combo tier, hit-stop,
-// camera kick. Extracted from main.ts's onHit (file-budget: 02_TECH/08).
+// camera kick. Extracted from main.ts's onHit (file-budget: AGENTS.md).
 //
 // The tiers exist so a poke and a combo finisher do not feel the same: hit 1 is
 // the plain impact, hit 2 escalates, hit 3 cracks, and an air punish jumps

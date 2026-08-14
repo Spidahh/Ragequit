@@ -1,6 +1,6 @@
 // Status / condition system.
 //
-// Authority: 01_DESIGN/01_combat_fundamentals.md, 05_abilities_magic.md,
+// Authority: VERITA.md,
 //            05_abilities_melee.md.
 //
 // A StatusInstance is a per-player record of one effect (Burn x3, Bleed,

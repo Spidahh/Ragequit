@@ -5,7 +5,17 @@ import importPlugin from 'eslint-plugin-import'
 
 export default [
   {
-    ignores: ['**/dist/**', '**/node_modules/**', '.claude/**', '_archive/**', '**/*.d.ts'],
+    // godot-build/ e' l'output dell'export web di Godot: runtime WASM generato,
+    // non codice nostro. godot/ e' un progetto GDScript, non TypeScript.
+    ignores: [
+      '**/dist/**',
+      '**/node_modules/**',
+      '.claude/**',
+      '_archive/**',
+      '**/*.d.ts',
+      'godot-build/**',
+      'godot/**',
+    ],
   },
   {
     files: ['**/*.ts'],
@@ -23,7 +33,10 @@ export default [
     rules: {
       // Strictness
       '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
       'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
       'prefer-const': 'error',
       'no-var': 'error',

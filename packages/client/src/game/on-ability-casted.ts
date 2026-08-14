@@ -1,6 +1,6 @@
 // Reaction to the server's AbilityCasted broadcast.
 //
-// Extracted from main.ts's connect() (file-budget: 02_TECH/08). Split by who
+// Extracted from main.ts's connect() (file-budget: AGENTS.md). Split by who
 // cast it: the local player already got audio + flash on the INPUT frame, so
 // this only adds what needs server confirmation (windup state, viewmodel,
 // swing arc); remote players get everything here, spatialised.

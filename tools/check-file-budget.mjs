@@ -26,7 +26,7 @@ const HARD_LIMIT = 800
 // from the "split" intent but still ratcheted so it can't balloon.
 // Baselined against the prettier-formatted tree (the canonical line count).
 const BUDGET = {
-  'packages/client/src/main.ts': 2574,
+  'packages/client/src/main.ts': 2545,
   'packages/server/src/rooms/GameRoom.ts': 1790,
   'packages/shared/src/abilities/registry.ts': 1508,
   'packages/server/src/sim/AbilityEngine.ts': 748,
@@ -97,7 +97,7 @@ if (violations.length) {
   console.error('✗ File-size budget violated:')
   for (const v of violations) console.error('  ' + v)
   console.error(
-    '\nExtract a cohesive piece into its own module (see 02_TECH/08_project_governance.md).',
+    '\nExtract a cohesive piece into its own module (see AGENTS.md).',
   )
   process.exit(1)
 }

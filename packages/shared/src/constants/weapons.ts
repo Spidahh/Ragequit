@@ -1,5 +1,5 @@
 // Weapon & ability constants.
-// Authority: 01_DESIGN/02_weapon_*.md + 01_DESIGN/05_abilities_melee.md.
+// Authority: VERITA.md.
 // All timings in seconds; damages are raw HP numbers tuned to the 6-9 s TTK band
 // (TTK_MIN_SEC / TTK_MAX_SEC in ./combat.ts, enforced by config/ttk.ts).
 
@@ -63,7 +63,7 @@ export const UPPERCUT_APEX_M = 2.0 as const
 // Respawn delay. Quake's is ~1.7 s; five was three times that, and a fixed wait
 // in a game whose whole point is being back in the fight. A death should cost you
 // the fight you just lost, not the next thirty seconds of the match.
-// See 01_DESIGN/00_truth.md §4 and D13.
+// See VERITA.md §6.
 export const RESPAWN_SEC = 1.5 as const
 
 // --- Lag compensation -------------------------------------------------------

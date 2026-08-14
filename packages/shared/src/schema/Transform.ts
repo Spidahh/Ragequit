@@ -1,7 +1,7 @@
 import { Schema, type } from '@colyseus/schema'
 
 // Position + orientation. Shared across entity types that move.
-// Authority: 02_TECH/03_network_protocol.md § State schema skeleton.
+// Authority: lo schema Colyseus in questa cartella.
 export class Transform extends Schema {
   @type('number') x = 0
   @type('number') y = 0

@@ -39,11 +39,45 @@ const _CHAR_GLB_FALLBACK_HEIGHT = 2.856
 // scale leaks through the hand/forearm bone into the held weapon + shield socket and
 // skewed them (worst on the Tank). Class silhouette now comes from outfit/hair/
 // accessories + tint, never from scaling the armature. Do NOT reintroduce breadth.
+/**
+ * How thick the team rim should be IN METRES, on screen, for any character.
+ *
+ * The outline is an inverted-hull shell: a copy of the mesh pushed out along its
+ * normals by `thickness` and drawn back-faces-only in the team colour. That
+ * displacement happens in the MODEL'S OWN LOCAL SPACE, so a hard-coded constant
+ * means the rim's real size is multiplied by whatever scale the model needed to
+ * reach render height — and every character GLB has a different native scale.
+ *
+ * The failure is not symmetric. A model authored large scales DOWN and its rim
+ * vanishes; a model authored small scales UP and its rim grows until the shell
+ * swallows the character completely, leaving a flat team-coloured mannequin with
+ * a perfect silhouette and no material at all. Two characters can be authored
+ * differently and get opposite bugs from the same line of code.
+ *
+ * So the thickness is derived from the scale instead of guessed: 6 mm of rim on
+ * a 1.9 m body, always, whatever the asset's units.
+ */
+const OUTLINE_WORLD_M = 0.006
+const OUTLINE_WORLD_WEAPON_M = 0.008
+
+/** Rewrite every outline shell's thickness once the model's real scale is known. */
+function retuneOutlineThickness(charGroup: THREE.Object3D, modelScale: number): void {
+  const outlines = charGroup.userData['outlineMeshes'] as THREE.Mesh[] | undefined
+  if (!outlines || modelScale <= 1e-6) return
+  for (const outline of outlines) {
+    const mat = outline.material as THREE.ShaderMaterial
+    const uniform = mat?.uniforms?.['thickness']
+    if (!uniform) continue
+    const world = outline.userData['outlineWeapon'] ? OUTLINE_WORLD_WEAPON_M : OUTLINE_WORLD_M
+    uniform.value = world / modelScale
+  }
+}
+
 const CLASS_BUILD: Record<string, { accent: number; tint: number }> = {
-  tank: { accent: 0x4a4f5a, tint: 0.85 }, // gunmetal bestione
-  archer: { accent: 0x2f7d2a, tint: 0.84 }, // vivid forest green
-  mage: { accent: 0x6a2fc0, tint: 0.86 }, // arcane violet wizard
-  hybrid: { accent: 0xb83020, tint: 0.84 }, // crimson, mid build
+  breaker: { accent: 0x4a4f5a, tint: 0.85 }, // gunmetal bestione
+  talon: { accent: 0x2f7d2a, tint: 0.84 }, // vivid forest green
+  warden: { accent: 0x6a2fc0, tint: 0.86 }, // arcane violet wizard
+  drift: { accent: 0xb83020, tint: 0.84 }, // crimson, mid build
 }
 
 function _measureRenderableBox(root: THREE.Object3D): THREE.Box3 {
@@ -161,7 +195,12 @@ function _installCharacterModel(
   } else {
     const nativeBox = _measureRenderableBox(model)
     const nativeHeight = _validBoxHeight(nativeBox)
-    model.scale.setScalar(CHARACTER_RENDER_HEIGHT_M / nativeHeight)
+    const legacyScale = CHARACTER_RENDER_HEIGHT_M / nativeHeight
+    model.scale.setScalar(legacyScale)
+    // Same scale-vs-outline correction as the live class-GLB path. A no-op when
+    // this path built no outlines, but the legacy fallback must not be the one
+    // place where a character can still turn into a flat coloured shell.
+    retuneOutlineThickness(charGroup, legacyScale)
     // UNIFORM scale only — no per-class X/Z breadth. A non-uniform armature scale
     // leaks into the hand-bone-attached weapon/shield and skews them; class identity
     // is conveyed by outfit/hair/accessories + tint instead (see CLASS_BUILD).
@@ -301,7 +340,7 @@ function _installCharacterModel(
   if (rightHand && wg) {
     const activeId =
       (charGroup.userData['activeWeaponProp'] as 'sword' | 'bow' | 'staff') ?? 'sword'
-    const classId = (charGroup.userData['loadedClassId'] as string) || 'hybrid'
+    const classId = (charGroup.userData['loadedClassId'] as string) || 'drift'
     const grip = getWeaponGrip(activeId, classId)
     rightHand.add(wg)
     wg.position.set(...grip.position)
@@ -346,10 +385,16 @@ function _installCharacterModel(
     // Thin TEAM-COLOURED rim instead of a heavy black ink line: it reads as a clean
     // hero-shooter silhouette AND carries faction identity (self blue / enemy red),
     // which the flat textures alone can't (both teams share the same skins).
-    const outline = createOutlineMesh(child, isWeaponMesh ? 0.01 : 0.008, teamColor)
+    //
+    // The thickness passed here is a placeholder — the real value cannot be known
+    // until the model has been scaled to render height, and is set below. See
+    // `retuneOutlineThickness`.
+    const outline = createOutlineMesh(child, isWeaponMesh ? 0.008 : 0.006, teamColor)
+    outline.userData['outlineWeapon'] = isWeaponMesh
     outlinePairs.push({ mesh: child, outline })
   })
   for (const { mesh, outline } of outlinePairs) mesh.parent?.add(outline)
+  charGroup.userData['outlineMeshes'] = outlinePairs.map((p) => p.outline)
 
   // Load physical shield!
   applyShieldProp(charGroup, toonGradient)
@@ -422,7 +467,9 @@ function _installSingleGlbModel(
   const boneBox0 = _measureBoneBox(model)
   const boneH = boneBox0 ? boneBox0.getSize(_tmpV).y : 0
   const nativeHeight = boneH > 0.1 ? boneH * 1.12 : _CHAR_GLB_FALLBACK_HEIGHT
-  model.scale.setScalar(CHARACTER_RENDER_HEIGHT_M / nativeHeight)
+  const modelScale = CHARACTER_RENDER_HEIGHT_M / nativeHeight
+  model.scale.setScalar(modelScale)
+  retuneOutlineThickness(charGroup, modelScale)
   model.updateMatrixWorld(true)
   const boneBox1 = _measureBoneBox(model)
   const footY = boneBox1 ? boneBox1.min.y : 0
@@ -500,7 +547,7 @@ export function loadCharacterGlb(
   toonGradient: THREE.DataTexture,
   classId?: string,
 ): void {
-  const resolvedClass = classId || 'hybrid'
+  const resolvedClass = classId || 'drift'
   // Set immediately so the guard below can detect stale results.
   charGroup.userData['loadedClassId'] = resolvedClass
 

@@ -1,30 +1,18 @@
 // ---------------------------------------------------------------------------
-// Specialisations — the third axis of a build.
+// Subclasses — the second half of a character's identity.
 //
-// The owner's definition of what this game IS, in his words: you pick a build
-// out of many combinations of CLASS, ABILITIES and SPECIALISATIONS, and take it
-// into an arena. Two of those three shipped. This is the third.
+// A class says WHAT YOU DO in a fight: BREAKER creates the opening, TALON
+// converts it, WARDEN decides where it happens, DRIFT denies it. A subclass says
+// HOW you do it, and there are three per class.
 //
-// LEARNING FROM THE ONE THAT WAS DELETED. There was a Mastery system once
-// (`03_mastery_system.md` and `constants/mastery.ts`, removed in 6a7839a). It
-// activated when 4 of your 5 magic slots shared an element, and granted an
-// element bonus. It died because it was INFERRED, not chosen: it did not
-// express a decision, it taxed you for mixing elements. A player never picked
-// Mastery — they discovered they had one.
+// Every one is a trade on the same line. A subclass with no cost is not a
+// choice, it is a patch note — so each states its malus next to its bonus and
+// the Forge prints both.
 //
-// So a specialisation here is an explicit pick, made in the Forge, visible on
-// the build, and legal only for its class. It is not derived from anything.
-//
-// WHY THESE MODIFIERS AND NOT DAMAGE. Every specialisation deliberately avoids
-// touching flat outgoing damage. The TTK band is 6-9 s and the classes measure
-// 6.3-7.9 s (config/ttk.ts), so a +15 % damage specialisation would push the
-// archer straight out of the bottom of the band and quietly undo D1. What is
-// left is more interesting anyway: how long your launch hangs, how often your
-// kit is available, how fast you move, how much you can take. Those change how
-// a build PLAYS without changing how long a fight lasts.
-//
-// Every one has a real malus on the same line as its bonus. A specialisation
-// with no cost is not a choice, it is a patch note.
+// WHY THESE LEVERS AND NOT DAMAGE. None of them touches outgoing damage. Damage
+// changes how long a fight lasts; these change how a fight FEELS to play — how
+// long your launch hangs, how often your kit is back, how fast you move, how
+// much you can take. That is the axis worth spending an identity on.
 // ---------------------------------------------------------------------------
 import { TARGET_CLASS_DEFS, type ClassId } from './classes.js'
 
@@ -62,140 +50,140 @@ const NEUTRAL = {
  * mechanics would make the choice unlearnable rather than deep.
  */
 export const SPECIALIZATION_DEFS: Readonly<Record<string, SpecializationDef>> = Object.freeze({
-  // --- Impact: the launch hangs longer, so the punish window is real --------
-  tank_impact: {
+  // ── BREAKER — you create the opening ─────────────────────────────────────
+  breaker_siege: {
+    id: 'breaker_siege',
+    classId: 'breaker',
+    name: 'SIEGE',
+    description: 'You hold the ground you take. Bigger health pool, so trading is your game.',
+    miniMalus: 'You move slower — nobody has to run from you, they can walk.',
     ...NEUTRAL,
-    id: 'tank_impact',
-    classId: 'tank',
-    name: 'Impatto',
-    description: 'I tuoi lanci in aria durano il 25% in più: hai tempo di punire.',
-    miniMalus: '-8% vita massima.',
-    knockupAirtimeMult: 1.25,
-    maxHpMult: 0.92,
-  },
-  hybrid_impact: {
-    ...NEUTRAL,
-    id: 'hybrid_impact',
-    classId: 'hybrid',
-    name: 'Impatto',
-    description: 'I tuoi lanci in aria durano il 25% in più: hai tempo di punire.',
-    miniMalus: '-8% vita massima.',
-    knockupAirtimeMult: 1.25,
-    maxHpMult: 0.92,
-  },
-  mage_impact: {
-    ...NEUTRAL,
-    id: 'mage_impact',
-    classId: 'mage',
-    name: 'Impatto',
-    description: 'I tuoi lanci in aria durano il 25% in più: hai tempo di punire.',
-    miniMalus: '-8% vita massima.',
-    knockupAirtimeMult: 1.25,
-    maxHpMult: 0.92,
-  },
-
-  // --- Bulwark: you take more before you break -----------------------------
-  tank_bulwark: {
-    ...NEUTRAL,
-    id: 'tank_bulwark',
-    classId: 'tank',
-    name: 'Baluardo',
-    description: '+12% vita massima. Reggi uno scambio in più di chiunque altro.',
-    miniMalus: '-6% velocità di movimento.',
-    moveSpeedMult: 0.94,
     maxHpMult: 1.12,
+    moveSpeedMult: 0.92,
   },
-  mage_bulwark: {
+  breaker_ram: {
+    id: 'breaker_ram',
+    classId: 'breaker',
+    name: 'RAM',
+    description: 'You open the fight by arriving. Fastest body in the class.',
+    miniMalus: 'You gave up the health that made arriving safe.',
     ...NEUTRAL,
-    id: 'mage_bulwark',
-    classId: 'mage',
-    name: 'Baluardo',
-    description: '+12% vita massima. Sopravvivi al primo che ti arriva addosso.',
-    miniMalus: '-6% velocità di movimento.',
-    moveSpeedMult: 0.94,
-    maxHpMult: 1.12,
+    moveSpeedMult: 1.12,
+    maxHpMult: 0.9,
+  },
+  breaker_anvil: {
+    id: 'breaker_anvil',
+    classId: 'breaker',
+    name: 'ANVIL',
+    description: 'Whatever you put in the air stays there. The punish window is yours.',
+    miniMalus: 'Your kit comes back slower — you get fewer openings to convert.',
+    ...NEUTRAL,
+    knockupAirtimeMult: 1.28,
+    cooldownMult: 1.1,
   },
 
-  // --- Cadence: the whole kit comes back sooner ----------------------------
-  tank_cadence: {
+  // ── TALON — you convert the opening ──────────────────────────────────────
+  talon_spire: {
+    id: 'talon_spire',
+    classId: 'talon',
+    name: 'SPIRE',
+    description: 'One committed shot, and a long window to land the next one.',
+    miniMalus: 'Everything you own is on a longer leash.',
     ...NEUTRAL,
-    id: 'tank_cadence',
-    classId: 'tank',
-    name: 'Cadenza',
-    description: '-15% su tutti i cooldown: la build intera è disponibile più spesso.',
-    miniMalus: '-10% vita massima.',
-    cooldownMult: 0.85,
+    knockupAirtimeMult: 1.3,
+    cooldownMult: 1.15,
+  },
+  talon_volley: {
+    id: 'talon_volley',
+    classId: 'talon',
+    name: 'VOLLEY',
+    description: "You don't wait for the moment. Your kit is always nearly ready.",
+    miniMalus: 'Thinner than anyone else on the field.',
+    ...NEUTRAL,
+    cooldownMult: 0.82,
     maxHpMult: 0.9,
   },
-  archer_cadence: {
+  talon_tether: {
+    id: 'talon_tether',
+    classId: 'talon',
+    name: 'TETHER',
+    description: 'You keep pace with what you hit. Nobody walks away from you.',
+    miniMalus: 'You chase instead of juggling — your launches hang less.',
     ...NEUTRAL,
-    id: 'archer_cadence',
-    classId: 'archer',
-    name: 'Cadenza',
-    description: '-15% su tutti i cooldown: la build intera è disponibile più spesso.',
-    miniMalus: '-10% vita massima.',
-    cooldownMult: 0.85,
-    maxHpMult: 0.9,
-  },
-  mage_cadence: {
-    ...NEUTRAL,
-    id: 'mage_cadence',
-    classId: 'mage',
-    name: 'Cadenza',
-    description: '-15% su tutti i cooldown: la build intera è disponibile più spesso.',
-    miniMalus: '-10% vita massima.',
-    cooldownMult: 0.85,
-    maxHpMult: 0.9,
-  },
-  hybrid_cadence: {
-    ...NEUTRAL,
-    id: 'hybrid_cadence',
-    classId: 'hybrid',
-    name: 'Cadenza',
-    description: '-15% su tutti i cooldown: la build intera è disponibile più spesso.',
-    miniMalus: '-10% vita massima.',
-    cooldownMult: 0.85,
-    maxHpMult: 0.9,
+    moveSpeedMult: 1.1,
+    knockupAirtimeMult: 0.85,
   },
 
-  // --- Momentum: you are simply harder to catch ----------------------------
-  archer_momentum: {
+  // ── WARDEN — you decide where it happens ─────────────────────────────────
+  warden_bramble: {
+    id: 'warden_bramble',
+    classId: 'warden',
+    name: 'BRAMBLE',
+    description: 'The ground is yours again quickly. You can afford to spend it.',
+    miniMalus: 'You are slow to leave the ground you claimed.',
     ...NEUTRAL,
-    id: 'archer_momentum',
-    classId: 'archer',
-    name: 'Slancio',
-    description: '+8% velocità di movimento. Detti tu la distanza dello scontro.',
-    miniMalus: '-10% vita massima.',
-    moveSpeedMult: 1.08,
+    cooldownMult: 0.85,
+    moveSpeedMult: 0.92,
+  },
+  warden_pyre: {
+    id: 'warden_pyre',
+    classId: 'warden',
+    name: 'PYRE',
+    description: 'What you lift stays lifted, long enough for the field to finish it.',
+    miniMalus: 'You burn some of your own margin to do it.',
+    ...NEUTRAL,
+    knockupAirtimeMult: 1.22,
+    maxHpMult: 0.94,
+  },
+  warden_hollow: {
+    id: 'warden_hollow',
+    classId: 'warden',
+    name: 'HOLLOW',
+    description: 'You outlast. The longer the fight, the more it is your fight.',
+    miniMalus: 'Your kit is deliberate — it comes back slowly.',
+    ...NEUTRAL,
+    maxHpMult: 1.14,
+    cooldownMult: 1.12,
+  },
+
+  // ── DRIFT — you deny the opening ─────────────────────────────────────────
+  drift_phase: {
+    id: 'drift_phase',
+    classId: 'drift',
+    name: 'PHASE',
+    description: 'The hardest body in the game to put a shot on.',
+    miniMalus: 'And the least able to survive one.',
+    ...NEUTRAL,
+    moveSpeedMult: 1.14,
+    maxHpMult: 0.88,
+  },
+  drift_slipstream: {
+    id: 'drift_slipstream',
+    classId: 'drift',
+    name: 'SLIPSTREAM',
+    description: 'Faster, and ready again sooner. Movement is the whole plan.',
+    miniMalus: 'Nothing left over for taking hits.',
+    ...NEUTRAL,
+    moveSpeedMult: 1.1,
+    cooldownMult: 0.9,
     maxHpMult: 0.9,
   },
-  hybrid_momentum: {
+  drift_echo: {
+    id: 'drift_echo',
+    classId: 'drift',
+    name: 'ECHO',
+    description: 'You always have another answer ready. Your kit barely rests.',
+    miniMalus: 'You win on information, not on footspeed.',
     ...NEUTRAL,
-    id: 'hybrid_momentum',
-    classId: 'hybrid',
-    name: 'Slancio',
-    description: '+8% velocità di movimento. Detti tu la distanza dello scontro.',
-    miniMalus: '-10% vita massima.',
-    moveSpeedMult: 1.08,
-    maxHpMult: 0.9,
-  },
-  archer_impact: {
-    ...NEUTRAL,
-    id: 'archer_impact',
-    classId: 'archer',
-    name: 'Impatto',
-    description: 'I tuoi lanci in aria durano il 25% in più: hai tempo di punire.',
-    miniMalus: '-8% vita massima.',
-    knockupAirtimeMult: 1.25,
-    maxHpMult: 0.92,
+    cooldownMult: 0.8,
+    moveSpeedMult: 0.95,
   },
 })
 
-/** The neutral build: no specialisation picked. Never null at the sim layer. */
 export const NO_SPECIALIZATION: SpecializationDef = Object.freeze({
   ...NEUTRAL,
   id: '',
-  classId: 'tank',
+  classId: 'breaker',
   name: 'Nessuna',
   description: 'Nessuna specializzazione.',
   miniMalus: '',

@@ -111,7 +111,7 @@ export class BotController {
     const dy = enemy.transform.y - self.transform.y
     const pitch = Math.atan2(dy, Math.max(dist, 0.1))
 
-    const classId = (self.classId ?? 'hybrid') as ClassId
+    const classId = (self.classId ?? 'drift') as ClassId
     const allowedWeapons =
       TARGET_CLASS_DEFS[classId]?.weapons ?? (['sword', 'bow', 'staff'] as const)
     const hpMax = TARGET_CLASS_DEFS[classId]?.resourceMaxima.hp ?? 200

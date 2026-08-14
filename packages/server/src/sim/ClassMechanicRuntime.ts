@@ -80,7 +80,7 @@ export interface IClassMechanic {
 }
 
 export class TankMechanic implements IClassMechanic {
-  readonly classId = 'tank'
+  readonly classId = 'breaker'
 
   tick(sid: string, player: Player, dt: number, now: number, runtime: ClassMechanicRuntime): void {
     if (player.furyStacks <= 0) return
@@ -152,7 +152,7 @@ export class TankMechanic implements IClassMechanic {
 }
 
 export class ArcherMechanic implements IClassMechanic {
-  readonly classId = 'archer'
+  readonly classId = 'talon'
 
   tick(
     _sid: string,
@@ -196,7 +196,7 @@ export class ArcherMechanic implements IClassMechanic {
 }
 
 export class MageMechanic implements IClassMechanic {
-  readonly classId = 'mage'
+  readonly classId = 'warden'
 
   onAbilityCast(
     sid: string,
@@ -264,7 +264,7 @@ export class MageMechanic implements IClassMechanic {
 }
 
 export class HybridMechanic implements IClassMechanic {
-  readonly classId = 'hybrid'
+  readonly classId = 'drift'
 
   tick(sid: string, player: Player, _dt: number, now: number, runtime: ClassMechanicRuntime): void {
     if (player.flowStacks <= 0) return
@@ -315,10 +315,10 @@ export class ClassMechanicRuntime {
   private readonly flowDamagePending = new Set<string>()
 
   private readonly mechanicsRegistry: Record<ClassId, IClassMechanic> = {
-    tank: new TankMechanic(),
-    archer: new ArcherMechanic(),
-    mage: new MageMechanic(),
-    hybrid: new HybridMechanic(),
+    breaker: new TankMechanic(),
+    talon: new ArcherMechanic(),
+    warden: new MageMechanic(),
+    drift: new HybridMechanic(),
   }
 
   constructor(

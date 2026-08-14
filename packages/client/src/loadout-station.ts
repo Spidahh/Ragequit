@@ -106,7 +106,7 @@ export function initLoadoutStation(
   let poolFilterEl = 'all'
   let poolSearch = ''
   let activeClassId: ClassId = loadClassId()
-  // The third axis (01_DESIGN/08_specializations.md). Built from the shared
+  // The third axis (VERITA.md). Built from the shared
   // registry and mounted next to the class cards.
   const specSelector = createSpecSelector(() => rerender())
   const classSelectorEl = document.getElementById('ls-class-selector')
@@ -157,7 +157,7 @@ export function initLoadoutStation(
     } catch {
       /* ignore */
     }
-    return 'hybrid'
+    return 'drift'
   }
 
   function saveClassId(id: ClassId): void {
@@ -478,10 +478,10 @@ export function initLoadoutStation(
     })
     // Apply class color token to the overlay
     const CLASS_COLORS: Record<ClassId, string> = {
-      tank: '#d4a04a',
-      archer: '#2ecc71',
-      mage: '#3498db',
-      hybrid: '#00f0ff',
+      breaker: '#d4a04a',
+      talon: '#2ecc71',
+      warden: '#3498db',
+      drift: '#00f0ff',
     }
     overlay.style.setProperty('--class-color', CLASS_COLORS[id])
     specSelector.setClass(id)
@@ -498,11 +498,13 @@ export function initLoadoutStation(
   // --- Class Vitals Console --------------------------------------------------
 
   const CLASS_MECHANIC_LABEL: Record<ClassId, string> = {
-    tank: '🔥 FURY — subendo colpi accumuli 5 stack. Al massimo, il prossimo colpo melee esplode con danno bonus e lento.',
-    archer:
+    breaker:
+      '🔥 FURY — subendo colpi accumuli 5 stack. Al massimo, il prossimo colpo melee esplode con danno bonus e lento.',
+    talon:
       '⚡ MOMENTUM — muovendoti carichi ritmo. Più momentum: arco più rapido e magie con recupero ridotto.',
-    mage: '🌀 RISONANZA — due spell dello stesso elemento entro 2.5s attivano una proc elementale potenziata.',
-    hybrid:
+    warden:
+      '🌀 RISONANZA — due spell dello stesso elemento entro 2.5s attivano una proc elementale potenziata.',
+    drift:
       '💧 FLOW — cambiare arma genera stack. Al pieno, la prossima cura o spell offensiva viene amplificata.',
   }
 

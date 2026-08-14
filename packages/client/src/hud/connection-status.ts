@@ -1,6 +1,6 @@
 // Connection status indicator — the debug HUD dot plus the menu footer dot,
 // both driven off the same status keyword (extracted out of main.ts;
-// file-budget: 02_TECH/08_project_governance.md).
+// file-budget: AGENTS.md).
 
 export type SetStatus = (text: string, color: string) => void
 

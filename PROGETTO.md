@@ -1,1368 +1,1825 @@
-# PROGETTO — RAGEQUIT (fonte di verità unica)
+# RAGEQUIT — Il gioco
 
-> **REGOLA.** Questo è l'UNICO file-cervello del progetto. Si LEGGE all'inizio di ogni
-> sessione e si AGGIORNA man mano. Quando l'utente dà un feedback, il piano qui dentro
-> si **modifica** e si annota nel log — **non si butta via e non si ricomincia**.
-> Niente modifiche sparse a caso: si lavorano le fasi del piano in ordine.
+> Questo documento descrive **il gioco finito**: cosa vedi, cosa fai, come si
+> sente. Non è una lista di cose da fare — è come sarà quando è fatto.
 >
-> **Per sviluppare/verificare/modificare senza perdere tempo → leggi `SVILUPPO.md`** (come si gira,
-> come si VERIFICA con log+logica e NON con gli screenshot, le trappole, le ricette di modifica).
+> I numeri stanno dove servono, a sostegno di una descrizione, mai al posto suo.
+> Quando ne leggi uno, quello è deciso: `[M]` misurato sul motore, `[B]`
+> verificato da un test, `[S]` standard di settore.
+>
+> Redatto il 2026-08-15. Motore **Godot 4.7.1**, renderer **Compatibility** —
+> l'unico che il browser supporta. Tutto il testo di gioco è in **inglese**.
+
+**Cosa c'è dentro**
+
+|                           |                               |                      |                            |
+| ------------------------- | ----------------------------- | -------------------- | -------------------------- |
+| 1 · Che gioco è           | 6 · I nemici del gioco        | 11 · Le schermate    | 16 · L'ordine              |
+| 2 · Cosa vedi quando apri | 7 · **Le spell, una per una** | 12 · **Le comodità** | 17 · Le verifiche          |
+| 3 · Come si gioca         | 8 · L'arena                   | 13 · La rete         | 18 · Cosa non si fa        |
+| 4 · Le modalità           | 9 · La grafica                | 14 · Su itch.io      | **Appendice** · i numeri   |
+| 5 · Le classi             | 10 · L'audio                  | 15 · Venti ore       | **Appendice** · le abilità |
 
 ---
 
-## ⭐ PIANO ATTIVO #1 — RIFARE TUTTA LA GRAFICA (parole dell'utente, NON ridiscutere)
+## 1 · Che gioco è
 
-Scritto una volta per non farselo ripetere mai più. Si esegue IN QUEST'ORDINE:
+Apri una pagina del browser. In dieci secondi sei dentro un'arena buia illuminata
+da torce, con una spada in mano e altri sette che ti vogliono morto.
 
-1. **ANALISI** di tutta la grafica attuale: cosa c'è e cosa è rotto.
-2. **PIANO + UNA VIA**: decidere **uno stile** che deve avere **TUTTO il gioco** — personaggi,
-   arena, armi, props, VFX, HUD **E i MENU**. _Io propongo le vie (con riferimenti); **sceglie l'UTENTE**._
-3. Deciso lo stile → **guardare cosa c'è in `E:/GIOCHI/ASSET_GRAFICA`**, studiarlo tutto, tenere
-   **SOLO le cose davvero funzionali e utili** a quello stile (scartare il resto, incluso il cartoon).
-4. Il **resto si scarica online, FREE** (Sketchfab/Quaternius/Mixamo/Poly Haven/CC0…).
-5. **INTEGRARE** tutto in modo coerente, verificando.
+RAGEQUIT è un **arena PvP in prima persona**. Ti muovi come in Quake — veloce,
+con inerzia vera, e puoi guadagnare velocità in aria se sai come — e combatti con
+un kit di otto abilità che hai scelto tu prima di entrare, fra quattro classi,
+dodici sottoclassi e decine di spell.
 
-**Regole dure:** solo GRATIS (asset+tech+hosting) · rig **Mixamo** · gioco **COMPLETO, niente tagli** ·
-**stile/asset = li decide l'UTENTE** · valori numerici = li metto io.
-Dettaglio aree/file nel log (§6). Come verificare senza perdere tempo → `SVILUPPO.md`.
-**Fatto finora: SOLO l'arena (PBR+luce). Tutto il resto della grafica è da fare con questo piano.**
+Il momento che il gioco vende è questo: **una spell stacca il nemico da terra, e
+mentre è per aria e non può schivare, tu lo colpisci.** Si chiama sbalzo, dura
+poco più di mezzo secondo, e chiuderlo è la cosa più difficile e più soddisfacente
+del gioco.
+
+**Non c'è niente da pagare. Non c'è niente da grindare.** Si scarica in sette
+megabyte, gira in una scheda del browser, e si sblocca tutto giocando.
 
 ---
 
-## 1. Cos'è il gioco
-
-Arena PvP da browser, **prima persona**, combattimento medievale-fantasy
-(melee + magie). 4 classi: **tank, archer, mage, hybrid**. Three.js (client) +
-Colyseus (server). Camera: **prima persona per tutte le armi**
-
-> **Ritirato 2026-08-13.** Il gioco e' in PRIMA PERSONA e basta. La camera mista non esiste piu' nel codice: `weapon-view.ts` espone solo `fovDelta` per arma, e da stanotte il rig locale non viene proprio disegnato dalla camera del mondo — era la causa delle "texture mezze trasparenti". Questa regola imponeva una telecamera che il codice non ha, e chi la leggeva avrebbe ripristinato il difetto.
-
-Riga originale, per memoria: ~~Camera MISTA: spada = 3ª persona (corpo visibile), arco/staff = 1ª
-persona (viewmodel) — vedi `render/weapon-view.ts`.
-
-## 1.5 VINCOLI DURI & FONTE ASSET (regole non negoziabili)
-
-- **SOLO asset GRATIS.** Niente pacchetti a pagamento (Synty/KitBash3D/Megascans = NO,
-  anche se più belli). Una ricerca a 6 agenti ha confermato: non esiste un ecosistema
-  gratis, coerente E realistico esterno → la via è la **libreria curata dall'utente**.
-- **TUTTE le tecnologie + hosting GRATIS** (oggi: Three.js + Colyseus; Fly.io +
-  Cloudflare Pages, tier gratuiti).
-- **FONTE ASSET PRIMARIA = `E:/GIOCHI/ASSET_GRAFICA`** — l'utente la aggiorna spesso; ha
-  un suo `_INVENTARIO.md`. Usare un asset SOLO se è davvero utile **e migliore** di
-  quello già nel gioco.
-- **RIG STANDARD = Mixamo** (uno scheletro). Ogni skin + animazione si conforma; skin
-  non-Mixamo → auto-rig su Mixamo o scartare.
-- **Cosa c'è in ASSET_GRAFICA** (2026-06):
-  - PERSONAGGI/CHARACTERS: `Knight_Met.glb` (Mixamo, 14 anim → **TANK pronto drop-in**),
-    `pbr_shadowkin_mage_rigged.glb`, `lightning_mage_free_download.glb` (statico/sporco),
-    `shadowflame_samurai.glb` (rig CC, 0 anim → conformare), `armored_guard_knight_rig.glb`.
-  - PERSONAGGI/MOBS: drago (52 anim), **Gwyn Lord of Cinder** (boss Dark Souls), zombie (Mixamo).
-  - PERSONAGGI/ANIMATION: **204 FBX Mixamo** (idle/run/strafe/attack/…) + cast da mago + UAL.
-  - PERSONAGGI/ARMI: KayKit FantasyWeapons + **RPGWeapons_Free** + archi/bastoni/braccia-FP.
-  - mappe: KayKit Dungeon Remastered, **Fantasy Props MegaKit**, Modular Village, Free
-    Modular, `gladiators_arena.glb`.
-  - AUDIO: 9 pack spell per elemento. PARTICELLE: Kenney. icone (106). menu (ritratti classi + logo).
-  - ⚠️ Alcuni item SONO cartoon (KayKit) → l'utente li rifiuta: valutare ognuno contro
-    il target dark-gritty-realistico; tenere i realistici (Knight_Met, Gwyn, drago,
-    RPGWeapons, dungeon/props realistici), scartare i cartoon.
-
-> Il design del gioco (vision, classi, combat, abilità, modalità) è nei doc `01_DESIGN/`
-> (rivisti con l'utente in `REVISIONE.md`). Non duplicarlo qui.
-
-## 2. Architettura & sistemi (mappa — NON ri-scoprirla ogni volta)
-
-- **Monorepo** pnpm: `packages/{client,server,shared}`. `@ragequit/shared` va buildato
-  (`pnpm --filter=@ragequit/shared build`) prima di typecheck/test.
-- **Gate**: `pnpm check` = typecheck + check:budget + check:assets + lint + format:check
-  - validate:content + test (41 client + 119 server). DEVE essere verde prima di ogni
-    commit. Su Windows il cwd può driftare: girare i gate via Bash con `cd` esplicito.
-- **Deploy**: push su `main` = produzione (Fly.io server + Cloudflare Pages client).
-  **Tutto va su `main`, niente branch** (regola utente). Flusso: commit → `git fetch
-origin main` → `git rebase origin/main` → `git push origin HEAD:main` → `git branch -f
-main HEAD`. (La CI a volte avanza `origin/main`: rebasare.)
-- **File client chiave**:
-  - `src/main.ts` — orchestratore (renderer, scena, luci, post-FX, loop, camera). Vicino
-    al tetto del file-budget: estrarre in moduli, non gonfiarlo.
-  - Sistema personaggio: `render/characters.ts` (install + materiali), `character-loader.ts`
-    (composizione layer + skeleton), `character-weapons.ts` (armi/scudo + grip),
-    `character-animation.ts` (mixer/stati), `character.ts` (anchor + weaponGroup/shieldGroup).
-  - `render/weapon-view.ts` — `WEAPON_VIEW` (camera 1ª/3ª per arma).
-  - `world/arena.ts` — arena (shell GLB, pavimento, cover-box, torce, cielo, props).
-  - Post-FX: `render/grade-pass.ts` (grade), GTAO + bloom selettivo in `main.ts`.
-  - VFX spell: `render/projectile-visuals.ts`. HUD: `hud/*` + `public/game-ui.css`.
-    Menu: `menu.ts`, `loadout-station.ts`, `menu-bg.ts`.
-  - Asset: `public/characters/*` (mesh+texture), `public/weapons/kaykit/*`,
-    `public/arena/*`.
-- **Verifica visiva headless** (FUNZIONA — l'utente la vuole): `tools/verify/shot.mjs`
-  (in-match) e `tools/verify/inspect.mjs` + `/inspect.html` (personaggio ravvicinato).
-  Playwright + SwiftShader + `gl.readPixels`. **Dopo ogni edit a `main.ts` riavviare il
-  dev-server** (HMR sull'entry → scena nera). Dettagli: vedi memoria `ragequit-verify-harness`.
-
-## 3. Stato visivo & cause-radice (diagnosi data-driven, 8 agenti)
-
-Meta-causa storica: **mancanza di una singola fonte di verità** per ogni cosa (altezza
-render, bind-pose, grip armi, outline, materiale/palette/post-FX, font). 6 cause radice:
-
-| #   | Causa                                                              | Stato                                                                                                          |
-| --- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| R1  | `×1.45` solo sul modello → personaggi giganti vs camera a 1.8m     | ✅ FATTO (`CHARACTER_RENDER_HEIGHT_M=1.9`)                                                                     |
-| R2  | layer skin con boneInverses propri + corpo base che buca i vestiti | 🟡 corpo: clip head-only (la base dà la FACCIA, l'outfit il CORPO); resta lo skeleton condiviso per dita/piedi |
-| R3  | armi/scudo pinnati con offset a mano, non sul grip/asse reale      | ⛔ scudo ancora storto                                                                                         |
-| R4  | regola "cappuccio=nascondi testa" + outline che mangia gli occhi   | ✅ FATTO (facce visibili, base non più outlinata)                                                              |
-| R5  | materiale/palette/post-FX forkati per ogni path; toon fangoso      | 🟡 personaggi+armi ora PBR + bordo team; arena ancora toon                                                     |
-| R6  | font del menu MAI caricati (cade su Arial); CSS 5.5k righe         | ⛔ da fare                                                                                                     |
-
-**MA** (chiarito dall'utente): il problema vero NON è solo aggiustare questi — vuole
-**cambiare TUTTI gli asset principali** (mesh di personaggi, arena, armi, props, UI)
-in **un unico stile coerente**. L'atmosfera è secondaria. Vedi §4 e §5.
-
-## 4. Direzione artistica (BLOCCATA dai riferimenti dell'utente)
-
-Riferimenti dati: **Mordhau, Chivalry 1/2, Mirage, Vermintide 1/2, Dark Messiah, Amid
-Evil, Hexen, Heretic, Ziggurat, Lichdom, Avowed, Witchfire, Tainted Grail, Warlander,
-Gunfire Reborn, Lunacid, Savage Resurrection.**
-
-DNA comune = **dark, gritty, atmosferico, realistico-medievale-fantasy, prima persona,
-melee + magia.** PBR realistico, desaturato, pietra cupa, torce. **NO** cartoon piatto
-"tinteggiato" (KayKit/Quaternius/Synty-carino: l'utente li ODIA). Buona notizia: giochi
-come Amid Evil/Hexen/Lunacid vivono di **luce+mood+materiali**, non di poligoni → il feel
-è raggiungibile senza la fedeltà mesh di Mordhau.
-
-## 5. IL PIANO
-
-### 5A. Riparazione fondamenta (in corso) — vedi tabella §3. Quasi fatta; restano R3
-
-(scudo) e R6 (font menu) e lo skeleton condiviso (R2).
-
-### 5B. OVERHAUL TOTALE DEGLI ASSET (la richiesta vera)
-
-**Sourcing DECISO**: tutto dalla libreria gratuita **`ASSET_GRAFICA`** (vedi §1.5),
-standard **rig Mixamo**. Niente a pagamento. Sostituire TUTTA la grafica principale in
-un unico stile **dark-gritty-realistico** (refs §4), scartando i pezzi cartoon.
-
-**Manifesto asset (mappa categoria → fonte):**
-
-- **Personaggi** (rig Mixamo, mont. clip dalle 204 anim):
-  - Tank = `Knight_Met.glb` (pronto). Mago = `pbr_shadowkin_mage_rigged.glb` (rigged) o
-    conformare `lightning_mage`. Ibrido = `shadowflame_samurai.glb` (conformare a Mixamo).
-    Arciere = scegliere/conformare una skin Mixamo (o assemblato Quaternius solo se nulla di meglio).
-  - Mob/boss = zombie (Mixamo), drago, Gwyn.
-- **Arena/ambiente** = dungeon/props realistici (Fantasy Props MegaKit / dungeon realistico),
-  illuminati dark+torce. NON KayKit cartoon.
-- **Armi** = RPGWeapons_Free / staff realistici / archi. **VFX** = Kenney + additive.
-  **Audio** = i 9 pack per elemento. **Icone/Menu** = `icone/` + ritratti classi.
-
-**Esecuzione (ordine, senza lasciare il gioco metà-vecchio):**
-
-1. Renderer bloccato su PBR realistico + illuminazione dark/torce (§ atmosfera — già impostata).
-2. **Pipeline personaggio Mixamo**: caricatore single-GLB Mixamo + libreria 204 clip →
-   sostituisce il sistema Frankenstein a layer. Tank=Knight come primo drop-in verificabile.
-3. Arena/ambiente realistico al posto del coliseum toon.
-4. Armi/props realistici. 5. VFX/audio per elemento. 6. HUD/menu + font.
-
-Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fase 2).**
-
-## 6. LOG DECISIONI & FEEDBACK (cronologico — non perdere il contesto)
-
-- **Regola**: niente branch, tutto su `main`. Niente modifiche a caso. Piano vivo, non si butta.
-- L'utente vuole un gioco **tripla-A**, TUTTI gli asset cambiati, **stesso stile coerente**.
-- **NO cartoon/tinteggiato** (KayKit scartato esplicitamente).
-- **Atmosfera = secondaria**; la grafica principale (mesh/asset) è la priorità.
-- Riferimenti = §4 (dark gritty realistico medievale-fantasy).
-- Lamentela di metodo: smettere di ri-scoprire tutto e dimenticare → questo file +
-  la memoria persistente sono la soluzione (vedi memoria `working-method-persistent-plan`).
-- **SOLO asset gratis; TUTTO (tech + hosting) gratis.** Fonte asset = `E:/GIOCHI/ASSET_GRAFICA`
-  (curata dall'utente, aggiornata spesso) — usare un asset solo se migliore dell'attuale.
-- Confermato: NON esiste ecosistema gratis-coerente-realistico esterno → si usa la
-  libreria dell'utente, rig Mixamo standard. Il realistico a pagamento (KitBash/Synty)
-  è ESCLUSO dalla regola "solo gratis".
-- ⚠️ DA REGISTRARE QUI: "le mille cose" (visione/gameplay/regole) che l'utente ha già
-  detto nei mesi — §1.6 è ancora incompleta, va riempita con lui.
-- **2026-06-11 — STILE DECISO E BLOCCATO.** Fine del ri-decidere lo stile a ogni sessione.
-  Calcolato dai giochi di riferimento e **ancorato ai valori reali del codice** (scoperto: lo
-  stile è già ~85% implementato in `main.ts`/`grade-pass.ts`/`arena.ts`). Spec completa con
-  valori = **`STILE.md`** (palette hex, materiali PBR, luci, post, VFX, camera, HUD, gate).
-  - **Decisione unica:** ~75% realistico (PBR materico desaturato, mondo grounded
-    Mordhau/Vermintide/Darkfall) + **un solo strato iper-saturo: la magia element-coded additiva**
-    (Mirage/Spellbreak) = l'unica cosa luminosa nel nero torch-lit. Fork ~55% toon-ramp = RIFIUTATO
-    (l'utente odia il tinteggiato piatto).
-  - **Valori confermati e bloccati** (non si ritoccano): hemisphere 0.4, key dir `#8893ad` 0.5,
-    rim `#3c4768` 0.35, torce `#ff7521` 2.2/30, exposure ACES 1.1, GTAO 1.2, fog `#090a10` 0.038,
-    FOV 90 / viewmodel 58, 5 hue elemento in `ELEMENT_COLOR`.
-  - **Correzioni che ne derivano (TODO visivo, mio = value-tuning):** (1) grade saturation
-    0.82→0.92; (2) togliere outline toon residui in `arena.ts`; (3) spell core emissive 3–5 +
-    dynamic point-light per proiettile + trail 13fps; (4) dust motes torch-proximity + god-ray
-    billboard economici.
-- **2026-06-11 — ARENA convertita TOON → PBR (fatto, da rivedere live).** Scoperta: TUTTA l'arena
-  (`world/arena.ts`: cover, shell colosseo, props, pavimento) era `MeshToonMaterial` + gradient toon
-  - outline neri, e **scartava le texture normal/ORM** ("MeshToonMaterial doesn't use them") → mondo
-    piatto/finto. = la causa concreta del "sembra cartone".
-  * FATTO: tutti i materiali arena → `MeshStandardMaterial` (pietra/sabbia rough .9/.95 metal 0;
-    props/torce mantengono il materiale PBR del GLB con normal+ORM riattivati); rimossi gradient toon
-    e tutti gli `createOutlineMesh(...0x050508)`. grade saturation 0.82→0.92.
-  * FATTO: aggiunto **environment map PMREM** (gradiente equirect dark on-palette) — senza IBL il PBR
-    rende nero. Le luci erano tarate sul toon (che illumina gratis) → ri-bilanciate per il PBR reale.
-  * CAUSA "niente luci" (feedback utente): le **torce erano `PointLight` intensità 2.2 con decay 2** =
-    fisicamente debolissime (cadono come 1/d²), illuminavano ~1m; il centro arena (~16m) restava nero.
-    Il toon lo mascherava. **Valori luce finali (verificati headless, forward+pavimento leggibili):**
-    torce `0xff7521` **intensità 18** (era 2.2) range 30 decay 2; hemisphere `0x7c8cb2/0x4a3a24` **@2.0**
-    (era `0x141820/0x05060a` @0.4); key dir `0x8893ad` **@1.0** (era 0.5); `environmentIntensity` **2.6**;
-    fog `FogExp2` **0.015** (era 0.038). Risultato: colosseo arenaria caldo + pozze torce + ombre reali +
-    cielo notte, dark ma leggibile, PBR (non più cartone).
-  * DA FARE: l'utente guarda live (`http://localhost:5173`, ricarica) e conferma il livello luce; poi
-    si committa. NON ancora su `main` (push = deploy prod). Allineare `STILE.md §3/§5` a questi valori.
-- **2026-06-11 — STILE arena RIVISTO: "è un'arena, non un dungeon".** Feedback utente: era troppo scura.
-  Rialzata e resa chiara/leggibile (verificato sulla GPU dell'utente via estensione Chrome): exposure 1.3,
-  hemisphere `0x9aa6c8/0x6a5a3c` @3.4, key `0x9aa6c4` @1.7, torce intensità 18, env 3.0, fog 0.007. Lo
-  STILE.md "dark dungeon" va corretto in "arena torch-lit chiara e leggibile" (mood gritty, NON cupo-buio).
-- **2026-06-11 — STANZA TEST aggiunta (feature).** La 3ª difficoltà allenamento ("Maestro") è ora **"Stanza
-  Test"** (`difficulty: 'test'`): spawna **4 dummy fermi, uno per ogni classe** (Tank/Arciere/Mago/Ibrido,
-  preset+arma corretti), il player spawna **davanti** rivolto verso di loro, in arena con cover come elementi
-  di test. File: `server/rooms/GameRoom.ts` (maxClients=5, botSpawnAtMatchStart=4, posizioni in fila + spawn
-  player), `server/sim/BotController.ts` (`'test'` = input neutro fermo), `client/menu.ts` + `index.html`
-  (pulsante "🧪 Stanza Test"). Verificato sulla GPU (4 dummy, player li guarda). Typecheck server+client OK.
-  - POLISH da fare: badge "✈ AIR" appare per errore sui dummy fermi (sono a terra — falso positivo client su
-    player perfettamente immobili); rifinire la fila/occlusione cover; valutare invuln/respawn dei dummy.
-  - VERIFY: pipeline GPU = estensione Chrome `?capture=1` → JS clicca menu → screenshot CDP (funziona col
-    preserveDrawingBuffer di `?capture`; senza va in timeout sul render-loop).
-- **2026-06-11 — AUDIT TOTALE (8 dimensioni, multi-agente + verifica avversariale).** 65 candidati → 28
-  "confermati". LEZIONE: l'audit ha **falsi positivi** (anche dopo la verifica) — ogni fix va ri-letto sul
-  codice prima di applicarlo, altrimenti introduce regressioni.
-  - APPLICATI (verificati a mano, sicuri): **[8]** ParrySystem — il ramo `else` di `release()` non bruciava
-    stamina/CD su una race di 1 tick = parry gratis → ora addebita (no doppio-addebito). **[21]** tolto
-    `passWithNoTests:true` da client+server vitest (cancello bugiardo; entrambi hanno test). Import-order
-    auto-fix. STILE.md §3/§5 allineato ai valori luce nuovi (arena chiara).
-  - FALSI POSITIVI (SKIP, motivo): **[0]** "onGround spingendo in su" — è l'atterraggio SOPRA le casse, il
-    codice è giusto, il fix proposto romperebbe lo stare sulle coperture. **[11]–[15]** "luci troppo alte vs
-    spec" — la mia illuminazione è richiesta dall'utente (arena, non dungeon), lo spec era vecchio. **[16]**
-    "pulsante Master manda 'test'" — è la Stanza Test, intenzionale. **[19]** Life Drain `breakOnDamage` — è
-    il mini-malus DOCUMENTATO (design). **[20]** fallback maxima — difensiva, scatta solo con classId invalido.
-  - DA FARE (bug veri ma da verificare/valutare con cura, prossimi giri): **[9]** Fury Surge slow applicato
-    prima del parry (leak); **[27]** doppi `Math.round` sul danno (precisione); **[5]** bow M1 a costo 0 (se
-    sono davvero M1, aggiungere stamina); **[1]/[4]** codice morto knockup in `drainDamage` (valutare se
-    cablarlo o rimuoverlo); **[2]** `clamp` NaN→0 (rischioso, valutare); **[22]–[26]** scrivere i test mancanti
-    (MeleeSystem/ParrySystem/ClassMechanic/Zone/Projectile) — da fare con un workflow dedicato.
-  - Lista completa difetti (confermati + 36 medium/low) nel task output dell'audit `wbxpn7b7i`.
-- **2026-06-12 — STANZA TEST completata (rifatta da zero su richiesta).** Iter: side-by-side → a terra non
-  sulle casse → mappa vuota + fila davanti → fermi immobili → distanti. Stato finale: mappa dedicata
-  **`test_room` VUOTA** (0 casse); **4 dummy una per classe, fermi immobili** (BotController: nessun input),
-  in **fila a terra distanziata 4 m** (x = -6/-2/2/6, z=0), **davanti al player** (z=8) e rivolti verso di lui.
-  - LEZIONE chiave: la disposizione va applicata in **TUTTI e 3** i punti di posizionamento —
-    `spawnBot` (spawn iniziale), `onJoin` (player), e **`respawn`** (chiamato da `resetAllPlayersForRound`
-    a inizio round, usava lo spawn unico → impilava tutti). Mancava il respawn = bug "tutti nello stesso punto".
-  - Bloccato da `rooms/test-room.test.ts` (regressione impossibile). Verifica = **logica + log server**, NON
-    screenshot (il gioco va in pausa senza pointer-lock → l'headless cattura il menu di pausa).
-- **2026-06-12 — Commit pushati su `main` (prod) questa sessione:** arena PBR+luce, Stanza Test, fix parry,
-  `passWithNoTests` tolto, estrazioni god-file, **+80 test** sistemi critici, redo Stanza Test (mappa vuota +
-  dummy fermi/distanti/respawn-fix) + test che la blocca. Gate verde a ogni push.
-  - PROSSIMI (coda, in ordine di valore, da fare con l'utente che guarda dal vivo): VFX magie "pop" (STILE §7);
-    bug visibili R6 font / R3 scudo; refactor combat rimandati [9]/[27]; dust-motes + god-ray (STILE §5).
-
-- **2026-06-12 — PIANO ATTIVO #1, STEP 1 «ANALISI» FATTA (code-grounded, 4 agenti).** Scoperta chiave:
-  il gioco **spedisce ANCORA gli asset cartoon che l'utente odia** — il manifesto §5B (Knight/Mixamo
-  realistico) è la DIREZIONE, non la realtà. Stato reale degli asset on-disk:
-  - **PERSONAGGI = Quaternius modular "frankenstein"** (`character-loader.ts`): base `Superhero_Male/Female_FullBody`
-    - outfit `Male/Female_Ranger|Peasant` + capelli, ri-bindati su 1 scheletro condiviso. Le 4 classi = solo
-      maschio/femmina × Ranger/Peasant → **poco distinte, look cartoon**. NIENTE Knight_Met/Mixamo nel gioco
-      (le 204 anim girano via `UAL1_Standard.glb`, non i clip Mixamo). R2 vivo: dita/piedi su skeleton condiviso.
-      Materiale forzato a `MeshStandardMaterial` rough .72/metal .05 hardcoded (scarta rough/metal sorgente).
-  - **ARMI = KayKit** (`/weapons/kaykit/sword|bow|staff|shield_A.glb`) = il pacchetto cartoon **esplicitamente
-    odiato**. Grip = offset a mano per classe (no socket reale). Scudo: in realtà RADDRIZZATO (non più storto).
-    FP: nessun corpo locale disegnato (vedi sopra). Le braccia/viewmodel sono un lavoro APERTO — il commento in `main.ts` promette una pass dedicata che non e' mai esistita.
-  - **OUTLINE toon team-color** ancora su personaggi (0.008) E armi (0.01) — contraddice STILE.md (rim, non ink).
-  - **VFX** (`projectile-visuals.ts`): core = 2 plane incrociati `MeshBasicMaterial` additivo + trail 10pt + impact
-    a 3 layer + bloom selettivo. **MANCA la dynamic point-light per proiettile** (la magia non illumina la pietra).
-  - **MENU/HUD**: `game-ui.css` = **5.563 righe monolitiche**; **R6 confermato** — `Inter`/`Rajdhani` dichiarati
-    ma **0 @font-face / 0 link** → cade su Arial. UI = "esports dark generico", non gotico-materico. Asset UI già
-    presenti: logo, `frame_but.webp`, `sfondo.webp`, ritratti classi.
-  - **CONCLUSIONE**: «fatto = solo arena (PBR+luce)» confermato. Tutto il resto è ancora il vecchio cartoon.
-    Step 2 = decidere INSIEME UNA via di stile (sotto). Dettaglio completo file:riga nei task-output dei 4 agenti.
-
-- **2026-06-12 — PROVA CONCRETA resa all'utente (dopo forte feedback: niente più astratto, solo render veri).**
-  L'utente si è infuriato sulle proposte astratte (descrizioni + schemi SVG) e sul fatto che la Stanza Test
-  mostra 4 classi che SEMBRANO UGUALI (perché oggi sono lo stesso modular-cartone). Risposta data = render VERI:
-  - Renderizzato `Knight_Met.glb` (Tank) in-engine via inspector **RAW mode** (`?raw=`, lanciato da PowerShell
-    perché Git Bash storpia il leading slash). Look realistico confermato. Schiarite le luci dell'inspector
-    (`src/inspect.ts`: hemi 2.3/key 2.7/rim 1.1 + fill) perché l'armatura scura era illeggibile.
-  - Creato **harness "lineup"** (`packages/client/lineup.html` + `src/lineup.ts` + `tools/verify/lineup.mjs`):
-    carica N GLB affiancati, normalizza altezza 1.9m, `?models=` e `?yaws=` per-modello. Reso un'immagine con
-    **4 candidati DISTINTI** dalla libreria: Tank=`Knight_Met`, Arciere=`armored_guard_knight_rig` (provvisorio),
-    Mago=`pbr_shadowkin_mage_rigged`, Ibrido=`shadowflame_samurai`. = prova che 4 classi distinte realistiche
-    sono fattibili col free esistente. (`.verify/lineup.png` mostrato all'utente.)
-  - GLB copiati in `packages/client/public/characters/` (worktree). Deps installate nella worktree (pnpm store
-    caldo, 6s); `@ragequit/shared` buildato; dev server inspector su :5174.
-  - STATO: in attesa OK utente su assegnazione classe→modello. Prossimo: integrare Tank=Knight in-game (single-GLB
-    Mixamo loader, 14 anim pronte) come primo drop-in verificabile; gli altri 3 = conformare anim a Mixamo (lavoro vero).
-  - ⚠️ NOTA repo: il working tree del repo PRINCIPALE `E:/GIOCHI/RAGEQUIT` è sul branch vecchio
-    `feat/first-person-viewmodels` (no inspector/harness) → si lavora nella worktree `eloquent-robinson-6bdcc4`.
-
-- **2026-06-12 — VETTING LIBRERIA (richiesto dall'utente) + tentativo integrazione Tank=Knight (BLOCCATO).**
-  Feedback utente: «hai controllato che gli asset possano usare TUTTE le animazioni?». Giusto → fatto vetting
-  data-driven di **tutta** la libreria personaggi con `tools/verify/vet-rigs.mjs` (legge scheletro+anim di ogni
-  GLB via @gltf-transform). **ROSTER reale:**
-  - **Mixamo-ready (drop-in, usano le 204 anim) = SOLO `Knight_Met` (Tank, 14 anim)** + `zombie` (mob).
-  - NON-Mixamo (servono conform/retarget, NON usabili as-is): `armored_guard` (rig custom, 1 anim),
-    `pbr_shadowkin_mage` (rig Character Creator, 0 anim reali), `shadowflame_samurai` (rig Reallusion, 0 anim),
-    `lightning_mage` (NESSUN rig). Quindi: per arciere/mago/ibrido **non esiste drop-in gratis** in libreria →
-    vanno scaricati Mixamo-ready o conformati via Mixamo (passo dell'utente).
-  - **Integrazione Tank=Knight TENTATA e BLOCCATA.** Aggiunto campo `mixamoGlb` a `ClassVisualDefinition`
-    (shared) + percorso "GLB singolo Mixamo" nel loader (`buildCharacterModel`) + branch in
-    `_installCharacterModel` (tiene materiali PBR, niente head-clip, nasconde spada/scudo interni, mappa i 14
-    clip). **BUG bloccante:** `Knight_Met` è autorato a **scala 1/100 dentro un nodo `knight`** (mesh in cm).
-    In RAW (scene.add diretto) rende perfetto, ma appena la pipeline del gioco **scala/sposta** il modello, lo
-    **skinning 'attached' di three.js collassa la mesh del corpo** (le ossa restano giuste → le armi su osso si
-    vedono, il corpo no). Diagnosi certa (flag mesh tutti ok: visible/colorWrite/layers; worldScale 0.01).
-    Provati: bone-box scale, no-scale, re-bind, no-clone → tutti falliti. **FIX corretto = normalizzare il GLB
-    a 1:1 offline** (bake della scala 0.01 in geometria+skeleton+inverseBindMatrices), poi ri-abilitare.
-  - **STABILIZZATO:** `mixamoGlb` del Tank **commentato** → il gioco torna al Tank modular funzionante (niente
-    Tank invisibile). Codice/scaffolding del percorso single-GLB restano (typecheck verde). Harness `vet-rigs.mjs`
-    - `lineup.*` tenuti (utili). GLB realistici copiati in `public/characters/` (servono al lineup).
-  - **PROSSIMO PASSO concreto:** normalizzare `Knight_Met.glb` (e futuri Mixamo) a scala 1:1 → un task focalizzato;
-    poi il Tank=Knight entra in-game verificabile. LEZIONE: i Mixamo-export a 0.01 vanno normalizzati prima di entrare nella pipeline.
-  - **AGGIORNAMENTO — scala RISOLTA, ma 2° bug più profondo.** Creato `tools/verify/normalize-glb.mjs` (bake della
-    scala 0.01 in geometria+ossa+inverseBindMatrices+anim) → `Knight_Met_norm.glb` **rende PERFETTO in RAW** (scala
-    ok). MA nella pipeline install il corpo **ancora non si disegna**: questo rig salva la **mesh "collassata"**
-    (225 verti ~in un punto, rest-pose piatto) e si vede SOLO quando lo skinning la espande con un'animazione. In
-    RAW (mixer sull'idle) si espande; nella pipeline le ossa SI posano (spine a Y 0.256, idle running) ma il corpo
-    skinnato resta collassato → invisibile. Escluso a uno a uno: scala/clone/posizione/mixer/attacco-armi → nessuno
-    è il colpevole. È un edge-case three.js skinning di QUESTO rig vs `_installCharacterModel`.
-  - **DECISIONE/PROSSIMO:** non forzare più il Knight nella pipeline modulare. La via che FUNZIONERÀ = **render path
-    DEDICATO per i personaggi single-GLB** che replica il RAW (che rende perfetto): add modello + mixer su clip
-    originali + scala-altezza + grip, SENZA il sistema head-clip/layer/material-fork dei cartoon. (Oppure asset
-    autorato pulito 1:1.) Strumenti tenuti: `vet-rigs.mjs`, `normalize-glb.mjs`, `lineup.*`. Tank torna modular (ok).
-  - **CONCLUSIONE FINALE (dopo render-path dedicato + analisi del file).** Costruito `_installSingleGlbModel`
-    (path dedicato, no head-clip/layer/material-fork). NON basta. **Causa-radice provata dai dati del file:** la
-    mesh del corpo è autorata **COLLASSATA** (POSITION del corpo = lastra piatta X0.3×**Y0.09**×Z1.0 a Y~1.4): il
-    corpo NON ha un bind-pose vero, si forma SOLO via skinning animato. Le mesh a **osso singolo** (spada/scudo)
-    rendono; il corpo **multi-osso** collassa nella pipeline (test rosso: solo le armi diventano rosse). Nel RAW
-    rende perché l'idle deforma ≈ posa in piedi. Isolati TUTTI: scala/clone/posizione/mixer/clip-clone/traslazione/
-    bind attached+detached → nessuno risolve. **= export ROTTO di questo specifico GLB** (bind-pose collassato).
-    **VERDETTO:** serve un personaggio **autorato pulito** (rest-mesh vera T-pose, 1:1). Scaffolding `mixamoGlb`+
-    dedicato lasciato in codice ma DISABILITATO. `Knight_Met_norm.glb` (scala 1:1, rende perfetto STANDALONE) tenuto.
-
-- **2026-06-12 — SVOLTA: LA PIPELINE È SANA, il Knight era solo ROTTO. Personaggi realistici RENDONO in-game.**
-  Test con asset PULITI via il path dedicato `_installSingleGlbModel` + `normalize-glb.mjs`:
-  - **`Soldier.glb`** (three.js, rig Mixamo pulito, mesh vera, 4 anim, scaricato da GitHub raw) → **RENDE E SI
-    ANIMA** nel motore vero (corpo multi-osso intero, posa di cammino). = la pipeline funziona con asset sani;
-    il Knight era difettoso (mesh collassata), non la pipeline.
-  - **`medieval_knight.glb`** (dalla libreria, `tank/Pack _warrior _free/`, rig Tripo 40 ossa, mesh vera) →
-    **RENDE PERFETTO**: cavaliere a piastre nere + mantello + occhi rossi = lo stile dark che l'utente vuole.
-    MA le sue "4 anim" sono **pose statiche da 1 frame** (NlaTrack, dur 0.04s) → niente vere animazioni → T-pose.
-  - **Aggiunto** in `_mapMixamoClips` un fallback by-index per clip a nomi generici (NlaTrack) — non basta qui
-    perché le clip sono pose statiche, ma serve per char con clip vere a nomi non-standard.
-  - **STRATEGIA NUOVA (la via vincente):** i modelli realistici dell'utente RENDONO; manca solo animarli. Soluzione
-    generale = **retarget della libreria animazioni Mixamo (le 14 clip del Knight, o le 204 FBX) sui rig realistici**.
-    Mappatura ossa medieval→Mixamo **PULITA e verificata** (Hip→Hips, Spine01→Spine, L*Thigh→LeftUpLeg, L_Calf→LeftLeg,
-    L_Upperarm→LeftArm, L_Forearm→LeftForeArm, L_Hand→LeftHand, idem R*\*; i Twist senza equivalente restano a riposo).
-    Entrambi bipedi standard → `THREE SkeletonUtils.retargetClip` fattibile. Questo sblocca 4 classi realistiche
-    animate dai modelli che l'utente HA GIÀ (medieval_knight, samurai, mage…).
-  - **PROSSIMO:** costruire il retargeting (runtime nel loader o bake offline) → animare il medieval_knight col Mixamo,
-    poi estendere a samurai/mage per le 4 classi. Asset tenuti: `Soldier.glb/_norm`, `medieval_knight.glb`.
-
-- **2026-06-12 — ✅ SBLOCCO: 4 CLASSI DISTINTE, 3 REALISTICHE ANIMATE — meccanismo "CC-direct" (LA soluzione).**
-  Il retargeting Mixamo↔rig-diversi resta garbled (provati world-delta E local-delta: ribalta/garbuglia — rest-pose
-  troppo diversi). LA VIA GIUSTA scoperta: **applicazione DIRETTA di clip della stessa famiglia di rig** — zero
-  retargeting, solo rimappa dei nomi:
-  - La libreria ha `MageCollectionSamplesFree/CharacterCreator/*_CC.fbx` (6 clip mago) con ossa **`CC_Base_*`** =
-    STESSO scheletro del `pbr_shadowkin_mage` e del `shadowflame_samurai` (rig CC). E il `medieval_knight` (Tripo)
-    usa gli **stessi nomi senza prefisso** (`Hip`, `L_Thigh`…) → le stesse clip valgono anche per lui.
-  - **Implementato in `character-loader.ts`:** `ccAnims` per classe (in `classes.ts` visuals) + `_loadFbxClip`
-    (FBXLoader, cache) + `_remapClipToModel` — tiene SOLO tracce `.quaternion`, rimappa per **suffisso numerico**
-    (`CC_Base_Hip` ↔ `CC_Base_Hip_03`, i GLB dedupano i nomi) e per **prefisso** (`CC_Base_Hip` ↔ `Hip`), e
-    **SCARTA la traccia del root** (`boneroot|^root$|_rootjoint`): porta la convenzione Z-up dell'FBX e sdraiava
-    il modello di 90° (questo era il bug-chiave).
-  - **STATO CLASSI (verificato in-engine, montage mostrato all'utente):** Tank=`medieval_knight` (bestione piastre
-    nere+mantello) · Mago=`shadowkin_mage_norm` (stregone mascherato) · Ibrido=`shadowflame_samurai_norm` (samurai
-    rosso-oro) — tutti REALISTICI e ANIMATI (clip CC dirette). Arciere=modulare (ranger verde incappucciato, completo).
-    Tutti normalizzati 1:1 con `normalize-glb.mjs` (i GLB-da-FBX hanno il nodo 0.01).
-  - **RIFINITURE da fare:** (1) le 6 clip CC sono "da mago" (cast/powerup) → mancano locomotion/death per i 3
-    realistici (gli stati fanno fallback su idle; serve trovare clip CC di run/walk/morte free); (2) grip armi
-    per-rig (lo staff fluttua sulle mani del mago, lame doppie sul tank scuro); (3) tank troppo scuro (materiale/luce);
-    (4) arciere realistico (l'`armored_guard` ha nomi ossa simil-CC parziali — candidato). Lineup/inspect = harness di verifica.
-
-- **2026-06-12 — RUN AUTONOMO "analizza→trova→correggi" (richiesto dall'utente). GATE PIENO VERDE.**
-  1. **Gate completo** (`pnpm check`): trovati e corretti lint (`prefer-const` in lineup.ts) + format (2 file).
-     Tutti i test passano: **203 server + 41 client**.
-  2. **Asset de-bloat**: rimossi i GLB duplicati/inutilizzati (−92MB: Knight_Met raw, Soldier raw+norm, guard,
-     mage/samurai raw). Compressi i vivi con gltf-transform: `medieval_knight` **37→24.6MB** (weld+quantize,
-     niente texture: è vertex-color), `samurai` **27→6MB** e `mago` **8.9→1.9MB** (texture→WebP).
-     `public/characters` 135→95MB. Render verificati identici dopo compressione.
-  3. **Grip armi (single-GLB)**: il path dedicato non attaccava l'arma → ora aggancia il `weaponGroup` alla
-     mano destra con match fuzzy dei nomi CC/Tripo/Mixamo (`CC_Base_R_Hand_xx`/`R_Hand`/`RightHand`), spada
-     verticale a riposo. **Bestione schiarito** (`GLB_BRIGHTNESS` ×1.55 sui vertex-color, ora leggibile).
-  4. **R6 RISOLTO (font menu)**: scaricati e self-hostati `Inter` (variabile) + `Rajdhani` 500/600/700 woff2
-     (~95KB, `public/fonts/`) + @font-face in `game-ui.css`. **Verificato via `document.fonts`** nel browser
-     headless: Inter e Rajdhani ora CARICANO (prima cadeva tutto su Arial).
-  5. **Bug combat [27] RISOLTO**: il danno passava per 4 `Math.round` in cascata (curse→fury→surge→flow,
-     drift cumulativo) → ora moltiplicatori in float e UN solo round. **Estratto** in
-     `server/src/sim/damage-modifiers.ts` (`applyOutgoingDamageModifiers`) anche per rientrare nel file-budget
-     di GameRoom (1960→sotto il tetto 1956). Test invariati e verdi.
-  6. Gate finale: **tutto verde** (typecheck, budget, assets, lint, format, content, test).
-
-- **2026-06-12 — RUN "finisci il gioco" (piena libertà). Verifica IN-MATCH + point-light spell + ship su main.**
-  1. **Verificato IN PARTITA** (shot.mjs, server worktree su :2567 — ucciso un server orfano di una worktree
-     vecchia che occupava la porta): match come tank e come mage, coverage 75–81%, **zero page errors**.
-     Registrati i materiali reali dei single-GLB in `userData.glbMaterials` → i flash di stato (hp pulse/
-     shield/damage blink) funzionano anche sui personaggi realistici.
-  2. **STILE §7 layer 5 FATTO**: **dynamic PointLight per proiettile spell** (`projectile-visuals.ts`) — hue
-     dall'elemento, intensità 7/range 7/decay 2, pool max 6 concorrenti (budget), niente luce sulle frecce.
-     La magia ora illumina la pietra. Test client verdi.
-  3. **Pulizia finale**: rimosso TUTTO il codice morto del retargeting cross-rig (3 funzioni + dizionario) con
-     un commento-guardia «non reintrodurre»; rimosso `Knight_Met_norm.glb` (−9.4MB, era solo del path morto).
-     Aggiunto `tools/verify/animshot.mjs` (verifica clip forzate: `&anim=run|death|attack` in inspect.html).
-  4. **CONFERMA cross-rig = vicolo cieco** (test visivo): anche l'applicazione diretta Mixamo→CC via dizionario
-     capitomba il corpo. Le anim si trasferiscono SOLO nella stessa famiglia di rig. **Locomotion dei 3
-     realistici = BLOCCATA su clip CC** (ActorCore ne ha 32 gratis ma serve account/browser → unico passo
-     dell'utente); nel frattempo corsa/morte fanno fallback su Idle (coerente, non rotto).
-  5. Gate pieno verde → **commit + push su `main` (= deploy prod)**.
-
-- **2026-06-12 — ROUND 2 (feedback utente: scudo storto · mappe da rifare · QoL "sembra primitivo").**
-  1. **SCUDO/BRACCIO RISOLTO.** Cause trovate coi dati (diag Playwright su `__inspectChar`): (a) `findBone`
-     non conosceva i nomi CC/Tripo → sui realistici lo scudo finiva sul fallback e il MODELLO single-GLB non
-     chiamava mai `applyShieldProp` → gruppo scudo VUOTO (meshCount 0); (b) posa-parata additiva troppo
-     estrema (braccio slogato); (c) scala scudo doppia sui realistici (model scale ~1.0 vs ~0.66 modulare).
-     FIX: **fuzzy bone-match canonico** in `findBone` (`_canonBone`: side+part, gestisce `CC_Base_L_Hand_31`/
-     `L_Hand`/`mixamorig:LeftHand`); `applyShieldProp` nel path single-GLB; costanti parata ammorbidite
-     (Z −0.8, X 0.42, gomito 0.95); scala scudo ×0.45 sui single-GLB. Verificato: knight para con scudo al
-     braccio, archer in guardia plausibile.
-  2. **MAPPE RIFATTE (level-design vero, principi arena-PvP).** `duel_arena` = "Court of Pillars": slab
-     centrale bassa vault-abile, 2 pilastri-orbita grassi E/W (melee dance), corsie z=±5 interrotte da
-     pilastri snelli (no shooting-gallery per gli archi), L-wall di protezione a ogni spawn, 2 power-flank
-     rialzati con step (rischio/ricompensa). `gladiators_arena` = "Ruined Bastion": keep centrale con DUE
-     approcci a gradini (la power position si conquista), rovine a taglie/posizioni irregolari (simmetria
-     180°, niente effetto-griglia), muri sfalsati off-cardinal, pocket-crate fra le zone, piattaforme angolo
-     ad altezze diverse (2.6/3.4 in coppie diagonali). Validator + 203 test server verdi; verificato in-match
-     (muro-spawn in muratura visibile davanti al giocatore).
-  3. **QoL AUDIO (il gap vero del "primitivo"):** il gioco aveva GIÀ popup-danno/hitmarker/kill-feed/20+ SFX
-     procedurali (audit fatto) — mancavano **passi** e **ambiente**. Nuovo `audio/ambience.ts`: footstep
-     stride-driven (uno scuff ogni ~2.1 m a terra, pitch variato, guard anti-teleport) + **wind-bed loop**
-     procedurale con swell lento (brown noise + LFO), zero file, dentro il master gain (volume/mute ok).
-     Spostati lì anche `playSwap`/`playStatus` (estrazione per il file-budget di sound-engine/main).
-  4. Gate pieno verde (244 test) → commit + push su `main`.
-
-- **2026-06-12 — ROUND 3 (feedback live: «errori ovunque, modelli che non si muovono, posizionati male»).**
-  CAUSA #0 del feedback precedente «tutto uguale»: l'utente giocava su **:5173 servito da una WORKTREE VECCHIA**
-  (dazzling-lumiere) e il repo principale era sul branch superato → ora :5173 = client NUOVO di questa worktree,
-  repo principale allineato a `origin/main` (file sciolti salvati in `.backup-untracked/`). LEZIONE: prima di
-  qualsiasi verifica utente, controllare COSA serve la sua porta.
-  1. **REVERT personaggi realistici dal gameplay** (decisione di completezza): le clip CC free sono solo cast →
-     in partita i 3 realistici SCIVOLANO senza animazione di corsa/morte = ingiocabili («modelli che non si
-     muovono»). `mixamoGlb`/`ccAnims` COMMENTATI per tank/mage/hybrid → il gioco torna ai 4 modulari COMPLETI
-     (tutte le anim) e distinti (CLASS_BUILD breadth+tinte). Le 4 classi realistiche tornano quando ci saranno
-     clip CC di locomotion (ActorCore free, serve account utente). Tutto il codice/asset resta pronto.
-  2. **AUDIT sistematico** (8 idle class×weapon + run/attack/death forzati con animshot) → 2 bug VERI trovati:
-     - **DECAPITAZIONE in pose basse** (corsa china, morte a terra): il piano head-clip era ad ALTEZZA FISSA →
-       la testa scendeva sotto e spariva. FIX in 2 passi: (a) il piano segue l'OSSO della testa (`headBone` in
-       userData); (b) segue anche l'ORIENTAMENTO (normale = asse-Y dell'osso, `setFromNormalAndCoplanarPoint`)
-       perché da sdraiati il piano orizzontale non tagliava più nulla e la pelle base bucava i vestiti.
-       Verificato: corsa con viso ✓, morte con viso e vestiti puliti ✓.
-     - **STAFF "da lancia"**: grip orizzontale all'indietro → da davanti un moncone all'anca. FIX: rotazione
-       verticale (come la spada) + scala 0.46/0.42→0.56/0.52 su tutte le classi. (Tentata inclinazione extra:
-       peggio, revertita — il diagonale a tutta lunghezza è il meglio del KayKit staff.)
-  3. Verificato in-match su :5173 (bot in affondo animato, 0 errori). Gate verde → ship su main.
-
-- **2026-06-12 — ROUND 4 (feedback: arena piccola/fatta male · anim non partono sempre · scudo/braccio ·
-  arco storto · «si blocca tutto») — METODO NUOVO: sonda interattiva, non più screenshot statici.**
-  Costruito `tools/verify/probe.mjs`: GIOCA davvero ~25 s (corre, mira, attacca, riattacca, abilità, Tab-swap,
-  parata, salto) registrando errori console, **rAF-gap >150 ms** (rilevatore "si blocca") e **conteggio
-  programmi shader** (`__renderer` esposto). Risultati e fix:
-  1. **FREEZE = compilazione shader in-fight (2 cause, 2 fix).** (a) Le PointLight dei proiettili venivano
-     aggiunte/rimosse a runtime → ogni spawn cambiava il light-count e three ricompilava TUTTI gli shader.
-     → **pool FISSO di 6 luci sempre in scena** (intensity 0 da ferme, acquire/release, posizione sincronizzata
-     al proiettile). (b) Materiali di proiettili/trail/impatti compilavano alla PRIMA magia → **warm-up**: un
-     proiettile per elemento + un impatto permanenti a y=−120 → compilano nel load. + `render/shader-warmup.ts`:
-     `renderer.compile` del pass viewmodel a 4/12/22/35 s (copre i GLB che arrivano al join). Probe: programmi
-     stabili durante il play (53→55 prima del tuning sweep).
-  2. **ANIM CHE NON RIPARTONO**: `_crossfade` usciva se `current===next` → due colpi IDENTICI consecutivi
-     (arco→arco, staff→staff) non ri-triggeravano la clip (restava clampata sull'ultimo frame). FIX: se il
-     one-shot richiesto è già current ma l'azione è FINITA → `reset()+play()` (Death escluso).
-  3. **SCUDO**: ancorato all'**AVAMBRACCIO** (lowerarm_l) invece che alla mano — la mano ruota a ogni
-     micro-movimento e lo scudo "ballava" anche da idle. Posizionamento metà-avambraccio, guardia verificata.
-  4. **ARCO FPV storto/enorme** (riempiva mezzo schermo di traverso — confermato a screenshot): riposizionato
-     `VM_POSITION (0.02,-0.44,-0.5)` scala 0.26→**0.2** → basso-sinistra, freccia verso il mirino.
-  5. **ARENA ×1.5**: `ARENA_SHELL_SCALE = 1.5` (conchiglia GLB, sabbia, offset-y del pavimento, anello torce
-     scalano insieme — il pit passa da r≈16.7 a r≈25); layout mappe ALLARGATI (centri ×1.3 duel / ×1.45 FFA
-     via `dbox`/`gbox`, le misure dei blocchi restano), spawn fuori (±14.3 duel, ±23 FFA). Verificata in-match:
-     campo visibilmente ampio. Gate verde (244 test) → ship.
-
-- **2026-06-13 — ROUND 5 (l'utente: «vai nella STANZA TEST e controlla, armi dei nemici messe male»).**
-  METODO NUOVO ancora: `tools/verify/testroom.mjs` — entra nella Stanza Test (il banco di prova dell'utente),
-  aspetta il load dei GLB (12 s — al primo scatto i dummy erano ancora placeholder dorati!), fotografa la fila,
-  **zooma su ogni dummy** (sharp crop) e DIAGNOSTICA via `__remotes` (genitore/posizione di weaponGroup e
-  shieldGroup per ogni remoto). Trovati e risolti:
-  1. **SCUDO dei remoti "pannello fluttuante"**: ancorato sì all'avambraccio, ma ruotato con la faccia larga
-     avanti/dietro (di profilo = lastra sospesa) e scostato dal braccio. FIX: yaw **−90°** (faccia borchiata in
-     FUORI lungo il braccio — prima prova a +90° mostrava il RETRO con la maniglia), stretto al braccio
-     (pos −0.02/0.10/0). Verificato a zoom: buckler da braccio vero, fronte visibile.
-  2. **STENDARDI A MEZZ'ARIA**: l'anello bandiere era a raggio FISSO 21 (muro vecchio) e quota 4.5 — con la
-     conchiglia ×1.5 il muro è a ~31 → bandiere appese al nulla dentro il pit. FIX: `BANNER_RING_R` e quota
-     scalano con `ARENA_SHELL_SCALE`. LEZIONE GENERALE: OGNI decorazione a raggio/quota fissa va legata alla
-     scala della conchiglia (torce ✓, bandiere ✓ — controllare eventuali future).
-  3. Diagnostica remoti: arma in `hand_r` ✓ per tutte le classi; scudo visibile solo per sword ✓.
-     Stanza Test finale: dummy armati corretti, bandiere sui muri, niente oggetti volanti. Gate verde → ship.
-
-- **2026-06-13 — AUDIT PROFESSIONALE COMPLETO (richiesta utente: «trova ogni errore/logica fatta male,
-  soprattutto le armi»).** Workflow multi-agente: 8 finder paralleli (doppia lente sulle armi) + verifica
-  AVVERSARIALE che ri-legge il codice reale per ogni finding → **37 confermati, 16 falsi positivi scartati**
-  (il verificatore ha retto: i 16 erano scelte di stile/codice morto irraggiungibile/premesse sbagliate).
-  Dedup: ~30 unici (GLB morti segnalati 5×, outline FPV 4×). **Batch SICURO applicato + committato sul
-  branch worktree (NON pushato su main = deploy prod; decide l'utente). Gate verde, 341 test.**
-  - **Sicurezza server:** loadoutSet senza cap sulle array client = DoS event-loop (milioni di stringhe
-    vuote) → cap; handler heartbeat era l'unico non rate-limitato → gate+finite-guard; swing.atTick non
-    validato finite → poteva disattivare la lag-comp (NaN→posizione live).
-  - **Correttezza combat:** [#9 del backlog] parata PERFETTA (tap) consumava Fury Surge/Flow e applicava
-    lo slow anche a colpo bloccato → ora `fullyBlocked` salta i modificatori consumanti; dash/knockback
-    usavano il raggio hitbox-proiettili 0.65 invece del footprint 0.4 → dash si fermava prima dei muri
-    raggiungibili a piedi; ELO assegnato su pareggio (bestWins=-1) → guard sul lead stretto; matchmaking
-    `filterBy(['mode','difficulty'])` (difficoltà training non più mischiate); rimosso codice morto
-    (blocco knockup PendingDamage mai vero; fallback effectMove che attraversava i muri); path m2-parry
-    ristretto ai SOLI bot (gli umani lo doppiavano → AbilityFailed/tapStart fantasma).
-  - **Armi/scudo render (client):** outline del viewmodel FPV staff/spada era un NO-OP (`outline.parent`
-    null) + leak geometria → ora aggancia al parent della mesh sorgente; grip arma applicato solo dopo il
-    re-parent sull'osso mano (niente arma minuscola all'origine se il GLB arma arriva prima del modello);
-    scudo con guard anti-race (re-selezione rapida impilava 2 scudi); parata HOLD ora mostra la posa
-    sostenuta anche sui remoti.
-  - **Riconnessione:** ora rigioca il mode UI originale → la difficoltà training sopravvive.
-  - **De-bloat deploy (~79MB OFF dal bundle spedito):** GLB realistici disabilitati + FBX anim CC spostati
-    FUORI da `public/` in `packages/client/character-sources/` (preservati per il re-enable, non più
-    spediti); 6 texture trim arena orfane 2048px (~16MB) eliminate; `.clinerules` (7MB) scollegato+gitignore;
-    `check:assets` ora segnala le immagini orfane nei prop-bundle (chiuso il buco del gate "bugiardo");
-    corretto il commento falso "kept in sync" sul raggio capsule. Verificato: `dist/characters` = solo
-    `UAL1_Standard.glb`, trim assenti. `vite build` ok.
-  - **DA DECIDERE CON L'UTENTE (non toccato — scelte di stile/asset o serve verifica live):**
-    (1) **breadth skew armi/scudo** [HIGH]: il `build.breadth` per-classe scala SOLO X/Z del modello (Tank
-    1.32) → l'arma/scudo agganciati a un osso EREDITANO lo skew (non si può allargare il corpo senza scalare
-    le ossa). Trade-off: silhouette di classe vs armi non deformate. (2) **flash post-FX su ogni hit-stop**
-    [HIGH, perf]: durante l'hit-stop il frame salta GTAO/grade/vignette → pop visibile; il fix richiede check
-    perf live. (3) **anim di tiro arco/staff sui remoti** [HIGH]: nessuna clip di rilascio/cast (serve campo
-    schema `lastRangedReleaseTick` + verifica). (4) staff FP senza braccia, orb staff mai tinto (heuristica
-    nome mai matcha i KayKit), combo spada = stessa clip, viewmodel senza grade-pass, grip single-GLB latente.
-  - **AGGIORNAMENTO STESSA SESSIONE — l'utente: «fai tutto senza fermarti» + «sempre main».** Risolti in
-    autonomia, gate verde (341 test), e **PUSHATO su `main` (deploy prod)**:
-    - (1) **breadth DISATTIVATO** (scelta utente): il modello torna a scala UNIFORME → armi/scudo non più
-      deformati; identità di classe via outfit/capelli/accessori + tinta accent. `CLASS_BUILD.breadth`
-      rimosso del tutto (commento-guardia «non reintrodurre»).
-    - (2) **flash post-FX hit-stop RISOLTO**: durante l'hit-stop si compositano comunque GTAO/grade/vignette
-      via `finalComposer.render()` (si salta SOLO il darken bloom per-frame, riusando il target precedente) →
-      niente più pop a ogni colpo. (Accorcia anche `main.ts` → rientra nel budget.)
-    - (3) **anim di tiro remoti RISOLTA**: nuovo campo schema `Player.lastRangedReleaseTick` (settato solo
-      quando freccia/dardo nasce davvero in `handleChargeRelease`/`handleFireStaff`); il client edge-detecta
-      il cambio e apre una finestra 220 ms → `Bow_Release` (via `attacking`) / `Staff_Cast` (via `casting`)
-      sui nemici. hitReact/parry mantengono la priorità; nessun falso trigger su tap/cancel.
-  - **RESTANO (LOW, bloccati da ASSET o tuning live — non sono bug di codice da fixare alla cieca):** staff FP
-    senza braccia (serve un GLB braccia) + sway idle; orb staff element-tint (il KayKit staff è una mesh
-    unica, servirebbe una mesh-tip emissiva da posizionare a vista); varietà clip combo spada (serve una 2ª
-    clip); viewmodel senza grade-pass (budget main.ts + render non banale); grip single-GLB (codice morto,
-    si ritara in-engine al riabilitare i realistici); shader-warmup ancorato al page-load (micro-stall
-    one-shot). Tutti annotati; si fanno col modello/asset giusto o con l'utente che guarda dal vivo.
-
-- **2026-06-13 — GAP ANALYSIS «cosa manca» (richiesta utente). 9 agenti: intento (doc) ↔ realtà (codice/
-  asset). 98 gap → roadmap priorizzata verificata sul codice in `COMPLETEZZA.md`** (BLOCCANTI/IMPORTANTI/
-  POLISH + nota grafica + ordine consigliato). Verdetto: «ottimo fight, scheletro di gioco» — finito solo
-  l'arena (PBR+luci); restano personaggi/armi cartoon (PIANO #1), niente musica/audio-file, 5v5+matchmaking
-  irraggiungibili, progressione/leaderboard/cosmetici assenti. `COMPLETEZZA.md` è la mappa-stato; questo file
-  resta il piano operativo. Prossimi passi sicuri (ordine §1): bot-fill FFA, gate WebGL, surface errore-connessione.
-  Le scelte di
-  STILE e ASSET sono **sue**; io faccio analisi, propongo, eseguo. (Questo è il piano che mi ha
-  scritto «20 volte»; ora è registrato — non va più ridetto.)
-  **Obiettivo:** rifare **TUTTA** la grafica in **UNO stile coerente** — personaggi, arena, armi,
-  braccia, props, VFX, HUD **e i MENU**. La camera/atmosfera è secondaria: il problema è mesh/asset/UI.
-  **PROCESSO (la prossima sessione esegue QUESTO, in ordine, con l'utente che decide):** 4. **ANALISI** completa della grafica attuale + di cosa è rotto (skin tutte uguali = frankenstein a
-  layer; armi girate/scudo storto = grip a mano; braccia FP a caso; font menu su Arila; VFX piatte). 5. **DECIDERE INSIEME LO STILE per TUTTO il gioco** (mondo 3D **e** menu/HUD) — **UNA via sola**.
-  `STILE.md` esiste ma copre il 3D e l'ho deciso io → va **ri-validato con l'utente** ed esteso a
-  menu/UI. Proporgli 2-3 vie concrete (con riferimenti), **lui sceglie UNA**. 6. **STUDIARE `E:/GIOCHI/ASSET_GRAFICA` a fondo** (ha `_INVENTARIO.md`): elencare **SOLO** ciò che è
-  **davvero utile e funzionale** allo stile scelto; scartare il resto (incluso il cartoon che odia). 7. **SCARICARE il mancante FREE** online (Sketchfab/Quaternius/Mixamo/Poly Haven/ambientCG/font CC0). 8. **INTEGRARE tutto coerente**, verificando (log+logica + l'utente guarda dal vivo).
-  **REGOLE DURE:** solo asset/tech/hosting **GRATIS**; rig **Mixamo**; **gioco completo, niente tagli**;
-  valori numerici = compito MIO; **scelte di stile/asset = decise dall'UTENTE**.
-  **AREE da sistemare** (lo scope; i dettagli si fissano ai punti 2-3 con l'utente): personaggi/skin
-  (4 classi DISTINTE, oggi frankenstein in `render/character-loader.ts`) · armi+grip (R3) · braccia 1ª
-  persona · spell/VFX (`render/projectile-visuals.ts`) · menu/HUD/font (`menu.ts`,`public/game-ui.css`,`hud/*`).
-  **FATTO finora:** SOLO arena (PBR+luce). Tutto il resto è da fare con questo processo, deciso con lui.
-
-- **2026-08-11 — REVISIONE GLOBALE + RICERCA 2026 + RIFONDAZIONE (richiesta utente: «rivedi tutto,
-  cerca aggiornamenti, studia il piano perfetto e realizzalo»).** Ricerca web su 5 fronti (three.js,
-  VFX, personaggi/anim, netcode/hosting, asset free) + piano completo in **`RIFONDAZIONE.md`**
-  (prompt riscritto, diagnosi, ricerca, fasi F0-F7, punti-decisione utente). Scoperte chiave:
-  - **Personaggi (LO SBLOCCO):** i personaggi STOCK di Mixamo (Paladin/Knight/Vanguard, Erika
-    Archer, Ninja) sono tutti sul rig `mixamorig` → scaricando le anim **"with skin"** per ciascuno
-    il retargeting sparisce. Mago assente su Mixamo → modello CC + AccuRig 2.0 (free) + Rokoko/Expy
-    in Blender. Mixamo è vivo ma non mantenuto → scaricare presto. Serve l'account Adobe dell'utente.
-  - **VFX:** three.quarks (mantenuto, editor visuale, trail/sub-emitter) = sistema pronto per le
-    spell; richiede three ≥0.182 → upgrade r185 (basso rischio, ritarare ombre/GTAO).
-  - **Netcode/hosting:** Colyseus 0.17 ha la riconnessione automatica (nostro gap); **Fly.io free
-    è morto per i nuovi account** (verificare grandfathering!, piano B: Koyeb Francoforte);
-    **Supabase free si pausa dopo 7 giorni** → serve keep-alive cron.
-  - **Asset:** la licenza Fab Standard è engine-agnostic → i free bisettimanali valgono per
-    Three.js (claimarli sempre); audio completo gratis via Sonniss GDC + pack spell itch; font
-    Cinzel+Grenze Gotisch.
-  - **F0 ESEGUITA (flow sbloccato, gate verde 355 test):** (1) errore-connessione VISIBILE + retry
-    con backoff per il cold-start (niente più rimbalzo muto al menu); (2) FFA parte con 5 bot
-    (`FFA_BOT_FILL`); (3) **Team 5v5 giocabile**: tile nel menu (griglia a 4), wiring `connect('5v5')`,
-    team bilanciati (squadra più piccola), spawn a metà-anello per team, bot mai contro compagni e
-    sul nemico più VICINO (prima: ultimo iterato — fix anche per FFA); (4) gate WebGL con messaggio
-    chiaro. Estratto `rooms/lobby-fill.ts` (pure) + 11 test che bloccano le regole.
-
-- **2026-08-11 (2ª parte) — F1 FONDAMENTA TECH ESEGUITA (ok dell'utente sul piano).** Gate verde
-  (358 test), verificato live (join 5v5 reale + in-match browser headless, 0 errori):
-  - **Colyseus 0.16→0.17 + schema v4 + client `@colyseus/sdk`**: il bootstrap è cambiato — in 0.17
-    le rotte di matchmaking vivono nell'app express DEL TRANSPORT; health/monitor si montano nel
-    callback `express:` di `new Server({...})` (un'app express propria = /matchmake 404, provato).
-    `Room<{state}>`, `this.state =`, `onLeave(client, code)`, kick rate-limit 4001→**4100** (0.17
-    riserva 4000-4010). Sblocca la riconnessione automatica lato client (da cablare in F7).
-  - **Auto-quality FPS-adattivo** (`render/auto-quality.ts` + 6 test): niente detect-gpu (scarica
-    benchmark da CDN = contro la regola self-contained); campiona gli fps SOLO in live, media <42
-    → scala il preset di un tier (mai su, mai dopo scelta manuale), toast informativo.
-  - **Keep-alive Supabase**: `.github/workflows/supabase-keepalive.yml` (cron lun+gio, usa i secret già in repo; ⚠ il token locale non ha scope `workflow` → il file va aggiunto una volta dalla UI GitHub)
-    VITE*SUPABASE*\* già presenti) — il free tier si pausa dopo 7 giorni senza query.
-  - Estrazioni per file-budget: `net/join-with-retry.ts` (retry cold-start), `render/create-renderer.ts`.
-  - **F1d post-FX pmndrs RIMANDATO a F2** (stesso compositor delle spell, va visto dal vivo).
-  - DA FARE (serve l'utente): stato account Fly (grandfathered o no) · ora Mixamo (F3).
-
-- **2026-08-11 (3ª parte) — F2a SPELL PARTICLE LAYER (three.quarks) — «continua da solo, decidi tu».**
-  Le spell ora hanno CORPO: `render/spell-particles.ts` (three.quarks 0.17) sopra i core a piani
-  incrociati — **ember-trail** che scia dal dardo (emission-over-distance: densità costante a ogni
-  velocità), **burst di scintille all'impatto** (con gravità), **muzzle-puff al lancio**; tutto
-  element-tinted (STILE §7) e sul layer bloom. Design anti-freeze: **UN solo materiale** (sprite
-  `vfx_shield` cerchio soffice, colore per-particella) → un solo SpriteBatch/shader, warmato al
-  load con un burst sotto il pavimento; pool luci invariato. Verifica: nuova sonda
-  **`tools/verify/spellshot.mjs`** (pointer-lock come probe, mostra il debug HUD col Backquote,
-  campiona SOLO quando `#dbg-proj>0`) → dardo mago IN VOLO con nube di embers catturato
-  (`.verify/spell-mage-*.png`), 0 errori; `probe.mjs`: programmi shader STABILI in play (46→39,
-  nessuna compilazione mid-fight). Gate verde 358 test → push su `main`.
-  - API quarks imparata (per la prossima volta): `startColor` vuole `ConstantColor`; i vettori
-    sono di quarks.core (`Vector3/4` da three.quarks, NON di three); `ColorOverLife` vuole un
-    `Gradient` (FunctionColorGenerator), non `ColorRange`; `BatchedRenderer.update` aggiorna i
-    sistemi anche a emitter sganciato → `endEmit()+autoDestroy` è un teardown sicuro.
-  - PROSSIMO F2b (visivo, con utente o altra sessione): tuning quantità/dimensioni per elemento,
-    telegraph a terra pre-impatto, composer unico pmndrs (F1d), varietà per-elemento (es. fulmine
-    jitter, dark che ASSORBE luce).
-
-- **2026-08-11 (4ª parte) — SCOREBOARD MULTI-PLAYER (FFA/5v5 non collassano più a 1v1).**
-  `assembleEndScreen` in `game/scoreboard-data.ts` (pure, +6 test): duel → pannello classico;
-  **FFA → classifica ranked** (kill desc, riga TU evidenziata, vittoria = primo posto strict);
-  **5v5 → tabella per squadre** (rosse prima, bordo colore team, titolo «ROSSO x — y BLU», esito
-  dai totali team). Dati dal último Score broadcast (`lastSoloScores`/`lastTeamScores`, reset a
-  inizio match). Render `renderMultiScoreboard` in `endgame.ts` + CSS `.sb-table/.sb-trow`.
-  Vale anche per l'uscita volontaria (FFA/5v5 mostrano la tabella, duel abbandonato resta
-  PRATICA senza ELO). main.ts alleggerito (~-60 righe, i due call-site ora sono una chiamata).
-  Gate verde 362 test → push su `main`. **+ RIVINCITA**: chip ⟳ sul fine-partita (duel e multi) che rilancia lo STESSO ui-mode via `lastConnectMode` (teardown pulito → launchModeOrForge).
-
-- **2026-08-11 (5ª parte) — 🎉 PERSONAGGI REALISTICI IN GIOCO (F3 core, «muoviti/fai tutto tu»).**
-  Con l'utente loggato su Mixamo (Brave, estensione Chrome): scaricati **i personaggi stock + i
-  PACK di animazioni** (la scoperta chiave: 1 pack = 50+ clip in uno zip): Paladin J Nordstrom +
-  Pro Sword and Shield (52), Erika Archer con arco + Pro Longbow (40), Ninja + Great Sword (52).
-  Blocco Brave "download multipli" superato coi "Consenti" dell'utente. Tutto committato in
-  `character-sources/mixamo/`. **Pipeline di fusione NUOVA** `tools/asset-pipeline/mixamo-to-glb.mjs`
-  (niente Blender: FBX2glTF via npm + gltf-transform mergeDocuments con retarget canali per nome
-  osso + prune/dedup/unpartition + optimize quantize/WebP) → **paladin.glb 1.9MB/29 clip,
-  erika.glb 2.5MB/20, ninja.glb 1.8MB/23**. `classes.ts`: `mixamoGlb` RIATTIVATO per tank/archer/
-  hybrid (il blocco storico "no locomotion" è morto — clip complete embedded); `_mapMixamoClips`
-  esteso ai nomi dei pack (guardie negative su block_idle, slash→attack2, impact→hit-react,
-  power_up→respawn, aim_overdraw/recoil→arco). **Verificato**: lineup post-compressione (tutti e
-  3 animati) + Stanza Test in-engine (a terra, armati, team-rim ok). Gate 362 test → main (9ec00a4).
-  - RESTANO (tuning prossima sessione): materiali scuri nell'arena (Paladin quasi nero → serve
-    boost tipo GLB_BRIGHTNESS), grip armi per-rig, yaw lineup, **mago** (serve Pro Magic Pack —
-    zip ancora bloccato dal consenso Brave — + un modello CC via AccuRig), FPV braccia.
-
-- **2026-08-12 — GIRO «continua a migliorare e fixare» (4 fix shippati, gate verde 364 test).**
-  (1) **Luminosità personaggi**: GLB_BRIGHTNESS paladin 1.5 / ninja 1.2 / erika 1.15 (il piastre-nero
-  era una silhouette). (2) **Arco animato di Erika**: i mesh `Bow/Arrow` embedded si mostrano SOLO con
-  arco equipaggiato (prop di gioco soppressa), staff li nasconde — generico via nome mesh. (3) **Via le
-  outline ink da armi+scudo** (STILE bloccato: rim, non ink; i corpi le avevano già perse). (4) **Timer
-  10 min sui modi kill-cap** (FFA/5v5 non possono più stallare all'infinito; +2 test MatchManager).
-  Probe col Paladin in play: 0 errori, shader 43→43 (nessuna compilazione mid-fight). Scoreboard e
-  deathcam ora TUTTI in italiano. Commits: 4100670, 782340c, ac21282, bb93271.
-
-- **2026-08-12 — GIRO POLISH+F5 (autonomo, «fai tutte le fasi»).** Push: d96b341 (Cinzel display
-  font self-hosted su tutti i titoli · preloadClassModel via placeholder dorati · FFA→10 ·
-  barili imbruniti) · d5f3258 (orb emissivo element-tinted sullo staff — backlog giugno chiuso) ·
-  **2275e9a (F5 MUSICA: `audio/music.ts` crossfade menu↔combat, tracce CC0 OpenGameArt —
-  "Loopable Dungeon Ambience" + "Battle Theme A" —, slider Musica dedicato persistito,
-  autoplay-policy gestita col gesture-unlock esistente; CREDITS.md nuovo)**. Gate 364 test.
-  - PROSSIMI: ritratti classi dai modelli veri (menu/loadout mostrano ancora i vecchi) · F2b
-    tuning spell per elemento + pmndrs · foley file-based (Sonniss) · F7 reconnect 0.17/leaderboard.
-
-- **2026-08-12 — GIRO «continua senza fermarti, migliora tutto» (autonomo, su branch
-  `claude/game-improvements-ff3fff`, NON ancora pushato su `main` — vedi nota sotto).** Gate verde
-  379 test. Prima di toccare codice: verificato nel sorgente reale dell'SDK Colyseus 0.17
-  (`Room.mjs`) che la riconnessione **era già cablata correttamente** (auto-retry interno, consuma
-  da solo il `reconnectionToken` contro l'`allowReconnection(20s)` server) — la nota di
-  COMPLETEZZA.md/l'agente di ricerca erano fuorvianti; il gap vero era solo l'assenza di feedback
-  UI durante il retry automatico. Shippato:
-  1. **Feedback riconnessione** (`net/reconnect-feedback.ts`): toast "riconnessione automatica" su
-     `room.onDrop`, richiuso su `room.onReconnect` — prima il giocatore vedeva un gioco muto/fermo
-     per tutta la finestra di retry (fino a ~20-60s).
-  2. **Validator Recovery**: `classLoadoutFitsSlotGrammar` non imponeva mai la presenza della
-     Recovery di classe (gap COMPLETEZZA «zero self-heal possibile»). Aggiunte
-     `loadoutHasRecovery`/`ensureLoadoutHasRecovery` in `shared/constants/classes.ts` + rete di
-     sicurezza server-authoritative in `rooms/loadout-resolve.ts` (sostituisce l'ultimo slot utility
-     se manca, ServerNote di avviso — mai un match senza sustain).
-  3. **F2b varietà VFX per-elemento** (`render/spell-particles.ts`): embers/impatti/muzzle erano
-     identici per tutti e 5 gli elementi (solo colore cambiava). Aggiunta tabella `ELEMENT_MOTION`
-     (velocità/vita/size/conteggio/forza verticale per elemento) — fuoco sale e brucia in fretta,
-     ghiaccio lento e cristallino, fulmine scatta e sparisce, dark pesante e lento, nature deriva
-     verso l'alto. Un solo materiale/batch/shader invariato (shader 41→41 nel probe).
-  4. **Atmosfera arena** (STILE §5, ultimi due item mancanti): dust motes ora si illuminano per
-     vicinanza torcia (colore per-vertice ricalcolato ogni frame) + god-ray economici (cono
-     shader gradiente, stesso trucco della sky dome) sotto ognuna delle 4 torce. Verificato
-     renderizzato via `tools/verify/shot.mjs`/`spellshot.mjs` (god-ray visibile, 0 errori pagina).
-  5. **Doc drift chiuso**: `02_TECH/06` e `07` descrivevano ancora `MeshToonMaterial`/asset
-     Quaternius abbandonati; riscritti sulla pipeline PBR/Mixamo reale (con nota sul fallback
-     silhouette toon di `character.ts`, che resta vivo ma non è più il default).
-  6. **File-budget**: le aggiunte sopra avrebbero sforato il ratchet su `main.ts`/`GameRoom.ts` →
-     estratti `hud/connection-status.ts` (setStatus) e `rooms/loadout-resolve.ts` (loadout+classe+
-     recovery), che ha anche liberato margine extra sul tetto di `GameRoom.ts`.
-  - **Verifica**: hitch >150ms nel probe headless erano identici A/B (stash del branch vs baseline)
-    → artefatto SwiftShader/carico macchina (altro worktree con server attivo in parallelo), non
-    una regressione introdotta qui.
-  - **⚠ NOTA workflow**: sessione avviata in un git worktree separato (non `main`); ho scelto di
-    NON pushare/mergiare su `main` in autonomia data l'assenza dell'utente (push = deploy prod per
-    le regole del progetto) — le modifiche restano committate sul branch, pronte per review/merge.
-  - PROSSIMI: valutare leaderboard minima (letta da Supabase, nessuna migrazione servirebbe se lo
-    schema esistente basta) · split file-budget di `AbilityEngine.ts`/`sound-engine.ts` (ratchet
-    opportunities segnalate da `check:budget`) · F2b resta aperto per pmndrs post-FX + telegraph
-    a terra dedicato · ritratti classi dai modelli veri.
-
-- **2026-08-12 (2ª parte) — AUDIT MULTI-AGENTE + FIX DI BUG VERI (feedback durissimo dell'utente:
-  «è tutta una merda, non si capisce quando/cosa casti, le spell sembrano tutte uguali, le
-  animazioni non funzionano, il loadout è incomprensibile»).** Gate verde 403 test.
-  - ⚠ **PRIMA COSA, ed era colpa mia**: l'utente sentiva «il gioco attivo da qualche parte ma non
-    lo vedo, sento l'audio». Era una **scheda browser invisibile lasciata aperta da me** con il
-    gioco (e la musica) in esecuzione. Chiusa. **Lezione: spegnere SEMPRE preview/dev-server a fine
-    verifica** — un server headless che continua a girare è indistinguibile da un bug del gioco.
-  - **Metodo nuovo, e decisivo**: invece di ragionare sul codice, ho costruito sonde che
-    FOTOGRAFANO l'HUD reale in partita. `tools/verify/hud.mjs` (HUD in-match: congela il rAF —
-    `page.screenshot` va altrimenti in timeout sotto il render loop —, rimuove il canvas, nasconde
-    gli overlay, misura la geometria di ogni sezione e **fallisce se l'HUD esce dallo schermo**;
-    `HUD_CAST=1` lancia davvero le abilità e ispeziona il readout) · `tools/verify/forge.mjs`
-    (Loadout: accento-colore risolto per card + conta i nodi di testo sotto gli 11px) ·
-    `tools/verify/list-clips.mjs` (inventario clip per GLB).
-  - **Audit**: workflow a 56 agenti su 8 dimensioni (HUD, cast feedback, VFX spell, animazioni,
-    loadout, logica combat, menu, audio) con ricerca web sulle tecniche di riferimento (LoL VFX
-    style guide, Valorant clarity, Overwatch frequency-slot audio, WildStar telegraph) e verifica
-    avversariale per ogni finding. **31 confermati su 64**. Dump completo nel journal del run
-    `wf_646bb9a6-106`.
-  - **BUG DI GAMEPLAY VERI trovati e corretti** (non estetica — spiegano «le meccaniche sono una
-    merda»): (1) **ogni dash/teleport non muoveva il caster**: `effectMove` scriveva solo
-    `player.transform`, ma il tick copia `simState.pos` sul transform ogni frame → spostamento
-    annullato un tick dopo; (2) **le abilità a costo stamina erano gratis**, stesso meccanismo sul
-    campo stamina (rotti anche Energize e i drain). MeleeSystem/ProjectileSystem/ParrySystem
-    avevano già gli hook `syncSimPos`/`syncSimStamina`; l'AbilityEngine no. Ora li ha, e i test
-    asseriscono che la **simulazione** è stata scritta — i vecchi test guardavano solo lo schema,
-    ed è esattamente per questo che il bug è sopravvissuto.
-  - **NON toccato di proposito**: i 9 knockup identici. Il codice documenta esplicitamente la
-    scelta (`void airborneSec`, «differentiating airtime would be a balance change, not a bug
-    fix») → è una decisione di bilanciamento, **serve l'utente**.
-  - **Leggibilità (le lamentele dirette)**: nomi abilità non più troncati né in hotbar
-    ("MARKSMA…") né nella colonna build del Forge ("TRAIETTORIA · 24 DANNI · ESP…") · danno/cura/
-    controllo/distanza + glifo della forma del colpo ora **sul pip**, sempre visibili (erano
-    calcolati ma chiusi in un tooltip `:hover`, **irraggiungibile in FPS con pointer-lock**) ·
-    dimensione pip da variabile CSS (prima la barra usciva dallo schermo a 1280×720) ·
-    `--elem-color` non era MAI definito fuori dalla hotbar → tutte e 53 le card del Forge e il
-    diagramma "dove colpisce" erano grigi uguali; ora seguono `ELEMENT_COLOR`/STILE.md §1.
-  - **Animazioni**: Sword/Bow/Staff/Attacking idle collassavano su UNA sola clip per classe (il
-    personaggio non cambiava mai postura cambiando arma); lo staff ora usa la clip `*_casting` che
-    i pack già contengono ma non veniva mai suonata. Inoltre `exact()` risolveva i candidati
-    sull'ordine delle clip nel GLB invece che sull'ordine di priorità → Erika suonava la posa ad
-    arco già teso al posto dell'incocco. Nuovo `character-clips.test.ts` valida i **4 GLB reali** e
-    fissa a ratchet le lacune di asset rimaste (Erika non ha idle neutro, Paladin non ha clip arco).
-  - **RESTANO CONFERMATI, non ancora fatti** (in ordine di impatto): hotbar `ready` mente (non
-    legge mana/stamina/GCD) · cast bar morta per 40/53 abilità · niente anello di cast sul mirino ·
-    `#shoot-flash` identico per tutte le 53 abilità/3 armi/5 elementi · 33/53 abilità senza VFX di
-    mondo · impatto VFX spawnato al PUNTO MEDIO attaccante-vittima con raggio fisso (mente su dove
-    e quanto grande) · casting muto sul frame di input (arco e staff completamente silenziosi) ·
-    nessun telegraph a terra AoE · niente footstep/audio remoti · AoE con 3 hitbox diverse (sfera
-    vs cilindro infinito) · abilità forward che non colpisce nulla addebita comunque costo+CD.
-  - ⚠ Resta su branch `claude/game-improvements-ff3fff`, NON pushato (push = deploy prod).
-
-- **2026-08-12 (3ª parte) — SVUOTAMENTO DELLA CODA («perché in coda? devi finire tutto»).**
-  Gate verde 427 test. Altri 5 commit sullo stesso branch, tutti su problemi CONFERMATI dall'audit:
-  - **Hotbar che mentiva**: un'abilità era «PRONTA» appena fuori cooldown, ignorando mana, stamina e
-    GCD → premevi un tasto acceso e non succedeva nulla, senza spiegazione. Ora i pip hanno gli stati
-    `unaffordable` e `gcd-locked`.
-  - **Flash "hai sparato" prima di ogni controllo**: ogni pressione confermava visivamente, e il
-    server smentiva un round-trip dopo. Nuovo `input/cast-preflight.ts` (puro, testato) sceglie tra
-    flash di successo e motivo immediato, leggendo gli STESSI campi replicati che valida il server.
-    Non predice mai un fallimento per l'arma sbagliata (il server auto-swappa) e non blocca l'invio.
-  - **Impatti disegnati nel posto sbagliato**: erano al PUNTO MEDIO attaccante-vittima, quindi una
-    freccia da 20 m disegnava l'impatto 10 m prima del bersaglio. Ora sono SULLA vittima, ad altezza
-    petto. Estratto in `game/hit-impacts.ts` con test sulla geometria.
-  - **33/53 abilità senza effetto elementale**: la libreria di particelle per-elemento era cablata
-    SOLO ai proiettili; ora anche gli impatti istantanei (raggi, magia ravvicinata, combo) hanno il
-    loro burst. Fisico e parate esclusi di proposito.
-  - **Cast muto**: arco e staff non facevano ALCUN rumore allo sparo (la spada sì) — un colpo a vuoto
-    era completamente silenzioso. Nuovo `playWeaponFire()`. E il suono delle abilità è passato
-    dall'eco del server al frame di input, dove appartiene.
-  - **Una sola hitbox AoE**: danno=sfera 3D, status/knockup=cilindri verticali INFINITI → la stessa
-    abilità colpiva tre insiemi diversi. Ora `sim/aoe-shape.ts`: disco con estensione verticale che
-    cresce col raggio ma mai più bassa di un giocatore — ed è la forma che il client già disegna.
-  - Localizzati in italiano tutti i messaggi di fallimento cast (erano l'ultimo inglese visibile).
-  - **Estrazioni per file-budget** (il ratchet ha imposto lavoro vero, non trucchi): `send-cast.ts`,
-    `hit-impacts.ts`, `on-ability-casted.ts`, `audio/hurt-sounds.ts`, `sim/aoe-shape.ts`,
-    `ability-engine-host.ts`, `hud/connection-status.ts`, `rooms/loadout-resolve.ts`. main.ts
-    2816→2745, sound-engine 909→819, AbilityEngine 1014→916. ⚠ LEZIONE: il tetto non si alza MAI —
-    una volta l'ho fatto e ho dovuto rifare il lavoro come si deve.
-  - **RESTA APERTO**: nessun telegraph a terra per le AoE (Meteor ha 1 s di windup e il punto non è
-    replicato) · nessun footstep/audio remoto (non senti arrivare nessuno) · `#shoot-flash` ancora
-    identico per tutte le abilità · abilità forward a vuoto che addebita comunque costo+CD ·
-    animazioni: 53 abilità → 3 clip di corpo, e le one-shot vengono tagliate nel primo ~15-20% ·
-    ritratti classi dai modelli veri · pmndrs post-FX.
-  - **DA DECIDERE (utente)**: i 9 knockup identici — il codice documenta la scelta come
-    bilanciamento, non tocco.
-
-- **2026-08-12 (4ª parte) — CODA FINITA.** Gate verde 433 test, altri 4 commit:
-  - **Animazioni: il colpo non si vedeva MAI.** Le clip Mixamo durano 1.5-2.5s ma lo stato che le
-    guida è tenuto solo ~220-420ms (finestra dell'arco di swing / rilascio a distanza), quindi il
-    crossfade abbandonava la clip dopo il 10-25%: partiva il caricamento e la stoccata non veniva
-    mai renderizzata. Invece di rallentare il gioco per far stare le clip, ogni one-shot viene
-    ACCELERATA per stare nella sua finestra (`fitOneShotToWindow`, cap 6× per non sfocare, mai
-    sotto 1×). Le animazioni c'erano già — semplicemente non le vedevi. Corretto anche il recoil
-    della spada, che rimetteva `timeScale = 1` e rallentava lo swing a metà colpo.
-  - **Telegraph a terra**: nuovo messaggio `CastTelegraph`. Il server lo trasmette appena parte un
-    cast con windup e area reale, col raggio VERO dell'abilità e la durata esatta del windup; il
-    client disegna un cerchio element-tinted con bordo opaco (leggibile su qualsiasi pavimento) e
-    riempimento che cresce dal centro e tocca il bordo esattamente all'impatto — il riempimento È
-    il timer. Verificato con test sul broadcast (l'input headless per le abilità a piazzamento è
-    fragile, il test è più affidabile).
-  - **Audio remoto**: i passi esistevano solo per il giocatore locale e su uscita non spaziale →
-    un avversario poteva attraversare l'arena alle tue spalle in silenzio totale. Ora passi HRTF
-    spazializzati per ogni giocatore remoto, stessa regola dei 2.1 m, più forti dei tuoi (la
-    posizione di un nemico è informazione).
-  - **Abilità a vuoto**: nuova ragione `no_target`. Il costo resta pagato (se rimborsare è una
-    scelta di bilanciamento, tua), ma almeno il giocatore viene informato.
-  - Estratti ancora per budget: `cast-telegraph.ts` (client+server), `on-death.ts`,
-    `remote-sounds.ts`, `player-maxima.ts`, `aoe-shape.ts`. main.ts 2816→2747 in totale.
-- **2026-08-12 (5ª parte) — «fai tutto e anche di più».** Gate verde 438 test, altri 3 commit.
-  Tutti da finding confermati dell'audit, tutti senza scaricare un solo asset nuovo:
-  - **Terzo fendente**: il combo va a 3 colpi ma erano mappate solo 2 clip d'attacco, quindi il
-    terzo ripeteva il primo. I pack Mixamo ne contengono 4-6 a testa (paladin: attack_2/3/4 +
-    slash_2; ninja: slash/slash_2) e **stavano lì inutilizzate**. Aggiunto `Dagger_Attack3` e il
-    selettore ora cicla su quante varianti il pack ha davvero. Test sui GLB REALI: paladin e ninja
-    risolvono 3 clip DISTINTE.
-  - **Flash element-tinted e pesato**: era un lampo bianco identico per 53 abilità, 3 armi e 5
-    elementi — diceva solo CHE qualcosa era partito, mai cosa. Ora porta il colore dell'elemento e
-    scala col peso (windup = cast impegnativo → più forte; M1 spada/staff restano discreti perché
-    sparano di continuo).
-  - **Hit-confirm dell'attaccante**: colpire non aveva alcuna conferma dedicata — sentivi il corpo
-    dell'impatto, lo stesso che sentono gli spettatori. Aggiunto un tick in banda alta (~4.2/5.1
-    kHz, libera nel mix) con transiente netto e decay 55ms: sopravvive a una mischia senza fango.
-  - **Parata direzionale**: la parata di terzi suonava a volume PIENO a qualsiasi distanza,
-    annullando l'indizio direzionale. Ora spazializzata su chi para.
-  - **Proiettili col loro peso**: `damage` arrivava sul filo e veniva buttato → un colpo da 8 danni
-    era identico a uno da 38. Dimensione e luce ora scalano (regola LoL: un attacco base non deve
-    rivaleggiare visivamente con un finisher).
-  - **Pip "input ricevuto"**: `markPending` metteva una classe che il refresh per-frame toglieva
-    ~16ms dopo → non si vedeva mai. Ora è una scadenza che il refresh rispetta.
-  - Estratti: `attacker-feedback.ts` (e rimosso un `ComboState` che avevo duplicato — esisteva già
-    in `combat-feedback.ts`).
-  - **RESTA, e serve l'UTENTE**: ritratti classi dai modelli veri (già tentato alla cieca in
-    passato e SCARTATO: 2/4 banner brutti — va rifatto con inquadratura dedicata o con lui) ·
-    pmndrs post-FX (cambia il look, va visto dal vivo) · clip d'attacco per l'arciere su
-    paladin/vampire/ninja (serve rieseguire la pipeline Mixamo con Pro Longbow: download) ·
-    i 9 knockup identici (bilanciamento).
-
-- **2026-08-12 — RILASCIO IN PRODUZIONE (autorizzato dall'utente: "vai")**. I 17 commit del branch
-  `claude/game-improvements-ff3fff` sono entrati su `main` in fast-forward (`f01a111..c99c4ce`) e
-  sono pubblicati. Gate verde sul commit esatto prima del push; CI verde su tutti e quattro i job
-  (gate, build, Fly.io, Cloudflare Pages).
-  - **Trappola dell'URL, scoperta qui**: `ragequit.pages.dev` NON è questo gioco — è il sito di
-    un'altra app. Il sottodominio era occupato, quindi il progetto Pages si chiama `ragequit-5i6`.
-    Un `curl` su quell'URL risponde `200` e sembra un deploy riuscito: ci ero cascato per un
-    momento. Documentato in `02_TECH/10_deploy_status.md` perché non ricapiti a nessuno. È molto
-    probabilmente all'origine del "sento il gioco attivo da qualche parte ma non riesco a vederlo".
-  - Catena verificata end-to-end sul deploy reale, non sui test: `https://ragequit-5i6.pages.dev/`
-    serve `<title>RAGEQUIT</title>`, il bundle pubblicato punta a `wss://ragequit-server.fly.dev`,
-    e quel server risponde `{"status":"ok"}`. (`ws://127.0.0.1` nel vendor bundle è solo il default
-    dell'SDK Colyseus, non l'endpoint configurato.)
-  - **Stendardi a scacchi viola/ciano — trovati FOTOGRAFANDO la produzione, non leggendo il
-    codice.** `banner_patternA_red` si chiama "red" ma i suoi UV pescano sulle strisce viola e
-    turchese della palette atlas KayKit (`dungeon_texture.png`, 64×64 a strisce): in ogni partita
-    pendevano dalle mura due bandiere che sembravano una texture mancante. Non era un 404 (nessuno
-    in produzione) e non era l'arena (la sua palette 3×4 non ha né viola né ciano). `mat.color`
-    moltiplica la map, quindi una tirata decisa verso il cremisi riporta entrambe le strisce su
-    maroon/mattone lasciando vivo il pattern — stessa tecnica già usata lì accanto per i barili,
-    a cui lo stendardo era semplicemente sfuggito. A/B misurato sulla stessa scena locale:
-    **1266 px viola + 1608 ciano → 0 e 0**; il "prima" (0,281% del frame) combacia con la
-    produzione (0,277%), il che conferma che era proprio quello.
-  - **Ancora aperto e NON toccato (è STILE, quindi tuo)**: dentro `gladiators_arena.glb` ci sono
-    barili/casse verde-acqua accesi, che stonano con l'arena rosso-scura. Non sono prop: sono
-    geometria dell'arena, quindi il tint "legno invecchiato" dei prop non li tocca. Colorarli è una
-    scelta di look, non un bug da correggere di mia iniziativa.
-  - **PISTA APERTA, non risolta — manichino azzurro dentro i personaggi.** Nella cattura di
-    produzione `prodfix-match2.png` due figure si compenetrano: un ninja col modello vero e, dentro
-    di lui, un corpo procedurale piatto azzurro (braccio, gamba e stivale che sporgono). L'azzurro
-    è `0x3a8fde`, il "blu = te stesso" di `character.ts:53`, quindi è un personaggio rimasto col
-    corpo procedurale mentre un altro ha già installato il GLB nello stesso punto. Non è il
-    placeholder di classe (tank=canna di fucile, arciere=verde, mago=viola, ibrido=cremisi: nessuno
-    azzurro). `_installCharacterModel` rimuove il procedurale quando installa il modello, quindi il
-    sospetto è una corsa in caricamento o due entità sullo stesso spawn. NON l'ho corretto: è
-    diagnosi da guardare dal vivo, e tirare a indovinare qui significa rompere il rendering dei
-    personaggi. Prova: `.verify/char.png`.
-
-- **2026-08-13 (notte) — l'utente va a dormire e dà autonomia piena, STILE COMPRESO** ("puoi
-  decidere quello che vuoi, ma deve essere figo"). Ogni scelta di gusto presa qui è annotata sotto
-  perché lui possa bocciarla; nulla è irreversibile.
-  - **Il menu dichiarava OFFLINE a chiunque aprisse il gioco.** Lo stato partiva da "offline" e si
-    correggeva solo quando rispondeva la health probe — che ha un timeout di 20s, e il server ha lo
-    scale-to-zero, quindi il primo visitatore pagava il cold start leggendo che il gioco era morto.
-    Ora "non lo so ancora" è uno stato suo: ambra `checking server` finché la probe non risponde.
-    Verificato tenendo aperta la /health (è ciò che si vede con la macchina addormentata): l'etichetta
-    resta `checking server` a 0ms, 1.5s e 6s. L'"offline" neutro dopo un'uscita volontaria è INVARIATO
-    — lì c'è un commento che lo difende come scelta.
-  - **Forge: 8 nodi di testo fisicamente tagliati, misurati non discussi** (`.verify/trunc.mjs`).
-    4 erano le descrizioni delle abilità equipaggiate ("bruciatura…", "lancia in ari…"): non potevi
-    leggere cosa avevi in mano. Causa: `text-transform: uppercase` su una FRASE — il maiuscolo costa
-    circa un quinto di larghezza in più e toglie le forme delle parole. Tolto, più clamp 2→3 righe.
-    Ora 8→5 nodi, e le descrizioni 4→1 (resta METEOR, che ha quattro clausole).
-  - **La meccanica di classe non era leggibile da nessuna parte.** La targhetta in alto sta in una
-    riga flex `overflow: hidden` con `flex: 1 1 0` e collassava a una scatoletta con dentro la sola
-    emoji. Provato a farla andare a capo: peggio, si riduceva a due caratteri — RIPRISTINATA com'era.
-    La colonna sinistra del Forge aveva un'area morta sotto gli slot Utility: la spiegazione vive lì
-    ora, per esteso e in minuscolo. Verificato su mage (RISONANZA) e tank (FURY).
-  - Estratto `hud/ffa-ladder.ts` (con test: top3 + te al tuo rango vero, senza duplicarti sul podio)
-    per ripagare le righe aggiunte a main.ts — il budget non sale mai.
-
-- **2026-08-13 (notte) — audit multi-agente e cinque batch di upgrade.** 13 agenti su 6 settori
-  (grafica, HUD, abilità, IA, quality-of-life, armi), ognuno con ricerca su come lo risolvono i
-  titoli usciti, poi una passata avversariale a uccidere i findings che non reggevano il contatto
-  col codice: **29 sopravvissuti su ~35**. Backlog ordinato in `.verify/backlog.md`.
-  - **Colore sbagliato su TUTTI i prop dell'arena.** `cloneGltfScene` scambia la map di ogni
-    materiale con una texture condivisa caricata a mano, e `TextureLoader` non imposta il
-    `colorSpace`: quindi l'albedo di torce, barili, casse e stendardi veniva decodificato come
-    lineare. Ecco perché sembravano plasticosi e da luna park accanto al guscio del colosseo, che
-    invece è caricato da GLTFLoader ed era sempre stato giusto. Misurato: il verde-acqua fuori
-    palette sui barili 128 px → 0, con saturazione media della scena INVARIATA (0,879 → 0,880).
-  - **Anisotropia da 4 fissa al massimo hardware (16).** Senza, il filtraggio mip sfoca in poltiglia
-    tutto ciò che si guarda di sbieco — cioè la sabbia dell'arena, che è quasi tutto lo schermo.
-  - **L'antialiasing era spento senza che nessuno lo sapesse.** Il canvas nasce con
-    `antialias: true`, ma quel flag smette di contare nel momento in cui `EffectComposer` possiede i
-    buffer — e li possiede da sempre. Ora il composer finale ha un target multisample. Misurato
-    contando i salti netti di luminanza: **3815 → 2169** su un frame, 3295 → 2580 sull'altro.
-    ⚠ TRAPPOLA: `EffectComposer` deriva la dimensione dal renderer SOLO se costruisce il target da
-    sé; se gliene passi uno, adotta le dimensioni di quello. Costruito 1×1 ha renderizzato tutto il
-    gioco come un unico pixel stirato — beccato subito dalla sonda (frame beige pieno, coverage 100%).
-  - **L'M1 dello staff non muoveva nulla in mano.** Il punch-and-settle del viewmodel esisteva e
-    funzionava, ma era raggiungibile solo da `AbilityCasted`, che sparare non emette. Ora ha una
-    magnitudine: la stoccata calcia a metà di un cast impegnato.
-  - **L'arco della spada era un cerchio alle caviglie**, mentre la lama passava nel petto. Alzato
-    all'altezza di contatto già usata da `hit-impacts.ts`, e tubo 0.14 → 0.05 (una spada lascia una
-    scia larga quanto la lama, non una ciambella). Corretto un commento che dichiarava 120°: la
-    campata è 90°.
-  - **La meccanica di classe ora si vede in partita.** Fury/Momentum/Risonanza/Flow erano simulate e
-    replicate su ogni Player, e il client non le leggeva: il CSS della striscia era già nel repo,
-    inutilizzato. Le costanti di scala erano private del server → spostate in `shared`, così l'HUD
-    disegna gli stessi numeri della simulazione. Barra Momentum con la tacca alla soglia vera
-    (modello Guild Wars 2: leggi la SOGLIA, non il valore).
-  - Estratti per pagare le righe: `render/post-pipeline.ts`, `input/input-gating.ts`,
-    `hud/ffa-ladder.ts`. main.ts 2738 → 2679 righe, budget stretto di conseguenza.
-  - **ESC sulla schermata dei risultati DISTRUGGEVA il risultato.** È l'unico posto dove vedi il tuo
-    delta ELO, uccisioni e danno. ESC non aveva un caso per lei: cadeva nel ramo del menu di pausa e,
-    finita la room, su un menu principale che si disegna DIETRO (z-index 850 contro 800) — e il
-    teardown cancellava i numeri senza modo di tornarci. Ora esce dalla stessa porta del pulsante.
-    Verificato sul client vivo: un ESC = un click di uscita, zero menu di pausa.
-  - **Tolto il prompt "SPC · SKIP" del deathcam** (e il suo CSS): il respawn è temporizzato dal
-    server, quindi nessun tasto poteva accorciarlo. Un prompt che non si può onorare è peggio di
-    nessun prompt.
-  - **Scuotimento camera regolabile** (0-100%), con default a 0 se il sistema chiede
-    `prefers-reduced-motion`. Era obbligatorio: chi soffre di motion sickness non poteva giocare.
-    A zero la camera non si muove per NIENTE, non "si muove meno" — è il punto della funzione, ed è
-    fissato da un test.
-  - **L'anello di cast nemico ora dice COSA arriva e QUANTO manca.** Era un cerchio dorato che si
-    accendeva e spegneva: comunicava che stava succedendo qualcosa, mai cosa né entro quando —
-    quindi interromperlo non era un'abilità, era fortuna. Ora prende il colore dell'elemento e si
-    stringe da pieno a nucleo mentre il windup si risolve, schiarendo nell'ultimo quarto. Le
-    abilità istantanee restano APERTE invece di ricevere un finto conto alla rovescia che le
-    farebbe leggere tutte come "sta per colpire". Zero stato nuovo: il tick d'inizio si ricava dal
-    windup dell'abilità stessa.
-  - Per farlo ho dovuto estrarre `render/remote-nameplate.ts`: `remote-players.ts` era ESATTAMENTE
-    sul limite duro di 800 righe, quindi non ci si poteva aggiungere niente. Ora è a 711.
-  - Test 438 → 492. Undici commit, CI verde su ognuno.
-  - **NON fatto stanotte, e perché**: IA dei bot (B8/B9 del backlog) — richiede di estrarre l'host
-    dei bot da `GameRoom.ts`, che è al suo tetto di 1927 righe: è chirurgia sul file più delicato
-    del server e non la volevo fare alle 5 del mattino senza nessuno che potesse guardare. I bot
-    intanto NON sono stupidi come sembrava: hanno già strafe orbitale, cambio arma per distanza,
-    ritirata a HP bassi, schivata sul cast nemico e reazione alla parata (`BotController.ts`).
-
-### 2026-08-13 — Ogni spell adesso si VEDE prima di lanciarla (00_truth.md §10 passo 7)
-
-- **Il punto è la tua richiesta centrale**: "devi capire come castare le spell, come visualizzarle,
-  un sistema semplice ma efficace, che ti fa capire dove andrà la spell visivamente, cosa farà".
-- **Com'era davvero**: 46 abilità su 53 non mostravano NIENTE. `isDirectCast` mandava tutto ciò che
-  non era `point` dritto a un cast alla cieca. Le 8 abilità di movimento non avevano alcuna
-  anteprima: un blink da 6 m era un tiro di dadi su dove saresti finito.
-- **Cosa ho fatto**: la forma di un'abilità adesso è un VALORE, non aritmetica sparsa dentro il
-  server. `shared/abilities/aim.ts` prende l'AbilityDef più la mira e restituisce le forme —
-  corsia, cerchio, muro, fantasma del dash. Il client le disegna e il server risolve sugli stessi
-  numeri: un'anteprima che si scosta dall'hitbox insegna una bugia, e l'unica difesa vera è che
-  esista una formula sola. `isCapsuleBlocked2D` è passata in `shared`, così il fantasma del dash
-  campiona gli stessi passi da 0.25 m del corpo e si ferma esattamente dove si fermerà lui.
-- **Il comando è cambiato, ed è la parte che devi provare tu**: premi il tasto → vedi la forma;
-  rilasci → lancia, con la mira che avevi al RILASCIO. Un tap resta un tap (premi e rilasci a un
-  paio di frame di distanza, quindi la velocità è quella di prima). Tenere premuto ti compra tempo
-  di mira, pagandolo col tuo stesso tempo. È lo standard dei giochi che citi, non una mia invenzione.
-  M1 conferma lo stesso, M2/Esc annulla. **Se questo non ti piace, si torna indietro in un commit:
-  è una scelta di FEEL e resta tua.**
-- **`isDirectCast` è stato eliminato ovunque** — dispatcher, loadout station, test. Nominava un
-  concetto che non esiste più.
-- **Prova renderizzata, non solo test**: `tools/verify/aimpreview.mjs` tiene premuto ogni tasto e
-  legge sia l'output del solver sia il framebuffer. 8/8 col mago e 8/8 con l'ibrido (tutti e tre i
-  tipi di dash), con l'estremità di ogni corsia che proietta a NDC (0.000, 0.000) — il mirino esatto.
-- **Due errori miei, tenuti a verbale perché costano ogni volta**:
-  1. La prima corsia disegnava il volume VERO — un tubo conico dalla bocca dell'arma. Corretto e
-     inguardabile: la corsia parte dalla telecamera, quindi guardavi dentro un cono di 30 m dal suo
-     vertice, ~60° di schermo pieno. La larghezza è finita nell'anello sul punto d'impatto, dove è
-     piccola e dove stai già guardando.
-  2. L'harness ha dichiarato rotta una feature funzionante per cinque run. Sotto SwiftShader il
-     render loop gira a **1-4 fps**: aspettare 220 ms vuol dire aspettare circa zero frame, e stavo
-     leggendo un'anteprima non ancora calcolata. Adesso aspetta un contatore di frame.
-     **Mai più misurare questo renderer a orologio.**
-- Gate verde: typecheck, lint, budget (3 tetti abbassati), content, 528 test.
-
-### 2026-08-13 — L'arena ha finalmente un bordo, e la velocità un tetto che si merita (passi 8 di §10)
-
-- **D20 — l'arena non aveva confini.** Nessun muro nella simulazione, nessun clamp, `groundY` un
-  piano infinito: uscivi dal colosseo e continuavi a camminare per sempre sul nulla. Adesso il
-  confine è un RAGGIO (24.5 m), non quattro muri quadrati — l'arena è rotonda, e un perimetro
-  quadrato o taglia gli angoli della sabbia o ti lascia stare fuori dal muro sulle diagonali. Il
-  numero è derivato dall'ARTE che già c'è (shell ×1.5, muro interno a 16.7 → 25.05; sabbia a
-  24.75), perché un confine che non vedi sembra un bug. Viene tolta solo la componente di velocità
-  VERSO il muro, così ci corri lungo invece di restarci incollato.
-- **Dare un bordo all'arena ha scoperto un difetto che il bordo mancante nascondeva**: la mappa FFA
-  non ci stava dentro il proprio edificio. Le piattaforme d'angolo arrivavano a r = 27.4 —
-  sospese sul vuoto oltre la sabbia — e 4 spawn su 10 stavano a r = 24.6-28.7, cioè giocatori che
-  nascevano FUORI dal colosseo. Ho stretto lo spread FFA 1.45 → 1.27 e messo gli spawn su un ANELLO
-  (angolo + raggio) invece di dieci coordinate scritte a mano senza regola. **Sono due scelte di
-  SPAZIATURA e restano tue: si tornano indietro in un commit**, oppure si allarga il colosseo
-  alzando shell scale e raggio insieme.
-- **D18 — il tetto della velocità in aria: 11.7 → 14.5 m/s.** Era 1.30× i 9 m/s base: TUTTO il
-  soffitto di abilità del movimento era +30%, in un gioco il cui secondo pilastro è "il movimento è
-  il soffitto di abilità", contro Quake 3 che non ha tetto. **Misurato, non scelto**: simulando il
-  controller vero su catene di strafe-jump, 14.50 si tocca esatto al quinto salto con una virata
-  stretta, e 11.06 con una virata sciatta. Cioè la tecnica adesso vale **+3.44 m/s**; prima la
-  virata sciatta saturava già il tetto e sopra "sufficiente" non c'era niente a cui puntare.
-  NON ho usato il "soft cap a 18 che perde 2 m/s al secondo" che gira in rete: simulato, non
-  converge (20.59 m/s a 5 salti, 31.03 a 20 e ancora in salita).
-- **Prova end-to-end, non solo unit test**: `tools/verify/bounds.mjs` entra in una partita vera e
-  tiene una direzione per 12 s (oltre quattro raggi d'arena) in tutte e quattro le direzioni. Le due
-  che arrivano al muro si fermano a 24.10 m esatti, e la posizione PREDETTA dal client è uguale a
-  quella del server al centimetro. Quell'uguaglianza è la vera affermazione: un confine che il
-  client non predice non è un muro, è un elastico — e in fotografia sono identici.
-- `tools/verify/feel.mjs` adesso stampa anche tetto in aria, catena di strafe sciatta vs stretta,
-  quanto vale la tecnica e il raggio dell'arena.
-- Estrazioni per stare nei tetti di riga (mai alzati, solo abbassati): `server/sim/displacement.ts`
-  (GameRoom aveva una copia privata del loop del dash — ora chiama lo STESSO solver condiviso che
-  disegna il fantasma, quindi anteprima e corpo non possono più divergere) e
-  `client/verify-seams.ts`. Tre tetti abbassati.
-- Gate verde: typecheck, lint, budget, content, 550 test.
-
-### 2026-08-13 — Il TTK: il documento mentiva, non il gioco (passo 9 di §10)
-
-- **La cosa più importante da capire**: `TTK_MIN_SEC = 20` / `TTK_MAX_SEC = 30` stavano lì da
-  sempre col commento "tutti i valori di danno/CD/costo sono tarati su questo". **Era falso**: il
-  registry uccide in circa sei secondi. E nessuno importava quelle due costanti — erano
-  documentazione travestita da codice, quindi sbagliare di 3-5× non costava niente e nessuno se ne
-  accorgeva. **Il documento è cambiato, non la tabella dei danni.**
-- Un rescale ×3 dei danni era la tentazione ovvia ed è stato RIFIUTATO: cure (50, 60) e scudi
-  (`stacks: 20`) sono numeri piatti fuori da qualsiasi moltiplicatore, quindi triplicare i danni non
-  conserva il bilanciamento — cancella le cure.
-- **Adesso il TTK si MISURA** (`shared/config/ttk.ts`) e un test fallisce se il roster esce dalla
-  banda 6-9 s. Per avere un numero onesto ho dovuto correggere prima il modello: sommare DPS delle
-  abilità e DPS dell'arma al 100% presuppone che tu lanci tutto E meni di continuo negli stessi
-  secondi — sono due giocatori, non una rotazione, e leggeva ~25% più veloce del reale. Ora ogni
-  abilità paga il proprio tempo di cast e l'arma riempie solo quello che resta.
-  Risultato: tank 6.53 / arciere 6.31 / mago 7.88 / ibrido 6.63 s. **Tutti dentro.**
-- **Tetto ai cooldown 12 s**: 24 abilità lo superavano, fino a 22 s. A TTK 6-9 s un cooldown da 22 s
-  parte una volta ogni TRE scontri, quindi una build a sei slot ne esprimeva due o tre e il resto
-  era arredamento. La coda sopra 8 s è COMPRESSA nel tetto, non tagliata di netto, così l'ordine
-  relativo sopravvive invece di far diventare 24 abilità identiche a 12. Mediana 12 → 9.
-  Curiosità utile: **non ha accorciato il TTK**, perché più uptime = più tempo a lanciare = meno
-  tempo a menare.
-- **Banda finisher 40-55**, ordinata per IMPEGNO (windup + cooldown), non cinque numeri uguali.
-- **`fireball` è il caso che insegna qualcosa**: portato a 40 rispettava la lettera della banda e ne
-  rompeva la ragione. Senza windup e con 5 s di cooldown diventava il bottone col DPS più alto del
-  gioco (7.55), presente in 3 build preset su 4, e buttava arciere e ibrido fuori dal fondo della
-  banda TTK. La banda è un tetto di CONVERSIONE (la punizione dopo il lancio in aria), quindi il
-  danno dentro la banda si paga con l'impegno: cooldown 5 → 8.5. Un test adesso impone l'ordine —
-  chi picchia più forte deve impegnarsi di più.
-- **Condizioni di vittoria ri-derivate**: FFA 40 → 45, squadre 75 → 150, con il modello scritto nero
-  su bianco (`TTK + avvicinamento + respawn`: vecchio 40 s, nuovo 19 s). **Il numero delle squadre è
-  quello debole** — dipende da quanti dei 5 stanno combattendo davvero, e lo dice solo il playtest.
-  Nota: col vecchio ciclo, 40 kill FFA erano una partita da 27 minuti, quindi il "partite da 15
-  minuti" di `07_modes.md` era già sbagliato PRIMA della correzione del TTK.
-- Corretti i quattro punti che citavano il numero vecchio come autorità (`weapons.ts`, `stats.ts`,
-  `05_abilities_philosophy.md`, `01_combat_fundamentals.md`) incluso il suo dato sbagliato
-  ("Sword M1 a 17.5 DPS" contro i 15.0 delle costanti).
-- Due test del server smettono di incollare numeri di bilanciamento: leggono dal registry, così una
-  passata di bilanciamento non rompe più test che non parlano di bilanciamento.
-- `tools/verify/ttk.mjs` stampa la tabella completa. Gate verde: 559 test.
-
-### 2026-08-13 — Le specializzazioni: il terzo asse della build (passo 10 di §10)
-
-- **Le tue parole**: "ti scegli una build tra varie combo di classe, abilità o specializzazioni".
-  Di quelle tre ne erano spedite due. Questa è la terza, e prima non esisteva NIENTE: né codice, né
-  schema, né documento.
-- **Prima di ricostruirla ho studiato quella cancellata**, come diceva il piano. C'era un sistema
-  Mastery (`03_mastery_system.md`, cancellato nel commit `6a7839a`): si attivava se 4 delle tue 5
-  slot magiche condividevano l'elemento. **È morto perché era DEDOTTO, non scelto**: nessuno
-  sceglieva una Mastery, te la ritrovavi — o scoprivi di averla persa prendendo la spell che
-  volevi. Non esprimeva una decisione, tassava chi mescolava gli elementi. Per questo la prima
-  regola del sostituto è che si SCEGLIE, nella Forge, accanto alle carte classe.
-- **12 specializzazioni, 4 archetipi, 3 per classe.** Ognuna ha un bonus E un costo, tutti e due
-  scritti sulla carta. Validate lato server come il resto della build e RIFIUTATE con una ragione,
-  non scartate in silenzio: una build corretta di nascosto è una build che scopri in arena.
-- **Nessuna tocca il danno, e il vincolo ha migliorato il design.** Il test della banda TTK gira sul
-  registry base, quindi una spec da +15% danno gli sarebbe passata sotto il naso spingendo
-  l'arciere fuori dal fondo della banda 6-9 s — annullando in silenzio il lavoro di ieri. Quel che
-  resta è più interessante: durata del lancio in aria, cooldown, velocità, vita. "I tuoi lanci in
-  aria durano il 25% in più" è una decisione di build più bella di "+15% danno", e punta al momento
-  che dà identità al gioco invece che altrove.
-- Due dettagli tecnici che tengo a verbale: il moltiplicatore di airtime si legge dal LANCIATORE,
-  non dalla vittima ("i TUOI lanci durano di più" è una proprietà di chi lancia); e il modificatore
-  di velocità entra in `slowFraction` da UNA funzione condivisa che il server usa per l'autorità e
-  il client per la predizione — due copie di quella riga sono un elastico permanente in attesa che
-  qualcuno ne modifichi una sola.
-- **Prova end-to-end** (`tools/verify/spec.mjs`): apre la Forge, legge le carte, ne clicca una,
-  entra in partita e confronta la vita che **il server ha dato** con quella calcolata — 168 per un
-  mago Baluardo, su 150 di base. Una specializzazione che vive solo in un registry non è una
-  feature. Screenshot in `.verify/spec-forge.png`.
-- Il layout è stato sbagliato al primo colpo: la riga finiva dentro la colonna della vitals e le
-  quattro carte si schiacciavano in una fettina illeggibile. L'ho visto perché la prova è
-  renderizzata, non perché un test è passato.
-- **Estrazioni per stare nei tetti** (mai alzati, tre abbassati): `rooms/loadout-validate.ts` —
-  `handleLoadoutSet` erano 155 righe di cui 119 di validazione intrecciata con gli avvisi al client,
-  quindi non testabile senza una stanza, un client e un socket; ora è una funzione pura.
-  Poi `sim/target-selection.ts` e `client/game/movement-caps.ts`.
-- Ritirato il divieto in `06_loadout_build.md` che vietava esattamente questo (restano i divieti su
-  slot extra e trasferimento risorse), scritto `01_DESIGN/08_specializations.md`, registrato nel
-  MANIFEST, cancellato l'artefatto morto `dist/constants/mastery.*`.
-- Gate verde: 572 test.
-
-### 2026-08-13 — Torneo: ne resta uno solo (passo 11 di §10)
-
-- `00_vision.md` elencava il torneo tra le TRE modalità che restano, e non esisteva. Adesso c'è, ed
-  è volutamente piccolo: **niente respawn** (la morte è eliminazione), la partita finisce quando ne
-  resta uno, e se scade il tempo vince il più sano tra i vivi — un pareggio esatto non ha vincitore
-  invece di darlo a caso.
-- **Cosa NON eredita dall'FFA, che era la domanda aperta del piano**: l'economia. In FFA vincere uno
-  scontro ti dà un punto e costa all'avversario un secondo e mezzo. È l'opposto di "ne resta uno".
-  Qui uno scontro perso costa la partita, ed è l'unica modalità dove sapere quando NON prendere un
-  duello si paga.
-- **Tetto di 1 abilità difensiva** (survival/counter). Una build con quattro difensive è legale
-  ovunque e lì è solo lenta; dove la morte è definitiva, rifiutarsi di perdere equivale a vincere.
-  Il tetto conta i RUOLI, non le slot, perché la build-muro è sparsa tra `magicAdvanced` e `utility`
-  proprio per aggirare una regola sulle slot. Conseguenza da sapere: siccome ogni build deve avere
-  una Recovery e ogni Recovery è survival, **in torneo la tua Recovery È la tua unica difensiva**.
-- **Due cose che ha trovato la prova dal vivo e che nessun test poteva trovare**:
-  1. **La lobby non partiva mai.** Il client chiede il riempimento con i bot solo per una lista di
-     modalità scritta a mano, e il torneo non c'era: 40 campioni, tutti in `lobby`. Adesso quella
-     lista è condivisa, così client e server non possono più essere in disaccordo.
-  2. **Un crash vero nelle particelle**, che non c'entra col torneo ed era vivo per chiunque usasse
-     un'abilità con elemento `'none'`: `element as SpellStyle` faceva passare una stringa che non è
-     uno stile, `STYLE_RGB['none']` è undefined e `const [r,g,b] = undefined` esplode a ogni
-     impatto. C'erano CINQUE cast identici che promettevano la stessa cosa senza verificarla: ora
-     c'è un resolver solo e zero cast.
-- **La prova guarda tutta la lobby, non me**: 8 giocatori, vivi 7 → 4 nel corso della partita, e
-  **mai in salita**. La prima versione dipendeva dal fatto che un bot decidesse di uccidermi e
-  dichiarava "inconcludente" una volta su due — un verdetto a testa o croce non prova niente.
-- Gate verde: 587 test.
-
-### 2026-08-13 — Mira libera davvero: il cono si stringe (passo 12 di §10)
-
-- **La contraddizione più grossa del repository**: `00_vision.md` dice "colpisci quello che punti e
-  manchi quello che non punti, niente auto-aim", e il server aveva un cono di ±10° che catturava
-  **3,09 m di lato a 15 metri** su 32 abilità su 53, prendendo il più vicino. Era un lock-on morbido.
-- **Tre classi di consegna, DEDOTTE e non scritte a mano**: se ha un proiettile è BOLT, se ha
-  portata da mischia è CONE, tutto il resto è RAY. Una tabella da 53 voci andrebbe tenuta in sincro
-  a mano e un'abilità nuova finirebbe senza classe senza che nessuno se ne accorga.
-  - CONE (3): resta a 10° → 0,89 m a 2,5 m, un corpo. È quello che una spadata deve prendere.
-  - RAY (19): 3° → 0,97 m a 10 m, una capsula.
-  - BOLT (10): nessun aiuto laterale, 0,45 m fissi. Il proiettile È la prova di mira.
-- **L'anteprima si è stretta insieme all'hitbox da sola**, perché legge la stessa identica funzione.
-  Misurato nel client vero, non affermato: `chain_bolt` a 15 m adesso segna **1,24 m** dove ne
-  catturava 3,09; `eruption` e `frost_pillar` segnano **0,97 m** dove ne catturavano 2,21.
-- **Cosa NON ho fatto, e perché**: la metà BOLT del piano — trasformare i lanciatori a distanza in
-  proiettili veri da anticipare — richiede due capacità del motore che non esistono (gli effetti
-  `onLand` su un'abilità con proiettile vengono saltati e mai risolti; `ProjectileSystem` non ha
-  alcun percorso per il knockup all'impatto). Quelle sono additive e sicure; il ribilanciamento che
-  ne segue no, e va fatto DOPO che l'hai provato, non prima.
-- Sette abilità RAY superano il tetto di 10 m previsto dal piano (fino a 15 m, `ping_mark` 30 m).
-  Ho lasciato stare le portate: la tolleranza di mira è la correzione, accorciare le portate è un
-  ribilanciamento senza ancora una misura dietro.
-- Per pagare le righe: estratte da `AbilityEngine` anche `resolveAnchor` / `resolveSingleTarget` /
-  `resolveAreaCenter` in `sim/target-selection.ts` — "dove si risolve questa abilità" è la stessa
-  materia di "chi colpisce". Il file è passato da 855 a 752 righe.
-- Gate verde: 595 test.
-
-### 2026-08-13 — Audit di TUTTI i dissensi rimasti: trovato un bug MIO di stanotte
-
-- Ho fatto verificare da 13 agenti in parallelo, uno per gruppo di dissensi, **il CODICE e non il
-  documento** (i marcatori di stato del documento erano vecchi e non ci si poteva fidare), poi ogni
-  verdetto è stato ri-controllato da un secondo agente che doveva provare a smontarlo.
-  21 dissensi verificati, **21 verdetti su 21 hanno retto**.
-- **IL BUG PIÙ GRAVE ERA MIO, di ieri sera.** Avevo ri-derivato le condizioni di vittoria (FFA 45,
-  squadre 150) da una partita di **900 secondi**. Ma `MatchManager` tagliava la partita a **600
-  secondi** con una costante sua, che non avevo controllato. Risultato: **nessuna delle due soglie
-  poteva essere raggiunta**. Ogni partita FFA e 5v5 finiva a tempo e la condizione di vittoria che
-  avevo derivato con tanta cura era codice morto. Due numeri che descrivono la stessa cosa, in due
-  file, in disaccordo — esattamente lo stesso errore del TTK, un piano più in alto.
-  - Corretto: adesso **entrambi** derivano da `MATCH_TARGET_DURATION_SEC`, e tre test verificano che
-    le soglie siano raggiungibili dentro la finestra (e non raggiungibili nel primo minuto).
-    Verificato: FFA 45 = 855 s, squadre 150 = 855 s, finestra 900 s. **Raggiungibili.**
-- **Bugie nei documenti, corrette** (erano attive, non teoriche):
-  - Tre file affermavano ancora il TTK 20-30 s ritirato, tra cui **AGENTS.md**, che è quello che un
-    agente legge come verità: gli si consegnava la finzione come requisito.
-  - `07_modes.md` spediva ancora 75/40 kill in quattro punti e respawn 5s/3s — contraddicendo il
-    codice E la propria nota di correzione tre sezioni più sotto.
-  - `01_stats.md` citava come autorità `01_combat_fundamentals.md`, che nel frattempo ritratta quel
-    numero, mentre quest'ultimo dichiara `deps: [01_stats.md]`: si citavano a vicenda tenendo numeri
-    opposti.
-  - Un commento in `weapons.ts` dichiarava come INTENZIONALE il comportamento anti-Quake che il
-    lavoro sul lancio ha cancellato: chiunque lo leggesse avrebbe ripristinato il bug.
-  - `01_controls.md` vietava in assoluto gli i-frame, contro i pilastri.
-  - Il piano citava dimensioni file vecchie (1927/906 invece di 1790/749).
-- **FOV**: i tre valori pre-init dicevano 90 mentre il default spedito è 100 — qualunque frame prima
-  del callback girava con un campo visivo che il giocatore non ha scelto. Ora c'è `DEFAULT_FOV`.
-- **Nuova sonda `tools/verify/healthcheck.mjs`**: percorre il flusso vero (menu → Forge su tutte e 4
-  le classi → partita → tutti gli input) e conta errori console, errori di pagina e richieste
-  fallite. **Run pulito: 0 errori, 0 richieste fallite.**
-- Gate vero verde: `pnpm check` esce 0 (typecheck, lint, **format:check**, budget, content, 598 test).
-
-### 2026-08-13 (sera) — La prima persona non esisteva, e le wheel erano la causa del bug del click
-
-Dopo il tuo "RESTYLING TOTALE" ho fatto studiare TUTTO da 13 agenti in parallelo, contro il codice.
-Il risultato non e' una lista di dettagli, e' una causa strutturale.
-
-**LA PRIMA PERSONA NON ESISTEVA.** In `main.ts` c'e' un commento che descrive una pass viewmodel
-dedicata (braccia + arma in una scena separata col proprio depth buffer). **Finisce a meta' frase e
-nessuno l'ha mai implementata.** Quindi il gioco disegnava il rig in TERZA persona per intero dentro
-l'occhio, con la camera nel petto e il near plane a 10 cm. Da li' viene:
-
-- **"texture mezze trasparenti che appaiono"**: `erika.glb` e `vampire.glb` hanno sottomesh
-  `alphaMode:BLEND` (ciglia, una freccia, un materiale trasparente) tenute com'erano e con
-  `frustumCulled=false`. Stanno a 10-40 cm dalla camera, non scrivono depth, e ci si vede il mondo
-  attraverso mentre l'animazione le sbatte dentro e fuori dal near plane.
-- Adesso il rig locale non viene piu' disegnato dalla camera del mondo. E' quello che rendono Quake,
-  CS e ogni arena shooter. I giocatori remoti non sono toccati.
-
-**IL FOV ERA UN FISHEYE.** three.js vuole il FOV **verticale**; ogni FPS del mondo lo presenta
-**orizzontale**. Il valore entrava crudo: slider su 100 = **129,5 gradi orizzontali** a 16:9, e con
-la velocita' superava i 140. A quell'angolo un nemico a 15 m e' una manciata di pixel e i
-pixel-per-grado sul mirino collassano: la mira libera, che e' un pilastro, era fisicamente
-impossibile. Ora `render/fov.ts` fa la conversione, fuori di li' si parla solo di orizzontale, e il
-resize riconverte (un ultrawide stava zitto zitto giocando a un gioco diverso).
-
-**Due effetti ti sparavano in faccia**: ogni colpo SUBITO generava un piano additivo da 2 m a 35 cm
-dai tuoi occhi (schermo lavato del colore dell'elemento, non vedevi chi ti picchiava), e l'arco della
-spada era un toro da 1,3 m mezzo metro sopra l'occhio — fatto per la telecamera in terza persona che
-e' stata cancellata. Il primo e' soppresso per te, il secondo e' eliminato (i remoti tengono il loro,
-che era la meta' utile). **La polvere** erano quadrati pieni da 219 px a mezzo metro: ora e' uno
-sprite radiale.
-
-**LE WHEEL SONO ELIMINATE, ed erano la causa del tuo bug.** Selezionare da una wheel metteva uno
-stato "primed" che **non scadeva mai**: da li' in poi ogni click sinistro lanciava quella spell
-invece dell'arma, mentre l'unico indicatore spariva dopo 5 secondi. Una spell a terra presa dalla
-wheel richiedeva **due** click e il secondo stato era muto. E tenendo aperta la wheel **non potevi
-mirare**, perche' tutto il mouse finiva dentro la ruota. Una causa sola, tutte e tre le tue frasi.
-
-**Tasti riposizionati**: gli slot 5-8 erano su Digit5-8, che dalla presa WASD **non si raggiungono
-senza staccare la mano** — meta' build inutilizzabile mentre ti muovi, nel gioco il cui secondo
-pilastro e' che il movimento e' il soffitto di abilita'. Ora sono su **Q, E, R, F**, il cluster che
-usa ogni shooter, liberato proprio dalle wheel.
-
-**Paletti vecchi ritirati**: la riga che riservava `Z X F V R G` come inutilizzabili (vietava
-esattamente i tasti che servono) e il divieto assoluto sui passivi in `AGENTS.md`, che vietava le
-specializzazioni gia' spedite.
-
-Verificato: `pnpm check` esce 0, healthcheck 0 errori, 8/8 abilita' disegnano l'anteprima sui tasti
-nuovi. Restano aperti: HUD (vitals e barra abilita' si sovrappongono, niente scala col viewport) e
-la leggibilita' della cura.
-
-### 2026-08-13 (notte) — HUD: misurato, non guardato
-
-Non potendo vederlo, l'ho MISURATO. `tools/verify/hudlayout.mjs` legge il rettangolo di ogni
-elemento dell'HUD a tre risoluzioni e verifica tre cose che uno screenshot non conferma a colpo
-d'occhio: che niente si sovrapponga, che niente esca dallo schermo, e che le dimensioni CAMBINO
-davvero tra 768p e 1440p — perche' "sproporzionato" vuol dire px fissi su uno schermo diverso da
-quello per cui erano scritti.
-
-- **Le stats non sono piu' in basso a sinistra.** Vitals e hotbar sono ora UN SOLO blocco in basso
-  al centro (colonna: vitals, armi, hotbar), che e' la disposizione di Overwatch/Apex/Valorant:
-  tutto quello che ti serve nel mezzo di uno scontro sta sotto il mirino, niente in un angolo da
-  cui devi distogliere lo sguardo. Stando nello stesso flusso, la sovrapposizione e' impossibile
-  per costruzione invece che evitata per fortuna — prima erano due oggetti in posizione assoluta
-  che si contendevano la stessa fascia orizzontale, e **tra 1381 e 1650 px si sovrapponevano
-  fisicamente**, in una fascia che nessun breakpoint copriva.
-- **Adesso scala**: 300x94 a 768p, 374x144 a 1440p. Prima era 318 px fissi su qualunque schermo.
-  Barre, mirino, anelli GCD/parata, slot arma e cast bar sono tutti in `clamp()` su `vh`.
-- **Tolto il pannello trascinabile e ridimensionabile** (250 righe): ti lasciava sbagliare il
-  layout e salvava l'errore, e il suo asse verticale era comunque morto (scriveva una variabile
-  CSS che nessuna regola leggeva).
-
-**E ho trovato un difetto peggiore, misurando: il MENU non ci stava nello schermo.** La colonna
-centrale era alta ~1300 px e veniva TAGLIATA senza scrollbar: a 1600x900 la tessera Loadout Forge e
-a 1920x1080 la scheda profilo erano **irraggiungibili**. Ora il menu scrolla a ogni larghezza (due
-media query lo facevano gia', fuori dai loro intervalli no). E la fila delle modalita' era
-`repeat(4, ...)` mentre le tessere sono cinque da quando ho aggiunto il Torneo: la quinta andava a
-capo. Ora e' `auto-fit`, cosi' non si rompe alla prossima modalita'. Da 1296 a 1122 px.
-
-Gate: `pnpm check` esce 0, healthcheck 0 errori, hudlayout "layout OK" su tutte e tre le
-risoluzioni.
-
-### 2026-08-14 (notte fonda) — Chiusi TUTTI i punti aperti della lista
-
-**Il modello di lancio era il bug, e l'avevo scritto io il giorno prima.** Era "premi = vedi la
-forma, rilasci = lancia", su tutte e 53 le abilità. Le tue tre frasi erano quell'unico modello: la
-forma esisteva solo mentre il tasto era fisicamente giu' (quindi su un tap lampeggiava due frame e
-spariva), il lancio era gia' partito al rilascio (quindi il click dopo colpiva con l'ARMA), e
-"armata" non aveva nessun indicatore persistente.
-**Solo 7 abilita' su 53 hanno bisogno di mirare** (14 self, 32 forward, 7 point): le altre mirano
-col mirino che stai gia' guardando. Avevo imposto una modalita' a 46 abilita' che non ne avevano
-bisogno. Ora: le abilita' col mirino partono alla pressione (come Quake e Overwatch), quelle a
-terra armano e **non scadono mai**; mentre sono armate il mirino pulsa oro e il readout resta.
-Provato dal vivo (`tools/verify/castmodel.mjs`): ancora armata dopo 7 secondi, 6/6.
-
-**La cura si impara.** Il tutorial aveva 4 voci, non nominava mai la cura, e la terza insegnava le
-ruote E/Q che avevo cancellato. Ora ha 5 voci e una dice **il TUO tasto vero**, calcolato dalla
-build (la Recovery sta su slot diversi per classe: uno fisso avrebbe insegnato la cosa sbagliata a
-tre classi su quattro).
-
-**Paletti: la telecamera mista.** `PROGETTO.md`, `STILE.md` e `AGENTS.md` imponevano ancora
-"spada = 3a persona". Il codice l'ha cancellata e da stanotte il rig locale non viene proprio
-disegnato — chi seguiva quelle righe avrebbe ripristinato il bug delle texture trasparenti.
-
-**BOLT: un proiettile ora puo' LANCIARE.** Erano due capacita' mancanti: `ProjectileSystem` non
-aveva alcun percorso di knockup, e un knockup `onLand` su un'abilita' con proiettile veniva saltato
-al cast e poi mai risolto. Per questo OGNI lanciatore doveva essere un hitscan dentro un cono
-morbido. `arc_lift` e' il primo lanciatore vero: 30 m/s, devi anticipare ~3 m un bersaglio che
-strafe; cattura laterale da 3,09 m a **0,45 m**. Il suo tooltip diceva "Instant ray" ed era
-diventato una bugia.
-
-**Le sei decisioni di feel, prese e dichiarate** (tutte reversibili in un commit):
-
-- salto: non costa piu' stamina e **non puo' essere rifiutato** (prima sotto 10 non saltavi, senza
-  nessun segnale: il personaggio smetteva di rispondere e non capivi perche');
-- attacchi base **gratis su tutte le armi** (la spada costava 8 = il Tank a secco in 4,5 s, meno
-  del TTK: la classe da mischia punita per attaccare);
-- **l'Arciere puo' lanciare alla sua distanza**. Correzione all'audit: non era "escluso", aveva
-  `thunder_clap` — `self`, raggio 3, cioe' utile solo col nemico gia' addosso. Ora ha uno slot
-  advanced e `arc_lift`. Misurato: TTK 6,94 s, tutte e 4 le classi dentro la banda;
-- **NON fatte apposta**: controllo aereo ridotto quando sei lanciato, e abilita' solo-da-terra.
-  Tolgono agency a chi sta gia' perdendo lo scambio, sono nerf puri senza dati dietro.
-
-**Due lezioni da non ripetere.** Un test teneva una COPIA dei preset invece di leggerli: un test che
-copia i dati che valida, valida la copia — non puo' accorgersi di una divergenza, solo diventare
-vecchio. E dopo una mia modifica `pnpm test` scriveva "177 passed" senza niente di rosso, ma
-`classes.test.ts` non era nell'elenco: una doppia virgola in un import faceva fallire la
-compilazione dell'INTERA suite e 12 test erano spariti dietro un numero verde.
-**Il conteggio dei test non e' un segnale di successo; quello dei FILE si'.** L'ha preso
-`pnpm check`, che e' il motivo per cui va eseguito intero e non a pezzi.
-
-Stato: `pnpm check` esce 0 (13+21+26 file di test, 608 test), healthcheck 0 errori, CI verde,
-produzione aggiornata su `ragequit-5i6.pages.dev`.
-
-## 7. Metodo di lavoro (professionale)
-
-1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.
-2. Verificare headless ogni cambio visibile. 4. Gate verde prima di ogni commit su `main`.
-3. Aggiornare questo file + il log a ogni cambiamento/feedback. 6. Sul feedback dell'utente:
-   **modificare** il piano qui, non ricominciare.
+## 2 · Cosa vedi quando apri
+
+### Il menù
+
+Fondo scuro, quasi nero-blu. Il logo brucia in alto — lettere arancioni con dentro
+un movimento di fuoco. Sotto, un unico bottone grande: **PLAY**. Sotto ancora,
+tre tessere per le modalità, e su ognuna un numero: **quanta gente ci sta giocando
+adesso**. Non è un ornamento: è l'informazione che ti dice se vale la pena entrare.
+
+Tutto il resto — profilo, impostazioni, poligono — sta piccolo in un angolo. Il
+menù non è il gioco, e non deve sembrarlo.
+
+**Dal click al primo colpo passa un click.** Se ne servono due, la schermata è
+sbagliata.
+
+### L'arena
+
+Un colosseo di pietra, di notte. Il pavimento è sabbia compattata, chiara,
+consumata al centro dove si combatte di più. I muri sono di un rosso mattone
+spento. Sopra, cielo notturno vero: stelle, e una luna che fa da luce fredda su
+tutto.
+
+L'unica luce calda viene dalle **torce sui muri**, che sputano arancione e creano
+pozze di luce sul pavimento. Fra una torcia e l'altra ci sono zone di ombra dove
+si può stare senza essere visti subito. Quella alternanza non è decorazione: è la
+mappa che partecipa al combattimento.
+
+**Il mondo è desaturato. Le azioni sono sature.** È la regola che tiene in piedi
+tutta la leggibilità: se brilla anche il muro, la spell sparisce. Il pavimento è
+terra spenta, i muri sono mattone spento, e poi arriva un fascio giallo acceso o
+un proiettile arancione e lo vedi da trenta metri.
+
+I nemici sono **rossi ed emissivi**: si staccano dal fondo anche in penombra. Gli
+alleati blu. Il colore dice la squadra, mai la classe — la classe la riconosci
+dalla silhouette, perché due lingue di colore sullo stesso schermo si combattono.
+
+Sparse sul pavimento ci sono sei o otto **coperture di pietra**, alte quanto un
+corpo e mezzo. Ti nascondi dietro, e ci salti sopra: sono fatte apposta per essere
+entrambe le cose. E due piattaforme rialzate, raggiungibili con un salto normale —
+la verticalità è per tutti, non solo per chi ha preso lo scatto giusto.
+
+### Il tuo personaggio
+
+Lo vedi in prima persona, e **hai un'arma in mano dal primo frame**. La spada sta
+in basso a destra, angolata; quando giri il mouse **resta indietro di un istante e
+poi rientra**, come farebbe un oggetto vero che ha un peso. Quando corri oscilla
+col passo. Quando atterri si abbassa di scatto e risale. Quando colpisci, la
+camera prende un calcio secco.
+
+Sono cinque dettagli piccolissimi e sono **la differenza fra tenere in mano
+un'arma e indossare un adesivo**. Una prima persona che non disegna niente del
+giocatore è una telecamera che galleggia in una stanza.
+
+### L'HUD
+
+In basso a sinistra, in periferia, tre barre: **vita** alta e rossa con il numero
+accanto, **stamina** e **mana** più sottili sotto. Stanno lì e non al centro
+perché il centro è dove guardi il nemico.
+
+In basso al centro, **otto riquadri**: le tue abilità, ognuna col suo tasto. Quando
+ne usi una il riquadro si svuota e **si riempie dal basso** mentre il cooldown
+scorre. Non c'è un numero da leggere — in un fight non leggi, guardi.
+
+Al centro, un **mirino a quattro trattini con il buco in mezzo**: si vede sul
+pavimento chiaro e sul muro scuro, e non copre quello che stai per colpire. Quando
+prendi qualcuno ci compare sopra una **X**, per un sesto di secondo. È il feedback
+senza cui uno sparatutto non esiste: senza, non sai se hai colpito.
+
+In alto: punteggio, timer, e **chi sta vincendo**. A destra il **kill feed**, che
+dice sempre **con quale abilità** — è così che impari i kit degli altri senza che
+nessuno te li spieghi.
+
+E quando tieni qualcuno per aria concatenando colpi, sopra di lui sale un
+**contatore combo**. È l'unica cosa in più che compare in partita, e c'è perché
+**premia, non insegna**.
+
+Quando ti colpiscono, i bordi dello schermo lampeggiano rosso **dalla parte da cui
+è arrivato il colpo**.
+
+---
+
+## 3 · Come si gioca
+
+### Ti muovi
+
+Non c'è sprint. La velocità normale **è** la velocità: 9 metri al secondo, e ci
+arrivi in circa un decimo di secondo perché il corpo accelera invece di partire
+già lanciato. Quando molli i tasti non ti fermi sul posto: scivoli per **ottanta
+centimetri**. Il corpo ha peso, e si sente.
+
+Il salto è un impulso fisso: tenerlo premuto non ti fa saltare più in alto. Se
+salti nell'istante esatto in cui atterri, **non perdi velocità** — e se in aria
+tieni premuto avanti e giri il mouse di lato, **acceleri oltre il limite di
+terra**. Non è un bug: è il tetto di skill del movimento, ed è la prima cosa che
+separa chi gioca da mesi da chi ha appena aperto.
+
+Non costa stamina e **non può essere rifiutato**. Un gioco di movimento non mette
+il movimento dietro una risorsa da combattimento.
+
+### Colpisci
+
+Tasto sinistro è l'arma: spada, arco o staff a seconda della classe. È **gratis** —
+non costa nulla, si può usare sempre, e porta circa il **40 %** del tuo danno. È
+deliberato: se le abilità facessero tutto, mirare non servirebbe e il gioco
+diventerebbe una rotazione di cooldown.
+
+Tasto destro è la **parata**. Un tap apre una finestra di mezzo secondo che blocca
+tutto; tenendolo premuto blocchi il 70 % finché ti regge la stamina. E si vede
+addosso al personaggio: chi para davanti a te è leggibile da fuori.
+
+Le otto abilità stanno su `1 2 3 4` e `Q E R F` — il cluster che ogni sparatutto
+usa, perché dalla presa WASD l'indice non arriva a `5`-`8` senza staccare la mano.
+
+**Nessuna abilità è mai bloccata dall'arma sbagliata.** Se lanci una spell mentre
+hai la spada, il gioco cambia arma per te. Mostrarti metà build come "non
+disponibile" sarebbe una bugia che ti trasforma otto abilità in due gruppi da
+quattro nella testa.
+
+### Le tre forme di un colpo
+
+Ogni abilità arriva in uno di tre modi, e **ognuno ti chiede una cosa diversa**. È
+da qui che nascono gli stili di gioco, non dai numeri.
+
+**Il fascio** parte istantaneo, dritto davanti, e colpisce quello che tocca. Ti
+chiede di mirare fermo. È largo quanto un corpo — perdona poco, ma abbastanza da
+poter prendere qualcuno che vola.
+
+**Il proiettile** viaggia. Ci mette mezzo secondo ad arrivare a venti metri,
+quindi contro qualcuno che strafa **devi tirare tre metri davanti a lui**. È un
+problema di mira vero, ed è l'unico del kit.
+
+**L'area** esplode intorno a te. Non si mira: si sta nel posto giusto. È il verbo
+del corpo a corpo, e la maggior parte degli sbalzi passa da qui.
+
+E vale una regola sola: **quello che vedi disegnato è quello che colpisce**. Il
+cilindro luminoso del fascio ha lo stesso raggio del volume che fa danno, l'onda a
+terra ha lo stesso raggio dell'area. Un effetto che mente una volta è peggio di
+nessun effetto.
+
+### Il momento firma
+
+Colpisci con un'abilità che sbalza. Il nemico **si stacca da terra** e resta per
+aria poco più di mezzo secondo, con un bagliore bianco sotto i piedi che lo dice a
+tutti.
+
+Lassù non è indifeso: **può ancora mirare, lanciare e parare**. Ma non può
+schivare, perché non ha appoggio. Quindi tu hai una finestra, e se in quella
+finestra ci infili un fascio o un proiettile, il combo sale e sopra la sua testa
+appare `x2`, `x3`.
+
+Lo sbalzo **si somma alla velocità che aveva già**. Non lo ferma: se stava
+correndo, vola in diagonale. Azzerargli lo slancio lo trasformerebbe in un
+bersaglio fermo — che è l'esatto opposto del rocket di Quake da cui viene l'idea.
+
+**Il danno da caduta è zero, sempre.** Un gioco che ti punisce per essere stato
+sbalzato punisce chi sta già perdendo lo scambio.
+
+E c'è un modo per uscirne: **`F`, il break.** Non costa slot e non si sceglie —
+ce l'hanno tutti. Annulla una volta il controllo che stai subendo: ti fa cadere da
+uno sbalzo, ti libera da una radice. Ha un cooldown lungo, quindi usarlo sul primo
+sbalzo significa non averlo sul secondo. **È una decisione, non un pulsante.**
+
+### Muori e torni
+
+Muori in tre secondi di attesa. Sullo schermo, mentre aspetti, compare il **death
+recap**: chi ti ha ucciso, **con quali abilità e per quanto danno ciascuna**, e
+quanto ne avevi fatto tu.
+
+> _Killed by **SIEGE** — Bastion 45 · Hammerfall 30. You dealt 120._
+
+È lì e non durante il fight per una ragione precisa: **il gioco non insegna mentre
+giochi.** In partita non compare mai un suggerimento, una freccia o un tasto che
+lampeggia. Le spiegazioni stanno nelle schermate di scelta e nel tutorial; in
+partita c'è solo quello che ti dice **cosa è successo**, mai cosa fare.
+
+---
+
+## 4 · Le modalità
+
+Tutte e tre girano sulla stessa arena, con le stesse regole e gli stessi kit.
+Cambia **solo come finisce**. Una modalità non è un altro gioco: è un altro modo
+di chiudere lo stesso gioco.
+
+### SOLO — tutti contro tutti
+
+Da due a otto giocatori, nessuna squadra. Primo a **25 uccisioni**, o alla
+scadenza degli otto minuti vince chi ne ha di più.
+
+Si respawna in **tre secondi**, e questo cambia il carattere della modalità: la
+morte costa poco, quindi si combatte in continuazione e si prendono rischi. È la
+modalità dove impari il gioco, perché sbagliare non ti mette in panchina.
+
+Verso la fine, quando qualcuno è a 22 e tu a 19, l'arena si stringe da sola: tutti
+cercano lo stesso, e la mappa diventa piccola.
+
+### SQUAD — squadra contro squadra
+
+Da 2v2 a 4v4. Punteggio comune, prima squadra a **50**. Il fuoco amico non
+esiste.
+
+Il respawn è di **quattro secondi**, uno in più del solo, e non è un dettaglio: in
+squadra la tua morte costa a qualcun altro, che per quattro secondi combatte in
+inferiorità numerica. Basta quel secondo in più a cambiare come si gioca — si
+resta più vicini, si copre, si aspetta il compagno.
+
+Ed è la modalità dove le classi si incastrano davvero: uno sbalza, l'altro
+converte. Il momento firma diventa una cosa a due.
+
+### TOURNAMENT — ne resta uno
+
+Otto giocatori, tabellone a eliminazione. Quattro duelli, poi due, poi la finale.
+Ogni duello è al **meglio di tre round da novanta secondi**, e nei round **non si
+respawna**: se muori, il round è finito.
+
+È l'unica modalità dove ogni singolo errore conta, e si sente. Un solo scambio
+sbagliato e sei sotto 1-0.
+
+Chi perde **non viene buttato fuori**: resta a guardare il resto del tabellone in
+camera libera, e può seguire chi vuole. Aspettare il proprio turno guardando
+qualcun altro giocare è metà del piacere di un torneo.
+
+### E se non c'è nessuno online?
+
+Questa è la domanda che decide se il gioco esiste davvero, perché un PvP gratis è
+per la maggior parte delle ore **un gioco contro i bot**.
+
+Quindi: **ogni modalità parte a due giocatori**, i bot riempiono all'istante, e
+**gli umani prendono il posto dei bot a partita in corso**, ereditandone il
+punteggio. **Non si vede mai una coda.** Premi play e stai combattendo.
+
+E i bot sono avversari, non riempitivo — vedi §6.
+
+---
+
+## 5 · Le classi
+
+Quattro classi, e non si dividono per tema fantasy ma per **che ruolo hanno nel
+momento firma del gioco**.
+
+### BREAKER — quello che apre
+
+> _You don't get the kill. You make it possible._
+
+È il corpo più pesante del gioco, 280 punti vita, spada in mano. Il suo mestiere
+è **arrivare addosso e staccarti da terra**.
+
+Giocarlo significa attraversare l'arena sotto tiro per arrivare a due metri da
+qualcuno, e da lì aprire lo scambio. Da solo converte anche da sé; in squadra
+sbalza e lascia finire agli altri. Non è la classe che fa i numeri più alti — è
+quella senza cui i numeri degli altri non succedono.
+
+**Le sue tre sottoclassi:**
+
+**SIEGE** tiene il punto. Più vita, meno velocità: chi ti si avvicina paga, e se
+ti ignora perde il terreno. Si gioca piantati.
+
+**RAM** arriva. È il corpo più veloce della classe e il più fragile: apri tu lo
+scambio, sempre, e se sbagli l'entrata non hai la vita per reggerlo.
+
+**ANVIL** tiene in aria. I suoi sbalzi durano quasi un terzo in più — abbastanza
+da farci stare un colpo in più — ma il kit torna più lento. È la sottoclasse che
+trasforma un momento in una finestra.
+
+### TALON — quello che chiude
+
+> _Everything you do needs aim. Miss and you're the fragile one._
+
+Duecento punti vita, i più bassi. Arco in mano e un po' di magia per la distanza.
+**Tutto quello che fa richiede mira**: non ha un'abilità che perdona.
+
+È la classe con il tetto di skill più alto e il margine di errore più basso. Da
+sola si prepara lo sbalzo e converte; in squadra è la cassa che incassa quello che
+il BREAKER apre.
+
+**SPIRE** aspetta. Un colpo caricato, lentissimo, che attraversa l'arena — e uno
+sbalzo che dura il 30 % in più. Tutto il suo kit è su leash lunga: colpisci una
+volta e conta.
+
+**VOLLEY** non aspetta. Cooldown più corti del gioco, vita ancora più bassa: non
+cerchi il momento perfetto, tracci il bersaglio e lo consumi.
+
+**TETHER** insegue. Più veloce, ma i suoi sbalzi durano meno: non è la
+sottoclasse che juggla, è quella da cui non si scappa.
+
+### WARDEN — quello che decide dove
+
+> _You don't out-damage them. You decide where the fight happens._
+
+Staff, 250 vita, e il pool di magia più profondo del gioco. **Non ti batte in
+danno: ti batte in posizione.** Mette zone a terra, rende inutilizzabile il
+terreno, e ti costringe a combattere dove vuole lui.
+
+È la classe che cambia la mappa mentre ci giochi sopra.
+
+**BRAMBLE** rivendica il terreno più spesso: cooldown più corti, ma è lenta a
+lasciare quello che ha preso.
+
+**PYRE** brucia. Sbalzi più lunghi a costo di un po' di margine: quello che alza,
+il campo lo finisce.
+
+**HOLLOW** sopravvive. Più vita, kit più lento: più il fight dura, più è il suo
+fight.
+
+### DRIFT — quello che non c'è
+
+> _Never be where they're shooting._
+
+Porta tutte e tre le armi e pesca un po' da ogni scuola, ma **niente di pesante**:
+il suo pool è una sezione trasversale scelta sulla rapidità. Il danno più basso
+del gioco, la mobilità più alta.
+
+Si gioca non facendosi prendere. È la classe che vince gli scambi che non
+avvengono.
+
+**PHASE** è il corpo più difficile da colpire del gioco, e il meno capace di
+reggere un colpo.
+
+**SLIPSTREAM** è più veloce e ha il kit più pronto, e ha rinunciato a tutto il
+resto per averlo.
+
+**ECHO** ha sempre un'altra risposta pronta — il cooldown più basso di tutti — e
+vince sull'informazione invece che sulla velocità.
+
+### Il cerchio
+
+Le quattro classi si mangiano in cerchio, **senza contro assoluti**:
+
+```
+BREAKER  ──odia──▶  DRIFT  ──odia──▶  WARDEN  ──odia──▶  TALON  ──odia──▶  BREAKER
+   (non lo prende)    (gli toglie il terreno)  (lo colpisce da fuori)  (gli arriva addosso)
+```
+
+Nessuno di questi è un contro automatico: sono matchup che **si giocano
+diversamente**, non che si vincono da soli.
+
+### La regola che tiene in piedi tutto
+
+**Un kit di classe è chiuso e riconoscibile: guardando un'abilità devi sapere chi
+la lancia.**
+
+Non è filosofia, è una cosa misurabile. Nella versione precedente una classe era
+legale per il **95 %** delle abilità del gioco — cioè non era una classe, era un
+superinsieme di tutte le altre — e aveva **485 volte** la varietà di build della
+più povera. Dopo la curatela il rapporto è **8,6×**, che è lo scarto normale di un
+gioco vero. `[M]`
+
+E **nessuna classe ha uno slot con una sola opzione legale**: scegliere 1 fra 1
+non è una scelta, è un'abilità fissa travestita da build.
+
+---
+
+## 6 · I nemici controllati dal gioco
+
+I bot sono contenuto, non riempitivo, perché sono l'avversario che incontri più
+spesso.
+
+**Non mirano per percentuale di colpi a segno** — quella produce un nemico che
+sbaglia a caso e che non puoi leggere. Mirano con due parametri, e sono entrambi
+visibili nel comportamento:
+
+**Sbagliano di più quando ti hanno appena visto**, e migliorano restando in vista.
+E **ruotano a velocità limitata**: non scattano sul bersaglio, ci arrivano. Se ti
+muovi di lato in fretta, la loro mira insegue e resta indietro.
+
+**Se rompi la linea di vista, la loro precisione si azzera.** È questo che dà alle
+coperture un motivo che non è decorativo, ed è leggibile: ti nascondi, e il loro
+prossimo colpo è impreciso.
+
+Si muovono mentre sparano, strafano, tengono la media distanza e usano le
+coperture. Un nemico fermo è un bersaglio, e insegna al giocatore l'abitudine
+sbagliata.
+
+Tre difficoltà — **Recluta, Veterano, Élite** — che cambiano quei due parametri e
+la cadenza di fuoco. In partita mista il default è Veterano, che prende circa
+l'88 % dei colpi in vista libera. `[M]`
+
+> **Un nemico che non ti può battere non è un avversario.** Nella prima versione
+> l'errore di mira era così largo che era _matematicamente impossibile_ che
+> colpisse un corpo: 0 colpi su 1. Il test l'ha preso prima che finisse in
+> partita. `[M]`
+
+---
+
+## 7 · Le spell, una per una
+
+Sessantasette abilità. Non sono sessantasette varianti dello stesso colpo: sono
+divise in **quattro scuole**, e ogni scuola è un modo diverso di stare in
+un'arena.
+
+Ogni abilità porta con sé una cosa che il giocatore legge nella schermata di
+scelta: **cosa fa** e **cosa ti costa** — non il costo in mana, ma il difetto.
+Ogni spell del gioco ha un difetto scritto, e non è modestia: è così che il
+giocatore capisce contro cosa la sta scegliendo.
+
+> `Riposte` — _Instant counter-cut that lifts the target off their feet._
+> _No wind-up to read._
+> **Shortest reach in the kit — you must already be inside their swing.**
+
+---
+
+### La scuola della spada — 14 abilità
+
+Il corpo a corpo del gioco. Tutte a due-quattro metri, tutte da usare mentre stai
+addosso a qualcuno. È la scuola dove si trovano **quattro dei sei sbalzi
+migliori**: se il gioco vende il momento in cui stacchi il nemico da terra, questa
+è la scuola che lo fa succedere più spesso.
+
+Si paga sempre in stamina, mai in mana. Chi gioca di spada gestisce una risorsa
+che si consuma correndo e parando.
+
+**Uppercut** — il gancio. Sbalza sette decimi di secondo, la finestra più lunga
+della scuola, ed è l'apertura più pulita che il gioco abbia. Fa solo 16 di danno:
+non è lì per uccidere, è lì per creare il momento.
+
+**Riposte** — il contrattacco. Istantaneo, nessun wind-up da leggere, ti stacca da
+terra. Ma arriva a 2,2 metri: devi essere già dentro la sua spada.
+
+**Guard Break** — spezza la guardia. Stordisce e sbalza insieme, ma fa 10 di
+danno: è il preludio di qualcos'altro, mai la cosa in sé.
+
+**Executioner's Blow** — il colpo che chiude. 52 di danno, il più alto del gioco
+in mischia, e sbalza. Undici secondi di ricarica: sbagliarlo significa non averlo
+per il resto dello scambio.
+
+**Skewer** — l'affondo lungo. Arriva a 4,2 metri e apre una ferita che sanguina.
+Va dritto e si impegna: chi strafa semplicemente non è lì.
+
+**Cleave** — la sciabolata larga. Prende tutti davanti a te in tre metri. Poco
+danno, sempre pronta: è il riempitivo onesto della scuola.
+
+**Momentum Strike** — il colpo veloce. Quattro secondi di ricarica, la più corta
+del gioco. Non impressiona: martella.
+
+**Whirlwind Slash** — il mulinello. Un secondo intero di rotazione che colpisce
+tutto intorno a ogni terzo di secondo. Mentre giri sei più lento e non puoi
+riposizionarti: è un impegno, non un'uscita.
+
+**Ground Slam** — il colpo a terra. Radica chi ti sta intorno: non li sbalza, li
+inchioda. È la risposta a chi ti sta addosso in tre.
+
+**Hamstring** — il taglio ai tendini. Rallenta. Dodici di danno e otto secondi di
+ricarica: la spendi per impedire una fuga, non per fare male.
+
+**Bleed Strike** — il taglio che sanguina. Dieci sul colpo e il resto nei quattro
+secondi dopo. Contro chi si cura è il modo di non farlo mai tornare pieno.
+
+**Bloodthirst** — il colpo che ti riporta in vita. Diciotto di danno e ne
+riprendi. È la sopravvivenza di chi non arretra mai.
+
+**Gap Closer** — la carica. Sei metri in avanti, danno e rallentamento
+all'arrivo. È così che un BREAKER attraversa il campo aperto.
+
+**Rending Dash** — lo scatto che taglia. Cinque metri, e chi attraversi
+sanguina. È l'entrata e l'uscita nello stesso tasto.
+
+---
+
+### La scuola dell'arco — 14 abilità
+
+La distanza. Ogni abilità di questa scuola è un **proiettile che viaggia**, e
+ognuna viaggia a una velocità diversa: da 34 metri al secondo della Bola ai 500 di
+Marksman Shot. Quella differenza _è_ la scuola: imparare quanto anticipare ogni
+freccia è il mestiere del TALON.
+
+Nessuna di queste abilità perdona un errore di mira. È deliberato.
+
+**Marksman Shot** — il colpo da cecchino. 500 m/s: non devi anticipare niente,
+punti e prendi. Cinquanta di danno, dieci secondi di ricarica, e una finestra di
+mira lunga in cui sei fermo e visibile.
+
+**Steady Aim** — il tiro caricato. Mezzo secondo piantato per terra a tendere, poi
+48 di danno che attraversano l'arena senza calare. Quel mezzo secondo è il prezzo,
+e si vede da fuori.
+
+**Piercing Shot** — la freccia che passa. 150 m/s, traiettoria piatta, 40 di
+danno. Hitbox stretta: contro chi si muove di lato sbaglia di brutto.
+
+**Blast Arrow** — la freccia esplosiva. 45 di danno in tre metri di raggio, spinge
+e incendia. Vola lenta e in arco: da lontano si schiva il punto d'impatto, quindi
+si tira dove sarà, non dove è.
+
+**Point Blank** — a bruciapelo. 38 di danno a quattro metri, e sbalza. È l'arco
+che si difende da chi gli è arrivato addosso.
+
+**Split Shot** — tre frecce a ventaglio. Un bersaglio ne prende una frazione: è
+per chi arriva in gruppo o per chi non riesci a inquadrare.
+
+**Broadhead** — la freccia pesante. Fa sanguinare quattro secondi e cala molto:
+sulle lunghe devi mirare sopra la testa.
+
+**Poison —** _vedi la scuola arcana._
+
+**Skyfall** — la pioggia. Si tira su un punto, non su una persona. Rallenta chi ci
+resta sotto.
+
+**Volley** — la salva. Una zona per un secondo e mezzo che colpisce a ondate e
+rallenta del 45 %. Il punto di caduta si vede: chi è sveglio esce prima della
+seconda ondata.
+
+**Bola** — la corda. Sei di danno e basta, ma radica per più di un secondo. Vola
+piano, si legge, e se arriva hai vinto lo scambio.
+
+**Pin Shot** — la freccia che inchioda. Radica quasi tre secondi. È il setup più
+lungo del gioco, e chiede una linea di tiro pulita.
+
+**Snare Trap** — la trappola. Si posa ai tuoi piedi, si arma in due secondi, dura
+venti. Il primo che ci passa è radicato tre secondi. Si mette prima, non durante.
+
+**Siphon Arrow** — la freccia che ruba. Ti ricura più di quanto tolga, ma toglie
+poco. E se sbagli, non ti cura niente.
+
+**Disengage Shot** — il passo indietro. Salti indietro di tre metri sparando in
+avanti. Dodici di danno: non è un attacco, è un modo per non essere lì.
+
+---
+
+### La scuola arcana — 27 abilità, cinque elementi
+
+È la scuola più grande e l'unica divisa per **elemento**, perché ogni elemento fa
+una cosa diversa al campo di battaglia.
+
+#### Fuoco — il danno nel tempo
+
+Brucia. Il fuoco non è la scuola del colpo secco, è quella che ti lascia addosso
+qualcosa che continua.
+
+**Meteor** — la spell più grossa del gioco. 55 di danno, sbalza per **1,2
+secondi** — il doppio di uno sbalzo normale — e incendia. Undici secondi di
+ricarica, e si tira su un punto: il bersaglio ha il tempo di uscire, se guarda in
+alto.
+
+**Fireball** — il classico. Orbita in arco a 30 m/s, esplode in 2,6 metri, spinge
+via e incendia. La traiettoria si vede: muoversi di lato la evita.
+
+**Eruption** — il suolo che si apre. Poco danno, ma sbalza sette decimi. È
+l'apertura del WARDEN di fuoco.
+
+**Flame Wall** — il muro. Sette metri di fuoco per tre secondi e mezzo. Non
+esplode: sta lì e rende un corridoio inagibile. È la spell che cambia la mappa.
+
+**Ignite** — istantanea, nessun danno diretto, tre cariche di bruciatura. È la
+spell che si lancia mentre corri.
+
+**Fire Blink** — sette metri in avanti, e dove eri resta una pozza che brucia.
+Riposizionarsi e lasciare un problema alle spalle, nello stesso tasto.
+
+#### Ghiaccio — il controllo
+
+Il ghiaccio fa poco danno per scelta. Serve a togliere all'avversario la cosa più
+preziosa che ha in questo gioco: **la velocità**.
+
+**Frost Bolt** — il colpo che raffredda. Sedici di danno e una carica di gelo che
+dura sei secondi; **ripetuto, arriva al congelamento vero**. È la spell più lunga
+da far fruttare e la più forte quando frutta.
+
+**Freeze Target** — il congelamento diretto. Otto di danno e il nemico è fermo.
+Dieci secondi e mezzo di ricarica: è una volta a scambio.
+
+**Frost Pillar** — la colonna che sbuca da terra e ti solleva. Sette decimi in
+aria, dodici di danno.
+
+**Ice Wall** — sei metri di ghiaccio che **radica chiunque ci cammini sopra**, per
+quattro secondi e mezzo. Zero danno. È negazione pura: gli togli metà arena.
+
+**Blizzard** — sette metri di tormenta per cinque secondi, rallenta del 60 %. È la
+zona più grande del gioco, e chi ci sta dentro può ancora sparare — non è una
+prigione, è una tassa.
+
+#### Fulmine — la velocità
+
+Il fulmine è l'elemento che arriva prima. Ricariche corte, colpi rapidi, e
+l'unico sbalzo istantaneo a distanza.
+
+**Chain Bolt** — 32 di danno, sei secondi di ricarica. È la spell da fight, quella
+che entra due volte per scambio.
+
+**Arc Lift** — la saetta che solleva. Viaggia a 30 m/s, quindi va anticipata, ma
+se prende, quello vola per sette decimi. È l'apertura a distanza del gioco.
+
+**Thunder Clap** — il tuono addosso. Tre metri intorno a te, stordisce e sbalza.
+È la risposta di un mago che si è fatto raggiungere.
+
+**Storm Field** — quattro metri e mezzo di tempesta che rallenta e fa danno a
+scatti rapidi.
+
+**Lightning Dash** — cinque metri di scatto che fanno danno a chi attraversi.
+
+#### Ombra — il ritorno di vita
+
+L'ombra non fa i numeri più alti. Fa una cosa sola, e la fa meglio di tutti: **ti
+rimette in piedi mentre combatti**.
+
+**Life Drain** — il canale. Due secondi e mezzo attaccato a qualcuno: prima gli
+strappa la stamina, poi gli succhia la vita e te la dà. Ti muovi o ti colpiscono e
+si spezza subito. È la spell più rischiosa del gioco e la più remunerativa.
+
+**Shadow Bolt** — cinque secondi di ricarica, 18 di danno, un quarto torna a te.
+È la sostenuta di base dell'ombra.
+
+**Void Spike** — la punta che esce da terra. Sbalza sette decimi.
+
+**Curse of Weakness** — il raggio che maledice: acceca per quattro secondi e gli
+svuota il mana, e metà di quel mana torna a te. È la spell che punisce un altro
+mago.
+
+**Dark Barrier** — 38 punti di scudo, istantanei. Nessun attacco, nessuna cura:
+assorbe e basta.
+
+#### Natura — il terreno
+
+La natura è la scuola del **dove**. Radica, avvelena, e rivendica pezzi di
+pavimento.
+
+**Root Upthrow** — le radici che ti lanciano. **Un secondo pieno in aria**, il
+secondo sbalzo più lungo del gioco dopo Meteor.
+
+**Entangle** — le radici che ti tengono. 3,2 secondi di root, quattro di danno.
+È il fermo più lungo del gioco.
+
+**Thorn Field** — tre metri e mezzo di spine per cinque secondi, rallenta della
+metà.
+
+**Poison Dart** — il dardo veloce. Otto di danno subito e veleno per quattro
+secondi. Cinque secondi di ricarica: si tira spesso.
+
+**Vine Dash** — cinque metri di scatto, e dove atterri resta una zona che radica
+chi ti insegue. È la fuga che lascia una trappola.
+
+**Healing Totem** — cinque secondi di cura lenta. Non ti salva in un fight: ti
+rimette a posto fra un fight e l'altro.
+
+---
+
+### La scuola comune — 12 abilità
+
+Nessuna arma, nessun elemento. Sono le abilità che tutti possono prendere, e sono
+quelle che decidono **se sopravvivi a un errore**.
+
+**Phase Shift** — sei decimi di invulnerabilità totale. Non puoi attaccare né
+lanciare. È la spell che annulla il colpo che ti avrebbe ucciso, e nient'altro.
+
+**Barrier** — 42 punti di scudo per otto secondi.
+
+**Cleanse Surge** — cancella tutti i malus addosso e ti dà due secondi di scatto.
+Non cura: ti restituisce il movimento.
+
+**Energize** — 35 di stamina di colpo. Altri scatti, altre parate, altri colpi di
+spada.
+
+**Quick Dash** — quattro metri nella direzione in cui ti stai già muovendo.
+Nessuna invulnerabilità: mentre scatti ti si può ancora prendere.
+
+**Smoke Screen** — tre metri e mezzo di fumo che acceca chi ci sta dentro. Zero
+danno: è terreno negato.
+
+**Mark Target** — un raggio da trenta metri che marca il nemico e gli toglie
+stamina. Sei di danno. In squadra è la spell che dice "quello lì".
+
+**Healing Potion** — due secondi fermo a bere, 40 di vita. Se ti muovi si annulla:
+non si combatte e ci si cura insieme.
+
+#### Le quattro Recovery — una per classe, e non si scambiano
+
+Ogni classe ha **la sua** cura, ed è l'unica che può prendere. È il modo più
+economico che il gioco ha di dire che quattro classi sono quattro cose diverse:
+si vede già da come si rimettono in piedi.
+
+**Brace Recovery** (BREAKER) — 50 di vita e uno scudo. Costa molta stamina: dopo
+averla usata, per un momento non puoi né parare né scattare.
+
+**Hunter's Flow** (TALON) — 35 di vita e uno scatto insieme. Cura di meno perché
+cura _mentre ti sposti_. Lo scatto non ha invulnerabilità.
+
+**Arcane Rebind** (WARDEN) — 60 di vita, la cura più alta del gioco. Ha un
+wind-up: se ti interrompono, l'hai persa.
+
+**Adaptive Mend** (DRIFT) — 30 di vita, la più bassa, ma la ricarica più corta
+delle quattro. Il DRIFT non torna su in una volta: torna su spesso.
+
+---
+
+### Come si legge un'abilità nella schermata
+
+Nella scelta della build, ogni abilità mostra sempre e solo queste cose, in
+quest'ordine:
+
+```
+UPPERCUT                                        [ 2 ]
+Sword · Melee · 2.5 m
+
+Rising strike that launches the target airborne.
+The longest lift in the game.
+
+16 damage · 8.5 s cooldown · 0.7 s airborne
+
+⚠ Almost no damage on its own — this opens, it does not close.
+```
+
+Nome, arma e scuola, **cosa fa in parole**, i tre numeri che contano, il difetto.
+Non c'è una scheda tecnica lunga, e non c'è niente nascosto sotto un tooltip: se
+un'informazione serve a scegliere, sta lì.
+
+---
+
+## 8 · L'arena, in dettaglio
+
+**Una mappa sola alla prima uscita, fatta bene.** Tre mappe mediocri valgono meno
+di una che si impara a memoria.
+
+È un colosseo quadrato di cinquanta metri per cinquanta, con muri di otto. Non è
+grande: da un capo all'altro ci si mette cinque secondi e mezzo di corsa. È
+deliberato — un'arena dove per trovare qualcuno devi cercarlo è un'arena dove non
+succede niente.
+
+Il pavimento è sabbia compattata, più chiara e più consumata al centro, dove si
+combatte di più. È una traccia di storia: la mappa sembra usata prima che tu
+arrivi.
+
+Ci sono **sei-otto blocchi di pietra** sparsi, alti tre metri. Ognuno è alto
+abbastanza da nasconderti e basso abbastanza da saltarci sopra, e questa non è una
+coincidenza: **la geometria deve partecipare al movimento, non solo fermare i
+proiettili**. E due piattaforme rialzate ai lati, raggiungibili con un salto
+normale, senza abilità — perché la verticalità deve essere di tutti, non solo di
+chi ha scelto lo scatto.
+
+Gli otto punti di comparsa stanno su un cerchio da venti metri, e **non si vedono
+fra loro**. Rinascere sotto tiro è la cosa che fa chiudere la scheda del browser.
+
+**Le regole con cui si giudica la mappa finita:**
+
+- ogni angolo ha **due uscite** — nessun vicolo cieco;
+- la linea di tiro più lunga è **trenta metri**, che è la gittata massima del
+  gioco: oltre è spazio morto;
+- dal centro si vedono tutte le uscite, dai bordi no. Il centro è il posto
+  pericoloso, e si vede che lo è;
+- **un solo punto nel codice decide dove si nasce.** Nel progetto precedente lo
+  decidevano tre posti diversi e uno sovrascriveva gli altri: nascevano tutti
+  sovrapposti.
+
+---
+
+## 9 · Come è fatto graficamente
+
+### La direzione
+
+**Stilizzata, con silhouette forti. Non realistica.** È una scelta, e ha tre
+ragioni concrete che non sono di gusto.
+
+Il realismo è la direzione artistica più cara che esista, e su asset gratuiti di
+autori diversi rende **visibile ogni differenza fra loro** — è così che si
+riconosce un gioco fatto di pezzi comprati. Poi: **la leggibilità è l'estetica
+moderna.** I giochi che sembrano contemporanei sembrano tali perché li capisci al
+volo, non perché hanno più poligoni. E infine gira in una scheda di browser sul
+renderer Compatibility, che è il vincolo vero e non si aggira.
+
+### La regola del colore
+
+> **Mondo desaturato, azioni sature.**
+
+È la regola che tiene in piedi tutta la leggibilità del gioco, ed è anche la
+ragione per cui l'arena è di notte. Un pavimento di terra spenta e muri di mattone
+spento non competono con niente; poi arriva un fascio giallo acceso e lo vedi da
+trenta metri.
+
+| Ruolo                                               | Colore                    | Dove                                 |
+| --------------------------------------------------- | ------------------------- | ------------------------------------ |
+| Pavimento                                           | `#6B5C45`                 | terra desaturata                     |
+| Muri                                                | `#4A2A22`                 | mattone spento                       |
+| Coperture                                           | `#59544D`                 | pietra                               |
+| Cielo                                               | `#0D1221` → `#2A2126`     | notte, più calda all'orizzonte       |
+| **Torce**                                           | `#FF7521`                 | le uniche sorgenti calde della mappa |
+| **Nemico**                                          | `#C72A2E` + emissione 0,9 | silhouette                           |
+| **Alleato**                                         | `#3A8FDE`                 | silhouette                           |
+| **Tuo fascio**                                      | `#FFC759`                 | BEAM                                 |
+| **Tuo proiettile**                                  | `#FF852E`                 | BOLT                                 |
+| **Sbalzo**                                          | bianco                    | è uno _stato_, non un elemento       |
+| Vita `#FF3344` · Stamina `#00FF88` · Mana `#00D0FF` |                           | HUD                                  |
+
+Il colore dice **la squadra**, mai la classe. Due lingue di colore sullo stesso
+schermo si combattono, e il giocatore impara quella sbagliata: la classe la
+riconosci dalla sagoma, che a trenta metri di profilo è già diversa.
+
+### La luce
+
+La luna dà una luce fredda, bassa, che arriva ovunque. Le torce sui muri danno
+l'unica luce calda, e sono l'unica cosa che si muove nell'illuminazione: il
+crepitio fa oscillare la pozza arancione sul pavimento.
+
+Fra una torcia e l'altra ci sono **zone d'ombra vere**, dove una silhouette non si
+stacca subito dal fondo. Quella alternanza non è decorazione: è la mappa che
+partecipa al combattimento. Chi conosce le ombre attraversa il campo aperto.
+
+C'è nebbia, e c'è per una ragione misurabile: **su un'arena da cinquanta metri
+serve una densità fra 0,012 e 0,018.** Al valore che il progetto precedente
+chiamava "densa" — 0,007 — copriva il 4 % a trenta metri, cioè non esisteva. `[M]`
+
+### Come si giudica un frame
+
+**Un'immagine si misura, non si guarda.** È la lezione più cara di questo
+progetto: a occhio si sbaglia, e si sbaglia sempre nella stessa direzione — verso
+il "va bene così".
+
+Quindi ogni frame catturato passa da quattro bersagli:
+
+|                            | Bersaglio  | Perché                          |
+| -------------------------- | ---------- | ------------------------------- |
+| Pixel più scuro            | **0**      | senza neri l'immagine è slavata |
+| Picco                      | **> 240**  | senza bianchi non ci sono luci  |
+| Pixel sopra l'80 %         | **< 8 %**  | oltre, il frame è bruciato      |
+| Pixel nel decile più scuro | **< 45 %** | oltre, metà schermo è vuoto     |
+
+Due trappole già prese, **entrambe invisibili a occhio nudo**:
+
+- il fascio disegnato **dall'occhio** invece che dalla bocca dell'arma mette la
+  camera dentro un cilindro additivo. Il pixel più scuro passa da 0 a **96** e il
+  **51,7 %** dello schermo si brucia. Il VFX parte dalla bocca; il test di
+  collisione continua a partire dall'occhio. `[M]`
+- l'onda dell'area disegnata all'altezza del petto riempie mezzo schermo. Si
+  disegna **ai piedi**, più sottile.
+
+### I personaggi
+
+Corpi stilizzati, silhouette leggibile, **una sagoma per classe** riconoscibile a
+trenta metri di profilo. Il BREAKER è largo e basso, il TALON è alto e stretto, il
+WARDEN ha una massa attorno alle spalle, il DRIFT è il più piccolo.
+
+Attorno a ognuno c'è un **bordo del colore della squadra**, fatto come guscio a
+hull invertito. Il suo spessore è **derivato dalla scala del modello** — sei
+millimetri su un corpo di 1,9 metri — e non è un dettaglio tecnico: uno spessore
+costante applicato a modelli con scale native diverse sparisce su quello grande e
+**inghiotte** quello piccolo, che diventa un manichino di plastica colorata. `[M]`
+
+### L'arma in mano
+
+L'arma esiste **dal primo frame**, e ha una scena e una camera sue, disegnate
+sopra il mondo. Così non può compenetrare i muri e ha un campo visivo suo.
+
+Cinque comportamenti, tutti piccoli, tutti indispensabili:
+
+- **sway** — resta indietro sul movimento del mouse e rientra a molla;
+- **bob** — oscilla col passo, guidato dalla **velocità reale**, così
+  l'accelerazione si vede nelle mani;
+- **dip** — si abbassa di scatto quando atterri e risale;
+- **kick** — quando lanci, l'arma scatta _prima_ che il colpo esista nel mondo;
+- **normalizzazione** — la scala è calcolata da una lunghezza a schermo, non da un
+  moltiplicatore: un modello diverso entra senza ritarare nulla.
+
+### Il peso di un colpo
+
+Quando colpisci, la camera prende un calcio secco che rientra a molla, e sullo
+schermo compare una X sul mirino.
+
+**Mai rallentando il motore.** `Engine.time_scale` è la soluzione ovvia e sbagliata:
+rallenta tutto — nemici, proiettili, il colpo che stavi per subire. Misurato, il
+proiettile appena lanciato non arrivava più a bersaglio e la vita del nemico
+restava a 148. Il peso si dà con la camera, che è visiva e non tocca la
+simulazione. `[M]`
+
+### Le prestazioni
+
+|                         | Bersaglio | Misurato          |
+| ----------------------- | --------- | ----------------- |
+| Frame time medio        | ≤ 16,6 ms | **6,98 ms** `[M]` |
+| Frame time p99          | ≤ 33,3 ms | 7,79 ms `[M]`     |
+| Draw call               | < 300     | **70** `[M]`      |
+| Peso scaricato (brotli) | < 20 MB   | **6,8 MB** `[M]`  |
+
+Il margine serve: quei numeri sono misurati su una macchina da sviluppo, e il
+gioco deve girare su un portatile con la grafica integrata.
+
+---
+
+## 10 · Come suona
+
+**Oggi il gioco è muto, ed è la mancanza che a parità di sforzo cambia di più.**
+Metà del peso di uno sparatutto sta nelle orecchie: un colpo senza suono non pesa,
+per quanto bene sia disegnato.
+
+### La regola
+
+**Ogni evento che cambia lo stato del gioco ha un suono, e ogni suono dice una
+cosa sola.** Tre famiglie che non si confondono mai:
+
+**Quello che fai tu** è secco, in primo piano, senza riverbero — sta nella tua
+testa. **Quello che ti fanno** è filtrato e spazializzato, e deve dirti **da
+dove**. **Il mondo** sta sotto tutto e non compete mai.
+
+### Cosa suona
+
+| Evento                         | Suono                             | Priorità    |
+| ------------------------------ | --------------------------------- | ----------- |
+| Passi                          | 4 varianti alternate              | media       |
+| Atterraggio                    | tonfo, intensità dalla velocità   | alta        |
+| Salto                          | espirazione corta                 | bassa       |
+| **Fascio**                     | scarica secca, 0,15 s             | **massima** |
+| **Proiettile**                 | lancio grave + sibilo in volo     | **massima** |
+| **Area**                       | impatto al suolo + coda           | **massima** |
+| **Colpo a segno (tuo)**        | tic acuto, sopra tutto            | **massima** |
+| **Colpo subito**               | impatto sordo + passa-basso 0,3 s | **massima** |
+| Sbalzo                         | soffio ascendente                 | alta        |
+| Parata riuscita                | metallo secco                     | alta        |
+| Abilità tornata pronta         | tic discreto                      | bassa       |
+| Abilità non disponibile        | tonfo sordo                       | media       |
+| Uccisione                      | conferma a due note               | alta        |
+| Morte                          | tonfo + attenuazione generale     | alta        |
+| Torce                          | crepitio in loop, spazializzato   | ambiente    |
+| Vento                          | loop continuo                     | ambiente    |
+| Menu: hover / click / conferma | tre suoni distinti                | media       |
+
+**Il suono del colpo a segno è il più importante del gioco.** È l'unico feedback
+che un FPS non può non avere: senza, non sai se hai colpito. Deve tagliare sopra
+qualunque altra cosa stia suonando, sempre.
+
+**Il combattimento abbassa l'ambiente di 6 dB** mentre suona. Tutte le sorgenti
+sono in 3D tranne HUD e menu.
+
+**Musica solo nel menu e nella schermata dei risultati. In partita, niente.** In
+un PvP l'informazione direzionale è gameplay, e la musica la copre.
+
+---
+
+## 11 · Le schermate
+
+Sette schermate in tutto. **Tutto il testo è in inglese.**
+
+La regola che le governa tutte: **dal click su PLAY al primo colpo passa un click
+solo.** Se una schermata ne aggiunge uno, quella schermata è sbagliata. Chi vuole
+solo giocare deve poterlo fare senza mai vedere la scelta della build.
+
+```
+MENU ──▶ ARENA ──▶ RESULTS ──▶ MENU
+  │        ▲          │
+  │        └──── PLAY AGAIN
+  ├──▶ ROSTER ──▶ BUILD ──▶ (torna al menu)
+  ├──▶ RANGE
+  └──▶ SETTINGS
+```
+
+### MENU
+
+Fondo quasi nero-blu, il logo che brucia in alto, un bottone **PLAY** grande al
+centro. Sotto, tre tessere — SOLO, SQUAD, TOURNAMENT — e su ognuna **quanta gente
+ci sta giocando adesso**: è l'informazione che dice se vale la pena entrare, ed è
+l'unico numero che il menù mostra.
+
+In basso, piccoli e in fila: il personaggio attualmente scelto (con la sua sagoma
+e il nome della sottoclasse), **RANGE**, **SETTINGS**, e il nome che ti sei dato.
+
+Il menù non è il gioco e non deve sembrarlo: niente caroselli, niente notizie,
+niente ricompense giornaliere.
+
+### ROSTER — scegliere chi sei
+
+A sinistra le quattro classi, in colonna, ognuna con la sua sagoma. Ne scegli una
+e la colonna si apre nelle **tre sottoclassi**.
+
+Al centro, il personaggio scelto **si vede in 3D**, illuminato come nell'arena,
+che fa una posa di attesa con l'arma della classe. Al passaggio da una sottoclasse
+all'altra il modello cambia, e cambia visibilmente.
+
+A destra, **quattro righe di testo**: la frase-identità della classe, cosa fa nel
+momento firma, cosa guadagna e cosa paga la sottoclasse, e una riga sul come si
+gioca.
+
+> **RAM** — _Breaker_
+> You open every trade. Fastest body of the class.
+> **+12 % move speed · −10 % health**
+> If you miss the entry, you don't have the health to sit in it.
+
+**Il baratto è scritto sulla stessa riga.** Guadagni e paghi, sempre insieme: una
+sottoclasse che ha solo vantaggi non è una scelta.
+
+In basso, un bottone **BUILD** e un bottone **PLAY**. Puoi giocare da qui senza
+mai toccare le abilità: ogni sottoclasse arriva con una build già fatta e sensata.
+
+### BUILD — scegliere cosa porti
+
+Otto slot in fila, con i loro tasti sotto: `1 2 3 4 Q E R F`. Clicchi uno slot e
+si apre il pool della classe, filtrato per scuola.
+
+Ogni abilità nel pool mostra il nome, l'arma, cosa fa **in parole**, i tre numeri
+che contano e il difetto (§7). Passandoci sopra, **al centro dello schermo una
+sagoma la esegue**, in loop, con il suo VFX vero: vedi il fascio partire, il
+proiettile viaggiare, l'area espandersi. Il raggio disegnato è quello vero.
+
+In alto, tre indicatori che si aggiornano mentre scegli — e sono l'unico
+"consiglio" che il gioco dà, senza mai dire cosa fare:
+
+```
+TIME TO KILL  5.4 s        LAUNCHES  2        RECOVERY  yes
+```
+
+Se una build non ha nessuno sbalzo, l'indicatore lo dice. Se non ha una cura, lo
+dice. Non ti impedisce niente.
+
+Sotto, **PRESETS**: tre build già fatte per sottoclasse, con un nome che dice come
+si gioca, non cosa contiene. E **RANDOM**, che ne genera una legale — il modo più
+veloce che esista per scoprire un'abilità che non avresti mai preso.
+
+Le build si salvano, se ne tengono **cinque per classe**, e hanno un nome tuo.
+
+### ARENA
+
+Il gioco. L'HUD è descritto al §2, e non c'è nient'altro sopra: **nessun
+suggerimento, nessuna freccia, nessun tasto che lampeggia.**
+
+Con `Tab` si apre il tabellone: nomi, punteggio, sottoclasse di ognuno, ping.
+Sotto ogni nome della squadra avversaria, **le abilità che ti hanno già colpito**
+— è il modo del gioco di dirti contro cosa stai giocando senza spiegarti niente.
+
+`Esc` apre un menù minimo: impostazioni, esci, e basta. **Il gioco non si mette in
+pausa**: è multigiocatore.
+
+### RESULTS
+
+Alla fine, il tabellone finale e in cima chi ha vinto, con la sua sagoma in 3D che
+fa una posa. Per ogni giocatore: uccisioni, morti, danno fatto, danno subito, e
+**l'abilità che ha usato meglio**.
+
+E per te tre righe in più:
+
+```
+Best streak        4
+Longest juggle     x3
+Accuracy           41 %
+```
+
+Due bottoni, grandi: **PLAY AGAIN** e **MENU**. Il primo ti rimette in coda con la
+stessa build, senza passare da nessuna schermata.
+
+### RANGE — il poligono
+
+L'unico posto dove il gioco insegna.
+
+Sei in un'arena vuota illuminata a giorno, con **bersagli fermi, bersagli che
+strafano, e un manichino che si cura da solo**. Le abilità **non hanno ricarica** e
+non c'è morte.
+
+Sul muro davanti, tre pannelli che si accendono uno alla volta e ti fanno fare tre
+cose:
+
+1. **Muoviti** — salta cinque volte di fila senza perdere velocità. Un contatore
+   ti mostra la velocità attuale, ed è così che si scopre lo strafe aereo.
+2. **Mira** — colpisci il bersaglio che strafa con un proiettile. Il pannello
+   mostra dove è arrivata la tua freccia rispetto a dove era lui.
+3. **Sbalza e converti** — sbalza il manichino e colpiscilo mentre è per aria.
+   Il contatore combo appare sopra di lui.
+
+Fatte quelle tre cose il poligono non ti chiede più niente e resta aperto. Ci si
+torna per provare una build nuova, e ci si arriva **anche dalla schermata BUILD**,
+con un bottone: provi quello che hai appena scelto senza uscire dal flusso.
+
+### SETTINGS
+
+Una pagina sola, in colonna, senza sottomenù. Tutto è descritto al §12.
+
+---
+
+## 12 · Le comodità — quelle senza cui un gioco sembra un compito
+
+Sono la parte che nessuno nota quando c'è, e che tutti notano quando manca. Vanno
+progettate adesso e non "dopo, se c'è tempo", perché sono esattamente le cose che
+"dopo" non si fanno mai.
+
+### Non perdere una partita per colpa nostra
+
+**Se la connessione cade, si rientra.** Il server tiene il posto per **trenta
+secondi**: ricarichi la pagina e sei di nuovo dentro, con il tuo punteggio, la tua
+build e la tua vita. Se non torni, un bot prende il tuo posto e la partita non si
+rompe per gli altri.
+
+**Se il gioco si chiude, la build resta.** Tutto quello che scegli è salvato in
+locale nel momento in cui lo scegli — mai al momento di uscire.
+
+**Se ti disconnetti da un torneo**, il tuo posto nel tabellone resta finché il tuo
+duello non finisce.
+
+### Sapere cosa sta succedendo alla connessione
+
+In alto a destra, sempre visibile e piccolo: **ping** e **FPS**. Il ping cambia
+colore sopra i 120 ms.
+
+Se il tuo client e il server si trovano in disaccordo su dove sei — e succede — la
+correzione è visibile: il personaggio non teletrasporta di scatto, **scivola alla
+posizione giusta**. Se la connessione peggiora davvero, compare una scritta piccola
+`UNSTABLE CONNECTION` sopra il ping. Non è un errore: è il gioco che ti dice che
+non è colpa tua.
+
+### Comandi
+
+**Tutti i tasti si possono rimappare, tutti.** Anche il break, anche la parata,
+anche i tasti del menù. C'è un preset **left-handed** già pronto (IJKL) per non
+costringere nessuno a rimapparne dodici a mano.
+
+Sensibilità del mouse con **due decimali**, e accanto il valore convertito nella
+scala dei giochi che il giocatore già usa, così può portarsi la sua mira:
+
+```
+Sensitivity   1.85       ( ≈ 0.62 in most FPS at 800 DPI )
+```
+
+Il campo visivo si regola **da 80 a 120 gradi**, e ha un cursore separato per
+l'arma in mano, perché chi gioca a FOV alto vuole l'arma più piccola, non più
+distorta.
+
+**Nessun gesto del mouse, nessun doppio click, nessuna combinazione.** Il gioco si
+gioca con dita che stanno già su WASD.
+
+### Vedere
+
+Il mirino si personalizza: **spessore, lunghezza, spazio centrale, colore, punto
+al centro sì o no**, e un'anteprima che si aggiorna mentre lo cambi. Chi ha una
+mira sua vuole il suo mirino.
+
+**Modalità daltonici** con tre profili (protanopia, deuteranopia, tritanopia): il
+rosso-nemico e il blu-alleato diventano una coppia che si distingue davvero. Non è
+un filtro sopra lo schermo — **cambia i colori delle silhouette e dell'HUD**, che
+è dove il colore porta informazione.
+
+Cursori separati per **luminosità** e per l'intensità degli effetti, perché su un
+portatile con lo schermo lucido metà del gioco può sparire.
+
+E tre interruttori che tolgono roba: **scuotimento della camera**, **lampo di
+danno ai bordi**, **flash quando qualcuno viene sbalzato**. Non sono opzioni di
+accessibilità di facciata — servono a chi quelle cose le trova nauseanti.
+
+### Sentire
+
+Cursori separati per **generale, effetti, ambiente, interfaccia, musica**.
+E `M` toglie tutto, subito, senza aprire niente — perché a volte serve.
+
+### Testo
+
+**Tutto il testo di gioco è in inglese**, e i nomi (classi, sottoclassi, abilità)
+non si traducono mai: sono nomi propri.
+
+Il testo dell'interfaccia si può ingrandire del **125 % e del 150 %**, e l'HUD si
+riadatta invece di sovrapporsi.
+
+### Giocare con qualcuno
+
+**Un link.** Premi INVITE, ti viene copiato un indirizzo, lo mandi a chi vuoi.
+Chi lo apre entra nella tua stanza — non deve registrarsi, non deve installare
+niente, non deve fare amicizia con te dentro il gioco. È un browser: usiamo
+l'unica cosa che un browser sa fare meglio di tutto il resto.
+
+Chi entra così resta con te anche nella partita dopo, finché uno dei due non se ne
+va.
+
+### Guardare
+
+Da morto in TOURNAMENT, e sempre quando la tua partita è finita, hai la **camera
+libera**: `Spazio` cambia giocatore, `F` passa alla prima persona di chi stai
+guardando, il movimento del mouse gira la camera. Vedere il suo HUD è metà
+dell'imparare.
+
+### Nomi
+
+Ti scegli un nome la prima volta e resta. Se non ne scegli uno, il gioco te ne dà
+uno decente invece di chiamarti `Player_8842`.
+
+**Non c'è chat testuale.** In un PvP anonimo e gratuito, una chat aperta è una
+funzione di molestia con un costo di moderazione che questo progetto non può
+sostenere. Al suo posto ci sono **quattro segnali rapidi** su una rotella
+(`Attacking` · `Falling back` · `Nice` · `Sorry`), che dicono tutto quello che
+serve in un'arena e niente che ferisca.
+
+### Come si entra
+
+Non c'è registrazione, non c'è account, non c'è email. **Si apre la pagina e si
+gioca.** Il progresso sta nel browser; chi vuole portarselo altrove copia una
+stringa dalle impostazioni e la incolla sull'altro dispositivo.
+
+---
+
+## 13 · Come funziona in rete
+
+Questa è la parte che il giocatore non vede mai e che sente sempre. Un gioco di
+movimento in cui il colpo che vedi andare a segno non va a segno **non è un gioco
+lento: è un gioco rotto**, e non c'è grafica che lo salvi.
+
+### Il modello
+
+**Il server decide, il client anticipa.**
+
+Quando premi un tasto, il tuo personaggio si muove **subito** — se aspettasse la
+risposta del server, ogni passo costerebbe un giro di rete prima di vedersi, e con
+80 ms di ping il movimento di Quake diventerebbe melma.
+
+Quello che mandi al server è **cosa stai premendo**, mai dove ti trovi. È una
+differenza che sembra formale e non lo è: mandare la posizione significa lasciar
+decidere al client dove sta, che è la prima cosa che un cheat sfrutta.
+
+Il server esegue **la stessa identica funzione di movimento** — lo stesso file,
+non una copia — e ottiene la verità. Poi la rimanda indietro. E qui il client fa
+la cosa meno ovvia del sistema: **si corregge solo se lo scarto supera i 35
+centimetri.** Allinearsi a ogni pacchetto annullerebbe la predizione e rimetterebbe
+il ritardo dentro il movimento.
+
+Gli altri giocatori li vedi **interpolati** verso la verità, non ci salti sopra: a
+venti pacchetti al secondo, atterrare sulla posizione esatta si vede come scatti.
+
+|                       | Valore             |
+| --------------------- | ------------------ |
+| Tick del server       | 60 Hz              |
+| Invii di stato        | 20 Hz              |
+| Soglia di correzione  | 0,35 m             |
+| Interpolazione altrui | 35 % per pacchetto |
+
+### Il danno
+
+Il client **dichiara solo l'intenzione**: quale slot, guardando dove. Il server
+controlla la ricarica, risolve la forma, applica il danno.
+
+**Nessun numero di danno attraversa mai la rete in salita**, e **la ricarica la
+tiene il server**. Un client che tiene la propria ricarica è un client che può
+lanciare quanto vuole.
+
+### Il colpo che vedi a segno va a segno
+
+**Il problema.** Tu vedi l'avversario dov'era 60 ms fa. Spari lì, e centri. Ma
+quando la tua richiesta arriva al server sono passati altri 60 ms e lui si è
+spostato: **a nove metri al secondo sono 1,1 metri, più largo di un corpo.** Vedi
+il tuo colpo attraversarlo, e smetti di giocare.
+
+**La soluzione** è vecchia di venticinque anni (Valve, _Latency Compensating
+Methods_, 2001): il server tiene uno storico delle posizioni e **riavvolge il
+mondo alla vista di chi ha sparato**.
+
+Lo storico copre mezzo secondo, il riavvolgimento massimo è di **due decimi**, e
+fra un campione e l'altro si interpola — prendere il campione più vicino sbaglia
+fino a sette centimetri, che su una capsula da quaranta è un ottavo del bersaglio.
+
+**Il baratto, dichiarato apertamente:** chi spara guadagna, chi è sparato può
+essere colpito dietro un angolo che credeva sicuro. Il limite di 200 ms è la
+manopola con cui si dosa: oltre, lo "sparato dietro l'angolo" diventa
+intollerabile. Quindi si taglia lì, e chi ha il ping peggiore paga.
+
+> **La trappola che costa settimane se la scopri tardi.** Il test di collisione
+> riavvolto **non può passare dal motore fisico**. Godot sincronizza le
+> trasformazioni dei corpi al passo di fisica: una query fatta subito dopo aver
+> spostato un corpo vede ancora la posizione **vecchia** — e nemmeno scrivere
+> direttamente nel PhysicsServer lo anticipa. Il riavvolgimento _sembra_ avvenire,
+> il colpo manca lo stesso, e non c'è nessun errore da nessuna parte. Le hitbox
+> riavvolte sono una **rappresentazione separata**: capsula verticale, test
+> segmento-contro-capsula in matematica pura. È la ragione per cui gli sparatutto
+> seri tengono le hitbox fuori dal motore fisico. `[M]`
+
+### Dove gira
+
+Il client è un pacchetto statico su itch.io. Il server è headless, su una macchina
+gratuita già attiva e già collegata alla CI. La connessione è **`wss://`** e non
+può essere altro: itch serve in https, e una connessione in chiaro viene bloccata
+dal browser come contenuto misto.
+
+---
+
+## 14 · Su itch.io
+
+| Requisito                                 | Stato                                                                                      |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Pointer lock dentro l'iframe cross-origin | **verificato, funziona** — anche senza `allow` `[M]`                                       |
+| Renderer                                  | **Compatibility** — Forward+ non parte sul web                                             |
+| Template di export                        | **nothreads** — quelli con i thread vogliono header cross-origin che su itch non controlli |
+| Percorsi                                  | relativi: itch serve da una sottocartella                                                  |
+| Connessione                               | solo `wss://`                                                                              |
+| Pacchetto                                 | zip con `index.html` in radice                                                             |
+| Peso                                      | **6,8 MB** in brotli `[M]`                                                                 |
+
+Sono sette righe, e ognuna è una cosa che se scoperta dopo costa una settimana. Il
+pointer lock in particolare: se non funzionasse dentro l'iframe di itch, tutto il
+progetto sarebbe da rifare per un'altra piattaforma. È stato verificato **prima**.
+
+---
+
+## 15 · Cosa succede giocando venti ore
+
+**Niente da pagare, niente da grindare, nessun season pass.** Ma qualcosa deve
+succedere, o alla terza partita si chiude la scheda.
+
+Quello che succede è che **il gioco si apre**.
+
+Al primo avvio hai le quattro classi, le dodici sottoclassi e un kit completo per
+ognuna — un kit **competitivo**, non una versione ridotta. Le abilità che non hai
+ancora le vedi, sai cosa fanno, e sai cosa devi fare per averle.
+
+E quello che devi fare non è aspettare: **è giocare in un certo modo.**
+
+> _Launch an enemy and hit them in the air — 10 times._ → **Arc Lift**
+> _Win a round without being launched._ → **Cleanse Surge**
+> _Land 25 bolts at over 20 metres._ → **Marksman Shot**
+
+È così che il gioco insegna sé stesso senza spiegare niente: per sbloccare
+l'abilità che sbalza a distanza, devi aver già sbalzato dieci volte da vicino.
+L'obiettivo è il tutorial.
+
+Il livello dell'account sale con le **partite giocate**, non con le vittorie: chi
+perde deve avere un motivo per rigiocare, ed è esattamente chi rischia di non
+tornare.
+
+I cosmetici sono l'unica ricompensa che non è un'abilità, e **non toccano mai il
+gameplay** — nemmeno un colore che renda una silhouette più difficile da vedere.
+
+**Si sblocca varietà, mai potenza.** Chi ha giocato cento ore ha più cose da
+provare, non abilità più forti. È l'unica forma di progressione compatibile con un
+PvP che vuole essere giusto.
+
+---
+
+## 16 · In che ordine si costruisce
+
+Ogni fase lascia il gioco **giocabile e verificabile**. Nessuna fase comincia
+prima che la precedente sia verde.
+
+| #   | Fase                                                             | Stato        |
+| --- | ---------------------------------------------------------------- | ------------ |
+| 0   | Motore, movimento portato e verificato                           | **✅ fatto** |
+| 1   | Combattimento: le tre forme, ricariche, danno                    | **✅ fatto** |
+| 2   | Nemici, HUD, effetti                                             | **✅ fatto** |
+| 3   | Rete autoritativa e lag compensation                             | **✅ fatto** |
+| 4   | **Struttura di partita**: modalità, punteggio, vittoria, respawn | ⬜           |
+| 5   | **Audio completo** (§10)                                         | ⬜           |
+| 6   | **Classi, sottoclassi e le 67 abilità** lette dai dati           | ⬜           |
+| 7   | **Le sette schermate** (§11) e le comodità (§12)                 | ⬜           |
+| 8   | **L'arena vera** (§8) al posto del blockout                      | ⬜           |
+| 9   | **Personaggi e armi** al posto delle capsule                     | ⬜           |
+| 10  | **Bot** a tre difficoltà e riempimento della lobby               | ⬜           |
+| 11  | **Pubblicazione** su itch.io e server ospitato                   | ⬜           |
+| 12  | Sblocchi e livello account                                       | ⬜           |
+
+**La 4 prima di tutto**, e non è un'opinione. Finché una partita non comincia e
+non finisce, tutto il resto è roba bella dentro qualcosa che non si può né vincere
+né perdere — e quindi non si rigioca. Un gioco senza condizione di vittoria non è
+un gioco incompleto: è una sandbox.
+
+**La 9 per ultima fra quelle visive**, e non per pigrizia: i personaggi sono
+l'unica cosa che si può sostituire senza toccare niente altro, se le silhouette
+sono state progettate prima. Metterli presto significa ritararli a ogni cambio di
+regola.
+
+---
+
+## 17 · Come si controlla che sia vero
+
+Ogni fase entra solo con la sua verifica automatica. Oggi ne girano **otto, tutte
+verdi**, più un benchmark che stampa i numeri invece di giudicarli. Si lanciano
+tutte con un comando: `node run_tests.mjs` dentro `godot/`.
+
+| Verifica               | Cosa protegge                                                           |
+| ---------------------- | ----------------------------------------------------------------------- |
+| `test_movement`        | il feel di Quake: frenata, salto che conserva la velocità, strafe aereo |
+| `test_combat`          | le quattro invarianti della scala                                       |
+| `test_ability_runtime` | le forme colpiscono chi devono e mancano chi devono                     |
+| `test_arena_play`      | premi il tasto, il colpo parte, il danno arriva                         |
+| `test_fight`           | si può vincere **e perdere**                                            |
+| `test_lag_comp`        | il colpo che vedi andare a segno va a segno                             |
+| `test_net`             | due processi veri si parlano — non un albero di scena che finge         |
+| `test_net_world`       | due corpi, movimento autoritativo                                       |
+| `bench`                | frame time, draw call, e stampa i numeri                                |
+
+**Le quattro regole che valgono più dei test**, e che vengono tutte da un errore
+già fatto:
+
+1. **Un numero che nessun file importa è un numero che nessuno può correggere.** È
+   così che il tempo di uccisione del progetto precedente è rimasto sbagliato di
+   tre-cinque volte per tutta la sua vita: era scritto in un documento e in nessun
+   `import`.
+2. **Si sviluppa sul renderer che si spedisce.** Tarare su Forward+ e pubblicare su
+   Compatibility significa che ogni valore visivo misurato è una bugia.
+3. **Un'immagine si misura, non si guarda.** Le due trappole del §9 erano entrambe
+   invisibili a occhio e ovvie all'istogramma.
+4. **Il numero dei test non è un segnale: quello dei FILE sì.** Un errore di
+   compilazione può far sparire un'intera suite dietro un totale verde più basso di
+   ieri, e nessuno se ne accorge.
+
+---
+
+## 18 · Le cose che non si fanno
+
+Un progetto è anche quello che esclude. Queste sono decise, e cambiarle vuol dire
+riaprire il documento, non improvvisare in corsa.
+
+**Niente montaggio delle spell.** Classi e sottoclassi sono **già fatte**: il
+giocatore sceglie, non assembla. Un sistema di potenziamenti componibili produce
+una build ottimale e undici sbagliate.
+
+**Niente archetipi generici.** Non esistono mago, guerriero, tank e ibrido. Le
+classi si dividono per che ruolo hanno nel momento firma, e i nomi lo dicono.
+
+**Niente spiegazioni durante la partita.** Nessun popup, nessuna freccia, nessun
+tasto che lampeggia. Le spiegazioni stanno nelle schermate di scelta e nel
+poligono. In partita c'è solo quello che dice **cosa è successo** — il kill feed,
+il recap di morte, il contatore combo — mai cosa fare.
+
+**Niente sprint.** La velocità base è già la velocità.
+
+**Niente danno da caduta.** Punirebbe chi ha appena subito uno sbalzo, cioè chi sta
+già perdendo lo scambio.
+
+**Niente teletrasporti di posizione in rete.** Un solo sistema di spostamento:
+l'impulso. Un teletrasporto non è predicibile dal client e fa scattare la
+riconciliazione a ogni uso.
+
+**Niente `Engine.time_scale`.** Il peso di un colpo si dà con la camera.
+
+**Niente chat testuale.** Quattro segnali rapidi, e nient'altro.
+
+## **Niente pagamenti, niente account, niente email.** Si apre la pagina e si gioca.
+
+# Appendice · I numeri
+
+Tutto quello che sopra è descritto a parole, qui è deciso in cifre. Se una cifra
+cambia, si cambia **qui**, e chi legge sopra deve trovare la stessa cosa.
+
+## A · La scala del combattimento
+
+Non si parte dal danno di un'abilità. Si parte da **quanto deve durare uno
+scambio**, e tutto il resto scende da lì:
+
+```
+scambio bersaglio 8 s   →   servono ~25 dps contro 200 di vita
+arma base ~15 dps       →   le abilità coprono i ~10 mancanti
+4 abilità × ~8 s        →   ognuna entra 1-2 volte per scambio
+                        →   ricariche 4-6,5 s · danno 20-52
+```
+
+Se cambia la durata dello scambio **cambiano tutti insieme**. È l'errore che il
+progetto precedente ha fatto per mesi: una banda di TTK dichiarata in un documento
+che nessun file importava, sbagliata di tre-cinque volte, e niente che potesse
+accorgersene.
+
+| Grandezza                     | Valore                                                  | Fonte             |
+| ----------------------------- | ------------------------------------------------------- | ----------------- |
+| Vita base                     | **200**                                                 | `[B]`             |
+| TTK del kit di partenza       | **5,4 s**                                               | `[B]` test_combat |
+| Quota di danno dell'arma base | **40 %**                                                | `[B]`             |
+| Global cooldown               | **0,35 s**                                              | `[B]`             |
+| Scala del danno               | 20 / 32 / 45 / 52                                       | `[B]`             |
+| Scala delle ricariche         | 4 / 5 / 6,5 s                                           | `[B]`             |
+| Stamina                       | 150 · +12/s fermo, +5/s in movimento, 0 durante un cast |                   |
+| Mana                          | 160 · +8/s sempre                                       |                   |
+| Parata (tap)                  | 0,5 s, blocca 100 %, 20 stamina, 3 s di ricarica        |                   |
+| Parata (tenuta)               | blocca 70 %, 15 stamina/s                               |                   |
+
+**Le quattro invarianti**, verificate da un test a ogni modifica:
+
+1. il TTK del kit resta fra **4,8 e 8,8 s**;
+2. l'arma base porta fra il **30 % e il 60 %** del danno;
+3. **chi picchia più forte si impegna di più** — wind-up e ricarica crescono col
+   danno;
+4. **nessuna abilità porta più del 50 %** del danno del kit.
+
+## B · Il movimento
+
+|                           | Valore         | Fonte                   |
+| ------------------------- | -------------- | ----------------------- |
+| Velocità a terra          | 9,0 m/s        |                         |
+| Tempo per arrivarci       | 117 ms         | `[M]`                   |
+| Spazio di frenata         | **0,812 m**    | `[M]` (dichiarato 0,81) |
+| Altezza del salto         | 1,5 m          |                         |
+| Gravità                   | 25 m/s²        |                         |
+| Tetto di velocità in aria | 14,5 m/s       |                         |
+| Coyote time               | 5 tick (83 ms) |                         |
+| Jump buffer               | 5 tick         |                         |
+
+**Le tre cose che rendono buono questo movimento e che non si toccano:**
+
+1. **la velocità si accumula**, non viene assegnata — il corpo ha peso;
+2. **il salto precede l'attrito** nell'ordine di calcolo. Invertendoli, un salto
+   cronometrato sull'atterraggio paga un tick di attrito: viene punito esattamente
+   l'input che il sistema dovrebbe premiare;
+3. **il limite in aria è sulla PROIEZIONE** della velocità sulla direzione voluta,
+   mai sul modulo. È quella singola scelta a far funzionare lo strafe aereo:
+   misurato, si superano i 9 m/s di terra. `[M]`
+
+## C · Le tre forme
+
+| Forma     | Chiede         | Numero            | Tolleranza                         |
+| --------- | -------------- | ----------------- | ---------------------------------- |
+| **BEAM**  | mira ferma     | istantaneo        | raggio **0,45 m** — un corpo       |
+| **BOLT**  | anticipo       | **42 m/s** base   | nessuna: a 20 m si tira 3 m avanti |
+| **BURST** | posizionamento | centrata su di te | raggio **5 m**                     |
+
+> **La legge della sagoma: quello che si disegna è quello che colpisce.** Il
+> cilindro del VFX ha lo stesso raggio del volume che risolve il danno; l'onda a
+> terra ha lo stesso raggio dell'area. Se divergono, l'effetto insegna una bugia.
+
+## D · Le dodici sottoclassi
+
+Una sottoclasse è **un baratto dichiarato sulla stessa riga**, e non tocca mai il
+danno — quello cambierebbe quanto dura un fight, non come si gioca.
+
+| Classe  | Sottoclasse    | Guadagni                        | Paghi               |
+| ------- | -------------- | ------------------------------- | ------------------- |
+| BREAKER | **SIEGE**      | +12 % vita                      | −8 % velocità       |
+| BREAKER | **RAM**        | +12 % velocità                  | −10 % vita          |
+| BREAKER | **ANVIL**      | +28 % durata dello sbalzo       | +10 % ricariche     |
+| TALON   | **SPIRE**      | +30 % durata dello sbalzo       | +15 % ricariche     |
+| TALON   | **VOLLEY**     | −18 % ricariche                 | −10 % vita          |
+| TALON   | **TETHER**     | +10 % velocità                  | −15 % durata sbalzo |
+| WARDEN  | **BRAMBLE**    | −15 % ricariche                 | −8 % velocità       |
+| WARDEN  | **PYRE**       | +22 % durata sbalzo             | −6 % vita           |
+| WARDEN  | **HOLLOW**     | +14 % vita                      | +12 % ricariche     |
+| DRIFT   | **PHASE**      | +14 % velocità                  | −12 % vita          |
+| DRIFT   | **SLIPSTREAM** | +10 % velocità, −10 % ricariche | −10 % vita          |
+| DRIFT   | **ECHO**       | −20 % ricariche                 | −5 % velocità       |
+
+## E · Le quattro classi
+
+| Classe      | Nel momento firma | HP  | Armi        | Abilità legali | Build possibili |
+| ----------- | ----------------- | --- | ----------- | -------------- | --------------- |
+| **BREAKER** | lo **crea**       | 280 | spada, arco | 28             | 1.261.260       |
+| **TALON**   | lo **converte**   | 200 | arco, staff | 34             | 3.243.240       |
+| **WARDEN**  | decide **dove**   | 250 | staff       | 36             | 10.810.800      |
+| **DRIFT**   | lo **nega**       | 250 | tutte       | 37             | 3.048.192       |
+
+Rapporto fra la classe più ricca e la più povera: **8,6×**. Prima della curatela
+era **485×**, e una classe da sola copriva il 95 % del contenuto del gioco. `[M]`
+
+## F · I bot
+
+| Difficoltà   | Errore a 20 m | Rotazione | Cadenza | Colpi a segno  |
+| ------------ | ------------- | --------- | ------- | -------------- |
+| **Recluta**  | 2,2 m         | 70 °/s    | 1,6 s   | ~40 %          |
+| **Veterano** | 1,2 m         | 110 °/s   | 1,15 s  | **88 %** `[M]` |
+| **Élite**    | 0,7 m         | 160 °/s   | 0,9 s   | ~95 %          |
+
+## G · La rete
+
+|                                 | Valore             |
+| ------------------------------- | ------------------ |
+| Tick del server                 | 60 Hz              |
+| Invii di stato                  | 20 Hz              |
+| Soglia di riconciliazione       | 0,35 m             |
+| Interpolazione degli altri      | 35 % per pacchetto |
+| Storico per la lag compensation | 0,5 s              |
+| Riavvolgimento massimo          | 0,2 s              |
+| Capsula per il test riavvolto   | h 1,8 m · r 0,4 m  |
+
+## H · Le prestazioni e il peso
+
+|                         | Bersaglio | Misurato          |
+| ----------------------- | --------- | ----------------- |
+| Frame time medio        | ≤ 16,6 ms | **6,98 ms** `[M]` |
+| Frame time p99          | ≤ 33,3 ms | 7,79 ms `[M]`     |
+| Draw call               | < 300     | **70** `[M]`      |
+| Peso scaricato (brotli) | < 20 MB   | **6,8 MB** `[M]`  |
+
+---
+
+# Appendice · Le abilità di ogni classe
+
+Le sessantasette abilità, divise per classe e per scuola, con i numeri che le
+governano. Il **verbo** è cosa fa: è l'unica colonna che il giocatore deve capire
+per scegliere.
+
+### BREAKER — 280 HP · sword/bow · slot {"melee":4,"bow":1,"magicBase":0,"magicAdvanced":0,"utility":3}
+
+Sottoclassi: ANVIL · RAM · SIEGE
+
+**melee** (14 disponibili)
+
+| Abilità            | Danno | CD   | Windup | Raggio | Costo | Verbo           |
+| ------------------ | ----- | ---- | ------ | ------ | ----- | --------------- |
+| Executioner's Blow | 52    | 11s  | 0.55   | 2.6    | 40sp  | sbalza          |
+| Whirlwind Slash    | 33    | 8s   | —      | 4      | 30sp  | stato/canalizza |
+| Ground Slam        | 24    | 9.5s | 0.3    | 4      | 32sp  | stato           |
+| Riposte            | 22    | 7s   | —      | 2.2    | 25sp  | sbalza          |
+| Skewer             | 20    | 6s   | 0.2    | 4.2    | 22sp  | stato           |
+| Bloodthirst        | 18    | 9s   | 0.1    | 2.4    | 26sp  | drena           |
+| Gap Closer         | 18    | 7s   | —      | 6      | 25sp  | sposta te/stato |
+| Uppercut           | 16    | 8.5s | 0.4    | 2.5    | 40sp  | sbalza          |
+| Momentum Strike    | 15    | 4s   | —      | 2.3    | 12sp  | stamina         |
+| Cleave             | 14    | 5s   | 0.15   | 3      | 18sp  | danno           |
+| Hamstring          | 12    | 8s   | —      | 2.5    | 20sp  | stato           |
+| Rending Dash       | 12    | 8s   | —      | 5      | 28sp  | sposta te/stato |
+| Bleed Strike       | 10    | 7s   | —      | 2.5    | 20sp  | stato           |
+| Guard Break        | 10    | 8.5s | 0.25   | 2.2    | 30sp  | sbalza/stato    |
+
+**bow** (5 disponibili)
+
+| Abilità       | Danno | CD   | Windup | Raggio | Costo | Verbo            |
+| ------------- | ----- | ---- | ------ | ------ | ----- | ---------------- |
+| Marksman Shot | 50    | 10s  | 1      | 100    | 20mp  | proiettile       |
+| Steady Aim    | 48    | 9s   | 0.5    | 30     | 20sp  | proiettile       |
+| Blast Arrow   | 45    | 9s   | 0.45   | 22     | 15mp  | proiettile       |
+| Piercing Shot | 40    | 7s   | 0.35   | 20     | —     | proiettile       |
+| Siphon Arrow  | 16    | 9.5s | 0.15   | 20     | 22sp  | drena/proiettile |
+
+**utility** (9 disponibili)
+
+| Abilità        | Danno | CD    | Windup | Raggio | Costo | Verbo           |
+| -------------- | ----- | ----- | ------ | ------ | ----- | --------------- |
+| Mark Target    | 6     | 4s    | —      | 30     | —     | stato/prosciuga |
+| Healing Potion | —     | 11.5s | —      | —      | —     | canalizza       |
+| Quick Dash     | —     | 6s    | —      | 4      | 10sp  | sposta te       |
+| Cleanse Surge  | —     | 11s   | —      | —      | 20sp  | stato/purifica  |
+| Barrier        | —     | 11s   | —      | —      | —     | stato           |
+| Energize       | —     | 9s    | —      | —      | —     | stamina         |
+| Phase Shift    | —     | 12s   | —      | —      | 15sp  | stato           |
+| Smoke Screen   | —     | 10.5s | —      | 8      | 20mp  | zona            |
+| Brace Recovery | —     | 10s   | —      | —      | 40sp  | cura/stato      |
+
+### TALON — 200 HP · bow/staff · slot {"melee":0,"bow":4,"magicBase":1,"magicAdvanced":1,"utility":2}
+
+Sottoclassi: SPIRE · TETHER · VOLLEY
+
+**bow** (14 disponibili)
+
+| Abilità        | Danno | CD   | Windup | Raggio | Costo | Verbo                |
+| -------------- | ----- | ---- | ------ | ------ | ----- | -------------------- |
+| Snare Trap     | 200   | 9s   | —      | 5      | —     | zona                 |
+| Marksman Shot  | 50    | 10s  | 1      | 100    | 20mp  | proiettile           |
+| Steady Aim     | 48    | 9s   | 0.5    | 30     | 20sp  | proiettile           |
+| Blast Arrow    | 45    | 9s   | 0.45   | 22     | 15mp  | proiettile           |
+| Piercing Shot  | 40    | 7s   | 0.35   | 20     | —     | proiettile           |
+| Point Blank    | 38    | 7.5s | —      | 4      | 24sp  | sbalza               |
+| Volley         | 33    | 8.5s | —      | 30     | —     | zona                 |
+| Skyfall        | 26    | 8s   | 0.2    | 22     | 26sp  | stato                |
+| Split Shot     | 18    | 6.5s | 0.1    | 16     | 20sp  | danno                |
+| Siphon Arrow   | 16    | 9.5s | 0.15   | 20     | 22sp  | drena/proiettile     |
+| Pin Shot       | 14    | 8.5s | 0.4    | 25     | —     | proiettile           |
+| Broadhead      | 14    | 7s   | 0.25   | 24     | 10sp  | proiettile           |
+| Disengage Shot | 12    | 8s   | —      | 15     | 15sp  | sposta te/proiettile |
+| Bola           | 6     | 7s   | —      | 18     | 18sp  | stato/proiettile     |
+
+**magicAdvanced** (5 disponibili)
+
+| Abilità           | Danno | CD   | Windup | Raggio | Costo | Verbo             |
+| ----------------- | ----- | ---- | ------ | ------ | ----- | ----------------- |
+| Flame Wall        | 30    | 9s   | —      | 10     | 30mp  | zona              |
+| Frost Pillar      | 12    | 9.5s | 0.3    | 10     | 30mp  | sbalza            |
+| Eruption          | 8     | 9.5s | —      | 10     | 30mp  | sbalza            |
+| Arc Lift          | 8     | 9s   | —      | 15     | 30mp  | sbalza/proiettile |
+| Curse of Weakness | —     | 9.5s | 0.35   | 15     | 30mp  | stato/prosciuga   |
+
+**magicBase** (6 disponibili)
+
+| Abilità        | Danno | CD   | Windup | Raggio | Costo | Verbo          |
+| -------------- | ----- | ---- | ------ | ------ | ----- | -------------- |
+| Shadow Bolt    | 18    | 5s   | —      | 20     | 25mp  | proiettile     |
+| Thunder Clap   | 16    | 9s   | —      | 3      | 30mp  | sbalza/stato   |
+| Lightning Dash | 15    | 8s   | —      | 5      | 25mp  | sposta te      |
+| Fire Blink     | 12    | 8.5s | —      | 7      | 30mp  | sposta te/zona |
+| Poison Dart    | 8     | 5s   | —      | 18     | 20mp  | proiettile     |
+| Vine Dash      | —     | 9s   | —      | 5      | 25mp  | sposta te/zona |
+
+**utility** (9 disponibili)
+
+| Abilità        | Danno | CD    | Windup | Raggio | Costo    | Verbo           |
+| -------------- | ----- | ----- | ------ | ------ | -------- | --------------- |
+| Mark Target    | 6     | 4s    | —      | 30     | —        | stato/prosciuga |
+| Healing Potion | —     | 11.5s | —      | —      | —        | canalizza       |
+| Quick Dash     | —     | 6s    | —      | 4      | 10sp     | sposta te       |
+| Cleanse Surge  | —     | 11s   | —      | —      | 20sp     | stato/purifica  |
+| Barrier        | —     | 11s   | —      | —      | —        | stato           |
+| Energize       | —     | 9s    | —      | —      | —        | stamina         |
+| Phase Shift    | —     | 12s   | —      | —      | 15sp     | stato           |
+| Smoke Screen   | —     | 10.5s | —      | 8      | 20mp     | zona            |
+| Hunter's Flow  | —     | 9.5s  | —      | —      | 20mp10sp | sposta te/cura  |
+
+### WARDEN — 250 HP · staff · slot {"melee":0,"bow":0,"magicBase":3,"magicAdvanced":3,"utility":2}
+
+Sottoclassi: BRAMBLE · HOLLOW · PYRE
+
+**magicBase** (12 disponibili)
+
+| Abilità        | Danno | CD    | Windup | Raggio | Costo | Verbo          |
+| -------------- | ----- | ----- | ------ | ------ | ----- | -------------- |
+| Fireball       | 40    | 8.5s  | —      | 20     | 20mp  | proiettile     |
+| Chain Bolt     | 32    | 6s    | —      | 15     | 25mp  | danno          |
+| Shadow Bolt    | 18    | 5s    | —      | 20     | 25mp  | proiettile     |
+| Frost Bolt     | 16    | 8s    | —      | 20     | 20mp  | proiettile     |
+| Thunder Clap   | 16    | 9s    | —      | 3      | 30mp  | sbalza/stato   |
+| Lightning Dash | 15    | 8s    | —      | 5      | 25mp  | sposta te      |
+| Fire Blink     | 12    | 8.5s  | —      | 7      | 30mp  | sposta te/zona |
+| Poison Dart    | 8     | 5s    | —      | 18     | 20mp  | proiettile     |
+| Entangle       | 4     | 9.5s  | 0.3    | 10     | 25mp  | stato          |
+| Ignite         | —     | 8s    | —      | 12     | 20mp  | stato          |
+| Dark Barrier   | —     | 10.5s | —      | —      | 30mp  | stato          |
+| Vine Dash      | —     | 9s    | —      | 5      | 25mp  | sposta te/zona |
+
+**magicAdvanced** (15 disponibili)
+
+| Abilità           | Danno | CD    | Windup | Raggio | Costo | Verbo               |
+| ----------------- | ----- | ----- | ------ | ------ | ----- | ------------------- |
+| Meteor            | 55    | 11s   | 1      | 25     | 40mp  | sbalza/stato        |
+| Storm Field       | 32    | 11s   | —      | 20     | 35mp  | zona                |
+| Flame Wall        | 30    | 9s    | —      | 10     | 30mp  | zona                |
+| Life Drain        | 24    | 9.5s  | —      | 12     | 35mp  | canalizza/prosciuga |
+| Thorn Field       | 24    | 10.5s | —      | 12     | 35mp  | zona                |
+| Blizzard          | 20    | 10s   | —      | 20     | 30mp  | zona                |
+| Void Spike        | 14    | 9.5s  | —      | 10     | 30mp  | sbalza/prosciuga    |
+| Frost Pillar      | 12    | 9.5s  | 0.3    | 10     | 30mp  | sbalza              |
+| Eruption          | 8     | 9.5s  | —      | 10     | 30mp  | sbalza              |
+| Freeze Target     | 8     | 10.5s | 0.4    | 12     | 35mp  | stato               |
+| Arc Lift          | 8     | 9s    | —      | 15     | 30mp  | sbalza/proiettile   |
+| Root Upthrow      | 8     | 9.5s  | —      | 10     | 30mp  | sbalza              |
+| Ice Wall          | —     | 10s   | —      | 8      | 30mp  | zona                |
+| Curse of Weakness | —     | 9.5s  | 0.35   | 15     | 30mp  | stato/prosciuga     |
+| Healing Totem     | —     | 11.5s | —      | —      | 30mp  | canalizza           |
+
+**utility** (9 disponibili)
+
+| Abilità        | Danno | CD    | Windup | Raggio | Costo | Verbo           |
+| -------------- | ----- | ----- | ------ | ------ | ----- | --------------- |
+| Mark Target    | 6     | 4s    | —      | 30     | —     | stato/prosciuga |
+| Healing Potion | —     | 11.5s | —      | —      | —     | canalizza       |
+| Quick Dash     | —     | 6s    | —      | 4      | 10sp  | sposta te       |
+| Cleanse Surge  | —     | 11s   | —      | —      | 20sp  | stato/purifica  |
+| Barrier        | —     | 11s   | —      | —      | —     | stato           |
+| Energize       | —     | 9s    | —      | —      | —     | stamina         |
+| Phase Shift    | —     | 12s   | —      | —      | 15sp  | stato           |
+| Smoke Screen   | —     | 10.5s | —      | 8      | 20mp  | zona            |
+| Arcane Rebind  | —     | 10.5s | 0.4    | —      | 45mp  | cura            |
+
+### DRIFT — 250 HP · sword/bow/staff · slot {"melee":2,"bow":1,"magicBase":2,"magicAdvanced":1,"utility":2}
+
+Sottoclassi: ECHO · PHASE · SLIPSTREAM
+
+**melee** (8 disponibili)
+
+| Abilità         | Danno | CD   | Windup | Raggio | Costo | Verbo           |
+| --------------- | ----- | ---- | ------ | ------ | ----- | --------------- |
+| Ground Slam     | 24    | 9.5s | 0.3    | 4      | 32sp  | stato           |
+| Riposte         | 22    | 7s   | —      | 2.2    | 25sp  | sbalza          |
+| Skewer          | 20    | 6s   | 0.2    | 4.2    | 22sp  | stato           |
+| Gap Closer      | 18    | 7s   | —      | 6      | 25sp  | sposta te/stato |
+| Momentum Strike | 15    | 4s   | —      | 2.3    | 12sp  | stamina         |
+| Cleave          | 14    | 5s   | 0.15   | 3      | 18sp  | danno           |
+| Rending Dash    | 12    | 8s   | —      | 5      | 28sp  | sposta te/stato |
+| Bleed Strike    | 10    | 7s   | —      | 2.5    | 20sp  | stato           |
+
+**bow** (6 disponibili)
+
+| Abilità        | Danno | CD   | Windup | Raggio | Costo | Verbo                |
+| -------------- | ----- | ---- | ------ | ------ | ----- | -------------------- |
+| Piercing Shot  | 40    | 7s   | 0.35   | 20     | —     | proiettile           |
+| Point Blank    | 38    | 7.5s | —      | 4      | 24sp  | sbalza               |
+| Split Shot     | 18    | 6.5s | 0.1    | 16     | 20sp  | danno                |
+| Broadhead      | 14    | 7s   | 0.25   | 24     | 10sp  | proiettile           |
+| Disengage Shot | 12    | 8s   | —      | 15     | 15sp  | sposta te/proiettile |
+| Bola           | 6     | 7s   | —      | 18     | 18sp  | stato/proiettile     |
+
+**magicAdvanced** (6 disponibili)
+
+| Abilità           | Danno | CD   | Windup | Raggio | Costo | Verbo               |
+| ----------------- | ----- | ---- | ------ | ------ | ----- | ------------------- |
+| Flame Wall        | 30    | 9s   | —      | 10     | 30mp  | zona                |
+| Life Drain        | 24    | 9.5s | —      | 12     | 35mp  | canalizza/prosciuga |
+| Frost Pillar      | 12    | 9.5s | 0.3    | 10     | 30mp  | sbalza              |
+| Eruption          | 8     | 9.5s | —      | 10     | 30mp  | sbalza              |
+| Arc Lift          | 8     | 9s   | —      | 15     | 30mp  | sbalza/proiettile   |
+| Curse of Weakness | —     | 9.5s | 0.35   | 15     | 30mp  | stato/prosciuga     |
+
+**magicBase** (8 disponibili)
+
+| Abilità        | Danno | CD   | Windup | Raggio | Costo | Verbo          |
+| -------------- | ----- | ---- | ------ | ------ | ----- | -------------- |
+| Chain Bolt     | 32    | 6s   | —      | 15     | 25mp  | danno          |
+| Shadow Bolt    | 18    | 5s   | —      | 20     | 25mp  | proiettile     |
+| Frost Bolt     | 16    | 8s   | —      | 20     | 20mp  | proiettile     |
+| Thunder Clap   | 16    | 9s   | —      | 3      | 30mp  | sbalza/stato   |
+| Lightning Dash | 15    | 8s   | —      | 5      | 25mp  | sposta te      |
+| Fire Blink     | 12    | 8.5s | —      | 7      | 30mp  | sposta te/zona |
+| Poison Dart    | 8     | 5s   | —      | 18     | 20mp  | proiettile     |
+| Vine Dash      | —     | 9s   | —      | 5      | 25mp  | sposta te/zona |
+
+**utility** (9 disponibili)
+
+| Abilità        | Danno | CD    | Windup | Raggio | Costo    | Verbo           |
+| -------------- | ----- | ----- | ------ | ------ | -------- | --------------- |
+| Mark Target    | 6     | 4s    | —      | 30     | —        | stato/prosciuga |
+| Healing Potion | —     | 11.5s | —      | —      | —        | canalizza       |
+| Quick Dash     | —     | 6s    | —      | 4      | 10sp     | sposta te       |
+| Cleanse Surge  | —     | 11s   | —      | —      | 20sp     | stato/purifica  |
+| Barrier        | —     | 11s   | —      | —      | —        | stato           |
+| Energize       | —     | 9s    | —      | —      | —        | stamina         |
+| Phase Shift    | —     | 12s   | —      | —      | 15sp     | stato           |
+| Smoke Screen   | —     | 10.5s | —      | 8      | 20mp     | zona            |
+| Adaptive Mend  | —     | 9s    | —      | —      | 15mp15sp | cura            |

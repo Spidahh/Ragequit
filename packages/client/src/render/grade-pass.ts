@@ -79,8 +79,16 @@ export function createGradePass(opts: GradeOptions = {}): ShaderPass {
       uniforms: {
         tDiffuse: { value: null },
         // Gritty dark-fantasy grade (Vermintide / Amid Evil): desaturated, punchy
-        // contrast, a heavy vignette closing the frame to gloom, and film grain.
-        uVignette: { value: opts.vignette ?? 0.66 },
+        // contrast, a vignette closing the frame, and film grain.
+        //
+        // Vignette was 0.66, which puts the corners at 37 % brightness
+        // (1 - 0.66 * 0.5 * 1.9). Measured on a real gameplay frame that helped
+        // push 52 % of the screen into the darkest tenth of the range, with a
+        // peak luminance of 179/255 — an image with no highlights and half of it
+        // void. 0.40 leaves the corners at 62 %: still a closed, cinematic frame,
+        // but it stops eating the picture. Re-measure with tools/verify before
+        // moving it again; this number is easy to set by feel and get wrong.
+        uVignette: { value: opts.vignette ?? 0.4 },
         uSaturation: { value: opts.saturation ?? 0.92 },
         uContrast: { value: opts.contrast ?? 0.2 },
         uWarmth: { value: opts.warmth ?? 0.06 },
