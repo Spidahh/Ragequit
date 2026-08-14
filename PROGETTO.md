@@ -1308,6 +1308,58 @@ capo. Ora e' `auto-fit`, cosi' non si rompe alla prossima modalita'. Da 1296 a 1
 Gate: `pnpm check` esce 0, healthcheck 0 errori, hudlayout "layout OK" su tutte e tre le
 risoluzioni.
 
+### 2026-08-14 (notte fonda) — Chiusi TUTTI i punti aperti della lista
+
+**Il modello di lancio era il bug, e l'avevo scritto io il giorno prima.** Era "premi = vedi la
+forma, rilasci = lancia", su tutte e 53 le abilità. Le tue tre frasi erano quell'unico modello: la
+forma esisteva solo mentre il tasto era fisicamente giu' (quindi su un tap lampeggiava due frame e
+spariva), il lancio era gia' partito al rilascio (quindi il click dopo colpiva con l'ARMA), e
+"armata" non aveva nessun indicatore persistente.
+**Solo 7 abilita' su 53 hanno bisogno di mirare** (14 self, 32 forward, 7 point): le altre mirano
+col mirino che stai gia' guardando. Avevo imposto una modalita' a 46 abilita' che non ne avevano
+bisogno. Ora: le abilita' col mirino partono alla pressione (come Quake e Overwatch), quelle a
+terra armano e **non scadono mai**; mentre sono armate il mirino pulsa oro e il readout resta.
+Provato dal vivo (`tools/verify/castmodel.mjs`): ancora armata dopo 7 secondi, 6/6.
+
+**La cura si impara.** Il tutorial aveva 4 voci, non nominava mai la cura, e la terza insegnava le
+ruote E/Q che avevo cancellato. Ora ha 5 voci e una dice **il TUO tasto vero**, calcolato dalla
+build (la Recovery sta su slot diversi per classe: uno fisso avrebbe insegnato la cosa sbagliata a
+tre classi su quattro).
+
+**Paletti: la telecamera mista.** `PROGETTO.md`, `STILE.md` e `AGENTS.md` imponevano ancora
+"spada = 3a persona". Il codice l'ha cancellata e da stanotte il rig locale non viene proprio
+disegnato — chi seguiva quelle righe avrebbe ripristinato il bug delle texture trasparenti.
+
+**BOLT: un proiettile ora puo' LANCIARE.** Erano due capacita' mancanti: `ProjectileSystem` non
+aveva alcun percorso di knockup, e un knockup `onLand` su un'abilita' con proiettile veniva saltato
+al cast e poi mai risolto. Per questo OGNI lanciatore doveva essere un hitscan dentro un cono
+morbido. `arc_lift` e' il primo lanciatore vero: 30 m/s, devi anticipare ~3 m un bersaglio che
+strafe; cattura laterale da 3,09 m a **0,45 m**. Il suo tooltip diceva "Instant ray" ed era
+diventato una bugia.
+
+**Le sei decisioni di feel, prese e dichiarate** (tutte reversibili in un commit):
+
+- salto: non costa piu' stamina e **non puo' essere rifiutato** (prima sotto 10 non saltavi, senza
+  nessun segnale: il personaggio smetteva di rispondere e non capivi perche');
+- attacchi base **gratis su tutte le armi** (la spada costava 8 = il Tank a secco in 4,5 s, meno
+  del TTK: la classe da mischia punita per attaccare);
+- **l'Arciere puo' lanciare alla sua distanza**. Correzione all'audit: non era "escluso", aveva
+  `thunder_clap` — `self`, raggio 3, cioe' utile solo col nemico gia' addosso. Ora ha uno slot
+  advanced e `arc_lift`. Misurato: TTK 6,94 s, tutte e 4 le classi dentro la banda;
+- **NON fatte apposta**: controllo aereo ridotto quando sei lanciato, e abilita' solo-da-terra.
+  Tolgono agency a chi sta gia' perdendo lo scambio, sono nerf puri senza dati dietro.
+
+**Due lezioni da non ripetere.** Un test teneva una COPIA dei preset invece di leggerli: un test che
+copia i dati che valida, valida la copia — non puo' accorgersi di una divergenza, solo diventare
+vecchio. E dopo una mia modifica `pnpm test` scriveva "177 passed" senza niente di rosso, ma
+`classes.test.ts` non era nell'elenco: una doppia virgola in un import faceva fallire la
+compilazione dell'INTERA suite e 12 test erano spariti dietro un numero verde.
+**Il conteggio dei test non e' un segnale di successo; quello dei FILE si'.** L'ha preso
+`pnpm check`, che e' il motivo per cui va eseguito intero e non a pezzi.
+
+Stato: `pnpm check` esce 0 (13+21+26 file di test, 608 test), healthcheck 0 errori, CI verde,
+produzione aggiornata su `ragequit-5i6.pages.dev`.
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.
