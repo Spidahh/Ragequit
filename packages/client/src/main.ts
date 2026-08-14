@@ -824,7 +824,7 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
       hideLoadingScreen()
       if (canEngageGameplaySurface()) {
         engageCanvasInput()
-        showTutorialIfFirstTime()
+        showTutorialIfFirstTime({ loadout: currentLoadoutArray(), classId: getCurrentClassId() })
         soundEngine.startArenaAmbient()
       }
     }

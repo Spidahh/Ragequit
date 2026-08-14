@@ -73,7 +73,14 @@ Non aggiungere bonus condizionali lato server (es. +X% danno se Y) a meno che no
 
 Qualsiasi intervento su una singola parte del codice deve essere progettato e implementato pensando a **tutti i sistemi collegati** (la "Rete di Sistemi"). Non agire mai con fretta o con fix isolati. Prima di modificare qualsiasi elemento, verifica e allinea l'intera catena di dipendenze visive, fisiche e logiche:
 
-1. **Visuale & Telecamera (FPV/TPV)**: Quando si modifica un'arma o un accessorio, assicurarsi che l'allineamento, il grip e le animazioni funzionino perfettamente sia in prima persona (First-Person View / ViewModels) sia in terza persona (Third-Person View / Character Skeleton), evitando clipping, torsioni innaturali o disallineamenti del mirino.
+1. **Visuale & Telecamera**: il gioco e' in **PRIMA PERSONA**, punto. Il rig del
+   giocatore locale NON viene disegnato dalla camera del mondo (era la causa
+   delle "texture mezze trasparenti": sottomesh `alphaMode:BLEND` a 10-40 cm
+   dall'occhio). Quando si modifica un'arma o un accessorio, l'allineamento e le
+   animazioni vanno verificati sui **giocatori remoti**, che sono l'unico posto
+   in cui quel rig si vede. Il FOV si esprime in gradi ORIZZONTALI e passa da
+   `render/fov.ts`: three.js vuole il verticale, e passarglielo crudo dava 129,5
+   gradi orizzontali (un fisheye in cui mirare e' impossibile).
 2. **Replicazione & Stato Multiplayer**: Ogni stato visivo locale (es. parata attiva, scudo sul fianco, swap dell'arma) deve essere perfettamente sincronizzato con lo stato autoritativo del server e replicato correttamente sulle schermate degli altri giocatori (bystanders) senza lag o anomalie di posizionamento.
 3. **Fisica del Server & Feedback Client**: I vettori di impatto delle abilità e i segmenti di collisione (hitbox) lato server devono corrispondere al pixel con il feedback visivo sul client (es. la traiettoria del fendente della spada, il crosshair delle armi a distanza, e le direzioni delle spinte fisiche).
 4. **Coerenza tra UI, Audio & VFX**: Nuovi stati o azioni di gioco (come il combat, il parry, lo swap, o l'uso di abilità) devono avere riscontri audio (SFX puliti), VFX fluidi (senza contorni neri o difetti di alpha) e aggiornamenti dell'HUD (tasti, risorse, cooldown) immediati e ottimizzati per evitare micro-stutters nel game loop.

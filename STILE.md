@@ -126,7 +126,11 @@ Emissive SOLO magia/torce/fuoco.
 ## 8. CAMERA / VIEWMODEL (valori reali)
 
 - World FOV **90°** (`camFovBase = 90`). Viewmodel FOV **58°** (`VIEWMODEL_FOV = 58`, scena/depth dedicati).
-- Framing per arma (`weapon-view.ts`): Spada = 3ª persona (corpo+lama in frame), Arco = 1ª persona animata,
+- Framing per arma (`weapon-view.ts`): **prima persona per tutte le armi**; l'unica cosa per-arma rimasta e' `fovDelta`.
+
+> **Ritirato 2026-08-13.** Il gioco e' in PRIMA PERSONA e basta. La camera mista non esiste piu' nel codice: `weapon-view.ts` espone solo `fovDelta` per arma, e da stanotte il rig locale non viene proprio disegnato dalla camera del mondo — era la causa delle "texture mezze trasparenti". Questa regola imponeva una telecamera che il codice non ha, e chi la leggeva avrebbe ripristinato il difetto.
+
+- ~~Originale: Spada = 3ª persona (corpo+lama in frame), Arco = 1ª persona animata,
   Staff = 1ª persona statica (glow su mano in carica). _(L'utente vuole 1ª persona per tutte: vedi
   decisions-log di PROGETTO — direzione FPS-only intenzionale, stato attuale mixto.)_
 - Motion: idle sway + step bob + **hit-stop camera kick** 4–6° per 80ms su colpo melee.

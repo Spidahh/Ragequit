@@ -31,9 +31,13 @@ Dettaglio aree/file nel log (§6). Come verificare senza perdere tempo → `SVIL
 
 ## 1. Cos'è il gioco
 
-Arena PvP da browser, prima persona / mezza-terza, combattimento medievale-fantasy
+Arena PvP da browser, **prima persona**, combattimento medievale-fantasy
 (melee + magie). 4 classi: **tank, archer, mage, hybrid**. Three.js (client) +
-Colyseus (server). Camera MISTA: spada = 3ª persona (corpo visibile), arco/staff = 1ª
+Colyseus (server). Camera: **prima persona per tutte le armi**
+
+> **Ritirato 2026-08-13.** Il gioco e' in PRIMA PERSONA e basta. La camera mista non esiste piu' nel codice: `weapon-view.ts` espone solo `fovDelta` per arma, e da stanotte il rig locale non viene proprio disegnato dalla camera del mondo — era la causa delle "texture mezze trasparenti". Questa regola imponeva una telecamera che il codice non ha, e chi la leggeva avrebbe ripristinato il difetto.
+
+Riga originale, per memoria: ~~Camera MISTA: spada = 3ª persona (corpo visibile), arco/staff = 1ª
 persona (viewmodel) — vedi `render/weapon-view.ts`.
 
 ## 1.5 VINCOLI DURI & FONTE ASSET (regole non negoziabili)
@@ -264,7 +268,7 @@ Ogni fase: verificata con `/inspect.html` + `shot.mjs`. **Stato: da iniziare (Fa
       Materiale forzato a `MeshStandardMaterial` rough .72/metal .05 hardcoded (scarta rough/metal sorgente).
   - **ARMI = KayKit** (`/weapons/kaykit/sword|bow|staff|shield_A.glb`) = il pacchetto cartoon **esplicitamente
     odiato**. Grip = offset a mano per classe (no socket reale). Scudo: in realtà RADDRIZZATO (non più storto).
-    FP: solo l'arco ha braccia vere (`animated_fps_bow.glb`); spada=3ª persona, staff=viewmodel statico (no braccia).
+    FP: nessun corpo locale disegnato (vedi sopra). Le braccia/viewmodel sono un lavoro APERTO — il commento in `main.ts` promette una pass dedicata che non e' mai esistita.
   - **OUTLINE toon team-color** ancora su personaggi (0.008) E armi (0.01) — contraddice STILE.md (rim, non ink).
   - **VFX** (`projectile-visuals.ts`): core = 2 plane incrociati `MeshBasicMaterial` additivo + trail 10pt + impact
     a 3 layer + bloom selettivo. **MANCA la dynamic point-light per proiettile** (la magia non illumina la pietra).
