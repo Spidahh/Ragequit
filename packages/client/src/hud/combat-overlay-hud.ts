@@ -21,6 +21,8 @@ export interface CombatOverlayHudOptions {
   blindVignette: HTMLElement
   deathOverlay: HTMLElement
   healFlash: HTMLElement
+  /** Called with the HP gained when the local player is healed. */
+  onHeal?: (amount: number) => void
 }
 
 export interface CombatOverlayUpdateParams {
@@ -52,6 +54,7 @@ export function initCombatOverlayHud({
   blindVignette,
   deathOverlay,
   healFlash,
+  onHeal,
 }: CombatOverlayHudOptions): CombatOverlayHudController {
   let prevSelfHp = -1
   let prevSelfAlive = false
@@ -140,6 +143,11 @@ export function initCombatOverlayHud({
         healFlash.classList.add('active')
         void healFlash.offsetHeight
         healFlash.classList.remove('active')
+        // A number, not just a green wash. The owner asked "come ci si cura?"
+        // and the honest answer was that nothing on screen ever confirmed a
+        // heal had happened, let alone how big it was — the protocol has no
+        // heal event at all, so this HP delta is the only evidence there is.
+        onHeal?.(selfSchema.hp - prevSelfHp)
       }
       prevSelfHp = selfSchema.hp
       prevSelfAlive = selfSchema.alive

@@ -2,6 +2,7 @@
 // AudioContext is created lazily on the first call so we satisfy the
 // "must be triggered by a user gesture" browser requirement.
 
+import { healChime } from './heal-tone.js'
 import { hurtAbility, hurtAoe, hurtMelee, hurtProjectile } from './hurt-sounds.js'
 import { remoteCast, remoteHit } from './remote-sounds.js'
 
@@ -321,39 +322,33 @@ export class SoundEngine {
 
   // ─── Victim-side impact sounds ───────────────────────────────────────────
 
-  /** Victim: received melee — dull grunt + low thud. */
-  playHurtMelee(power = 1): void {
-    if (this._muted) return
-    hurtMelee(this.ac, this.out, power, (s) => this._pitch(s))
-  }
-
-  /** Victim: received arrow/bolt — sharp "thwack" at point of impact. */
-  playHurtProjectile(power = 1): void {
-    if (this._muted) return
-    hurtProjectile(this.ac, this.out, power, (s) => this._pitch(s))
-  }
-
-  /** Victim: received zone/AoE — muffled explosion boom. */
-  playHurtAoe(power = 1): void {
-    if (this._muted) return
-    hurtAoe(this.ac, this.out, power, (s) => this._pitch(s))
-  }
-
-  /** Victim: received ability hit — magic "zap" sweep. */
-  playHurtAbility(power = 1): void {
-    if (this._muted) return
-    hurtAbility(this.ac, this.out, power, (s) => this._pitch(s))
-  }
-
-  // ─── Dispatcher: victim side ─────────────────────────────────────────────
-
-  /** Play the victim-side "received damage" sound based on damage source. */
+  /**
+   * The victim-side "I was hit by X" sound.
+   *
+   * This was four one-line wrapper methods plus a dispatcher, and nothing
+   * outside this class ever called the wrappers — the dispatcher was their only
+   * caller. One table says the same thing.
+   */
   playHurtByType(cause: string, power = 1): void {
-    if (cause === 'sword_m1' || cause === 'uppercut') return this.playHurtMelee(power)
-    if (cause === 'bow' || cause.startsWith('bow:')) return this.playHurtProjectile(power)
-    if (cause === 'staff' || cause.startsWith('staff:')) return this.playHurtProjectile(power)
-    if (cause.startsWith('zone:') || cause.startsWith('combo:')) return this.playHurtAoe(power)
-    return this.playHurtAbility(power)
+    if (this._muted) return
+    const pitch = (src: AudioBufferSourceNode): void => this._pitch(src)
+    const synth =
+      cause === 'sword_m1' || cause === 'uppercut'
+        ? hurtMelee
+        : cause === 'bow' ||
+            cause.startsWith('bow:') ||
+            cause === 'staff' ||
+            cause.startsWith('staff:')
+          ? hurtProjectile
+          : cause.startsWith('zone:') || cause.startsWith('combo:')
+            ? hurtAoe
+            : hurtAbility
+    synth(this.ac, this.out, power, pitch)
+  }
+
+  /** A heal, as a rising chime — see audio/heal-tone.ts. */
+  playHeal(): void {
+    if (!this._muted) healChime(this.ac, this.out)
   }
 
   /** Element-themed tone sweep on ability cast. */

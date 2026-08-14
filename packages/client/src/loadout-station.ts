@@ -317,10 +317,22 @@ export function initLoadoutStation(
         if (poolFilterEl === 'recommended')
           return recommendationTags(def, activeIdx, slots).length > 0
         if (poolFilterEl === 'control') return abilityHasControl(def)
-        if (poolFilterEl === 'projectile') return abilityNatureLabel(def).includes('PROJECTILE')
-        if (poolFilterEl === 'recovery') return abilityNatureLabel(def) === 'RECOVERY'
-        if (poolFilterEl === 'zone') return abilityNatureLabel(def).includes('ZONE')
-        if (poolFilterEl === 'mobility') return abilityNatureLabel(def).includes('MOBILITY')
+        // FOUR of these filters were dead. They compared the DISPLAY label
+        // against English strings while abilityNatureLabel returns Italian —
+        // 'RECUPERO' vs 'RECOVERY', 'ZONA' vs 'ZONE', 'PROIETTILE' vs
+        // 'PROJECTILE', 'MOBILITA' vs 'MOBILITY' — so every one returned an
+        // empty pool. The owner asked "come ci si cura?" and the one control
+        // that would have answered him showed nothing.
+        //
+        // They filter on the ability's DATA now. A UI filter keyed off a
+        // translated string is a bug with a delivery date.
+        if (poolFilterEl === 'projectile') return def.effects.some((e) => e.kind === 'projectile')
+        if (poolFilterEl === 'recovery')
+          return def.effects.some(
+            (e) => e.kind === 'heal' || e.kind === 'restoreStamina' || e.kind === 'cleanse',
+          )
+        if (poolFilterEl === 'zone') return def.effects.some((e) => e.kind === 'zone')
+        if (poolFilterEl === 'mobility') return def.effects.some((e) => e.kind === 'move')
         if (poolFilterEl === 'none') return def.element === 'none'
         return def.element === poolFilterEl
       })

@@ -562,7 +562,7 @@ const remotePlayerSystem = initRemotePlayers({
 })
 
 const hitFeedback = initHitFeedback({
-  crosshairEl,
+  hitmarkerEl: document.getElementById('hitmarker')!,
   hitDirEls,
   popupsLayer,
   camera,
@@ -571,6 +571,7 @@ const hitFeedback = initHitFeedback({
 })
 
 const combatOverlayHud = initCombatOverlayHud({
+  onHeal: (amount) => (hitFeedback.showHealPopup(amount), soundEngine.playHeal()),
   bowCharge,
   bowChargeFill,
   crosshairEl,
@@ -1568,11 +1569,17 @@ function onHit(msg: ServerHitMessage): void {
       },
     )
 
-  const victimPos = getPlayerWorldPos(msg.victimId)
-  if (victimPos) {
-    hitFeedback.showDamagePopup(victimPos, msg.damage, amISelf, msg.didParry, msg.element, {
-      airPunish: isAirPunish && amIAttacker && !amISelf,
-    })
+  if (amISelf) {
+    // Screen space, not world space: projecting your own body puts the number
+    // on the camera and the frustum guard drops it. See showInboundDamage.
+    hitFeedback.showInboundDamage(msg.damage, msg.didParry)
+  } else {
+    const victimPos = getPlayerWorldPos(msg.victimId)
+    if (victimPos) {
+      hitFeedback.showDamagePopup(victimPos, msg.damage, false, msg.didParry, msg.element, {
+        airPunish: isAirPunish && amIAttacker,
+      })
+    }
   }
   // White blink + a brief animation freeze on the struck enemy so hits land with
   // weight (the remote mixer already honours hitStopUntilMs — this just triggers it).
@@ -1597,7 +1604,8 @@ function onDeath(msg: ServerDeathMessage): void {
       addKillFeedEntry: (k, v, sk, sd) => combatFeedHud.addKillFeedEntry(k, v, sk, sd),
       showKillSplash: (text, kind) => combatFeedHud.showKillSplash(text, kind),
       spawnDeathBurst: (pos, byUs) => deathBurstVfx.spawn(pos, byUs),
-      countSelfKill: () => selfStats.kills++,
+      // The kill hitmarker belongs on the kill, not on the hit.
+      countSelfKill: () => (hitFeedback.showHitmarker(true), selfStats.kills++),
       countOpponentKill: () => opponentStats.kills++,
       trackKill,
       trackDeath,

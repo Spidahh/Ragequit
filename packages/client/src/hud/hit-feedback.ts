@@ -10,7 +10,8 @@ const ELEMENT_POPUP_COLOR: Record<string, string> = {
 }
 
 export interface HitFeedbackOptions {
-  crosshairEl: HTMLElement
+  /** The dedicated hitmarker element — NOT the crosshair. See showHitmarker. */
+  hitmarkerEl: HTMLElement
   hitDirEls: Record<string, HTMLElement>
   popupsLayer: HTMLElement
   camera: THREE.Camera
@@ -19,7 +20,11 @@ export interface HitFeedbackOptions {
 }
 
 export interface HitFeedbackController {
-  showHitmarker: () => void
+  showHitmarker: (kill?: boolean) => void
+  /** Healing you received, as a number you can actually read. */
+  showHealPopup: (amount: number) => void
+  /** Damage YOU took. Screen space — see the note on the implementation. */
+  showInboundDamage: (amount: number, parried: boolean) => void
   showDirectionalHit: (attackerWorldPos: THREE.Vector3 | null) => void
   showDamagePopup: (
     worldPos: THREE.Vector3,
@@ -32,7 +37,7 @@ export interface HitFeedbackController {
 }
 
 export function initHitFeedback({
-  crosshairEl,
+  hitmarkerEl,
   hitDirEls,
   popupsLayer,
   camera,
@@ -41,12 +46,31 @@ export function initHitFeedback({
 }: HitFeedbackOptions): HitFeedbackController {
   let hitmarkerTimeout = 0
 
-  function showHitmarker(): void {
+  /**
+   * The hitmarker: four ticks that snap in and fade, at the crosshair.
+   *
+   * It used to be `crosshairEl.classList.add('hit')` against a single CSS
+   * declaration — `#crosshair.hit { border-color: var(--danger) }` — and THREE
+   * later rules of identical specificity set border-color on the same element
+   * (`[data-charge]` for the bow, `[data-weapon='sword']`, `[data-primed]`).
+   * Later wins, so the one signal that says "you connected" never fired with a
+   * sword equipped or an ability armed. That is the loudest beat of the combat
+   * loop, silently absent.
+   *
+   * A dedicated element cannot be overridden by crosshair state, because it is
+   * not the crosshair. Every shipped shooter draws it this way.
+   */
+  function showHitmarker(kill = false): void {
     clearTimeout(hitmarkerTimeout)
-    crosshairEl.classList.add('hit')
+    hitmarkerEl.classList.remove('show', 'kill')
+    // Force a reflow so a second hit inside the window restarts the animation
+    // instead of being swallowed — rapid hits are exactly when you need it.
+    void hitmarkerEl.offsetWidth
+    hitmarkerEl.classList.add('show')
+    if (kill) hitmarkerEl.classList.add('kill')
     hitmarkerTimeout = setTimeout(
-      () => crosshairEl.classList.remove('hit'),
-      130,
+      () => hitmarkerEl.classList.remove('show', 'kill'),
+      kill ? 320 : 180,
     ) as unknown as number
   }
 
@@ -116,5 +140,48 @@ export function initHitFeedback({
     setTimeout(() => el.remove(), 900)
   }
 
-  return { showHitmarker, showDirectionalHit, showDamagePopup }
+  /**
+   * A heal, as a number at the crosshair.
+   *
+   * Healing had NO event and no number: the only signal was a full-screen green
+   * wash inferred from an HP delta, so "am I being healed, and by how much"
+   * was unanswerable — and the owner asked exactly that ("come ci si cura?").
+   * Drawn in screen space on purpose: the world position of a heal is your own
+   * body, which in first person is the camera, and a popup projected there is
+   * discarded by the frustum guard. That is the same bug that made inbound
+   * damage numbers invisible.
+   */
+  /**
+   * Damage you took, at the crosshair.
+   *
+   * The world-space popup could never show this in first person: it projects
+   * the VICTIM's position, and when the victim is you that position is your own
+   * body, i.e. the camera — so the projection lands behind the near plane and
+   * the frustum guard (`v.z < -1`) discards it. The number was computed,
+   * classed 'inbound', and thrown away every time. You could not see how hard
+   * you had been hit while holding a bow or a staff.
+   */
+  function showInboundDamage(amount: number, parried: boolean): void {
+    if (amount <= 0) return
+    const el = document.createElement('span')
+    el.className = parried ? 'popup inbound parried' : 'popup inbound'
+    el.textContent = parried ? `${Math.round(amount)} ⛊` : `-${Math.round(amount)}`
+    el.style.left = `${window.innerWidth / 2 + (Math.random() - 0.5) * 70}px`
+    el.style.top = `${window.innerHeight * 0.56}px`
+    document.body.appendChild(el)
+    setTimeout(() => el.remove(), 900)
+  }
+
+  function showHealPopup(amount: number): void {
+    if (amount <= 0) return
+    const el = document.createElement('span')
+    el.className = 'popup heal'
+    el.textContent = `+${Math.round(amount)}`
+    el.style.left = `${window.innerWidth / 2 + (Math.random() - 0.5) * 40}px`
+    el.style.top = `${window.innerHeight * 0.42}px`
+    document.body.appendChild(el)
+    setTimeout(() => el.remove(), 900)
+  }
+
+  return { showHitmarker, showDirectionalHit, showDamagePopup, showHealPopup, showInboundDamage }
 }

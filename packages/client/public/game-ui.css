@@ -3129,8 +3129,82 @@ button.locked {
   height: 1px;
 }
 
-#crosshair.hit {
-  border-color: var(--danger);
+/* The old hitmarker lived here as a border-colour tweak on #crosshair and was
+   silently overridden by [data-charge], [data-weapon] and [data-primed], all of
+   the same specificity and all later in the file. See #hitmarker. */
+
+#hitmarker {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 700;
+  width: clamp(22px, 3.2vh, 40px);
+  height: clamp(22px, 3.2vh, 40px);
+  transform: translate(-50%, -50%) scale(1.55);
+  opacity: 0;
+  pointer-events: none;
+}
+
+#hitmarker i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2px;
+  height: 34%;
+  margin-left: -1px;
+  background: #fff;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.85);
+  transform-origin: 50% 0;
+}
+
+/* Four ticks on the diagonals, offset out from the centre so the crosshair
+   itself stays readable underneath. */
+#hitmarker i:nth-child(1) {
+  transform: rotate(45deg) translateY(28%);
+}
+#hitmarker i:nth-child(2) {
+  transform: rotate(135deg) translateY(28%);
+}
+#hitmarker i:nth-child(3) {
+  transform: rotate(225deg) translateY(28%);
+}
+#hitmarker i:nth-child(4) {
+  transform: rotate(315deg) translateY(28%);
+}
+
+#hitmarker.show {
+  animation: hitmarker-pop 0.18s ease-out forwards;
+}
+
+#hitmarker.kill i {
+  background: var(--danger);
+  width: 3px;
+}
+
+#hitmarker.kill {
+  animation-duration: 0.32s;
+}
+
+@keyframes hitmarker-pop {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.9);
+  }
+  35% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.15);
+  }
+}
+
+/* A heal reads GREEN and rises, so it can never be mistaken for damage. */
+.popup.heal {
+  color: #5dff9b;
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(93, 255, 155, 0.55);
 }
 
 /* Bow charge crosshair feedback */
