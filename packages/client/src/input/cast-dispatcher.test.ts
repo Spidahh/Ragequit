@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { initCastDispatcher, type CastDispatchParams } from './cast-dispatcher.js'
 import type { GameInputState } from './game-input.js'
 
+// fireball/uppercut/quick_dash aim with the crosshair; meteor is ground-targeted.
 const LOADOUT = ['fireball', 'meteor', 'uppercut', 'quick_dash']
 
 function setup(): {
@@ -43,123 +44,133 @@ function setup(): {
   return { d, sendCast, hide, tick, inp }
 }
 
-// D12. Before this, 46 of 53 abilities were fired on the press edge with
-// nothing drawn — you learned a spell's shape by dying to it. Press now shows
-// the shape and release commits it, uniformly, for the whole roster.
-describe('press shows, release casts', () => {
-  it('does not cast on the press edge alone', () => {
+// The model before this fired every ability on key-UP after showing a shape on
+// key-DOWN. The owner's three reports were all that model: the shape flashed for
+// two frames on a tap ("you can't tell where you're aiming, it disappears"), the
+// cast had already left so a following click hit with the weapon ("left click
+// doesn't do it"), and "armed" had no persistent indicator at all.
+//
+// Only 7 of 53 abilities are `point`. The other 46 aim with the crosshair, so a
+// modal aim state bought them nothing.
+describe('crosshair-aimed abilities fire on the press edge', () => {
+  it('casts immediately, with no aiming step', () => {
     const { d, sendCast, tick } = setup()
-    d.activateAbilitySlot(0, false)
-    tick()
-    expect(sendCast).not.toHaveBeenCalled()
-    expect(d.getPlacementAbilityId()).toBe('fireball')
-  })
-
-  it('casts on release, for a forward ability that used to cast blind', () => {
-    const { d, sendCast, tick } = setup()
-    d.activateAbilitySlot(0, false)
-    d.releaseAbilitySlot(0)
+    d.activateAbilitySlot(0)
     tick()
     expect(sendCast).toHaveBeenCalledWith('fireball', 101)
     expect(d.getPlacementAbilityId()).toBeNull()
   })
 
-  it('treats a point ability exactly the same', () => {
+  it('does not wait for, or react to, the key coming back up', () => {
     const { d, sendCast, tick } = setup()
-    d.activateAbilitySlot(1, false)
-    expect(d.getPlacementAbilityId()).toBe('meteor')
-    d.releaseAbilitySlot(1)
+    d.activateAbilitySlot(2)
     tick()
-    expect(sendCast).toHaveBeenCalledWith('meteor', 101)
-  })
-
-  // Roll your fingers across 1 and 2 and you must not fire ability 1 with
-  // ability 2's aim, nor fire twice.
-  it('matches the release to the key that was pressed', () => {
-    const { d, sendCast, tick } = setup()
-    d.activateAbilitySlot(0, false)
-    d.activateAbilitySlot(2, false)
-    d.releaseAbilitySlot(0)
-    tick()
-    expect(sendCast).not.toHaveBeenCalled()
-    expect(d.getPlacementAbilityId()).toBe('uppercut')
+    expect(sendCast).toHaveBeenCalledTimes(1)
     d.releaseAbilitySlot(2)
     tick()
     expect(sendCast).toHaveBeenCalledTimes(1)
-    expect(sendCast).toHaveBeenCalledWith('uppercut', 101)
   })
 
-  it('ignores a release for a key that was never held', () => {
-    const { d, sendCast, tick } = setup()
-    d.releaseAbilitySlot(3)
+  it('leaves the left click meaning "weapon" afterwards', () => {
+    const { d, sendCast, tick, inp } = setup()
+    d.activateAbilitySlot(0)
     tick()
-    expect(sendCast).not.toHaveBeenCalled()
-  })
-
-  it('does not cast after the preview was cancelled', () => {
-    const { d, sendCast, tick } = setup()
-    d.activateAbilitySlot(0, false)
-    d.cancelPlacementPreview()
-    d.releaseAbilitySlot(0)
+    expect(sendCast).toHaveBeenCalledTimes(1)
+    inp.lmbPressEdge = true
     tick()
-    expect(sendCast).not.toHaveBeenCalled()
+    // Still one: the click was the weapon, not a leftover spell.
+    expect(sendCast).toHaveBeenCalledTimes(1)
   })
 
-  it('hides the visual when the preview ends', () => {
-    const { d, hide } = setup()
-    d.activateAbilitySlot(0, false)
-    d.releaseAbilitySlot(0)
-    expect(hide).toHaveBeenCalled()
+  it('lets two abilities fire in sequence', () => {
+    const { d, sendCast, tick } = setup()
+    d.activateAbilitySlot(0)
+    tick()
+    d.activateAbilitySlot(2)
+    tick()
+    expect(sendCast).toHaveBeenNthCalledWith(1, 'fireball', 101)
+    expect(sendCast).toHaveBeenNthCalledWith(2, 'uppercut', 101)
   })
 })
 
-describe('LMB confirms whatever is being previewed', () => {
-  it('fires the previewed ability and clears the preview', () => {
+describe('ground-targeted abilities wait for a click', () => {
+  it('arms instead of casting, and stays armed', () => {
+    const { d, sendCast, tick } = setup()
+    d.activateAbilitySlot(1)
+    expect(d.getPlacementAbilityId()).toBe('meteor')
+    // Many frames later it is STILL armed — no timeout. A state that expires on
+    // its own is a state you cannot trust.
+    for (let i = 0; i < 50; i++) tick()
+    expect(d.getPlacementAbilityId()).toBe('meteor')
+    expect(sendCast).not.toHaveBeenCalled()
+  })
+
+  it('casts on the confirming click', () => {
     const { d, sendCast, tick, inp } = setup()
-    d.activateAbilitySlot(0, false)
+    d.activateAbilitySlot(1)
     inp.lmbPressEdge = true
+    tick()
+    expect(sendCast).toHaveBeenCalledWith('meteor', 101)
+    expect(d.getPlacementAbilityId()).toBeNull()
+  })
+
+  it('cancels on right click without casting', () => {
+    const { d, sendCast, tick, inp } = setup()
+    d.activateAbilitySlot(1)
+    inp.rmbPressEdge = true
+    tick()
+    expect(sendCast).not.toHaveBeenCalled()
+    expect(d.getPlacementAbilityId()).toBeNull()
+  })
+
+  it('replaces the armed ability when another ground ability is pressed', () => {
+    const { d, tick } = setup()
+    d.activateAbilitySlot(1)
+    d.activateAbilitySlot(1)
+    tick()
+    expect(d.getPlacementAbilityId()).toBe('meteor')
+  })
+
+  // Pressing a crosshair-aimed ability while placing should do the obvious
+  // thing: fire it and drop the placement, not leave two armed states.
+  it('a crosshair ability clears the placement and fires', () => {
+    const { d, sendCast, tick } = setup()
+    d.activateAbilitySlot(1)
+    d.activateAbilitySlot(0)
     tick()
     expect(sendCast).toHaveBeenCalledWith('fireball', 101)
     expect(d.getPlacementAbilityId()).toBeNull()
   })
 
-  // The radial wheels are deleted, and with them the `primedSlotIdx` state that
-  // never expired: it hijacked EVERY left click into casting that spell instead
-  // of firing the weapon, while its only indicator auto-hid after 5 s. That is
-  // both halves of the owner's report — "left click doesn't cast it" and "you
-  // can't tell if a spell is selected". There is now exactly one armed state,
-  // it is the visible aim preview, and it ends when the cast does.
-  it('never leaves a spell armed after the preview ends', () => {
-    const { d, sendCast, tick, inp } = setup()
-    d.activateAbilitySlot(0, false)
-    d.releaseAbilitySlot(0)
-    tick()
-    expect(sendCast).toHaveBeenCalledTimes(1)
-    expect(d.getPlacementAbilityId()).toBeNull()
-    expect(d.getPrimedSlotIdx()).toBeNull()
-
-    // A later click is the WEAPON, not a leftover spell.
+  it('hides the visual when the placement ends', () => {
+    const { d, hide, tick, inp } = setup()
+    d.activateAbilitySlot(1)
     inp.lmbPressEdge = true
     tick()
-    expect(sendCast).toHaveBeenCalledTimes(1)
+    expect(hide).toHaveBeenCalled()
   })
 })
 
 describe('a queued cast never survives losing control of the character', () => {
   it('drops the queue when combat is not live', () => {
     const { d, sendCast, tick } = setup()
-    d.activateAbilitySlot(0, false)
-    d.releaseAbilitySlot(0)
+    d.activateAbilitySlot(0)
     tick({ combatLive: false })
     expect(sendCast).not.toHaveBeenCalled()
   })
 
   it('drops the queue while dead, so respawn does not auto-fire it', () => {
     const { d, sendCast, tick } = setup()
-    d.activateAbilitySlot(0, false)
-    d.releaseAbilitySlot(0)
+    d.activateAbilitySlot(0)
     tick({ dead: true })
     tick()
     expect(sendCast).not.toHaveBeenCalled()
+  })
+
+  it('disarms a placement when the round ends', () => {
+    const { d, tick } = setup()
+    d.activateAbilitySlot(1)
+    tick({ combatLive: false })
+    expect(d.getPlacementAbilityId()).toBeNull()
   })
 })

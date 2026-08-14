@@ -6880,8 +6880,28 @@ button.locked {
   transition: none;
 }
 /* Primed ability accent ring */
+/* Placement armed. Loud on purpose and pulsing, because this is the ONLY state
+   in which a left click does something other than swing your weapon, and the
+   owner's report was that he could not tell whether a spell was selected. */
 #crosshair[data-primed='true'] {
-  box-shadow: 0 0 0 2px rgba(212, 160, 74, 0.55);
+  box-shadow:
+    0 0 0 2px rgba(255, 210, 96, 0.95),
+    0 0 14px rgba(255, 210, 96, 0.45);
+  animation: crosshair-armed 0.9s ease-in-out infinite;
+}
+
+@keyframes crosshair-armed {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px rgba(255, 210, 96, 0.95),
+      0 0 14px rgba(255, 210, 96, 0.4);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px rgba(255, 210, 96, 1),
+      0 0 22px rgba(255, 210, 96, 0.7);
+  }
 }
 
 /* Selected abilities change the reticle language before LMB: trajectory,

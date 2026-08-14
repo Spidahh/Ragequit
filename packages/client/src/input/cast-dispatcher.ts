@@ -71,16 +71,12 @@ export function initCastDispatcher({
   onWeaponFired,
 }: CastDispatcherOptions): CastDispatcherController {
   let placementAbilityId: string | null = null
-  // Which hotbar key is physically down. Releasing key A must not fire the
-  // ability you re-aimed to with key B, so the release is matched to the press.
-  let heldSlotIdx: number | null = null
   let lastStaffFireMs = 0
   const abilityCastQueue: string[] = []
 
   function cancelPlacementPreview(): void {
     if (placementAbilityId) hideAbilityReadout?.()
     placementAbilityId = null
-    heldSlotIdx = null
     hidePlacementVisual()
   }
 
@@ -91,32 +87,60 @@ export function initCastDispatcher({
   }
 
   /**
-   * Press: show what the ability will do. Release: do it.
+   * Press the key, the ability happens. That is the whole model.
    *
-   * Every ability goes through this now, not just the seven `point` ones. The
-   * old split fired 46 of 53 on the press edge with nothing drawn, which is
-   * what made a spell an act of faith — you learned an ability's shape by
-   * being killed by it, or by reading the tooltip, never by looking at it.
+   * I built the previous one yesterday and it was wrong, so this note is the
+   * evidence rather than an opinion. It was "key down shows the shape, key up
+   * casts", applied to all 53 abilities. The owner's report, verbatim: "when
+   * you switch spell and press left click it doesn't do it", "you can't tell
+   * where you're aiming because it disappears", "you can't tell if you have
+   * selected a spell". All three are that model:
    *
-   * A tap is still a tap: press and release land 1-3 frames apart, so the cast
-   * leaves at the same speed it used to and the shape flashes on the way out.
-   * Holding buys aim time at the cost of your own hold, which is a trade the
-   * player makes deliberately — and the cast then carries the aim you were
-   * looking at on RELEASE, so what you saw is what you threw.
+   *  - the shape existed only while the key was physically down, so on a tap it
+   *    flashed for two frames and vanished — hence "it disappears";
+   *  - the cast had already left on key-up, so a following left click hit with
+   *    the WEAPON — hence "left click doesn't do it";
+   *  - and "armed" was a state with no persistent indicator at all.
+   *
+   * ONLY 7 OF 53 ABILITIES NEED AN AIMING STEP. The split is 14 `self`, 32
+   * `forward`, 7 `point`. Self and forward aim with the crosshair you are
+   * already looking through — there is nothing to place, so a modal aim state
+   * buys them nothing and costs a vanishing indicator. I had imposed a mode on
+   * 46 abilities that never needed one.
+   *
+   * So: `point` abilities enter a PERSISTENT placement that waits for a click
+   * and never times out. Everything else fires on the press edge, the way Quake
+   * and Overwatch fire an ability, and its shape is shown by the world
+   * telegraph at the moment it resolves — which is where a shape teaches you
+   * something anyway.
    */
   function activateAbilitySlot(slotIdx: number, _fromWheel = false): void {
     const id = getLoadout()[slotIdx] ?? ''
-    if (!id || !ABILITY_DEFS[id]) return
-    beginPlacementPreview(id)
-    heldSlotIdx = slotIdx
-    showAbilityReadout?.(id, 'placement')
-  }
+    const def = ABILITY_DEFS[id]
+    if (!id || !def) return
 
-  function releaseAbilitySlot(slotIdx: number): void {
-    if (heldSlotIdx !== slotIdx || !placementAbilityId) return
-    const id = placementAbilityId
+    if (def.targeting === 'point') {
+      // Ground-targeted: you genuinely have to choose a spot. Stays up until
+      // you click or cancel — no timeout, because a state that expires on its
+      // own is a state you cannot trust.
+      beginPlacementPreview(id)
+      showAbilityReadout?.(id, 'placement')
+      return
+    }
+
     cancelPlacementPreview()
     abilityCastQueue.push(id)
+  }
+
+  /**
+   * Key up. Deliberately does nothing.
+   *
+   * Kept as a no-op rather than unwired, because the input layer reports slot
+   * releases and a silently missing handler is how the previous model's bugs
+   * hid. If a hold-to-charge ability ever ships, this is where it goes.
+   */
+  function releaseAbilitySlot(_slotIdx: number): void {
+    /* casting happens on the press edge — see activateAbilitySlot */
   }
 
   function clearQueue(): void {

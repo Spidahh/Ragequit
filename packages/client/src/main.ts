@@ -2394,9 +2394,11 @@ function _renderInner(now: number): void {
     crosshairEl.dataset['moving'] = selfMoving ? 'true' : 'false'
     if (now < _killConfirmUntilMs) crosshairEl.classList.add('kill-confirm')
     else crosshairEl.classList.remove('kill-confirm')
-    // Primed crosshair accent — subtle gold ring when an ability is ready to fire on LMB.
-    const primedIdx = castDispatcher.getPrimedSlotIdx()
-    if (primedIdx !== null) crosshairEl.setAttribute('data-primed', 'true')
+    // Armed at the CROSSHAIR, where your eyes are — not only in a readout at
+    // the edge. Placement is the one state where a click means something other
+    // than your weapon, so it has to be unmissable and it has to persist for
+    // exactly as long as the state does.
+    if (castDispatcher.getPlacementAbilityId()) crosshairEl.setAttribute('data-primed', 'true')
     else crosshairEl.removeAttribute('data-primed')
   }
 
