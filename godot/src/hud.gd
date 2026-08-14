@@ -35,6 +35,12 @@ var _hitmark_t := 0.0
 var _combo := 0
 var _combo_label: Label
 var _combo_t := 0.0
+var _score_label: Label
+var _timer_label: Label
+var _leader_label: Label
+## Le righe del kill feed, con il tempo che resta a ciascuna.
+var _feed: Array = []
+var _feed_box: VBoxContainer
 
 
 func setup(player: Node) -> void:
@@ -164,6 +170,53 @@ func _build() -> void:
 		bar.add_child(nm)
 		_slots.append({"id": kit[i].id, "fill": fill, "h": w})
 
+	# --- Punteggio e timer, in alto al centro --------------------------------
+	# Le due sole cose che dicono a che punto è la partita. Stanno in alto perché
+	# si controllano fra uno scambio e l'altro, non durante.
+	var top := Control.new()
+	top.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	top.position = Vector2(0, 14)
+	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(top)
+
+	_score_label = Label.new()
+	_score_label.text = "0"
+	_score_label.position = Vector2(-60, 0)
+	_score_label.size = Vector2(120, 34)
+	_score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_score_label.add_theme_font_size_override("font_size", 30)
+	_score_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.95))
+	top.add_child(_score_label)
+
+	_timer_label = Label.new()
+	_timer_label.text = "8:00"
+	_timer_label.position = Vector2(-60, 34)
+	_timer_label.size = Vector2(120, 18)
+	_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_timer_label.add_theme_font_size_override("font_size", 15)
+	_timer_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.6))
+	top.add_child(_timer_label)
+
+	# Chi sta vincendo: senza, il tuo punteggio non vuol dire niente.
+	_leader_label = Label.new()
+	_leader_label.position = Vector2(-140, 52)
+	_leader_label.size = Vector2(280, 16)
+	_leader_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_leader_label.add_theme_font_size_override("font_size", 12)
+	_leader_label.add_theme_color_override("font_color", COL_READY)
+	top.add_child(_leader_label)
+
+	# --- Kill feed, in alto a destra -----------------------------------------
+	# Dice sempre CON QUALE ABILITÀ: è così che si imparano i kit degli altri
+	# senza che nessuno li spieghi.
+	_feed_box = VBoxContainer.new()
+	_feed_box.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_feed_box.position = Vector2(-372, 14)
+	_feed_box.size = Vector2(348, 120)
+	_feed_box.alignment = BoxContainer.ALIGNMENT_BEGIN
+	_feed_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_feed_box)
+
 	# --- Contatore combo, fluttuante -----------------------------------------
 	# L'unica cosa "in più" concessa in partita, e concessa perché PREMIA, non
 	# insegna.
@@ -174,6 +227,41 @@ func _build() -> void:
 	_combo_label.add_theme_color_override("font_color", COL_READY)
 	_combo_label.modulate.a = 0.0
 	root.add_child(_combo_label)
+
+
+## Aggiorna la testata. `score` è il tuo, `leader` è la riga che dice chi sta
+## davanti. Il testo lo compone chi conosce la modalità: l'HUD non sa le regole.
+func set_match(score: int, seconds_left: float, leader: String) -> void:
+	if _score_label == null:
+		return
+	_score_label.text = str(score)
+	var s := int(ceilf(maxf(0.0, seconds_left)))
+	_timer_label.text = "%d:%02d" % [s / 60, s % 60]
+	# Sotto il minuto il timer si accende: è l'unico momento in cui vale la pena
+	# guardarlo, quindi è l'unico in cui si fa notare.
+	_timer_label.add_theme_color_override(
+		"font_color", COL_HP if s <= 60 else Color(1, 1, 1, 0.6)
+	)
+	_leader_label.text = leader
+
+
+## Una riga di kill feed. Sparisce da sola dopo cinque secondi.
+func push_feed(text: String, mine: bool = false) -> void:
+	if _feed_box == null:
+		return
+	var line := Label.new()
+	line.text = text
+	line.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	line.add_theme_font_size_override("font_size", 13)
+	line.add_theme_color_override("font_color", COL_READY if mine else Color(1, 1, 1, 0.75))
+	_feed_box.add_child(line)
+	_feed.append({"node": line, "t": 5.0})
+	# Cinque righe bastano: oltre, il feed copre lo schermo proprio nel momento
+	# in cui succede di più.
+	while _feed.size() > 5:
+		var old = _feed.pop_front()
+		if is_instance_valid(old["node"]):
+			old["node"].queue_free()
 
 
 func _on_cast(_ability_name: String, hits: int) -> void:
@@ -211,6 +299,18 @@ func _process(delta: float) -> void:
 			fill.size.y = h * ready_frac
 			fill.position.y = h - h * ready_frac
 			fill.color = COL_READY if ready_frac >= 1.0 else COL_COOLING
+
+	# Le righe del feed sbiadiscono e se ne vanno.
+	for entry in _feed.duplicate():
+		entry["t"] = float(entry["t"]) - delta
+		var node = entry["node"]
+		if not is_instance_valid(node):
+			_feed.erase(entry)
+			continue
+		node.modulate.a = clampf(float(entry["t"]) / 1.2, 0.0, 1.0)
+		if float(entry["t"]) <= 0.0:
+			node.queue_free()
+			_feed.erase(entry)
 
 	# Conferma di colpo e combo svaniscono da soli.
 	if _hitmark_t > 0.0:

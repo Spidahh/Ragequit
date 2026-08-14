@@ -31,6 +31,10 @@ var _cam_kick := 0.0
 ## Vita del giocatore. Sta qui e non in un componente separato finche non serve:
 ## un sistema in piu senza un secondo utente e complessita comprata a credito.
 var hp: float = Combat.HP_MAX
+## A terra, in attesa che le regole dicano quando si torna. Un morto non spara
+## e non incassa: senza questo, i tre secondi di attesa sono tre secondi in cui
+## il cadavere continua a far salire il punteggio di chi lo ha ucciso.
+var dead := false
 
 signal died
 
@@ -142,11 +146,21 @@ func cast_slot(idx: int) -> int:
 
 
 func take_damage(amount: float) -> void:
+	if dead:
+		return
 	hp = maxf(0.0, hp - amount)
 	damaged.emit(amount, hp)
 	if hp <= 0.0:
+		dead = true
 		died.emit()
-		hp = Combat.HP_MAX
+
+
+## Chi decide QUANDO si torna in vita sono le regole della partita, non il
+## colpo che ti ha ucciso. Qui si esegue e basta.
+func respawn() -> void:
+	dead = false
+	hp = Combat.HP_MAX
+	_sim["vel"] = Vector3.ZERO
 
 
 func launch() -> void:

@@ -27,6 +27,8 @@ const Combat := preload("res://src/combat.gd")
 
 var hp: float
 var target: Node3D = null
+## Fuori scena in attesa di rientrare. Un morto non spara e non si colpisce.
+var dead := false
 
 var _aim := Vector3.FORWARD
 var _fire_t := 0.0
@@ -34,6 +36,7 @@ var _tracking := 0.0
 var _rng := RandomNumberGenerator.new()
 var _err := Vector3.ZERO
 var _err_t := 0.0
+var _layer := 0
 
 signal fired(from: Vector3, to: Vector3, hit: bool)
 signal died
@@ -46,10 +49,35 @@ func _ready() -> void:
 
 
 func take_damage(amount: float) -> void:
+	if dead:
+		return
 	hp = maxf(0.0, hp - amount)
 	if hp <= 0.0:
+		dead = true
+		# Non `queue_free`: un nemico distrutto non può tornare, e una partita in
+		# cui gli avversari finiscono non è una partita — è un livello. Qui esce
+		# di scena e ci rientra quando le regole lo dicono.
+		visible = false
+		process_mode = Node.PROCESS_MODE_DISABLED
+		# E smette di essere un bersaglio: senza questo, i secondi di attesa sono
+		# secondi in cui il cadavere continua a incassare e a far salire il
+		# punteggio.
+		_layer = collision_layer
+		collision_layer = 0
 		died.emit()
-		queue_free()
+
+
+## Rientra in campo, vita piena, nel punto che gli viene detto.
+func revive(at: Vector3) -> void:
+	dead = false
+	hp = max_hp
+	global_position = at
+	velocity = Vector3.ZERO
+	_tracking = 0.0
+	visible = true
+	process_mode = Node.PROCESS_MODE_INHERIT
+	if _layer != 0:
+		collision_layer = _layer
 
 
 func launch() -> void:

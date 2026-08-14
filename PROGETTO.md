@@ -1362,7 +1362,7 @@ prima che la precedente sia verde.
 | 1   | Combattimento: le tre forme, ricariche, danno                    | **✅ fatto** |
 | 2   | Nemici, HUD, effetti                                             | **✅ fatto** |
 | 3   | Rete autoritativa e lag compensation                             | **✅ fatto** |
-| 4   | **Struttura di partita**: modalità, punteggio, vittoria, respawn | ⬜           |
+| 4   | **Struttura di partita**: modalità, punteggio, vittoria, respawn | **✅ fatto** |
 | 5   | **Audio completo** (§10)                                         | ⬜           |
 | 6   | **Classi, sottoclassi e le 67 abilità** lette dai dati           | ⬜           |
 | 7   | **Le sette schermate** (§11) e le comodità (§12)                 | ⬜           |
@@ -1386,9 +1386,9 @@ regola.
 
 ## 17 · Come si controlla che sia vero
 
-Ogni fase entra solo con la sua verifica automatica. Oggi ne girano **otto, tutte
-verdi**, più un benchmark che stampa i numeri invece di giudicarli. Si lanciano
-tutte con un comando: `node run_tests.mjs` dentro `godot/`.
+Ogni fase entra solo con la sua verifica automatica. Oggi ne girano **undici,
+tutte verdi**, più un benchmark che stampa i numeri invece di giudicarli. Si
+lanciano tutte con un comando: `node run_tests.mjs` dentro `godot/`.
 
 | Verifica               | Cosa protegge                                                           |
 | ---------------------- | ----------------------------------------------------------------------- |
@@ -1398,6 +1398,9 @@ tutte con un comando: `node run_tests.mjs` dentro `godot/`.
 | `test_arena_play`      | premi il tasto, il colpo parte, il danno arriva                         |
 | `test_fight`           | si può vincere **e perdere**                                            |
 | `test_lag_comp`        | il colpo che vedi andare a segno va a segno                             |
+| `test_match`           | le tre modalità cominciano, segnano e finiscono                         |
+| `test_match_world`     | il colpo che uccide fa punto, e il morto smette di essere un bersaglio  |
+| `test_arena_match`     | nell'arena vera si arriva a 25 e si vince                               |
 | `test_net`             | due processi veri si parlano — non un albero di scena che finge         |
 | `test_net_world`       | due corpi, movimento autoritativo                                       |
 | `bench`                | frame time, draw call, e stampa i numeri                                |

@@ -133,3 +133,15 @@ func broadcast_damage(target_id: int, amount: float, remaining: float) -> void:
 
 
 signal damage_happened(target_id: int, amount: float, remaining: float)
+
+
+## Gli eventi di partita: uccisione, respawn, fine round, fine partita.
+## Il punteggio NON viaggia come numero: viaggiano i fatti, e ogni client
+## ricostruisce il totale. Un totale che arriva già fatto è un totale che può
+## arrivare sbagliato senza che nessuno se ne accorga.
+@rpc("authority", "reliable", "call_local")
+func broadcast_match_event(event: Dictionary) -> void:
+	match_event_happened.emit(event)
+
+
+signal match_event_happened(event: Dictionary)
