@@ -44,41 +44,34 @@
     <div id="death-overlay"></div>
     <div id="popups"></div>
 
-    <div id="hud">
-      <div id="hud-drag-handle" title="Drag to move HUD. Double-click to reset.">
-        <span class="grip"></span>
-        <span>Vitals</span>
-        <span class="hint">::</span>
-      </div>
-      <div class="bar" id="hud-hp">
-        <div class="fill" style="width: 100%"></div>
-        <div class="label">
-          <span>HP</span>
-          <span id="hud-hp-num">200 / 200</span>
+    <div id="combat-console">
+      <div id="hud">
+        <div class="bar" id="hud-hp">
+          <div class="fill" style="width: 100%"></div>
+          <div class="label">
+            <span>HP</span>
+            <span id="hud-hp-num">200 / 200</span>
+          </div>
         </div>
-      </div>
-      <div class="bar" id="hud-mana">
-        <div class="fill" style="width: 100%"></div>
-        <div class="label">
-          <span>MANA</span>
-          <span id="hud-mana-num">120 / 120</span>
+        <div class="bar" id="hud-mana">
+          <div class="fill" style="width: 100%"></div>
+          <div class="label">
+            <span>MANA</span>
+            <span id="hud-mana-num">120 / 120</span>
+          </div>
         </div>
-      </div>
-      <div class="bar" id="hud-stam">
-        <div class="fill" style="width: 100%"></div>
-        <div class="label">
-          <span>STAM</span>
-          <span id="hud-stam-num">100 / 100</span>
+        <div class="bar" id="hud-stam">
+          <div class="fill" style="width: 100%"></div>
+          <div class="label">
+            <span>STAM</span>
+            <span id="hud-stam-num">100 / 100</span>
+          </div>
         </div>
-      </div>
-      <!-- Class mechanic (Fury / Momentum / Risonanza / Flow). The server has
+        <!-- Class mechanic (Fury / Momentum / Risonanza / Flow). The server has
            always replicated this state; until now nothing drew it, so the thing
            that makes each class play differently was invisible in a match. -->
-      <div id="class-mechanic" class="hidden"></div>
-      <div id="hud-resize-handle" title="Resize HUD"></div>
-    </div>
-
-    <div id="combat-console">
+        <div id="class-mechanic" class="hidden"></div>
+      </div>
       <div id="weapons">
         <div id="hud-combo">
           <div class="dot" id="combo-0"></div>

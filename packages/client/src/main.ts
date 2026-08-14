@@ -78,7 +78,6 @@ import { createStatusSetter } from './hud/connection-status.js'
 import { ffaLadderRows, renderFfaLadder } from './hud/ffa-ladder.js'
 import { createHudFlash, shootFlashStyleFor } from './hud/flash.js'
 import { initHitFeedback } from './hud/hit-feedback.js'
-import { initDraggableHud } from './hud/hud-drag.js'
 import { initSelfHud } from './hud/self-hud.js'
 import { initStatusOverlay } from './hud/status-overlay.js'
 import { showTutorialIfFirstTime } from './hud/tutorial.js'
@@ -196,9 +195,6 @@ const hudManaFill = document.querySelector<HTMLElement>('#hud-mana .fill')!
 const hudManaNum = document.getElementById('hud-mana-num')!
 const hudStamFill = document.querySelector<HTMLElement>('#hud-stam .fill')!
 const hudStamNum = document.getElementById('hud-stam-num')!
-const hudPanel = document.getElementById('hud')!
-const hudDragHandle = document.getElementById('hud-drag-handle')!
-const hudResizeHandle = document.getElementById('hud-resize-handle')!
 const comboDots = [0, 1, 2].map((i) => document.getElementById(`combo-${i}`)!)
 const hudComboEl = document.getElementById('hud-combo')!
 const serverToast = document.getElementById('server-toast')!
@@ -821,7 +817,6 @@ function applyMatchPhase(msg: ServerMatchPhaseMessage, selfId: string): void {
   if (msg.phase === 'live') {
     livePhaseStartTick = getSchemaTick()
     roundTimer.textContent = ''
-    requestAnimationFrame(() => draggableHud.refreshBounds())
     // Wait for asset preload before engaging gameplay.
     // If preload is already done this resolves immediately.
     const engage = (): void => {
@@ -926,12 +921,6 @@ let camHFov = DEFAULT_FOV
 // Settings-driven FOV, set by the settings panel and persisted by menu.ts.
 let settingsFovBase = DEFAULT_FOV
 let pendingLaunchMode: string | null = null
-const draggableHud = initDraggableHud({
-  panel: hudPanel,
-  dragHandle: hudDragHandle,
-  resizeHandle: hudResizeHandle,
-})
-
 const setStatus = createStatusSetter(dbgStatus)
 
 let playerProfile = {
@@ -2565,7 +2554,6 @@ addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight)
   bloomComposer.setSize(window.innerWidth, window.innerHeight)
   finalComposer.setSize(window.innerWidth, window.innerHeight)
-  draggableHud.refreshBounds()
 })
 
 addEventListener('beforeunload', () => {

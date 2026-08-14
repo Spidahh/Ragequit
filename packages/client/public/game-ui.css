@@ -257,6 +257,13 @@ button.locked {
   position: fixed;
   inset: 0;
   z-index: 800;
+  /* Scroll rather than clip, at EVERY width.
+     Two media queries already did this; outside their ranges the menu clipped
+     silently. The centre column is ~1100 px tall, so at 1600x900 the Loadout
+     Forge tile and at 1920x1080 the profile card were below the fold with no
+     scrollbar — parts of the main menu were simply unreachable. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   grid-template-rows: minmax(84px, auto) minmax(0, 1fr) auto;
@@ -299,10 +306,10 @@ button.locked {
   align-self: start;
   justify-self: center;
   display: grid;
-  gap: 20px;
+  gap: clamp(8px, 1.7vh, 20px);
   width: 100%;
   max-width: 900px;
-  margin-top: -34px;
+  margin-top: 0;
   position: relative;
   z-index: 2;
 }
@@ -339,7 +346,11 @@ button.locked {
 }
 
 .mm-modes-row {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* auto-fit, not a hard-coded 4: the Torneo tile made five, and the fifth
+     wrapped onto a second row, adding ~120 px to a menu that already did not
+     fit 1080p. A column count that has to be edited every time a mode ships is
+     a column count that will be wrong. */
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
 }
 
 .mm-subnav {
@@ -349,14 +360,14 @@ button.locked {
 .mode-tile,
 .forge-tile {
   position: relative;
-  min-height: 108px;
+  min-height: clamp(74px, 11vh, 112px);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
   gap: 8px;
-  padding: 18px 16px;
+  padding: clamp(8px, 1.5vh, 18px) 16px;
   overflow: hidden;
 }
 
@@ -2311,23 +2322,27 @@ button.locked {
 }
 /* HUD */
 #hud {
-  position: fixed;
-  left: 24px;
-  bottom: 28px;
-  /* 600: above game canvas (0) but below all overlays (pause 850, scoreboard 850, loadout 760) */
-  z-index: 600;
-  width: 318px;
+  /* Vitals live INSIDE the bottom-centre console now, directly above the
+     hotbar, so one eye movement reads both. They used to be fixed at
+     left: 24px, which is where the owner found them ("le stats sono a sinistra
+     in basso") — and at widths between ~1381 and ~1650 px the 318 px panel and
+     the centred ability bar physically OVERLAPPED, because two absolutely
+     positioned objects were competing for the same horizontal band with no
+     breakpoint covering it. Being in the same flow makes that impossible
+     rather than merely unlikely.
+
+     Sized in vh so the whole cluster scales with the viewport instead of
+     staying 318 px on every screen from a laptop to a 4K monitor. */
+  width: clamp(300px, 26vh, 460px);
   display: grid;
-  gap: 6px;
-  padding: 10px 12px;
+  gap: clamp(3px, 0.55vh, 7px);
+  padding: clamp(6px, 0.9vh, 12px) clamp(8px, 1.1vh, 14px);
   border: 1px solid var(--line);
   border-left: 4px solid var(--gold);
   border-radius: var(--radius);
   background: var(--panel);
   user-select: none;
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+  pointer-events: none;
 }
 
 #hud.dragging {
@@ -2340,27 +2355,12 @@ button.locked {
   box-shadow: 0 0 12px rgba(0, 255, 136, 0.45);
 }
 
-#hud-drag-handle {
-  display: flex;
-  justify-content: space-between;
-  color: var(--muted);
-  font: 900 9px/1 var(--font-mono);
-  text-transform: uppercase;
-  cursor: grab;
-  transition: color 0.15s ease;
-}
 
-#hud-drag-handle:hover {
-  color: var(--gold);
-}
 
-#hud-drag-handle:active {
-  cursor: grabbing;
-}
 
 .bar {
   position: relative;
-  height: 26px;
+  height: clamp(16px, 2.3vh, 28px);
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-left: 5px solid var(--bar-color);
@@ -2485,33 +2485,24 @@ button.locked {
   background: var(--stamina);
 }
 
-#hud-resize-handle {
-  position: absolute;
-  right: 4px;
-  bottom: 4px;
-  width: 12px;
-  height: 12px;
-  border-right: 2px solid var(--gold);
-  border-bottom: 2px solid var(--gold);
-  cursor: nwse-resize;
-  opacity: 0.5;
-}
 
 #combat-console {
   position: fixed;
   left: 50%;
-  bottom: 24px;
+  bottom: clamp(12px, 2.2vh, 28px);
   z-index: 600;
   transform: translateX(-50%);
+  /* A COLUMN: vitals on top, weapons + hotbar underneath, one centred stack.
+     This is the Overwatch/Apex/Valorant arrangement — everything you need mid
+     fight in one place under the crosshair, nothing in a corner you have to
+     look away to read. */
   display: flex;
-  flex-direction: row;
-  align-items: flex-end;
-  gap: 18px;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(4px, 0.7vh, 10px);
   background: none;
   border: none;
   box-shadow: none;
-  pointer-events: none;
-}
 
 #weapons {
   display: flex;
@@ -2570,8 +2561,8 @@ button.locked {
 }
 
 .wslot {
-  width: 46px;
-  height: 46px;
+  width: clamp(34px, 4.1vh, 52px);
+  height: clamp(34px, 4.1vh, 52px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3109,8 +3100,8 @@ button.locked {
   left: 50%;
   top: 50%;
   z-index: 560;
-  width: 30px;
-  height: 30px;
+  width: clamp(18px, 2.6vh, 34px);
+  height: clamp(18px, 2.6vh, 34px);
   transform: translate(-50%, -50%);
   border: 1px solid rgba(232, 236, 246, 0.72);
   border-radius: 50%;
@@ -3171,8 +3162,8 @@ button.locked {
 }
 
 #gcd-ring {
-  width: 44px;
-  height: 44px;
+  width: clamp(28px, 3.9vh, 50px);
+  height: clamp(28px, 3.9vh, 50px);
   border: 1px solid transparent;
 }
 
@@ -3181,8 +3172,8 @@ button.locked {
 }
 
 #parry-ring {
-  width: 60px;
-  height: 60px;
+  width: clamp(38px, 5.3vh, 68px);
+  height: clamp(38px, 5.3vh, 68px);
   border: 2px solid var(--mana);
   opacity: 0;
 }
@@ -3243,8 +3234,8 @@ button.locked {
 
 #cast-bar {
   top: calc(50% + 54px);
-  width: 320px;
-  height: 30px;
+  width: clamp(200px, 26vh, 360px);
+  height: clamp(20px, 2.6vh, 34px);
   margin-left: -160px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -4034,7 +4025,7 @@ button.locked {
 #hint {
   position: fixed;
   left: 50%;
-  bottom: 118px;
+  top: clamp(96px, 14vh, 160px);
   z-index: 750;
   transform: translateX(-50%);
   padding: 8px 12px;
@@ -4513,6 +4504,12 @@ button.locked {
 .mm-center {
   grid-row: 1 / 2;
   min-width: 0;
+  /* Fit the screen, and scroll rather than clip if it still cannot.
+     `align-self: start` let this column grow to its content height (1137 px)
+     on every viewport; the parent grid clipped the overflow and there was no
+     scrollbar, so at 1600x900 the Loadout Forge tile and at 1920x1080 the
+     profile card were simply unreachable. */
+  align-self: start;
 }
 
 .mm-center > * {

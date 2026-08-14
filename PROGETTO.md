@@ -1273,6 +1273,37 @@ Verificato: `pnpm check` esce 0, healthcheck 0 errori, 8/8 abilita' disegnano l'
 nuovi. Restano aperti: HUD (vitals e barra abilita' si sovrappongono, niente scala col viewport) e
 la leggibilita' della cura.
 
+### 2026-08-13 (notte) — HUD: misurato, non guardato
+
+Non potendo vederlo, l'ho MISURATO. `tools/verify/hudlayout.mjs` legge il rettangolo di ogni
+elemento dell'HUD a tre risoluzioni e verifica tre cose che uno screenshot non conferma a colpo
+d'occhio: che niente si sovrapponga, che niente esca dallo schermo, e che le dimensioni CAMBINO
+davvero tra 768p e 1440p — perche' "sproporzionato" vuol dire px fissi su uno schermo diverso da
+quello per cui erano scritti.
+
+- **Le stats non sono piu' in basso a sinistra.** Vitals e hotbar sono ora UN SOLO blocco in basso
+  al centro (colonna: vitals, armi, hotbar), che e' la disposizione di Overwatch/Apex/Valorant:
+  tutto quello che ti serve nel mezzo di uno scontro sta sotto il mirino, niente in un angolo da
+  cui devi distogliere lo sguardo. Stando nello stesso flusso, la sovrapposizione e' impossibile
+  per costruzione invece che evitata per fortuna — prima erano due oggetti in posizione assoluta
+  che si contendevano la stessa fascia orizzontale, e **tra 1381 e 1650 px si sovrapponevano
+  fisicamente**, in una fascia che nessun breakpoint copriva.
+- **Adesso scala**: 300x94 a 768p, 374x144 a 1440p. Prima era 318 px fissi su qualunque schermo.
+  Barre, mirino, anelli GCD/parata, slot arma e cast bar sono tutti in `clamp()` su `vh`.
+- **Tolto il pannello trascinabile e ridimensionabile** (250 righe): ti lasciava sbagliare il
+  layout e salvava l'errore, e il suo asse verticale era comunque morto (scriveva una variabile
+  CSS che nessuna regola leggeva).
+
+**E ho trovato un difetto peggiore, misurando: il MENU non ci stava nello schermo.** La colonna
+centrale era alta ~1300 px e veniva TAGLIATA senza scrollbar: a 1600x900 la tessera Loadout Forge e
+a 1920x1080 la scheda profilo erano **irraggiungibili**. Ora il menu scrolla a ogni larghezza (due
+media query lo facevano gia', fuori dai loro intervalli no). E la fila delle modalita' era
+`repeat(4, ...)` mentre le tessere sono cinque da quando ho aggiunto il Torneo: la quinta andava a
+capo. Ora e' `auto-fit`, cosi' non si rompe alla prossima modalita'. Da 1296 a 1122 px.
+
+Gate: `pnpm check` esce 0, healthcheck 0 errori, hudlayout "layout OK" su tutte e tre le
+risoluzioni.
+
 ## 7. Metodo di lavoro (professionale)
 
 1. Leggere QUESTO file all'inizio. 2. Lavorare le fasi del piano in ordine, niente sparse.
