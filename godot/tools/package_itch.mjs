@@ -48,11 +48,16 @@ if (!/rendering_method="gl_compatibility"/.test(project)) {
   problems.push('renderer non Compatibility: un export Forward+ non parte sul web')
 }
 
+// SOLO I FILE IN RADICE. `server/` è l'eseguibile del server dedicato: 70 MB
+// che nessun browser scaricherà mai, e che su itch sarebbero solo peso — e
+// nel conteggio del peso sarebbero una bugia.
+const files = readdirSync(BUILD).filter(
+  (f) => statSync(join(BUILD, f)).isFile() && !f.endsWith('.zip'),
+)
+
 let packed = 0
-for (const f of readdirSync(BUILD)) {
-  const p = join(BUILD, f)
-  if (!statSync(p).isFile() || f.endsWith('.zip')) continue
-  packed += brotliCompressSync(readFileSync(p), {
+for (const f of files) {
+  packed += brotliCompressSync(readFileSync(join(BUILD, f)), {
     params: { [constants.BROTLI_PARAM_QUALITY]: 9 },
   }).length
 }
@@ -65,17 +70,34 @@ if (problems.length > 0) {
   process.exit(1)
 }
 
-// Lo zip si costruisce con i file in RADICE, non con la cartella dentro.
-const files = readdirSync(BUILD).filter((f) => !f.endsWith('.zip'))
-execFileSync(
-  'powershell',
-  [
-    '-NoProfile',
-    '-Command',
-    `Compress-Archive -Force -Path ${files.map((f) => `'${join(BUILD, f)}'`).join(',')} -DestinationPath '${ZIP}'`,
-  ],
-  { stdio: 'inherit' },
-)
+// Lo zip ha i file IN RADICE, non una cartella dentro: itch cerca `index.html`
+// al primo livello, e una cartella in mezzo produce una pagina bianca senza
+// nessun errore.
+//
+// E si costruisce con quello che c'è sulla macchina, non con PowerShell: la
+// pipeline gira su Linux, e un pacchetto che si crea solo sul portatile di chi
+// lo ha scritto è un pacchetto che non esce mai da lì. È stata la CI a dirmelo.
+function makeZip() {
+  try {
+    execFileSync('zip', ['-q', '-X', '-j', ZIP, ...files.map((f) => join(BUILD, f))], {
+      stdio: 'inherit',
+    })
+    return 'zip'
+  } catch {
+    execFileSync(
+      'powershell',
+      [
+        '-NoProfile',
+        '-Command',
+        `Compress-Archive -Force -Path ${files.map((f) => `'${join(BUILD, f)}'`).join(',')} -DestinationPath '${ZIP}'`,
+      ],
+      { stdio: 'inherit' },
+    )
+    return 'Compress-Archive'
+  }
+}
+
+const how = makeZip()
 
 console.log(`\n  ✓ index.html in radice`)
 console.log(`  ✓ percorsi relativi`)
