@@ -48,6 +48,9 @@ var _scoreboard: Control = null
 var _recap: Control = null
 var _recap_label: Label = null
 var _recap_left := 0.0
+var _combo_world := Vector3.ZERO
+var _combo_has_world := false
+var _drills: Control = null
 
 
 ## I tasti degli otto slot, nell'ordine in cui stanno sotto le dita.
@@ -57,7 +60,10 @@ const SLOT_KEYS := ["1", "2", "3", "4", "Q", "E", "R", "F"]
 func setup(player: Node) -> void:
 	_player = player
 	if player.has_signal("cast_resolved"):
-		player.cast_resolved.connect(_on_cast)
+		player.cast_resolved.connect(func(n, hits):
+			_on_cast(n, hits)
+			if hits > 0 and "last_hit_point" in player:
+				combo_at(player.last_hit_point))
 	# La barra si costruisce QUI e non in `_ready`: le abilità sono quelle della
 	# build scelta, e l'HUD non può conoscerle prima di sapere chi sta giocando.
 	_build_bar()
@@ -333,6 +339,47 @@ func _build_crosshair() -> void:
 		_crosshair.add_child(dot)
 
 
+## Il pannello del poligono: le tre prove, con quella fatta barrata.
+##
+## Sta a sinistra e non al centro, e non lampeggia: e' un promemoria, non un
+## maestro. Quando sono tutte fatte sparisce da solo — il poligono resta aperto,
+## ma smette di chiedere.
+func show_drills(rows: Array) -> void:
+	_drop(_drills)
+	if rows.is_empty():
+		_drills = null
+		return
+	_drills = VBoxContainer.new()
+	_drills.set_anchors_preset(Control.PRESET_CENTER_LEFT)
+	_drills.position = Vector2(34, -60)
+	_drills.add_theme_constant_override("separation", 6)
+	_drills.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_drills)
+	for r in rows:
+		var box := VBoxContainer.new()
+		box.add_theme_constant_override("separation", 0)
+		var head := HBoxContainer.new()
+		head.add_theme_constant_override("separation", 8)
+		var mark: bool = bool(r.get("done", false))
+		head.add_child(UI.label("✓" if mark else "○", 15, UI.GOOD if mark else UI.TEXT_FAINT))
+		head.add_child(UI.label(String(r.get("title", "")), 14, UI.TEXT_DIM if mark else UI.TEXT))
+		var p := String(r.get("progress", ""))
+		if not p.is_empty():
+			head.add_child(UI.label(p, 12, UI.ACCENT))
+		box.add_child(head)
+		if not mark:
+			var line := UI.label("     " + String(r.get("line", "")), 11, UI.TEXT_FAINT)
+			line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			line.custom_minimum_size = Vector2(300, 0)
+			box.add_child(line)
+		_drills.add_child(box)
+
+
+func hide_drills() -> void:
+	_drop(_drills)
+	_drills = null
+
+
 ## Il tabellone, su `Tab`. Sotto ogni avversario ci sono LE ABILITÀ CON CUI TI
 ## HA COLPITO: è così che si impara il kit degli altri senza che nessuno lo
 ## spieghi, ed è l'unico posto in partita dove il gioco dice qualcosa in più.
@@ -441,6 +488,16 @@ func hide_death_recap() -> void:
 	_recap_label = null
 
 
+## Il contatore combo, SOPRA LA TESTA DI CHI VOLA e non al centro dello schermo.
+##
+## È l'unica cosa "in più" concessa in partita, e c'è perché PREMIA, non insegna.
+## Al centro sarebbe un widget; sopra la vittima è parte di quello che sta
+## succedendo, e dice anche a chi guarda da fuori chi ce l'ha in mano.
+func combo_at(world_pos: Vector3) -> void:
+	_combo_world = world_pos
+	_combo_has_world = true
+
+
 func _on_cast(_ability_name: String, hits: int) -> void:
 	if hits <= 0:
 		return
@@ -504,5 +561,18 @@ func _process(delta: float) -> void:
 	if _combo_t > 0.0:
 		_combo_t -= delta
 		_combo_label.modulate.a = clampf(_combo_t / 1.4, 0.0, 1.0)
+		# Segue la vittima: si proietta il punto del mondo sullo schermo, e se
+		# finisce dietro la camera si nasconde invece di comparire specchiato
+		# dalla parte sbagliata.
+		if _combo_has_world and _player and is_instance_valid(_player):
+			var cam := _player.get_node_or_null("Camera3D") as Camera3D
+			if cam:
+				if cam.is_position_behind(_combo_world):
+					_combo_label.modulate.a = 0.0
+				else:
+					var p := cam.unproject_position(_combo_world)
+					var vp := get_viewport().get_visible_rect().size
+					_combo_label.position = p - vp * 0.5 - Vector2(14, 52)
 		if _combo_t <= 0.0:
 			_combo = 0
+			_combo_has_world = false

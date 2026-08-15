@@ -87,6 +87,9 @@ const BINDINGS := {
 	"ability_6": KEY_E,
 	"ability_7": KEY_R,
 	"ability_8": KEY_F,
+	# Il break e la parata SI RIMAPPANO come tutto il resto: "tutti i tasti"
+	# significa tutti, compresi quelli che nessuno pensa di voler cambiare.
+	"break_free": KEY_SHIFT,
 }
 
 const LEFT_HANDED := {

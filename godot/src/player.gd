@@ -23,7 +23,10 @@ const Status := preload("res://src/status.gd")
 const Effects := preload("res://src/effects.gd")
 const ZoneScript := preload("res://src/zone.gd")
 const ViewmodelScript := preload("res://src/viewmodel.gd")
+const SettingsScript := preload("res://src/settings.gd")
 
+## La sensibilita' di serie, prima del moltiplicatore del giocatore.
+const SENSITIVITY_BASE := 0.0012
 const MOUSE_SENSITIVITY := 0.0022
 const PITCH_LIMIT := deg_to_rad(89.0)
 ## Otto slot: `1 2 3 4` e `Q E R F`. È il cluster che ogni sparatutto usa, perché
@@ -79,6 +82,24 @@ const PARRY_COOLDOWN := 3.0
 const PARRY_HOLD_FRACTION := 0.7
 const PARRY_HOLD_DRAIN := 15.0
 
+## IL BREAK.
+##
+## Annulla UNA VOLTA il controllo che stai subendo: ti fa cadere da uno sbalzo,
+## ti libera da una radice, ti toglie di dosso il gelo. Ce l'hanno tutti, non
+## costa uno slot e non si sceglie — e ha una ricarica lunga, quindi usarlo sul
+## primo sbalzo significa non averlo sul secondo.
+##
+## E' UNA DECISIONE, NON UN PULSANTE. Se fosse gratis, lo sbalzo smetterebbe di
+## essere una finestra e diventerebbe un fastidio; se non ci fosse, sarebbe una
+## condanna. La ricarica lunga e' cio' che lo rende una scelta.
+##
+## Sta su `Shift` e non su `F` — `F` e' l'ottavo slot di abilita'. `Shift` e'
+## il tasto che in ogni altro gioco fa correre, ed e' libero qui proprio perche'
+## correre e' gia' la velocita' normale.
+const BREAK_COOLDOWN := 18.0
+
+var _break_ready_at := 0.0
+
 var _parry_until := -1.0
 var _parry_ready_at := 0.0
 var _parry_holding := false
@@ -93,6 +114,11 @@ signal died
 signal cast_resolved(ability_name: String, hits: int)
 signal damaged(amount: float, remaining: float)
 
+## Dove è finito l'ultimo colpo a segno. Serve al contatore combo, che va
+## sopra la testa di chi lo sta subendo e non al centro dello schermo.
+var last_hit_point := Vector3.ZERO
+var _sensitivity := MOUSE_SENSITIVITY
+var _shake_enabled := true
 var _sim: Dictionary
 var _yaw := 0.0
 var _pitch := 0.0
@@ -121,7 +147,22 @@ func _ready() -> void:
 	_viewmodel = _vm.root
 	_vm_rest = _vm.REST_POS
 	equip(class_id, sub_id)
+	apply_settings(SettingsScript.new())
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+
+## Porta le impostazioni dentro al gioco.
+##
+## Un cursore che si muove e non cambia niente e' peggio di un cursore che non
+## c'e': dice al giocatore che ha capito male. Qui la sensibilita' arriva al
+## mouse e il campo visivo alla camera, separato da quello dell'arma.
+func apply_settings(st) -> void:
+	_sensitivity = SENSITIVITY_BASE * float(st.get_value("sensitivity"))
+	if _camera:
+		_camera.fov = float(st.get_value("fov"))
+	if _vm and _vm.camera:
+		_vm.camera.fov = float(st.get_value("viewmodel_fov"))
+	_shake_enabled = bool(st.get_value("camera_shake"))
 
 
 ## Prende classe e sottoclasse e ne monta il personaggio: numeri e kit insieme.
@@ -272,7 +313,7 @@ func cast_slot(idx: int) -> int:
 	# rallenta tutto — nemici, proiettili, il proiettile che avevi appena
 	# lanciato. Il test l'ha preso subito (il bolt non arrivava più a bersaglio).
 	# Un kick visivo dà la stessa sensazione senza toccare la simulazione.
-	if n > 0:
+	if n > 0 and _shake_enabled:
 		_cam_kick = 0.035
 		_sway += Vector2(0.0, -0.045)
 
@@ -282,6 +323,11 @@ func cast_slot(idx: int) -> int:
 	_sound_cast(ability.shape)
 	if n > 0:
 		Sfx.play("hit_confirm")
+		# Dove è stato colpito il primo bersaglio: è lì che va il contatore.
+		for h in result.hits:
+			if is_instance_valid(h):
+				last_hit_point = h.global_position + Vector3(0, 1.1, 0)
+				break
 
 	cast_resolved.emit(ability.name, n)
 	return n
@@ -343,6 +389,37 @@ func parry_absorb(amount: float) -> float:
 	if _parry_holding and stamina > 0.0:
 		return amount * (1.0 - PARRY_HOLD_FRACTION)
 	return amount
+
+
+## Rompe il controllo. Restituisce `true` se ha fatto qualcosa: chiamarlo a
+## vuoto NON deve consumare la ricarica, o il break diventa un tasto da non
+## premere mai per paura di sprecarlo.
+func break_free() -> bool:
+	if _clock < _break_ready_at:
+		return false
+	var held := not (status.can_move() and status.can_cast())
+	var airborne := not is_on_floor()
+	if not held and not airborne:
+		return false
+	_break_ready_at = _clock + BREAK_COOLDOWN
+	status.cleanse()
+	if airborne:
+		# Cadere subito invece di restare per aria: e' quello che il break
+		# compra, ed e' anche il motivo per cui non e' gratis.
+		_sim["vel"].y = minf(_sim["vel"].y, -6.0)
+		_sim["knockback_ticks"] = 0
+	Sfx.play("cleanse" if false else "parry")
+	_cam_kick = 0.03
+	return true
+
+
+func break_ready() -> bool:
+	return _clock >= _break_ready_at
+
+
+func _try_break() -> void:
+	if not break_free():
+		Sfx.play("unavailable", Sfx.UI, -8.0)
 
 
 func parrying() -> bool:
@@ -431,8 +508,8 @@ func _punch(shape: int) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		_yaw -= event.relative.x * MOUSE_SENSITIVITY
-		_pitch = clampf(_pitch - event.relative.y * MOUSE_SENSITIVITY, -PITCH_LIMIT, PITCH_LIMIT)
+		_yaw -= event.relative.x * _sensitivity
+		_pitch = clampf(_pitch - event.relative.y * _sensitivity, -PITCH_LIMIT, PITCH_LIMIT)
 		# Il sway è il DELTA del mouse: l'arma resta indietro e rientra a molla.
 		_sway.x += event.relative.x * 0.00035
 		_sway.y += event.relative.y * 0.00035
@@ -449,6 +526,9 @@ func _physics_process(delta: float) -> void:
 	for i in SLOTS:
 		if Input.is_action_just_pressed("ability_%d" % (i + 1)):
 			cast_slot(i)
+
+	if Input.is_action_just_pressed("break_free"):
+		_try_break()
 
 	if Input.is_action_just_pressed("parry"):
 		_try_parry()

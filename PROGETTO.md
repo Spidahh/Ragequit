@@ -153,7 +153,9 @@ tutto; tenendolo premuto blocchi il 70 % finché ti regge la stamina. E si vede
 addosso al personaggio: chi para davanti a te è leggibile da fuori.
 
 Le otto abilità stanno su `1 2 3 4` e `Q E R F` — il cluster che ogni sparatutto
-usa, perché dalla presa WASD l'indice non arriva a `5`-`8` senza staccare la mano.
+usa, perché dalla presa WASD l'indice non arriva a `5`-`8` senza staccare la
+mano. Il break sta su **`Shift`**: è il tasto che in ogni altro gioco ti fa
+correre, e qui è libero proprio perché correre è già la tua velocità normale.
 
 **Nessuna abilità è mai bloccata dall'arma sbagliata.** Se lanci una spell mentre
 hai la spada, il gioco cambia arma per te. Mostrarti metà build come "non
@@ -199,7 +201,8 @@ bersaglio fermo — che è l'esatto opposto del rocket di Quake da cui viene l'i
 **Il danno da caduta è zero, sempre.** Un gioco che ti punisce per essere stato
 sbalzato punisce chi sta già perdendo lo scambio.
 
-E c'è un modo per uscirne: **`F`, il break.** Non costa slot e non si sceglie —
+E c'è un modo per uscirne: **`Shift`, il break.** Non costa slot e non si
+sceglie —
 ce l'hanno tutti. Annulla una volta il controllo che stai subendo: ti fa cadere da
 uno sbalzo, ti libera da una radice. Ha un cooldown lungo, quindi usarlo sul primo
 sbalzo significa non averlo sul secondo. **È una decisione, non un pulsante.**

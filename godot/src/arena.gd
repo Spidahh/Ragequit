@@ -10,6 +10,7 @@ const Vfx := preload("res://src/vfx.gd")
 const MatchRules := preload("res://src/match_rules.gd")
 const SpawnsScript := preload("res://src/spawns.gd")
 const Bots := preload("res://src/bots.gd")
+const RangeDrills := preload("res://src/range_drills.gd")
 const Sfx := preload("res://src/sfx.gd")
 
 ## Il giocatore è il peer 1; i nemici prendono 101, 102… Gli stessi id che
@@ -30,6 +31,7 @@ var _bots: Dictionary = {}
 ## peer id → nome di battaglia
 var _bot_names: Dictionary = {}
 var _scoreboard_open := false
+var _drills = null
 ## La difficoltà di questa partita. In partita mista il default è Veterano: è
 ## l'unico che si può battere sudando, ed è quello su cui è tarato il resto.
 @export var difficulty: int = Bots.DEFAULT_LEVEL
@@ -70,6 +72,15 @@ func _ready() -> void:
 			if hits > 0:
 				_hits += 1)
 	_scoreboard_open = false
+
+	if practice:
+		_drills = RangeDrills.new()
+		_drills.drill_done.connect(func(_w): _refresh_drills())
+		_refresh_drills()
+		# Nel poligono le abilita' non hanno ricarica e non si muore: si prova,
+		# e provare non deve costare attese.
+		if _player:
+			_player.set("practice", true)
 
 	# Ogni nemico insegue il giocatore ed entra in partita con un suo id.
 	var next_id := BOT_ID_BASE
@@ -178,6 +189,26 @@ func _on_enemy_fired(from: Vector3, to: Vector3, hit: bool) -> void:
 	Sfx.play_at("cast_beam", from, -9.0)
 
 
+## Riporta le tre prove all'HUD. Si ricostruisce ogni frame perché il contatore
+## dei salti cambia mentre salti: un pannello che si aggiorna solo a prova
+## conclusa non fa vedere che stai andando bene.
+func _refresh_drills() -> void:
+	if _drills == null or _hud == null or not _hud.has_method("show_drills"):
+		return
+	if _drills.all_done():
+		_hud.hide_drills()
+		return
+	var rows := []
+	for k in [RangeDrills.Drill.MOVE, RangeDrills.Drill.LEAD, RangeDrills.Drill.LAUNCH]:
+		rows.append({
+			"title": String(RangeDrills.TITLES[k]),
+			"line": String(RangeDrills.LINES[k]),
+			"done": bool(_drills.done[k]),
+			"progress": _drills.progress(k),
+		})
+	_hud.show_drills(rows)
+
+
 func _bot_name(peer_id: int) -> String:
 	return String(_bot_names.get(peer_id, "SOMEONE"))
 
@@ -257,7 +288,21 @@ func _process(delta: float) -> void:
 			_hud.show_scoreboard(scoreboard())
 		elif not Input.is_key_pressed(KEY_TAB) and _scoreboard_open:
 			_scoreboard_open = false
+
+	if practice:
+		_drills = RangeDrills.new()
+		_drills.drill_done.connect(func(_w): _refresh_drills())
+		_refresh_drills()
+		# Nel poligono le abilita' non hanno ricarica e non si muore: si prova,
+		# e provare non deve costare attese.
+		if _player:
+			_player.set("practice", true)
 			_hud.hide_scoreboard()
+
+	if _drills != null and _player and is_instance_valid(_player):
+		var flat := Vector2(_player.velocity.x, _player.velocity.z).length()
+		_drills.watch_movement(flat, _player.is_on_floor())
+		_refresh_drills()
 
 	if _match.is_empty():
 		return

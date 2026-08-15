@@ -9,6 +9,7 @@
 extends SceneTree
 
 const Settings = preload("res://src/settings.gd")
+const Drills = preload("res://src/range_drills.gd")
 
 var failures := 0
 var _arena: Node3D
@@ -48,6 +49,9 @@ func _process(_d: float) -> bool:
 			_il_recap_dice_come_sei_morto()
 			_il_tabellone_si_apre_e_si_chiude()
 			_il_mirino_e_tuo()
+			_il_break_e_una_decisione()
+			_le_impostazioni_arrivano_alla_camera()
+			_il_poligono_insegna_tre_cose()
 			print("")
 			if failures == 0:
 				print("Tutto verde.\n")
@@ -173,6 +177,102 @@ func _il_mirino_e_tuo() -> void:
 	_check("e lo spessore arriva davvero", is_equal_approx(thick, 5.0), "%.0f px" % thick)
 	st.set_value("crosshair_thickness", 2.0)
 	st.set_value("crosshair_dot", false)
+
+
+func _il_break_e_una_decisione() -> void:
+	print("\nIl break")
+	if _player == null:
+		return
+	_player._break_ready_at = 0.0
+	# A terra e senza niente addosso non c'è niente da rompere: e chiamarlo a
+	# vuoto NON deve consumare la ricarica, o diventa un tasto da non premere
+	# mai per paura di sprecarlo.
+	_player.velocity.y = 0.0
+	var used_on_nothing: bool = _player.break_free()
+	_check("a vuoto non fa niente", not used_on_nothing, "non si spreca")
+	_check("e resta pronto", _player.break_ready(), "ricarica intatta")
+
+	# Radicato: il break libera.
+	_player.status.apply("root", 3.0)
+	_check("radicato non ti muovi", not _player.status.can_move(), "bloccato")
+	var used: bool = _player.break_free()
+	_check("il break libera", used and _player.status.can_move(), "libero")
+
+	# E ha una ricarica lunga: usarlo sul primo sbalzo significa non averlo sul
+	# secondo. È questo che lo rende una decisione.
+	_player.status.apply("root", 3.0)
+	_check("e subito dopo non c'è", not _player.break_free(), "%.0f s di attesa" % _player.BREAK_COOLDOWN)
+	_check(
+		"e l'attesa è lunga davvero",
+		_player.BREAK_COOLDOWN >= 10.0,
+		"%.0f s: non lo si preme a caso" % _player.BREAK_COOLDOWN
+	)
+	_player.status.cleanse()
+	_player._break_ready_at = 0.0
+
+
+func _le_impostazioni_arrivano_alla_camera() -> void:
+	print("\nLe impostazioni arrivano dove servono")
+	if _player == null:
+		return
+	var st := Settings.new()
+	st.set_value("fov", 118.0)
+	st.set_value("sensitivity", 3.0)
+	_player.apply_settings(st)
+	var cam: Camera3D = _player.get_node("Camera3D")
+	_check("il campo visivo arriva alla camera", is_equal_approx(cam.fov, 118.0), "%.0f gradi" % cam.fov)
+	_check(
+		"e la sensibilità al mouse",
+		is_equal_approx(_player._sensitivity, _player.SENSITIVITY_BASE * 3.0),
+		"%.4f rad per conteggio" % _player._sensitivity
+	)
+	# E il campo visivo dell'arma resta SUO: chi gioca a FOV alto vuole l'arma
+	# più piccola, non più distorta.
+	st.set_value("viewmodel_fov", 55.0)
+	_player.apply_settings(st)
+	_check(
+		"e l'arma ha il suo, separato",
+		_player._vm and _player._vm.camera and is_equal_approx(_player._vm.camera.fov, 55.0),
+		"%.0f gradi" % (_player._vm.camera.fov if _player._vm and _player._vm.camera else 0.0)
+	)
+	st.set_value("fov", 100.0)
+	st.set_value("sensitivity", 1.85)
+	st.set_value("viewmodel_fov", 70.0)
+
+
+func _il_poligono_insegna_tre_cose() -> void:
+	print("\nIl poligono")
+	var d := Drills.new()
+	_check("tre prove, e tre soltanto", d.done.size() == 3, str(d.done.size()))
+
+	# Muoversi: cinque salti DI FILA che conservano la velocità. Uno lento in
+	# mezzo azzera la serie — il punto è il ritmo, e il ritmo non si accumula
+	# a pezzi.
+	for i in Drills.HOPS_NEEDED - 1:
+		d.watch_movement(Drills.HOP_SPEED + 0.5, true)
+		d.watch_movement(Drills.HOP_SPEED + 0.5, false)
+	_check("quattro salti non bastano", not bool(d.done[Drills.Drill.MOVE]), d.progress(Drills.Drill.MOVE))
+	d.watch_movement(2.0, true)
+	d.watch_movement(2.0, false)
+	_check("e uno lento azzera la serie", d.hops == 0, "%d salti" % d.hops)
+	for i in Drills.HOPS_NEEDED:
+		d.watch_movement(Drills.HOP_SPEED + 0.5, true)
+		d.watch_movement(Drills.HOP_SPEED + 0.5, false)
+	_check("cinque di fila la chiudono", bool(d.done[Drills.Drill.MOVE]), "fatta")
+
+	# Anticipare: un colpo ravvicinato non insegna niente.
+	d.watch_hit(4.0, false, false)
+	_check("un colpo da vicino non conta", not bool(d.done[Drills.Drill.LEAD]), "sotto i 12 m")
+	d.watch_hit(Drills.LEAD_DISTANCE + 1.0, false, false)
+	_check("uno da lontano sì", bool(d.done[Drills.Drill.LEAD]), "fatta")
+
+	# Convertire: colpire in aria QUALCUNO CHE HAI SBALZATO TU. Prendere uno che
+	# stava già saltando non è il momento firma.
+	d.watch_hit(2.0, true, false)
+	_check("prendere chi saltava non conta", not bool(d.done[Drills.Drill.LAUNCH]), "non l'hai sbalzato tu")
+	d.watch_hit(2.0, true, true)
+	_check("sbalzare e convertire sì", bool(d.done[Drills.Drill.LAUNCH]), "fatta")
+	_check("e allora il poligono smette di chiedere", d.all_done(), "pannello via")
 
 
 ## Tutto il testo visibile in un sottoalbero, in una stringa sola.
