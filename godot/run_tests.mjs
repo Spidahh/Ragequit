@@ -44,6 +44,7 @@ const SINGLE = [
   'test_bots',
   'test_screens',
   'test_polish',
+  'test_rollback',
 ]
 const PAIRED = ['test_net', 'test_net_world']
 

@@ -21,6 +21,20 @@ config/features=PackedStringArray("4.4", "Forward Plus")
 ; invece che a ogni colpo.
 Audio="*res://src/audio.gd"
 
+; netfox — MIT, v1.35.3. Fa quello che avevo scritto a mano in `lag_comp.gd` e
+; nella meta' predittiva di `net_world.gd`: tempo di rete condiviso, predizione
+; lato client, riconciliazione lato server, interpolazione e ROLLBACK — che era
+; l'unico pezzo che davvero non avevamo.
+;
+; Si appoggia al multiplayer di alto livello di Godot, che e' agnostico rispetto
+; al trasporto: funziona sopra il nostro WebSocket, ed e' la ragione per cui e'
+; adottabile senza rimettere in discussione §14.
+NetworkTime="*res://addons/netfox/network-time.gd"
+NetworkTimeSynchronizer="*res://addons/netfox/network-time-synchronizer.gd"
+NetworkRollback="*res://addons/netfox/rollback/network-rollback.gd"
+NetworkEvents="*res://addons/netfox/network-events.gd"
+NetworkPerformance="*res://addons/netfox/network-performance.gd"
+
 [display]
 
 window/size/viewport_width=1280
@@ -135,3 +149,15 @@ break_free={
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194325,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
 ]
 }
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/netfox.internals/plugin.cfg", "res://addons/netfox/plugin.cfg", "res://addons/netfox.extras/plugin.cfg")
+
+[netfox]
+
+; 60 Hz come il passo di fisica del gioco. Il default di netfox e' 30, e con due
+; frequenze diverse il movimento simulato dal server e quello predetto dal
+; client integrano un numero di passi diverso: divergono sempre, e la
+; riconciliazione correggerebbe in continuazione un errore che non e' di rete.
+time/tickrate=60

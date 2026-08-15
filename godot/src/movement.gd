@@ -50,7 +50,20 @@ static func make_state(spawn: Vector3) -> Dictionary:
 ##
 ## `wish` è l'input WASD normalizzato nello spazio locale (x destra, z avanti).
 ## `yaw` è la direzione di sguardo. `ground_y` è il piano di appoggio.
-static func step(state: Dictionary, wish: Vector2, yaw: float, jump: bool, dt: float, ground_y: float = 0.0) -> Dictionary:
+static func step(previous: Dictionary, wish: Vector2, yaw: float, jump: bool, dt: float, ground_y: float = 0.0) -> Dictionary:
+	# LO STATO IN INGRESSO NON SI TOCCA.
+	#
+	# In GDScript un Dictionary viaggia per riferimento: scrivere dentro
+	# `previous` significa scrivere dentro il dizionario di chi ha chiamato. Con
+	# la predizione semplice non si notava — c'era un solo stato e lo si voleva
+	# aggiornare. Con il ROLLBACK e' fatale: lo storico da cui si riavvolge sono
+	# proprio quei dizionari, e risimulare li corromperebbe uno dopo l'altro,
+	# quindi ogni riavvolgimento ripartirebbe da uno stato gia' sporcato dal
+	# riavvolgimento precedente. Il gioco non divergerebbe di colpo: si
+	# scollerebbe piano, e nessuno saprebbe perche'.
+	#
+	# Se ne e' accorto un test scritto apposta, non un errore in console.
+	var state := previous.duplicate(true)
 	var vel: Vector3 = state["vel"]
 	var pos: Vector3 = state["pos"]
 
