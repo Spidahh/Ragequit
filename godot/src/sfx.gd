@@ -56,6 +56,12 @@ static func step(position: Vector3) -> void:
 		s.step(position)
 
 
+static func music(track: String) -> void:
+	var s := service()
+	if s:
+		s.music(track)
+
+
 static func ambience(sound: String, volume_db: float = -18.0) -> void:
 	var s := service()
 	if s:

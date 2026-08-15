@@ -52,6 +52,8 @@ func _process(_d: float) -> bool:
 			_il_break_e_una_decisione()
 			_le_impostazioni_arrivano_alla_camera()
 			_il_poligono_insegna_tre_cose()
+			_la_musica_sta_dove_deve()
+			_il_poligono_non_fa_aspettare()
 			print("")
 			if failures == 0:
 				print("Tutto verde.\n")
@@ -273,6 +275,58 @@ func _il_poligono_insegna_tre_cose() -> void:
 	d.watch_hit(2.0, true, true)
 	_check("sbalzare e convertire sì", bool(d.done[Drills.Drill.LAUNCH]), "fatta")
 	_check("e allora il poligono smette di chiedere", d.all_done(), "pannello via")
+
+
+func _la_musica_sta_dove_deve() -> void:
+	print("
+La musica")
+	var svc := root.get_node_or_null("Audio")
+	if svc == null:
+		_check("il servizio audio c'è", false, "assente")
+		return
+	_check("c'è un tema per il menu", svc.has("music_menu"), "music_menu")
+	_check("e uno per i risultati", svc.has("music_results"), "music_results")
+
+	svc.music("music_menu")
+	_check("nel menu suona", svc._music != null and svc._music.playing, "in riproduzione")
+	# In partita NIENTE: l'informazione direzionale è gameplay, e una musica la
+	# copre. È l'unica ragione per cui questo si spegne invece di abbassarsi.
+	svc.music("")
+	_check("in arena tace", svc._music == null, "silenzio")
+
+	# E i due temi si ripetono: un tema che finisce lascia il menu muto dopo
+	# sedici secondi, che è peggio di non averlo mai messo.
+	for track in ["music_menu", "music_results"]:
+		var st = svc._streams.get(track)
+		_check(
+			"  %s si ripete" % track,
+			st is AudioStreamWAV and st.loop_mode == AudioStreamWAV.LOOP_FORWARD,
+			"in loop"
+		)
+
+
+func _il_poligono_non_fa_aspettare() -> void:
+	print("
+Il poligono non fa aspettare e non uccide")
+	if _player == null:
+		return
+	_player.practice = true
+	_player.stamina = 999.0
+	_player.mana = 999.0
+	var slot := 0
+	var first: int = _player.cast_slot(slot)
+	var second: int = _player.cast_slot(slot)
+	_check(
+		"si rilancia subito, senza ricarica",
+		first != -1 and second != -1,
+		"due lanci di fila sullo stesso slot"
+	)
+
+	# E non si muore: una prova che ti uccide non è una prova.
+	_player.hp = 5.0
+	_player.take_damage(9999.0)
+	_check("e non si muore", not _player.dead and _player.hp > 0.0, "vita %.0f" % _player.hp)
+	_player.practice = false
 
 
 ## Tutto il testo visibile in un sottoalbero, in una stringa sola.

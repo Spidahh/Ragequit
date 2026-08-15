@@ -116,6 +116,9 @@ signal damaged(amount: float, remaining: float)
 
 ## Dove è finito l'ultimo colpo a segno. Serve al contatore combo, che va
 ## sopra la testa di chi lo sta subendo e non al centro dello schermo.
+## Nel poligono le abilita' non hanno ricarica e non si muore: provare non deve
+## costare attese, e una prova che ti uccide non e' una prova.
+var practice := false
 var last_hit_point := Vector3.ZERO
 var _sensitivity := MOUSE_SENSITIVITY
 var _shake_enabled := true
@@ -214,7 +217,7 @@ func cast_slot(idx: int) -> int:
 	# perché lo legge dall'HUD.
 	var cd := Content.cooldown_for(ability, stats)
 	if (
-		not _cooldowns.can_cast(ability.id, _clock)
+		(not practice and not _cooldowns.can_cast(ability.id, _clock))
 		or not status.can_cast()
 		or mana < float(ability.get("cost_mana", 0.0))
 		or stamina < float(ability.get("cost_stamina", 0.0))
@@ -223,7 +226,8 @@ func cast_slot(idx: int) -> int:
 		# come "il gioco non mi ha sentito", che è la lamentela peggiore.
 		Sfx.play("unavailable", Sfx.UI, -8.0)
 		return -1
-	_cooldowns.start(ability.id, cd, float(ability.get("windup", 0.0)), _clock)
+	if not practice:
+		_cooldowns.start(ability.id, cd, float(ability.get("windup", 0.0)), _clock)
 	mana -= float(ability.get("cost_mana", 0.0))
 	stamina -= float(ability.get("cost_stamina", 0.0))
 
@@ -449,6 +453,11 @@ func take_damage(amount: float) -> void:
 		damaged.emit(0.0, hp)
 		return
 	amount = passed
+	if practice:
+		# Nel poligono si incassa il colpo — il feedback serve — ma non si muore.
+		damaged.emit(amount, hp)
+		Sfx.play("hurt")
+		return
 	hp = maxf(0.0, hp - amount)
 	damaged.emit(amount, hp)
 	Sfx.play("hurt")

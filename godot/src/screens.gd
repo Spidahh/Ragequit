@@ -82,6 +82,8 @@ func show_screen(which: int) -> void:
 	_body.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_body.mouse_filter = Control.MOUSE_FILTER_PASS
 	add_child(_body)
+	# La musica c'è solo qui: in partita l'informazione direzionale è gameplay.
+	Sfx.music("music_results" if which == Screen.RESULTS else "music_menu")
 	match which:
 		Screen.MENU:
 			_build_menu()

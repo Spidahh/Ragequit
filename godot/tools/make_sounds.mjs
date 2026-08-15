@@ -263,6 +263,68 @@ function wind() {
   return seamless(a, 0.6)
 }
 
+// --- musica ---------------------------------------------------------------
+
+/**
+ * Il tema del menu.
+ *
+ * PERCHE' SOLO NEL MENU E NEI RISULTATI. In partita l'informazione direzionale
+ * e' gameplay — da dove arriva un colpo, dove sta crepitando una torcia — e una
+ * musica la copre. Qui invece il silenzio e' peggio: un menu muto sembra
+ * un'applicazione, non un gioco.
+ *
+ * E' un drone in re minore con una quinta e una nona sopra, e un battito lento
+ * sotto. Nessuna melodia: una melodia in un menu che si riapre venti volte
+ * diventa insopportabile alla quinta, un drone no.
+ */
+function musicMenu() {
+  const a = buf(16)
+  // Re, la, mi: la fondamentale, la quinta e la nona. Le tre note che stanno
+  // insieme senza dire ne' allegro ne' triste.
+  const notes = [73.42, 110.0, 146.83, 220.0, 329.63]
+  const gains = [0.9, 0.5, 0.35, 0.18, 0.09]
+  for (let n = 0; n < notes.length; n++) {
+    let ph = 0
+    for (let i = 0; i < a.length; i++) {
+      // Un respiro lentissimo su ogni voce, sfasato: e' quello che tiene vivo
+      // un accordo fermo per sedici secondi.
+      const breathe = 0.6 + 0.4 * Math.sin((t(i) * 2 * Math.PI) / (7 + n * 1.7) + n)
+      ph += (notes[n] * 2 * Math.PI) / SR
+      a[i] += Math.sin(ph) * gains[n] * breathe * 0.22
+    }
+  }
+  // Il battito: un colpo sordo ogni due secondi. Da' un tempo al menu senza
+  // chiedere attenzione.
+  for (let k = 0; k < 8; k++) {
+    const at = Math.round(k * 2.0 * SR)
+    const len = Math.round(0.5 * SR)
+    for (let i = 0; i < len && at + i < a.length; i++) {
+      const x = i / SR
+      a[at + i] += Math.sin(2 * Math.PI * 48 * x) * 0.5 * Math.exp(-x / 0.09)
+    }
+  }
+  // Un velo di rumore molto scuro: toglie all'accordo l'aria di sintetizzatore.
+  noise(a, 180, 0.12)
+  return seamless(a, 1.2)
+}
+
+/** La coda dei risultati: lo stesso accordo, piu' rado e piu' alto. */
+function musicResults() {
+  const a = buf(12)
+  const notes = [98.0, 146.83, 220.0, 293.66]
+  const gains = [0.8, 0.45, 0.25, 0.12]
+  for (let n = 0; n < notes.length; n++) {
+    let ph = 0
+    for (let i = 0; i < a.length; i++) {
+      const breathe = 0.55 + 0.45 * Math.sin((t(i) * 2 * Math.PI) / (5 + n * 2.1) + n * 1.3)
+      ph += (notes[n] * 2 * Math.PI) / SR
+      a[i] += Math.sin(ph) * gains[n] * breathe * 0.24
+    }
+  }
+  noise(a, 220, 0.09)
+  return seamless(a, 1.0)
+}
+
 // --- interfaccia ----------------------------------------------------------
 
 function uiHover() {
@@ -315,6 +377,8 @@ const SOUNDS = {
   ui_hover: uiHover,
   ui_click: uiClick,
   ui_confirm: uiConfirm,
+  music_menu: musicMenu,
+  music_results: musicResults,
 }
 
 let total = 0

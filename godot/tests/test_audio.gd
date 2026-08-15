@@ -33,9 +33,11 @@ const REQUIRED := [
 	"ui_hover",
 	"ui_click",
 	"ui_confirm",
+	"music_menu",
+	"music_results",
 ]
 
-const LOOPS := ["torch_loop", "wind_loop"]
+const LOOPS := ["torch_loop", "wind_loop", "music_menu", "music_results"]
 
 var failures := 0
 var _step := 0

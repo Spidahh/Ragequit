@@ -147,6 +147,9 @@ func _ready() -> void:
 ## la stessa ragione per cui hanno una luce propria: sono i punti di riferimento
 ## della mappa, e ci si orienta anche a orecchie.
 func _start_ambience() -> void:
+	# Silenzio musicale appena si entra: da qui in poi quello che senti è
+	# informazione, e una musica sopra la coprirebbe.
+	Sfx.music("")
 	Sfx.ambience("wind_loop", -20.0)
 	var lit := 0
 	for node in _all_descendants(self):

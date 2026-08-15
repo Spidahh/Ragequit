@@ -32,7 +32,7 @@ const DUCKS := ["cast_beam", "cast_bolt", "cast_burst", "hurt", "death", "kill"]
 
 ## I due loop d'ambiente. Un WAV importato non si ripete da solo: il flag va
 ## messo sulla risorsa, o il vento suona quattro secondi e poi cala il silenzio.
-const LOOPS := ["torch_loop", "wind_loop"]
+const LOOPS := ["torch_loop", "wind_loop", "music_menu", "music_results"]
 
 enum Bus { MASTER, SFX, AMBIENT, UI, MUSIC }
 
@@ -50,6 +50,8 @@ var _ambient_db := 0.0
 ## un metronomo e sparisce dall'attenzione.
 var _step_i := 0
 var _muted := false
+var _music: AudioStreamPlayer = null
+var _music_track := ""
 
 
 func _ready() -> void:
@@ -99,6 +101,31 @@ func _load_all() -> void:
 			stream.loop_begin = 0
 			stream.loop_end = stream.data.size() / 2
 		_streams[base] = stream
+
+
+## La musica. C'e' SOLO nel menu e nei risultati: in partita l'informazione
+## direzionale e' gameplay, e una musica la copre. Ma un menu muto sembra
+## un'applicazione, non un gioco.
+##
+## Passare `""` la spegne, ed e' quello che fa l'arena quando si entra.
+func music(track: String) -> void:
+	if track == _music_track:
+		return
+	_music_track = track
+	if _music and is_instance_valid(_music):
+		_music.stop()
+		_music.queue_free()
+		_music = null
+	if track.is_empty():
+		return
+	var stream = _streams.get(track)
+	if stream == null:
+		return
+	_music = AudioStreamPlayer.new()
+	_music.stream = stream
+	_music.bus = BUS_NAME[Bus.MUSIC]
+	add_child(_music)
+	_music.play()
 
 
 func has(sound: String) -> bool:

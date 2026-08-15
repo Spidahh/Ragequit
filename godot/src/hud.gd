@@ -51,6 +51,9 @@ var _recap_left := 0.0
 var _combo_world := Vector3.ZERO
 var _combo_has_world := false
 var _drills: Control = null
+var _netstat: Label = null
+var _ping_ms := 0
+var _fps_smooth := 60.0
 
 
 ## I tasti degli otto slot, nell'ordine in cui stanno sotto le dita.
@@ -191,6 +194,20 @@ func _build() -> void:
 	_feed_box.alignment = BoxContainer.ALIGNMENT_BEGIN
 	_feed_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_feed_box)
+
+	# --- Ping e FPS, in alto a destra e piccoli ------------------------------
+	# Sempre visibili, non dietro un menù. Quando il gioco scatta, la prima cosa
+	# che il giocatore vuole sapere è se è colpa sua o nostra — e chiederglielo
+	# di aprire le impostazioni per scoprirlo è chiederglielo nel momento
+	# peggiore.
+	_netstat = Label.new()
+	_netstat.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_netstat.position = Vector2(-104, 4)
+	_netstat.size = Vector2(96, 16)
+	_netstat.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_netstat.add_theme_font_size_override("font_size", 11)
+	_netstat.add_theme_color_override("font_color", Color(1, 1, 1, 0.38))
+	root.add_child(_netstat)
 
 	# --- Contatore combo, fluttuante -----------------------------------------
 	# L'unica cosa "in più" concessa in partita, e concessa perché PREMIA, non
@@ -375,6 +392,10 @@ func show_drills(rows: Array) -> void:
 		_drills.add_child(box)
 
 
+func set_ping(ms: int) -> void:
+	_ping_ms = ms
+
+
 func hide_drills() -> void:
 	_drop(_drills)
 	_drills = null
@@ -532,6 +553,17 @@ func _process(delta: float) -> void:
 			fill.size.y = h * ready_frac
 			fill.position.y = h - h * ready_frac
 			fill.color = COL_READY if ready_frac >= 1.0 else COL_COOLING
+
+	# Ping e FPS. Gli FPS si mediano: un numero che salta fra 58 e 61 dieci volte
+	# al secondo non è un'informazione, è rumore.
+	if _netstat:
+		_fps_smooth = lerpf(_fps_smooth, float(Engine.get_frames_per_second()), 0.08)
+		_netstat.text = "%d ms   %d fps" % [_ping_ms, int(round(_fps_smooth))]
+		# Sopra i 120 ms il ping si accende: sotto non cambia niente di quello
+		# che senti, sopra sì.
+		_netstat.add_theme_color_override(
+			"font_color", COL_HP if _ping_ms > 120 else Color(1, 1, 1, 0.38)
+		)
 
 	# Il conto alla rovescia del respawn scorre: un numero fermo mentre aspetti
 	# è un numero che non dice se il gioco è ancora vivo.
