@@ -9,6 +9,7 @@ extends Node3D
 const Vfx := preload("res://src/vfx.gd")
 const MatchRules := preload("res://src/match_rules.gd")
 const SpawnsScript := preload("res://src/spawns.gd")
+const Bots := preload("res://src/bots.gd")
 const Sfx := preload("res://src/sfx.gd")
 
 ## Il giocatore è il peer 1; i nemici prendono 101, 102… Gli stessi id che
@@ -19,9 +20,31 @@ const BOT_ID_BASE := 101
 var _player: Node = null
 var _hud: Node = null
 var _hurt_flash: ColorRect
+## Chi ti ha colpito per ultimo: serve al kill feed e al recap di morte, che
+## devono dire un nome e non "sei morto".
+var _last_attacker := -1
 var _match: Dictionary = {}
 ## peer id → nodo del nemico
 var _bots: Dictionary = {}
+## peer id → nome di battaglia
+var _bot_names: Dictionary = {}
+## La difficoltà di questa partita. In partita mista il default è Veterano: è
+## l'unico che si può battere sudando, ed è quello su cui è tarato il resto.
+@export var difficulty: int = Bots.DEFAULT_LEVEL
+## Il poligono: stessa arena, nessun punteggio e nessuna morte. È l'unico posto
+## dove il gioco insegna, e ci si sta finché si vuole.
+@export var practice: bool = false
+@export var match_mode: int = MatchRules.Mode.SOLO
+
+## Statistiche della partita, per la schermata dei risultati. Si contano qui
+## perché qui succedono: chiederle dopo a un sistema che non le ha viste
+## significa inventarle.
+var _streak := 0
+var _best_streak := 0
+var _shots := 0
+var _hits := 0
+
+signal match_finished(rows: Array, won: bool, stats: Dictionary)
 
 
 func _ready() -> void:
@@ -33,6 +56,11 @@ func _ready() -> void:
 
 	if _hud and _hud.has_method("setup"):
 		_hud.setup(_player)
+	if _player.has_signal("cast_resolved"):
+		_player.cast_resolved.connect(func(_n, hits):
+			_shots += 1
+			if hits > 0:
+				_hits += 1)
 
 	# Ogni nemico insegue il giocatore ed entra in partita con un suo id.
 	var next_id := BOT_ID_BASE
@@ -43,16 +71,25 @@ func _ready() -> void:
 				child.fired.connect(_on_enemy_fired)
 			if child.has_signal("died"):
 				var id := next_id
+				var idx := next_id - BOT_ID_BASE
 				next_id += 1
 				_bots[id] = child
 				child.died.connect(_on_bot_died.bind(id))
+				# Ogni bot è un avversario con un nome, una classe e una
+				# difficoltà: "Bot 3" è un avversario che il giocatore smette di
+				# considerare un avversario.
+				var who: Dictionary = Bots.identity(idx)
+				_bot_names[id] = String(who["name"])
+				child.class_id = String(who["class_id"])
+				Bots.apply(child, difficulty)
 
 	# Una partita vera anche da soli: si segna, si muore, si torna, e si vince o
 	# si perde. Un'arena senza condizione di vittoria non è un gioco incompleto —
 	# è una sandbox, e non si rigioca.
-	var roster := [PLAYER_ID]
-	roster.append_array(_bots.keys())
-	_match = MatchRules.start(MatchRules.Mode.SOLO, roster)
+	if not practice:
+		var roster := [PLAYER_ID]
+		roster.append_array(_bots.keys())
+		_match = MatchRules.start(match_mode, roster)
 
 	if _player.has_signal("died"):
 		_player.died.connect(_on_player_died)
@@ -101,6 +138,11 @@ func _all_descendants(node: Node, out: Array = []) -> Array:
 func _on_enemy_fired(from: Vector3, to: Vector3, hit: bool) -> void:
 	# Il tracciante rosso: senza, non sai da dove ti stanno sparando, e morire
 	# senza sapere da dove è la cosa che fa chiudere un PvP.
+	for id in _bots.keys():
+		var b = _bots[id]
+		if is_instance_valid(b) and b.global_position.distance_to(from) < 2.5:
+			_last_attacker = id
+			break
 	Vfx.tracer(self, from, to)
 	if hit:
 		Vfx.impact(self, to, Vfx.COL_ENEMY)
@@ -108,6 +150,10 @@ func _on_enemy_fired(from: Vector3, to: Vector3, hit: bool) -> void:
 	# manca. È metà dell'informazione direzionale che hai su chi ti sta sparando,
 	# e l'unica che funziona quando non lo vedi.
 	Sfx.play_at("cast_beam", from, -9.0)
+
+
+func _bot_name(peer_id: int) -> String:
+	return String(_bot_names.get(peer_id, "SOMEONE"))
 
 
 func _on_player_damaged(_amount: float, _remaining: float) -> void:
@@ -121,9 +167,11 @@ func _on_bot_died(bot_id: int) -> void:
 	if _match.is_empty():
 		return
 	MatchRules.on_kill(_match, PLAYER_ID, bot_id)
+	_streak += 1
+	_best_streak = maxi(_best_streak, _streak)
 	Sfx.play("kill")
 	if _hud and _hud.has_method("push_feed"):
-		_hud.push_feed("YOU  ▸  BOT %d" % (bot_id - BOT_ID_BASE + 1), true)
+		_hud.push_feed("YOU  ▸  %s" % _bot_name(bot_id), true)
 
 
 func _on_player_died() -> void:
@@ -132,8 +180,9 @@ func _on_player_died() -> void:
 	# -1: nessuno segna. Contro i bot il punteggio deve restare quello del
 	# giocatore, ma la morte va contata comunque — è la metà onesta del risultato.
 	MatchRules.on_kill(_match, -1, PLAYER_ID)
+	_streak = 0
 	if _hud and _hud.has_method("push_feed"):
-		_hud.push_feed("BOT  ▸  YOU")
+		_hud.push_feed("%s  ▸  YOU" % _bot_name(_last_attacker))
 
 
 func _process(delta: float) -> void:
@@ -154,7 +203,7 @@ func _process(delta: float) -> void:
 		var leader_text := (
 			"YOU LEAD"
 			if top == PLAYER_ID
-			else "BOT %d LEADS  %d" % [top - BOT_ID_BASE + 1, int(_match["score"].get(top, 0))]
+			else "%s LEADS  %d" % [_bot_name(top), int(_match["score"].get(top, 0))]
 		)
 		_hud.set_match(mine, MatchRules.time_left(_match), leader_text)
 
@@ -184,3 +233,32 @@ func _respawn(peer_id: int) -> void:
 func _on_match_over(winner: int) -> void:
 	if _hud and _hud.has_method("push_feed"):
 		_hud.push_feed("MATCH OVER — %s" % ("YOU WIN" if winner == PLAYER_ID else "YOU LOSE"), true)
+	match_finished.emit(scoreboard(), winner == PLAYER_ID, match_stats())
+
+
+## Il tabellone finale. Ogni riga ha un nome vero: "Bot 3" non e' un avversario.
+func scoreboard() -> Array:
+	if _match.is_empty():
+		return []
+	var rows := []
+	for peer in _match["peers"]:
+		rows.append({
+			"name": "YOU" if int(peer) == PLAYER_ID else _bot_name(int(peer)),
+			"score": int(_match["score"].get(peer, 0)),
+			"deaths": int(_match["deaths"].get(peer, 0)),
+			"mine": int(peer) == PLAYER_ID,
+			"best": "—",
+		})
+	rows.sort_custom(func(a, b): return int(a["score"]) > int(b["score"]))
+	return rows
+
+
+func match_stats() -> Dictionary:
+	var combo := 0
+	if _hud and "_combo" in _hud:
+		combo = int(_hud.get("_combo"))
+	return {
+		"streak": _best_streak,
+		"juggle": combo,
+		"accuracy": int(round(100.0 * float(_hits) / maxf(float(_shots), 1.0))),
+	}

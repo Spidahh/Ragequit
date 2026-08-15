@@ -41,6 +41,8 @@ const SINGLE = [
   'test_status',
   'test_settings',
   'test_progression',
+  'test_bots',
+  'test_screens',
 ]
 const PAIRED = ['test_net', 'test_net_world']
 
