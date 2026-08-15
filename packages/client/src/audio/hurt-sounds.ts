@@ -1,6 +1,6 @@
 // Damage-taken (victim-side) sounds.
 //
-// Split out of SoundEngine (file-budget: 02_TECH/08). These are pure synthesis
+// Split out of SoundEngine (file-budget: AGENTS.md). These are pure synthesis
 // over a supplied AudioContext, so the engine keeps ownership of the context,
 // the mute flag and the pitch-variance helper and just delegates.
 

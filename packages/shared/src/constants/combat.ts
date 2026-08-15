@@ -1,5 +1,5 @@
 // Combat fundamentals — TTK window, GCD, knockup bounds.
-// Authority: 01_DESIGN/01_combat_fundamentals.md.
+// Authority: VERITA.md.
 //
 // Parry constants live in ./weapons.ts as the full authoritative set
 // (tap window, tap cost, tap CD, hold drain, block fractions). Keep this file
@@ -62,7 +62,7 @@ export const KNOCKUP_IMMUNITY_AFTER_LAND_SEC = 2 as const
 
 // --- Match flow ------------------------------------------------------------
 // 1v1 ranked: best-of-5 rounds, 2-min timer per round, higher HP wins on
-// timeout. Authority: 01_DESIGN/07_modes.md.
+// timeout. Authority: VERITA.md.
 export const MATCH_ROUNDS_TO_WIN = 3 as const
 export const MATCH_MAX_ROUNDS = 5 as const
 export const ROUND_TIMER_SEC = 120 as const

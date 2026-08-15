@@ -1,6 +1,6 @@
 // Reaction to a Death broadcast: kill feed, stats, death burst, and the
 // self-died / self-killed feedback. Extracted from main.ts (file-budget:
-// 02_TECH/08). The mutable pieces main.ts owns (stats, cast bar, combo) are
+// AGENTS.md). The mutable pieces main.ts owns (stats, cast bar, combo) are
 // reached through callbacks so this stays a pure dispatcher.
 
 import type { ServerDeathMessage } from '@ragequit/shared'

@@ -7,7 +7,7 @@ import { WEAPON_VIEW, getWeaponView } from './weapon-view.js'
 // a per-weapon property, that the sword orbited 5.5 m behind the player and that
 // each first-person weapon named a viewmodel. That contract is gone. RAGEQUIT is
 // first person for every weapon, which is what STILE.md §8 and the reference
-// list in PROGETTO.md §5 said all along.
+// list in STILE.md said all along.
 //
 // What is left here is the guarantee that nothing weapon-specific can creep back
 // into the view except how the FOV reacts.

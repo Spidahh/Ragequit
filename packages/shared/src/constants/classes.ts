@@ -2,7 +2,7 @@ import type { WeaponId } from './weapons.js'
 
 // Class vocabulary and slot grammar shared by client and server.
 
-export const CLASS_IDS = ['tank', 'archer', 'mage', 'hybrid'] as const
+export const CLASS_IDS = ['breaker', 'talon', 'warden', 'drift'] as const
 export type ClassId = (typeof CLASS_IDS)[number]
 
 // ── Class-mechanic scale ────────────────────────────────────────────────────
@@ -72,10 +72,10 @@ export interface ClassTargetDefinition {
 }
 
 export const TARGET_CLASS_DEFS = {
-  tank: {
-    id: 'tank',
-    label: 'Tank',
-    resourceMaxima: { hp: 250, mana: 50, stamina: 150 },
+  breaker: {
+    id: 'breaker',
+    label: 'BREAKER',
+    resourceMaxima: { hp: 280, mana: 60, stamina: 160 },
     slots: { melee: 4, bow: 1, magicBase: 0, magicAdvanced: 0, utility: 3 },
     weapons: ['sword', 'bow'],
     recoveryId: 'brace_recovery',
@@ -91,10 +91,10 @@ export const TARGET_CLASS_DEFS = {
       accessories: ['Male_Ranger_Acc_Pauldron'],
     },
   },
-  archer: {
-    id: 'archer',
-    label: 'Arciere',
-    resourceMaxima: { hp: 175, mana: 80, stamina: 110 },
+  talon: {
+    id: 'talon',
+    label: 'TALON',
+    resourceMaxima: { hp: 200, mana: 90, stamina: 120 },
     // magicAdvanced 0 -> 1, taken from magicBase, so the total stays 8.
     //
     // The Arciere could only launch with thunder_clap: `self`, range 3, a panic
@@ -114,10 +114,10 @@ export const TARGET_CLASS_DEFS = {
       accessories: [],
     },
   },
-  mage: {
-    id: 'mage',
-    label: 'Mago',
-    resourceMaxima: { hp: 150, mana: 160, stamina: 80 },
+  warden: {
+    id: 'warden',
+    label: 'WARDEN',
+    resourceMaxima: { hp: 250, mana: 160, stamina: 90 },
     slots: { melee: 0, bow: 0, magicBase: 3, magicAdvanced: 3, utility: 2 },
     weapons: ['staff'],
     recoveryId: 'arcane_rebind',
@@ -131,10 +131,10 @@ export const TARGET_CLASS_DEFS = {
       accessories: ['Hair_Beard'],
     },
   },
-  hybrid: {
-    id: 'hybrid',
-    label: 'Ibrido',
-    resourceMaxima: { hp: 200, mana: 100, stamina: 100 },
+  drift: {
+    id: 'drift',
+    label: 'DRIFT',
+    resourceMaxima: { hp: 250, mana: 110, stamina: 120 },
     slots: { melee: 2, bow: 1, magicBase: 2, magicAdvanced: 1, utility: 2 },
     weapons: ['sword', 'bow', 'staff'],
     recoveryId: 'adaptive_mend',
@@ -151,52 +151,88 @@ export const TARGET_CLASS_DEFS = {
 
 // Preset builds per class — full 8-slot class-aware builds.
 // Slot positions are packed by family regardless of wire-field name; the server
-// validates by family budget (not position). See 01_DESIGN/06_loadout_build.md for rationale.
+// validates by family budget (not position). See VERITA.md for rationale.
 // Each preset includes the class Recovery utility.
+// Le build di partenza. GENERATE dai pool curati, mai scritte a mano.
+//
+// Un preset elencato a mano diventa illegale in silenzio la prima volta che il
+// pool della sua classe cambia: è successo con frost_bolt, rimasto nel preset
+// del TALON dopo che la curatela lo aveva tolto dal suo kit. Un test lo ha
+// preso, ma solo perché esisteva — la generazione rende il bug impossibile.
+// Le build di partenza. GENERATE dai pool curati, mai scritte a mano.
+//
+// Un preset elencato a mano diventa illegale in silenzio la prima volta che il
+// pool della sua classe cambia: è successo con frost_bolt, rimasto nel preset
+// del TALON dopo che la curatela lo aveva tolto dal suo kit. Un test lo ha
+// preso, ma solo perché esisteva — la generazione rende il bug impossibile.
+// Le build di partenza. GENERATE dai pool curati, mai scritte a mano.
+//
+// Un preset elencato a mano diventa illegale in silenzio la prima volta che il
+// pool della sua classe cambia: è successo con frost_bolt, rimasto nel preset
+// del TALON dopo che la curatela lo aveva tolto dal suo kit. Un test lo ha
+// preso, ma solo perché esisteva — la generazione rende il bug impossibile.
+// Le build di partenza. GENERATE dai pool curati, mai scritte a mano.
+//
+// Un preset elencato a mano diventa illegale in silenzio la prima volta che il
+// pool della sua classe cambia: è successo con frost_bolt, rimasto nel preset
+// del TALON dopo che la curatela lo aveva tolto dal suo kit. Un test lo ha
+// preso, ma solo perché esisteva — la generazione rende il bug impossibile.
+// Le build di partenza. GENERATE dai pool curati, mai scritte a mano.
+//
+// Un preset elencato a mano diventa illegale in silenzio la prima volta che il
+// pool della sua classe cambia: è successo con frost_bolt, rimasto nel preset
+// del TALON dopo che la curatela lo aveva tolto dal suo kit. Un test lo ha
+// preso, ma solo perché esisteva — la generazione rende il bug impossibile.
+// Le build di partenza. GENERATE dai pool curati, mai scritte a mano.
+//
+// Un preset elencato a mano diventa illegale in silenzio la prima volta che il
+// pool della sua classe cambia: è successo con frost_bolt, rimasto nel preset
+// del TALON dopo che la curatela lo aveva tolto dal suo kit. Un test lo ha
+// preso, ma solo perché esisteva — la generazione rende il bug impossibile.
 export const CLASS_PRESET_BUILDS: Record<ClassId, readonly string[]> = {
-  // Tank: 4 melee + 1 bow + 3 utility = 8
-  tank: Object.freeze([
-    'uppercut', // slot 0 — melee (Uppercut: knockup setup)
-    'gap_closer', // slot 1 — melee (Gap Closer: engage dash)
-    'guard_break', // slot 2 — melee (Guard Break: short-range setup)
-    'whirlwind', // slot 3 — melee (Whirlwind: physical spinning pressure)
-    'piercing_shot', // slot 4 — bow (Piercing Shot: physical cashout)
-    'brace_recovery', // slot 5 — utility (Recovery)
-    'barrier', // slot 6 — utility
-    'quick_dash', // slot 7 — utility
+  // BREAKER — generato dal suo pool curato (slots: {"melee":4,"bow":1,"magicBase":0,"magicAdvanced":0,"utility":3})
+  breaker: Object.freeze([
+    'uppercut', // melee
+    'gap_closer', // melee
+    'guard_break', // melee
+    'whirlwind', // melee
+    'steady_aim', // bow
+    'brace_recovery', // utility
+    'barrier', // utility
+    'quick_dash', // utility
   ]),
-  // Arciere: 4 bow + 2 magicBase + 2 utility = 8
-  archer: Object.freeze([
-    'pin_shot', // slot 0 — bow (ranged setup)
-    'marksman_shot', // slot 1 — bow (precision cashout)
-    'disengage_shot', // slot 2 — bow (spacing response)
-    'volley', // slot 3 — bow (volley of arrows)
-    'frost_bolt', // slot 4 — magicBase (control projectile)
-    'arc_lift', // slot 5 — magicAdvanced (the ranged launcher)
-    'hunters_flow', // slot 6 — utility (Recovery)
-    'quick_dash', // slot 7 — utility
+  // TALON — generato dal suo pool curato (slots: {"melee":0,"bow":4,"magicBase":1,"magicAdvanced":1,"utility":2})
+  talon: Object.freeze([
+    'pin_shot', // bow
+    'marksman_shot', // bow
+    'disengage_shot', // bow
+    'volley', // bow
+    'fire_blink', // magicBase
+    'arc_lift', // magicAdvanced
+    'hunters_flow', // utility
+    'quick_dash', // utility
   ]),
-  // Mago: 3 magicBase + 3 magicAdvanced + 2 utility = 8
-  mage: Object.freeze([
-    'fireball', // slot 0 — magicBase (Fire projectile pressure)
-    'frost_bolt', // slot 1 — magicBase (Ice pressure)
-    'chain_bolt', // slot 2 — magicBase (Lightning chain)
-    'eruption', // slot 3 — magicAdvanced (launch setup)
-    'meteor', // slot 4 — magicAdvanced (high-commit Fire cashout)
-    'frost_pillar', // slot 5 — magicAdvanced (Ice knockup)
-    'arcane_rebind', // slot 6 — utility (Recovery)
-    'phase_shift', // slot 7 — utility (timed survival counter)
+  // WARDEN — generato dal suo pool curato (slots: {"melee":0,"bow":0,"magicBase":3,"magicAdvanced":3,"utility":2})
+  warden: Object.freeze([
+    'fireball', // magicBase
+    'frost_bolt', // magicBase
+    'chain_bolt', // magicBase
+    'eruption', // magicAdvanced
+    'meteor', // magicAdvanced
+    'storm_field', // magicAdvanced
+    'arcane_rebind', // utility
+    'phase_shift', // utility
   ]),
-  // Ibrido: 2 melee + 1 bow + 2 magicBase + 1 magicAdvanced + 2 utility = 8
-  hybrid: Object.freeze([
-    'uppercut', // slot 0 — melee (knockup setup)
-    'gap_closer', // slot 1 — melee (engage dash)
-    'marksman_shot', // slot 2 — bow (precision cashout)
-    'fireball', // slot 3 — magicBase (staff pressure)
-    'lightning_dash', // slot 4 — magicBase (staff movement)
-    'arc_lift', // slot 5 — magicAdvanced (launch cashout)
-    'adaptive_mend', // slot 6 — utility (Recovery)
-    'quick_dash', // slot 7 — utility
+  // DRIFT — generato dal suo pool curato (slots: {"melee":2,"bow":1,"magicBase":2,"magicAdvanced":1,"utility":2})
+  drift: Object.freeze([
+    'gap_closer', // melee
+    'riposte', // melee
+    'point_blank', // bow
+    'lightning_dash', // magicBase
+    'fire_blink', // magicBase
+    'arc_lift', // magicAdvanced
+    'adaptive_mend', // utility
+    'quick_dash', // utility
   ]),
 }
 
@@ -209,74 +245,112 @@ export function targetClassSlotCount(classId: ClassId): number {
   )
 }
 
+// Chi puo prendere cosa. CURATO, non ereditato.
+//
+// Misurato prima di questa passata: DRIFT era legale per 58 abilita su 61 —
+// l'unione di tutte le altre classi. Una classe che puo prendere il 95% del
+// gioco non e una classe, e un superinsieme, e nessuna quantita di contenuto
+// nuovo puo pareggiarla: ogni abilita aggiunta finiva anche a lei.
+// TALON aveva inoltre uno slot 'magicAdvanced' con UNA sola opzione legale —
+// uno slot di build che non era una scelta.
+//
+// Regola, presa dai giochi che reggono: un kit di classe e CHIUSO e
+// riconoscibile. Guardando un'abilita devi sapere chi la lancia.
+//   BREAKER — tutta la mischia; l'arco solo nei tre pezzi piu pesanti.
+//   TALON   — tutto l'arco, piu magia scelta per la distanza.
+//   WARDEN  — tutta la magia. E l'unica che la possiede davvero.
+//   DRIFT   — sezione trasversale sul suo verbo, il movimento: le piu rapide di
+//             ogni famiglia, niente pesantezza. NON piu l'unione di tutti.
+// Le quattro recovery restano una per classe.
+//
+// Generato da una regola meccanica sui dati (comboRole + cooldown), non a gusto.
 const ABILITY_LEGAL_CLASSES: Record<string, readonly ClassId[]> = {
-  // Melee
-  whirlwind: ['tank', 'hybrid'],
-  gap_closer: ['tank', 'hybrid'],
-  uppercut: ['tank', 'hybrid'],
-  bleed_strike: ['tank', 'hybrid'],
-  guard_break: ['tank', 'hybrid'],
-  rending_dash: ['tank', 'hybrid'],
-
-  // Bow
-  piercing_shot: ['tank', 'archer', 'hybrid'],
-  volley: ['tank', 'archer', 'hybrid'],
-  pin_shot: ['tank', 'archer', 'hybrid'],
-  snare_trap: ['tank', 'archer', 'hybrid'],
-  marksman_shot: ['tank', 'archer', 'hybrid'],
-  disengage_shot: ['tank', 'archer', 'hybrid'],
-  broadhead: ['tank', 'archer', 'hybrid'],
-  blast_arrow: ['archer', 'hybrid'],
-
-  // Magic Base
-  fireball: ['archer', 'mage', 'hybrid'],
-  ignite: ['archer', 'mage', 'hybrid'],
-  fire_blink: ['archer', 'mage', 'hybrid'],
-  frost_bolt: ['archer', 'mage', 'hybrid'],
-  chain_bolt: ['archer', 'mage', 'hybrid'],
-  thunder_clap: ['archer', 'mage', 'hybrid'],
-  lightning_dash: ['archer', 'mage', 'hybrid'],
-  shadow_bolt: ['archer', 'mage', 'hybrid'],
-  dark_barrier: ['archer', 'mage', 'hybrid'],
-  poison_dart: ['archer', 'mage', 'hybrid'],
-  entangle: ['archer', 'mage', 'hybrid'],
-  vine_dash: ['archer', 'mage', 'hybrid'],
-
-  // Magic Advanced
-  flame_wall: ['mage', 'hybrid'],
-  meteor: ['mage', 'hybrid'],
-  eruption: ['mage', 'hybrid'],
-  ice_wall: ['mage', 'hybrid'],
-  blizzard: ['mage', 'hybrid'],
-  freeze_target: ['mage', 'hybrid'],
-  frost_pillar: ['mage', 'hybrid'],
-  storm_field: ['mage', 'hybrid'],
-  // Archer too: now that arc_lift is a 30 m/s projectile you have to lead, it
-  // is an archer's problem more than a mage's.
-  arc_lift: ['archer', 'mage', 'hybrid'],
-  curse_of_weakness: ['mage', 'hybrid'],
-  life_drain: ['mage', 'hybrid'],
-  void_spike: ['mage', 'hybrid'],
-  thorn_field: ['mage', 'hybrid'],
-  healing_totem: ['mage', 'hybrid'],
-  root_upthrow: ['mage', 'hybrid'],
-
-  // Utility
-  brace_recovery: ['tank'],
-  hunters_flow: ['archer'],
-  arcane_rebind: ['mage'],
-  adaptive_mend: ['hybrid'],
-  self_heal: ['tank', 'archer', 'mage', 'hybrid'],
-  quick_dash: ['tank', 'archer', 'mage', 'hybrid'],
-  ping_mark: ['tank', 'archer', 'mage', 'hybrid'],
-  cleanse_surge: ['tank', 'archer', 'mage', 'hybrid'],
-  barrier: ['tank', 'archer', 'mage', 'hybrid'],
-  energize: ['tank', 'archer', 'mage', 'hybrid'],
-  phase_shift: ['tank', 'archer', 'mage', 'hybrid'],
-  smoke_screen: ['tank', 'archer', 'mage', 'hybrid'],
+  bleed_strike: ['breaker', 'drift'],
+  bloodthirst: ['breaker'],
+  cleave: ['breaker', 'drift'],
+  executioner: ['breaker'],
+  gap_closer: ['breaker', 'drift'],
+  ground_slam: ['breaker', 'drift'],
+  guard_break: ['breaker'],
+  hamstring: ['breaker'],
+  momentum_strike: ['breaker', 'drift'],
+  rending_dash: ['breaker', 'drift'],
+  riposte: ['breaker', 'drift'],
+  skewer: ['breaker', 'drift'],
+  uppercut: ['breaker'],
+  whirlwind: ['breaker'],
+  blast_arrow: ['breaker', 'talon'],
+  bola: ['talon', 'drift'],
+  broadhead: ['talon', 'drift'],
+  disengage_shot: ['talon', 'drift'],
+  marksman_shot: ['breaker', 'talon'],
+  piercing_shot: ['breaker', 'talon', 'drift'],
+  pin_shot: ['talon'],
+  point_blank: ['talon', 'drift'],
+  siphon_arrow: ['breaker', 'talon'],
+  skyfall: ['talon'],
+  snare_trap: ['talon'],
+  split_shot: ['talon', 'drift'],
+  steady_aim: ['breaker', 'talon'],
+  volley: ['talon'],
+  chain_bolt: ['warden', 'drift'],
+  dark_barrier: ['warden'],
+  entangle: ['warden'],
+  fire_blink: ['talon', 'warden', 'drift'],
+  fireball: ['warden'],
+  frost_bolt: ['warden', 'drift'],
+  ignite: ['warden'],
+  lightning_dash: ['talon', 'warden', 'drift'],
+  poison_dart: ['talon', 'warden', 'drift'],
+  shadow_bolt: ['talon', 'warden', 'drift'],
+  thunder_clap: ['talon', 'warden', 'drift'],
+  vine_dash: ['talon', 'warden', 'drift'],
+  arc_lift: ['talon', 'warden', 'drift'],
+  blizzard: ['warden'],
+  curse_of_weakness: ['talon', 'warden', 'drift'],
+  eruption: ['talon', 'warden', 'drift'],
+  flame_wall: ['talon', 'warden', 'drift'],
+  freeze_target: ['warden'],
+  frost_pillar: ['talon', 'warden', 'drift'],
+  healing_totem: ['warden'],
+  ice_wall: ['warden'],
+  life_drain: ['warden', 'drift'],
+  meteor: ['warden'],
+  root_upthrow: ['warden'],
+  storm_field: ['warden'],
+  thorn_field: ['warden'],
+  void_spike: ['warden'],
+  adaptive_mend: ['drift'],
+  arcane_rebind: ['warden'],
+  barrier: ['breaker', 'talon', 'warden', 'drift'],
+  brace_recovery: ['breaker'],
+  cleanse_surge: ['breaker', 'talon', 'warden', 'drift'],
+  energize: ['breaker', 'talon', 'warden', 'drift'],
+  hunters_flow: ['talon'],
+  phase_shift: ['breaker', 'talon', 'warden', 'drift'],
+  ping_mark: ['breaker', 'talon', 'warden', 'drift'],
+  quick_dash: ['breaker', 'talon', 'warden', 'drift'],
+  self_heal: ['breaker', 'talon', 'warden', 'drift'],
+  smoke_screen: ['breaker', 'talon', 'warden', 'drift'],
 }
 
 const ABILITY_SLOT_FAMILIES: Record<string, TargetAbilitySlotFamily> = {
+  // Bow (second batch — see abilities/bow-extended.ts)
+  point_blank: 'bow',
+  steady_aim: 'bow',
+  skyfall: 'bow',
+  bola: 'bow',
+  siphon_arrow: 'bow',
+  split_shot: 'bow',
+  // Melee (second batch — see abilities/melee-extended.ts)
+  riposte: 'melee',
+  skewer: 'melee',
+  cleave: 'melee',
+  hamstring: 'melee',
+  executioner: 'melee',
+  bloodthirst: 'melee',
+  ground_slam: 'melee',
+  momentum_strike: 'melee',
   // Melee
   whirlwind: 'melee',
   gap_closer: 'melee',
@@ -379,7 +453,7 @@ export function loadoutHasRecovery(classId: ClassId, abilityIds: readonly string
 
 // Deterministically guarantees a resolved build always carries its class's
 // Recovery ability — the slot grammar alone allows a legal build with zero
-// self-sustain (COMPLETEZZA.md gap). Swaps the LAST utility-family slot for
+// self-sustain (lacuna nota). Swaps the LAST utility-family slot for
 // it (position is not gameplay-significant — validation is by family budget,
 // not slot index), or appends it when no utility slot is in use.
 export function ensureLoadoutHasRecovery(
@@ -400,18 +474,18 @@ export function ensureLoadoutHasRecovery(
 
 export function inferClassFromLoadout(abilityIds: readonly string[]): ClassId | null {
   const activeIds = abilityIds.filter(Boolean)
-  const hybridFits = classLoadoutFitsSlotGrammar('hybrid', activeIds)
+  const hybridFits = classLoadoutFitsSlotGrammar('drift', activeIds)
 
   for (const candidate of CLASS_IDS) {
-    if (candidate === 'hybrid' || !classLoadoutFitsSlotGrammar(candidate, activeIds)) continue
+    if (candidate === 'drift' || !classLoadoutFitsSlotGrammar(candidate, activeIds)) continue
 
     const hasClassExclusiveAbility = activeIds.some(
-      (id) => isAbilityLegalForClass(id, candidate) && !isAbilityLegalForClass(id, 'hybrid'),
+      (id) => isAbilityLegalForClass(id, candidate) && !isAbilityLegalForClass(id, 'drift'),
     )
     if (hasClassExclusiveAbility || !hybridFits) return candidate
   }
 
-  return hybridFits ? 'hybrid' : null
+  return hybridFits ? 'drift' : null
 }
 
 export function getClassSlotOrder(classId: ClassId): TargetAbilitySlotFamily[] {

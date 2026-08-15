@@ -95,7 +95,7 @@ export interface AssembleEndScreenParams {
 }
 
 function buildLabel(p: EndPlayerLike | undefined): string {
-  return `${(p?.classId ?? 'hybrid').toUpperCase()} · ${(p?.activeWeapon ?? 'sword').toUpperCase()}`
+  return `${(p?.classId ?? 'drift').toUpperCase()} · ${(p?.activeWeapon ?? 'sword').toUpperCase()}`
 }
 
 export function assembleEndScreen(p: AssembleEndScreenParams): ScoreboardData | MultiScoreboard {

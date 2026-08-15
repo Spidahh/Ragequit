@@ -55,7 +55,7 @@ function setProgress(pct: number, sub: string): void {
  * classes in the background after the match starts — only `selfClassId` is
  * guaranteed loaded before the first frame.
  *
- * @param selfClassId — class id of the local player ('tank', 'archer', 'mage', 'hybrid')
+ * @param selfClassId — class id of the local player ('breaker', 'talon', 'warden', 'drift')
  * @param onProgress  — optional callback called with (0-100) progress value
  */
 export async function preloadMatchAssets(
@@ -114,7 +114,7 @@ export async function preloadMatchAssets(
  * don't stall when they first appear.
  */
 export function preloadOtherClassesBackground(selfClassId: string): void {
-  const ALL_CLASSES = ['tank', 'archer', 'mage', 'hybrid']
+  const ALL_CLASSES = ['breaker', 'talon', 'warden', 'drift']
   for (const cls of ALL_CLASSES) {
     if (cls === selfClassId) continue
     preloadClassModel(cls).catch((e: unknown) => {

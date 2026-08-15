@@ -1,6 +1,6 @@
 // Where a hit is drawn, and what it looks like.
 //
-// Extracted from main.ts's onHit (file-budget: 02_TECH/08). The important rule
+// Extracted from main.ts's onHit (file-budget: AGENTS.md). The important rule
 // lives here: an impact must read as "the hit landed HERE", so it is placed on
 // the VICTIM. This used to be the attacker↔victim midpoint, which drew a bow
 // impact ~10 m short of the target it actually hit.

@@ -1,6 +1,6 @@
 // Declarative ability schema.
 //
-// Authority: 01_DESIGN/05_abilities_*.md.
+// Authority: VERITA.md.
 //
 // An AbilityDef is the **only** representation of an ability. The server's
 // AbilityEngine consumes the def and orchestrates effects (damage, dot,
@@ -37,7 +37,7 @@ export type TargetingMode = 'self' | 'forward' | 'target' | 'point'
 // from effects because two abilities can share primitives but serve different
 // combat jobs.
 //
-// Standard 6-role taxonomy — see 01_DESIGN/05_abilities_philosophy.md.
+// Standard 6-role taxonomy — see VERITA.md.
 // Legacy roles were consolidated: extender/drain -> pressure, resource ->
 // survival, and ray was deleted (instant line-of-sight is a delivery property,
 // expressed via windupSec:0 + targeting:'forward', not a combat role).

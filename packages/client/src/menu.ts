@@ -107,7 +107,7 @@ export function initMenu(handlers: {
   onPlay: () => void
   onFfa: () => void
   onTeam: () => void
-  /** Last one standing — no respawn (01_DESIGN/07_modes.md). */
+  /** Last one standing — no respawn (VERITA.md). */
   onTournament: () => void
   onTraining: (difficulty: 'novice' | 'competent' | 'master' | 'test') => void
   onLoadout: () => void
@@ -505,10 +505,10 @@ export function initMenu(handlers: {
       } else {
         const classId = profile.currentClass as ClassId
         const CLASS_COLORS: Record<ClassId, string> = {
-          tank: '#d4a04a',
-          archer: '#2ecc71',
-          mage: '#3498db',
-          hybrid: '#00f0ff',
+          breaker: '#d4a04a',
+          talon: '#2ecc71',
+          warden: '#3498db',
+          drift: '#00f0ff',
         }
         const previewEl = document.getElementById('menu-loadout-preview')
         if (previewEl)

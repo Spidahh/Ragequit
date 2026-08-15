@@ -1,0 +1,509 @@
+## Verifica le cose che il progetto descrive e che si dimenticano sempre:
+## la parata, il recap di morte, il tabellone, il mirino personalizzato.
+##
+## Sono tutte cose che non danno errori quando mancano — il gioco gira lo stesso,
+## semplicemente non fa quello che c'è scritto che fa. È la categoria che a fine
+## progetto resta ⬜ mentre tutti pensano sia ✅.
+##
+##   godot --headless --script res://tests/test_polish.gd
+extends SceneTree
+
+const Settings = preload("res://src/settings.gd")
+const Drills = preload("res://src/range_drills.gd")
+const Spectator = preload("res://src/spectator.gd")
+const NetScript = preload("res://src/net.gd")
+const Wheel = preload("res://src/signals_wheel.gd")
+
+var failures := 0
+var _arena: Node3D
+var _player: CharacterBody3D
+var _hud: Node
+var _step := 0
+var _wait := 0
+
+
+func _check(what: String, ok: bool, detail: String) -> void:
+	if ok:
+		print("  ✓ %s — %s" % [what, detail])
+	else:
+		failures += 1
+		printerr("  ✗ %s — %s" % [what, detail])
+
+
+func _init() -> void:
+	print("\n=== LA RIFINITURA ===\n")
+	_arena = (load("res://scenes/arena.tscn") as PackedScene).instantiate()
+	root.add_child(_arena)
+	current_scene = _arena
+	_player = _arena.get_node_or_null("Player")
+	_hud = _arena.get_node_or_null("HUD")
+
+
+func _process(_d: float) -> bool:
+	if _wait > 0:
+		_wait -= 1
+		return false
+	_step += 1
+	match _step:
+		1:
+			_wait = 6
+		2:
+			_la_parata_blocca_e_costa()
+			_il_recap_dice_come_sei_morto()
+			_il_tabellone_si_apre_e_si_chiude()
+			_il_mirino_e_tuo()
+			_il_break_e_una_decisione()
+			_le_impostazioni_arrivano_alla_camera()
+			_il_poligono_insegna_tre_cose()
+			_la_musica_sta_dove_deve()
+			_il_poligono_non_fa_aspettare()
+			_chi_perde_resta_a_guardare()
+			_chi_cade_ha_trenta_secondi()
+			_quattro_segnali_e_nessuna_chat()
+			_tutti_i_tasti_uno_per_uno()
+			_la_rotella_e_lo_spettatore_sono_cablati()
+			print("")
+			if failures == 0:
+				print("Tutto verde.\n")
+				quit(0)
+			else:
+				printerr("%d rosso/i.\n" % failures)
+				quit(1)
+			return true
+	return false
+
+
+func _la_parata_blocca_e_costa() -> void:
+	print("La parata")
+	if _player == null:
+		_check("il giocatore c'è", false, "assente")
+		return
+	_player.stamina = float(_player.stats.get("max_stamina", 150.0))
+	var stamina_before: float = _player.stamina
+
+	# Un tap apre la finestra: dentro, non passa niente.
+	_player._try_parry()
+	_check("il tap apre una finestra", _player.parrying(), "sta parando")
+	_check(
+		"e costa stamina",
+		_player.stamina < stamina_before,
+		"%.0f → %.0f" % [stamina_before, _player.stamina]
+	)
+
+	var hp_before: float = _player.hp
+	_player.take_damage(40.0)
+	_check("dentro la finestra non passa niente", is_equal_approx(_player.hp, hp_before), "vita intatta")
+
+	# Fuori dalla finestra passa tutto — e la parata non si può ripetere subito,
+	# o non è una lettura: è un tasto tenuto premuto.
+	_player._clock += _player.PARRY_WINDOW + 0.1
+	_check("fuori dalla finestra non pari più", not _player.parrying(), "finestra chiusa")
+	_player.take_damage(40.0)
+	_check("e il colpo arriva", _player.hp < hp_before, "vita %.0f" % _player.hp)
+
+	var stamina_now: float = _player.stamina
+	_player._try_parry()
+	_check(
+		"e non si può riparare subito",
+		is_equal_approx(_player.stamina, stamina_now),
+		"la ricarica di %.0f s regge" % _player.PARRY_COOLDOWN
+	)
+
+	# Tenuta: blocca una parte, non tutto. Una difesa senza buchi è una difesa
+	# che si tiene premuta per sempre.
+	_player._clock += _player.PARRY_COOLDOWN + 0.1
+	_player._parry_holding = true
+	_player.stamina = 100.0
+	var hp2: float = _player.hp
+	_player.take_damage(50.0)
+	var passed: float = hp2 - _player.hp
+	_check(
+		"tenuta blocca una parte e non tutto",
+		passed > 0.0 and passed < 50.0,
+		"di 50 ne passano %.0f" % passed
+	)
+	_player._parry_holding = false
+
+
+func _il_recap_dice_come_sei_morto() -> void:
+	print("\nIl recap di morte")
+	if _hud == null or not _hud.has_method("show_death_recap"):
+		_check("l'HUD sa mostrarlo", false, "metodo assente")
+		return
+	_hud.show_death_recap(
+		"ASH", [{"name": "Bastion", "damage": 45}, {"name": "Hammerfall", "damage": 30}], 120.0, 3.0
+	)
+	var texts := _labels(_hud)
+	_check("dice chi ti ha ucciso", texts.contains("ASH"), "nome del colpevole")
+	_check("con quali abilità e per quanto", texts.contains("Bastion 45"), "il dettaglio")
+	_check("e quanto avevi fatto tu", texts.contains("120"), "danno inflitto")
+	# E c'è il conto alla rovescia: un'attesa senza numero è un'attesa che
+	# sembra un blocco.
+	_check("e quanto manca", texts.contains("3"), "conto alla rovescia")
+	_hud.hide_death_recap()
+	_check("e sparisce", not _labels(_hud).contains("ASH"), "via a fine attesa")
+
+
+func _il_tabellone_si_apre_e_si_chiude() -> void:
+	print("\nIl tabellone")
+	if _hud == null or not _hud.has_method("show_scoreboard"):
+		_check("l'HUD sa mostrarlo", false, "metodo assente")
+		return
+	_hud.show_scoreboard([
+		{"name": "YOU", "score": 12, "deaths": 4, "mine": true, "ping": 34},
+		{"name": "ASH", "score": 9, "deaths": 7, "ping": 51, "hit_you_with": "shot (63)"},
+	])
+	var texts := _labels(_hud)
+	_check("c'è chi gioca e quanto ha fatto", texts.contains("ASH") and texts.contains("9"), "righe")
+	_check("e il ping", texts.contains("51 ms"), "ping per riga")
+	# La riga che insegna: con cosa ti ha colpito. È l'unico posto in partita
+	# dove il gioco dice qualcosa in più, e lo dice solo se lo chiedi.
+	_check("e con cosa ti ha colpito", texts.contains("shot (63)"), "il kit degli altri")
+	_hud.hide_scoreboard()
+	_check("e si richiude", not _labels(_hud).contains("51 ms"), "via al rilascio")
+
+
+func _il_mirino_e_tuo() -> void:
+	print("\nIl mirino")
+	if _hud == null:
+		return
+	var st := Settings.new()
+	st.set_value("crosshair_dot", false)
+	_hud._build_crosshair()
+	var without: int = _hud._crosshair.get_child_count()
+
+	st.set_value("crosshair_dot", true)
+	_hud._build_crosshair()
+	var with_dot: int = _hud._crosshair.get_child_count()
+	_check(
+		"il punto centrale si accende dalle impostazioni",
+		with_dot == without + 1,
+		"%d → %d elementi" % [without, with_dot]
+	)
+
+	st.set_value("crosshair_thickness", 5.0)
+	_hud._build_crosshair()
+	var thick: float = (_hud._crosshair.get_child(0) as ColorRect).size.y
+	_check("e lo spessore arriva davvero", is_equal_approx(thick, 5.0), "%.0f px" % thick)
+	st.set_value("crosshair_thickness", 2.0)
+	st.set_value("crosshair_dot", false)
+
+
+func _il_break_e_una_decisione() -> void:
+	print("\nIl break")
+	if _player == null:
+		return
+	_player._break_ready_at = 0.0
+	# A terra e senza niente addosso non c'è niente da rompere: e chiamarlo a
+	# vuoto NON deve consumare la ricarica, o diventa un tasto da non premere
+	# mai per paura di sprecarlo.
+	_player.velocity.y = 0.0
+	var used_on_nothing: bool = _player.break_free()
+	_check("a vuoto non fa niente", not used_on_nothing, "non si spreca")
+	_check("e resta pronto", _player.break_ready(), "ricarica intatta")
+
+	# Radicato: il break libera.
+	_player.status.apply("root", 3.0)
+	_check("radicato non ti muovi", not _player.status.can_move(), "bloccato")
+	var used: bool = _player.break_free()
+	_check("il break libera", used and _player.status.can_move(), "libero")
+
+	# E ha una ricarica lunga: usarlo sul primo sbalzo significa non averlo sul
+	# secondo. È questo che lo rende una decisione.
+	_player.status.apply("root", 3.0)
+	_check("e subito dopo non c'è", not _player.break_free(), "%.0f s di attesa" % _player.BREAK_COOLDOWN)
+	_check(
+		"e l'attesa è lunga davvero",
+		_player.BREAK_COOLDOWN >= 10.0,
+		"%.0f s: non lo si preme a caso" % _player.BREAK_COOLDOWN
+	)
+	_player.status.cleanse()
+	_player._break_ready_at = 0.0
+
+
+func _le_impostazioni_arrivano_alla_camera() -> void:
+	print("\nLe impostazioni arrivano dove servono")
+	if _player == null:
+		return
+	var st := Settings.new()
+	st.set_value("fov", 118.0)
+	st.set_value("sensitivity", 3.0)
+	_player.apply_settings(st)
+	var cam: Camera3D = _player.get_node("Camera3D")
+	_check("il campo visivo arriva alla camera", is_equal_approx(cam.fov, 118.0), "%.0f gradi" % cam.fov)
+	_check(
+		"e la sensibilità al mouse",
+		is_equal_approx(_player._sensitivity, _player.SENSITIVITY_BASE * 3.0),
+		"%.4f rad per conteggio" % _player._sensitivity
+	)
+	# E il campo visivo dell'arma resta SUO: chi gioca a FOV alto vuole l'arma
+	# più piccola, non più distorta.
+	st.set_value("viewmodel_fov", 55.0)
+	_player.apply_settings(st)
+	_check(
+		"e l'arma ha il suo, separato",
+		_player._vm and _player._vm.camera and is_equal_approx(_player._vm.camera.fov, 55.0),
+		"%.0f gradi" % (_player._vm.camera.fov if _player._vm and _player._vm.camera else 0.0)
+	)
+	st.set_value("fov", 100.0)
+	st.set_value("sensitivity", 1.85)
+	st.set_value("viewmodel_fov", 70.0)
+
+
+func _il_poligono_insegna_tre_cose() -> void:
+	print("\nIl poligono")
+	var d := Drills.new()
+	_check("tre prove, e tre soltanto", d.done.size() == 3, str(d.done.size()))
+
+	# Muoversi: cinque salti DI FILA che conservano la velocità. Uno lento in
+	# mezzo azzera la serie — il punto è il ritmo, e il ritmo non si accumula
+	# a pezzi.
+	for i in Drills.HOPS_NEEDED - 1:
+		d.watch_movement(Drills.HOP_SPEED + 0.5, true)
+		d.watch_movement(Drills.HOP_SPEED + 0.5, false)
+	_check("quattro salti non bastano", not bool(d.done[Drills.Drill.MOVE]), d.progress(Drills.Drill.MOVE))
+	d.watch_movement(2.0, true)
+	d.watch_movement(2.0, false)
+	_check("e uno lento azzera la serie", d.hops == 0, "%d salti" % d.hops)
+	for i in Drills.HOPS_NEEDED:
+		d.watch_movement(Drills.HOP_SPEED + 0.5, true)
+		d.watch_movement(Drills.HOP_SPEED + 0.5, false)
+	_check("cinque di fila la chiudono", bool(d.done[Drills.Drill.MOVE]), "fatta")
+
+	# Anticipare: un colpo ravvicinato non insegna niente.
+	d.watch_hit(4.0, false, false)
+	_check("un colpo da vicino non conta", not bool(d.done[Drills.Drill.LEAD]), "sotto i 12 m")
+	d.watch_hit(Drills.LEAD_DISTANCE + 1.0, false, false)
+	_check("uno da lontano sì", bool(d.done[Drills.Drill.LEAD]), "fatta")
+
+	# Convertire: colpire in aria QUALCUNO CHE HAI SBALZATO TU. Prendere uno che
+	# stava già saltando non è il momento firma.
+	d.watch_hit(2.0, true, false)
+	_check("prendere chi saltava non conta", not bool(d.done[Drills.Drill.LAUNCH]), "non l'hai sbalzato tu")
+	d.watch_hit(2.0, true, true)
+	_check("sbalzare e convertire sì", bool(d.done[Drills.Drill.LAUNCH]), "fatta")
+	_check("e allora il poligono smette di chiedere", d.all_done(), "pannello via")
+
+
+func _la_musica_sta_dove_deve() -> void:
+	print("
+La musica")
+	var svc := root.get_node_or_null("Audio")
+	if svc == null:
+		_check("il servizio audio c'è", false, "assente")
+		return
+	_check("c'è un tema per il menu", svc.has("music_menu"), "music_menu")
+	_check("e uno per i risultati", svc.has("music_results"), "music_results")
+
+	svc.music("music_menu")
+	_check("nel menu suona", svc._music != null and svc._music.playing, "in riproduzione")
+	# In partita NIENTE: l'informazione direzionale è gameplay, e una musica la
+	# copre. È l'unica ragione per cui questo si spegne invece di abbassarsi.
+	svc.music("")
+	_check("in arena tace", svc._music == null, "silenzio")
+
+	# E i due temi si ripetono: un tema che finisce lascia il menu muto dopo
+	# sedici secondi, che è peggio di non averlo mai messo.
+	for track in ["music_menu", "music_results"]:
+		var st = svc._streams.get(track)
+		_check(
+			"  %s si ripete" % track,
+			st is AudioStreamWAV and st.loop_mode == AudioStreamWAV.LOOP_FORWARD,
+			"in loop"
+		)
+
+
+func _il_poligono_non_fa_aspettare() -> void:
+	print("
+Il poligono non fa aspettare e non uccide")
+	if _player == null:
+		return
+	_player.practice = true
+	_player.stamina = 999.0
+	_player.mana = 999.0
+	var slot := 0
+	var first: int = _player.cast_slot(slot)
+	var second: int = _player.cast_slot(slot)
+	_check(
+		"si rilancia subito, senza ricarica",
+		first != -1 and second != -1,
+		"due lanci di fila sullo stesso slot"
+	)
+
+	# E non si muore: una prova che ti uccide non è una prova.
+	_player.hp = 5.0
+	_player.take_damage(9999.0)
+	_check("e non si muore", not _player.dead and _player.hp > 0.0, "vita %.0f" % _player.hp)
+	_player.practice = false
+
+
+func _chi_perde_resta_a_guardare() -> void:
+	print("
+Lo spettatore")
+	var s := Spectator.new()
+	root.add_child(s)
+	var a := Node3D.new()
+	a.name = "ASH"
+	var b := Node3D.new()
+	b.name = "VULTURE"
+	root.add_child(a)
+	root.add_child(b)
+
+	s.set_targets([a, b])
+	_check("si guarda qualcuno", s.target == a, String(s.target.name))
+	s.next_target()
+	_check("e si cambia", s.target == b, String(s.target.name))
+	# In tondo: dall'ultimo si torna al primo, o guardare l'ultimo della lista
+	# è un vicolo cieco.
+	s.next_target()
+	_check("in tondo", s.target == a, String(s.target.name))
+
+	var was: int = s.mode
+	s.cycle_mode()
+	_check("e si cambia modo", s.mode != was, "occhi / spalle / libera")
+	s.cycle_mode()
+	s.cycle_mode()
+	_check("e si torna al primo", s.mode == was, "tre modi, in giro")
+
+	# Se chi guardavi sparisce, non si resta appesi al vuoto.
+	b.queue_free()
+	s.set_targets([a])
+	_check("chi sparisce esce dalla lista", s.target == a, "resta chi c'è")
+	_check("e c'è scritto chi stai guardando", s.status_line().contains("ASH"), s.status_line())
+
+	s.queue_free()
+	a.queue_free()
+
+
+func _chi_cade_ha_trenta_secondi() -> void:
+	print("
+La riconnessione")
+	var n := NetScript.new()
+	root.add_child(n)
+
+	_check(
+		"la finestra è lunga abbastanza",
+		n.RECONNECT_SEC >= 20.0,
+		"%.0f s: una pagina che si ricarica ci mette 10-15 s" % n.RECONNECT_SEC
+	)
+
+	n._on_peer_disconnected(7)
+	_check("il posto resta tenuto", n.reconnecting.has(7), "peer 7 in attesa")
+	_check("e chi torna lo riprende", n.claim_reconnect(7), "rientrato")
+	_check("una volta sola", not n.claim_reconnect(7), "il posto non si riprende due volte")
+
+	# Scaduta la finestra il posto si libera: tenerlo per sempre svuota la lobby
+	# da sola, un posto alla volta.
+	n._on_peer_disconnected(8)
+	n.reconnecting[8]["until"] = 0.0
+	n.expire_reconnects()
+	_check("e a finestra scaduta si libera", not n.reconnecting.has(8), "posto libero")
+	_check("e chi torna tardi entra da zero", not n.claim_reconnect(8), "come uno nuovo")
+	n.queue_free()
+
+
+func _quattro_segnali_e_nessuna_chat() -> void:
+	print("
+I segnali rapidi")
+	_check("sono quattro", Wheel.LABELS.size() == 4, str(Wheel.LABELS.values()))
+
+	# Le posizioni sono FISSE e distinte: la memoria muscolare vale più di
+	# qualunque etichetta, e due segnali sullo stesso settore la distruggono.
+	var seen := {}
+	for k in Wheel.ANGLES:
+		seen[float(Wheel.ANGLES[k])] = true
+	_check("e stanno in quattro posti diversi", seen.size() == 4, str(seen.keys()))
+
+	# Su, giù, destra, sinistra: si punta senza guardare.
+	_check("in alto c'è ATTACKING", Wheel.pick(Vector2(0, -1)) == Wheel.Signal_.ATTACKING, "su")
+	_check("in basso FALLING BACK", Wheel.pick(Vector2(0, 1)) == Wheel.Signal_.FALLING_BACK, "giù")
+	_check("a destra NICE", Wheel.pick(Vector2(1, 0)) == Wheel.Signal_.NICE, "destra")
+	_check("a sinistra SORRY", Wheel.pick(Vector2(-1, 0)) == Wheel.Signal_.SORRY, "sinistra")
+
+	# La via d'uscita: aprire la rotella e non mandare niente deve essere
+	# possibile, o il tasto diventa una trappola.
+	_check("e al centro non si manda niente", Wheel.pick(Vector2(0.05, 0.05)) == -1, "zona morta")
+
+	# E c'è una pausa fra un segnale e l'altro: quattro segnali innocui ripetuti
+	# venti volte al minuto sono quattro modi di fare rumore addosso a qualcuno.
+	var w := Wheel.new()
+	var sent: String = w.send(Wheel.Signal_.NICE, 100.0)
+	_check("il primo parte", sent == "NICE", sent)
+	_check("il secondo subito no", w.send(Wheel.Signal_.NICE, 100.1) == "", "in attesa")
+	_check(
+		"e dopo la pausa sì",
+		w.send(Wheel.Signal_.NICE, 100.0 + Wheel.COOLDOWN_SEC + 0.1) == "NICE",
+		"%.0f s di pausa" % Wheel.COOLDOWN_SEC
+	)
+	# E il messaggio dice CHI: un "NICE" senza nome, in una partita a otto, non
+	# dice a chi.
+	_check(
+		"e si sa chi lo ha mandato",
+		Wheel.message("ASH", Wheel.Signal_.NICE).contains("ASH"),
+		Wheel.message("ASH", Wheel.Signal_.NICE)
+	)
+
+
+func _tutti_i_tasti_uno_per_uno() -> void:
+	print("
+La rimappatura, tasto per tasto")
+	var st := Settings.new()
+	st.reset_bindings()
+	# Movimento, salto, otto abilità, break, parata: se "tutti i tasti" è vero,
+	# ci devono essere tutti in elenco.
+	for action in ["move_forward", "jump", "ability_8", "break_free", "parry"]:
+		_check("  %s è in elenco" % action, st.bindings.has(action), OS.get_keycode_string(int(st.bindings.get(action, 0))))
+
+	# La parata ha un tasto E il pulsante del mouse: rimappare la tastiera non
+	# deve toglierle il tasto destro in silenzio.
+	st.apply_bindings()
+	_check(
+		"la parata tiene anche il tasto destro",
+		st.mouse_hint("parry") == "RMB",
+		st.mouse_hint("parry")
+	)
+	st.bind("parry", KEY_V)
+	_check(
+		"e lo tiene anche dopo averla rimappata",
+		st.mouse_hint("parry") == "RMB",
+		"tastiera su V, mouse ancora RMB"
+	)
+	st.reset_bindings()
+
+
+func _la_rotella_e_lo_spettatore_sono_cablati() -> void:
+	print("
+Cablati in partita, non solo scritti")
+	# È la categoria di errore di questo progetto: un sistema che esiste, ha il
+	# suo test, e non lo chiama nessuno. Qui si controlla il collegamento.
+	_check("l'HUD sa disegnare la rotella", _hud != null and _hud.has_method("show_wheel"), "show_wheel")
+	_check("l'arena la fa girare", _arena.has_method("_tick_wheel"), "_tick_wheel")
+	_check("e sa passare a spettatore", _arena.has_method("enter_spectator"), "enter_spectator")
+
+	if _hud and _hud.has_method("show_wheel"):
+		_hud.show_wheel(Wheel.Signal_.NICE, Wheel.LABELS, Wheel.ANGLES)
+		var texts := _labels(_hud)
+		_check("e la rotella mostra tutti e quattro", texts.contains("NICE") and texts.contains("SORRY"), "quattro voci")
+		_hud.hide_wheel()
+		_check("e si chiude al rilascio", not _labels(_hud).contains("FALLING BACK"), "via")
+
+	_arena.enter_spectator()
+	_check("lo spettatore entra", _arena._spectator != null, "camera libera pronta")
+	# E due volte non ne crea due: entrare due volte è quello che succede quando
+	# muori mentre il round sta già finendo.
+	var first = _arena._spectator
+	_arena.enter_spectator()
+	_check("e non si duplica", _arena._spectator == first, "uno solo")
+
+
+## Tutto il testo visibile in un sottoalbero, in una stringa sola.
+func _labels(from: Node) -> String:
+	var out := []
+	var stack: Array = [from]
+	while not stack.is_empty():
+		var n = stack.pop_back()
+		for c in n.get_children():
+			stack.append(c)
+		if n is Label:
+			out.append(String((n as Label).text))
+	return " | ".join(out)

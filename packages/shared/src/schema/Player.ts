@@ -101,9 +101,9 @@ export class Player extends Schema {
   // join from a default loadout and replaced whenever the client sends loadoutSet.
   @type(['string']) loadout = new ArraySchema<string>()
 
-  @type('string') classId = 'hybrid'
+  @type('string') classId = 'drift'
 
-  // The third axis of a build (01_DESIGN/08_specializations.md). Empty = none.
+  // The third axis of a build (VERITA.md). Empty = none.
   // Replicated rather than kept server-side because a build you cannot see on
   // your opponent is a build you cannot read, and reading builds is the game.
   @type('string') specializationId = ''

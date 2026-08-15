@@ -114,7 +114,7 @@ const gameServer = new Server({
     app.get('/health', (_req, res) => {
       res.json({ status: 'ok', ts: Date.now() })
     })
-    // Global 1v1 ELO leaderboard (COMPLETEZZA.md gap) — read-only, no session
+    // Global 1v1 ELO leaderboard (lacuna nota) — read-only, no session
     // required. Not per-room state, so a plain HTTP route (not a Colyseus
     // message) is the natural fit; menu can fetch it standalone.
     app.get('/leaderboard', (_req, res) => {

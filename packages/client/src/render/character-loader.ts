@@ -132,7 +132,7 @@ interface _ClassLayers {
 
 function _getClassLayers(classId: string): _ClassLayers {
   const c = classId.toLowerCase() as ClassId
-  const def = TARGET_CLASS_DEFS[c] || TARGET_CLASS_DEFS['hybrid']
+  const def = TARGET_CLASS_DEFS[c] || TARGET_CLASS_DEFS['drift']
   return {
     base: def.visuals.base,
     outfit: def.visuals.outfit,
@@ -182,7 +182,7 @@ export function preloadClassModel(classId: string): Promise<void> {
   return fetchCharacterData(classId).then(() => undefined)
 }
 
-export function fetchCharacterData(classId = 'hybrid'): Promise<CharacterData> {
+export function fetchCharacterData(classId = 'drift'): Promise<CharacterData> {
   const layers = _getClassLayers(classId)
   const cacheKey = `${layers.base}|${layers.outfit}|${layers.hair}|${layers.accessories.join(',')}`
 
@@ -600,7 +600,7 @@ export async function buildCharacterModel(classId: string): Promise<{
 }> {
   // --- Single-GLB Mixamo path (realistic characters, e.g. Tank = Knight_Met) ---
   const cls = classId.toLowerCase() as ClassId
-  const def = TARGET_CLASS_DEFS[cls] || TARGET_CLASS_DEFS['hybrid']
+  const def = TARGET_CLASS_DEFS[cls] || TARGET_CLASS_DEFS['drift']
   // `TARGET_CLASS_DEFS` is `as const`, so `visuals` is a literal union where only the
   // tank carries `mixamoGlb`; read it through the interface shape.
   const mixamoGlb = (def.visuals as { mixamoGlb?: string }).mixamoGlb

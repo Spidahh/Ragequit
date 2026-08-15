@@ -57,7 +57,7 @@ export function createSpecSelector(onChange: () => void): SpecSelector {
   root.appendChild(cards)
 
   let selected = load()
-  let classId: ClassId = 'hybrid'
+  let classId: ClassId = 'drift'
 
   function render(): void {
     cards.replaceChildren()

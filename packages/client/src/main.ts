@@ -123,13 +123,16 @@ import { configureGameRenderer, createRendererOrGate } from './render/create-ren
 import { installArenaEnvironment } from './render/environment.js'
 import { makeToonGradient } from './render/factories.js'
 import { hFovToVFov } from './render/fov.js'
+import { installArenaLights } from './render/lighting.js'
 import { initPlacementPreview } from './render/placement-preview.js'
 import { createPostPipeline } from './render/post-pipeline.js'
 import { initProjectileVisuals, type SchemaProjectile } from './render/projectile-visuals.js'
 import { initRemotePlayers, type RemotePlayerSchema } from './render/remote-players.js'
+import { renderBloomPass } from './render/selective-bloom.js'
 import { initSelfEmissive, STATUS_EMISSIVE } from './render/self-emissive.js'
 import { initSpellParticles, toSpellStyle } from './render/spell-particles.js'
 import { VfxTextures } from './render/vfx-textures.js'
+import { createViewmodel } from './render/viewmodel.js'
 import { getWeaponView } from './render/weapon-view.js'
 import { initZoneVisuals, zoneColorForElement } from './render/zone-visuals.js'
 import {
@@ -409,7 +412,13 @@ const scene = new THREE.Scene()
 // clean, readable space. Density is high; readability comes from the torch pools +
 // the key light on combatants, not from flat ambient.
 scene.background = new THREE.Color(0x07080c)
-scene.fog = new THREE.FogExp2(0x121622, 0.007)
+// Density measured against the arena, not chosen by feel. FogExp2 blends by
+// 1 - exp(-(density * d)^2), so 0.007 reached 4 % at 30 m and 11 % at 50 m —
+// across a 50x57 m arena that is not "THICK fog", it is no fog, and it is why
+// a captured frame had no readable sense of distance at all. 0.018 gives ~30 %
+// at 30 m and ~55 % at 50 m: the far wall separates from the near floor, which
+// is the entire job of aerial perspective.
+scene.fog = new THREE.FogExp2(0x1a2030, 0.018)
 
 // PBR image-based lighting — without it MeshStandard metals go black and stone reads
 // flat-dark. Dark on-palette night env map; see render/environment.ts.
@@ -437,56 +446,14 @@ const {
   bloomLayer: BLOOM_LAYER,
 } = createPostPipeline(renderer, scene, camera)
 
-// Ambient FILL — deliberately weak. It was 3.4 against a 1.7 key: the omnidirectional
-// wash was twice the directional light and the same pale blue, so nothing in the scene
-// had a light direction, which is what made everything read flat. Shipped games run the
-// key several times the ambient; the ratio here is now ~6:1.
-scene.add(new THREE.HemisphereLight(0x9aa6c8, 0x6a5a3c, 0.55))
-// KEY light — the moon. This is what carves form and casts the shadows.
-const dir = new THREE.DirectionalLight(0xbcc8e8, 3.6)
-dir.position.set(12, 28, 14)
-dir.castShadow = true
-dir.shadow.mapSize.width = 2048
-dir.shadow.mapSize.height = 2048
-dir.shadow.camera.near = 1
-dir.shadow.camera.far = 120
-dir.shadow.camera.left = -40
-dir.shadow.camera.right = 40
-dir.shadow.camera.top = 40
-dir.shadow.camera.bottom = -40
-dir.shadow.bias = -0.0008
-scene.add(dir)
-// Fill / rim light — soft moonlight blue from the opposite side for readable
-// silhouettes. (A cyan/teal rim turned the warm sandstone walls visibly green at
-// grazing angles; moonlight blue reads as the night sky's fill and stays neutral.)
-// RIM / back light — its job is silhouette separation: a bright edge along the far
-// side of a body so it reads against the arena wall instead of merging into it. At
-// 0.35 it did nothing. Kept moonlight blue on purpose: a cyan/teal rim turns the warm
-// sandstone visibly green at grazing angles.
-const rim = new THREE.DirectionalLight(0x6f80b4, 1.7)
-rim.position.set(-14, 9, -16)
-scene.add(rim)
-// Ground bounce — warm ember glow off the floor, a touch stronger now that the
-// scene is dark so the lower arena stays grounded in firelight.
-const bounce = new THREE.PointLight(0xff7a30, 0.22, 24, 2)
-bounce.position.set(0, 0.4, 0)
-scene.add(bounce)
-// Player follow-light — a warm torch-like personal pool so the fighter and the
-// ground around them stay readable in the gloom (you carry the light with you).
-const playerLight = new THREE.PointLight(0xffb070, 0.7, 9, 2)
-scene.add(playerLight)
+const { playerLight } = installArenaLights(scene)
 const selfEmissive = initSelfEmissive({
   getSelfMesh: () => selfMesh,
   playerLight,
 })
 
 const toonGradient = makeToonGradient()
-// Black material used during the bloom selective render pass.
-const _blackMat = new THREE.MeshBasicMaterial({ color: 0x000000 })
-// Scratch list of meshes darkened during the bloom pass — refilled every frame
-// by traversing the scene, so dynamically added meshes (remote players,
-// projectiles, zones) are always handled and despawned ones never linger.
-const _bloomDarkened: Array<{ mesh: THREE.Mesh; mat: THREE.Material | THREE.Material[] }> = []
+const viewmodel = createViewmodel() // the weapon in your hands — see render/viewmodel.ts
 
 scene.add(camera)
 const { loadMapGeometry, getActiveMapId, animateArena } = buildArena(scene, toonGradient)
@@ -1202,7 +1169,7 @@ async function connect(mode = 'duel_arena', reopenLoadout = true): Promise<void>
     }
 
     // Kick off asset preload in background while the player configures loadout.
-    const selfClass = loadoutStation.getClassId() || 'hybrid'
+    const selfClass = loadoutStation.getClassId() || 'drift'
     _matchPreloadPromise = preloadMatchAssets(selfClass).then(() => {
       preloadOtherClassesBackground(selfClass)
     })
@@ -2121,7 +2088,11 @@ function _renderInner(now: number): void {
   // Covers both attacker-side (landed a hit) and victim-side (received a hit).
   const inHitStop = now < hitStopUntilMs || now < victimHitStopUntilMs
   // Brief exposure boost during hit-stop for impactful "crunch" feel.
-  const targetExposure = inHitStop ? 1.45 : 1.1
+  // Lifted from 1.1: a measured frame peaked at 179/255 with nothing above 60 %
+  // luminance, i.e. an image with no highlights anywhere. ACES rolls the top off
+  // gently, so the extra exposure buys midtone and specular range rather than
+  // clipping.
+  const targetExposure = inHitStop ? 1.75 : 1.38
   renderer.toneMappingExposure +=
     (targetExposure - renderer.toneMappingExposure) * Math.min(1, 16.8 * dt)
 
@@ -2179,7 +2150,7 @@ function _renderInner(now: number): void {
   // Self render.
   if (self && selfMesh) {
     if (selfSchema) {
-      const currentClassId = selfSchema.classId || 'hybrid'
+      const currentClassId = selfSchema.classId || 'drift'
       if (selfMesh.userData['loadedClassId'] !== currentClassId) {
         loadCharacterGlb(selfMesh, 0x3a8fde, toonGradient, currentClassId)
       }
@@ -2377,6 +2348,18 @@ function _renderInner(now: number): void {
     camera.fov = hFovToVFov(camHFov, camera.aspect)
     camera.updateProjectionMatrix()
 
+    // The hands. Fed raw player state — the viewmodel derives its own aim delta
+    // and landing edge, so none of that bookkeeping lands in this file.
+    viewmodel.setWeapon(wSchema)
+    viewmodel.setVisible(!dead)
+    viewmodel.update(dt, {
+      speed: horizSpeed,
+      maxSpeed: MOVE_SPEED_MPS,
+      yaw: inp.mouseYaw,
+      pitch: inp.mousePitch,
+      onGround: self.sim.onGround,
+    })
+
     // Weapon-specific crosshair — drives CSS via data attribute.
     crosshairEl.dataset['weapon'] = wSchema
     // Dynamic crosshair: expand when moving, contract when still
@@ -2465,7 +2448,7 @@ function _renderInner(now: number): void {
   if (self && currentMatchPhase === 'live') {
     const selfSch = getSelfSchemaPlayer()
     if (selfSch && selfSch.alive) {
-      const classId = (selfSch.classId || 'hybrid') as ClassId
+      const classId = (selfSch.classId || 'drift') as ClassId
       const hpMax = TARGET_CLASS_DEFS[classId]?.resourceMaxima?.hp ?? 200
       const hpFrac = Math.max(0, selfSch.hp / hpMax)
       if (hpFrac < 0.25) {
@@ -2529,26 +2512,14 @@ function _renderInner(now: number): void {
     deathcamData,
   })
 
-  // Selective bloom: black out non-emissive meshes, render bloom (emissive only),
-  // restore, then finalComposer mixes it in. Traverse every frame so dynamically
-  // added/removed meshes are always handled. Skipped during hit-stop.
-  if (!inHitStop) {
-    _bloomDarkened.length = 0
-    scene.traverse((obj) => {
-      const m = obj as THREE.Mesh
-      if (m.isMesh && !m.layers.test(BLOOM_LAYER)) {
-        _bloomDarkened.push({ mesh: m, mat: m.material })
-        m.material = _blackMat
-      }
-    })
-    bloomComposer.render()
-    for (const e of _bloomDarkened) e.mesh.material = e.mat
-  }
+  // Selective bloom — see render/selective-bloom.ts. Skipped during hit-stop.
+  if (!inHitStop) renderBloomPass(bloomComposer, scene, BLOOM_LAYER)
   // ALWAYS composite through finalComposer so GTAO + grade + vignette + bloom-mix
   // stay applied. During hit-stop we skip ONLY the per-frame bloom darken/render
   // above (reusing the prior bloom target), so the graded look stays continuous
   // instead of popping to a bare un-graded render for the freeze's 1-2 frames.
   finalComposer.render()
+  viewmodel.render(renderer) // the weapon, over the finished world frame
   // Update draw call counter (shown in debug panel, ` key) — only when open.
   if (isDebugVisible()) dbgDraws.textContent = String(renderer.info.render.calls)
   _renderErrorCount = 0 // reset error counter on successful frame
@@ -2563,6 +2534,7 @@ addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight)
   bloomComposer.setSize(window.innerWidth, window.innerHeight)
   finalComposer.setSize(window.innerWidth, window.innerHeight)
+  viewmodel.resize(window.innerWidth, window.innerHeight)
 })
 
 addEventListener('beforeunload', () => {

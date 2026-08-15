@@ -1,7 +1,19 @@
-import { MessageTypes } from '@ragequit/shared'
+import { CLASS_PRESET_BUILDS, MessageTypes, getAbilitySlotFamily } from '@ragequit/shared'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { __loadoutStationSmoke, initLoadoutStation } from './loadout-station.js'
+
+/**
+ * Cosa il preset di una classe mette in una famiglia — LETTO dai dati.
+ *
+ * Questi assert elencavano gli id a mano e sono diventati rossi appena i preset
+ * sono stati rigenerati dai pool curati. Ma il valore del test non era mai
+ * "il preset contiene uppercut": era "il client spedisce il preset, classificato
+ * per famiglia". È quello che verifica adesso, e non invecchia più.
+ */
+function presetFamily(classId: 'breaker' | 'talon' | 'warden' | 'drift', family: string) {
+  return [...CLASS_PRESET_BUILDS[classId]].filter((id) => getAbilitySlotFamily(id) === family)
+}
 
 function mountLoadoutDom(): void {
   document.body.innerHTML = `
@@ -49,14 +61,14 @@ describe('loadout station smoke', () => {
     expect(send.mock.calls[0]?.[0]).toBe(MessageTypes.Loadout)
     const msg = send.mock.calls[0]?.[1] as Record<string, unknown>
     // classId must always be sent for server-side class validation
-    expect(msg['classId']).toBe('hybrid')
+    expect(msg['classId']).toBe('drift')
     // class-aware envelope: arrays classified by target slot family
     // Hybrid now: 2 melee + 1 bow + 2 magicBase + 1 magicAdvanced + 2 utility = 8
-    expect(msg['melee']).toEqual(['uppercut', 'gap_closer'])
-    expect(msg['bow']).toEqual(['marksman_shot'])
-    expect(msg['magicBase']).toEqual(['fireball', 'lightning_dash'])
-    expect(msg['magicAdvanced']).toEqual(['arc_lift'])
-    expect(msg['utility']).toEqual(['adaptive_mend', 'quick_dash'])
+    expect(msg['melee']).toEqual(presetFamily('drift', 'melee'))
+    expect(msg['bow']).toEqual(presetFamily('drift', 'bow'))
+    expect(msg['magicBase']).toEqual(presetFamily('drift', 'magicBase'))
+    expect(msg['magicAdvanced']).toEqual(presetFamily('drift', 'magicAdvanced'))
+    expect(msg['utility']).toEqual(presetFamily('drift', 'utility'))
     // Locked as an exact set on purpose: the server validates what it is sent,
     // so an extra field going out unnoticed is a build the player did not make.
     expect(Object.keys(msg).sort()).toEqual([
@@ -72,7 +84,7 @@ describe('loadout station smoke', () => {
   })
 
   it('resets an incompatible saved build before sending the active class loadout', () => {
-    localStorage.setItem(__loadoutStationSmoke.classStorageKey, 'hybrid')
+    localStorage.setItem(__loadoutStationSmoke.classStorageKey, 'drift')
     localStorage.setItem(
       __loadoutStationSmoke.storageKey,
       JSON.stringify({
@@ -98,10 +110,10 @@ describe('loadout station smoke', () => {
 
     const msg = send.mock.calls[0]?.[1] as Record<string, unknown>
     // Incompatible saved build is reset to the hybrid preset (2m+1b+2mb+1ma+2u)
-    expect(msg['melee']).toEqual(['uppercut', 'gap_closer'])
-    expect(msg['magicBase']).toEqual(['fireball', 'lightning_dash'])
-    expect(msg['magicAdvanced']).toEqual(['arc_lift'])
-    expect(msg['utility']).toEqual(['adaptive_mend', 'quick_dash'])
+    expect(msg['melee']).toEqual(presetFamily('drift', 'melee'))
+    expect(msg['magicBase']).toEqual(presetFamily('drift', 'magicBase'))
+    expect(msg['magicAdvanced']).toEqual(presetFamily('drift', 'magicAdvanced'))
+    expect(msg['utility']).toEqual(presetFamily('drift', 'utility'))
     expect(api.getLoadout()).not.toContain('chain_bolt')
   })
 
@@ -163,11 +175,19 @@ describe('loadout station smoke', () => {
 
     api.open()
     const before = api.getLoadout().join('|')
+    // Lo stato PERSISTITO prima dei click. L'assert era `toBeNull()`, che usava
+    // "storage vuoto" come proxy di "il lock ha impedito la modifica" — e il
+    // proxy si è rotto quando l'inizializzazione ha cominciato a scrivere la
+    // build di default (resetSlotsForClass salva). L'invariante vero non è che
+    // nessuno scriva mai: è che i TUOI click, mentre sei bloccato in battaglia,
+    // non cambino niente.
+    const storedBefore = localStorage.getItem(__loadoutStationSmoke.storageKey)
+
     document.querySelector<HTMLButtonElement>('.pool-card:not(.equipped)')?.click()
     document.getElementById('ls-default')?.click()
 
     expect(api.getLoadout().join('|')).toBe(before)
-    expect(localStorage.getItem(__loadoutStationSmoke.storageKey)).toBeNull()
+    expect(localStorage.getItem(__loadoutStationSmoke.storageKey)).toBe(storedBefore)
     expect(document.querySelector<HTMLButtonElement>('.pool-card')?.disabled).toBe(true)
   })
 
@@ -219,7 +239,7 @@ describe('loadout station smoke', () => {
   })
 
   it('uses the selected class slot family when building the ability pool', () => {
-    localStorage.setItem(__loadoutStationSmoke.classStorageKey, 'mage')
+    localStorage.setItem(__loadoutStationSmoke.classStorageKey, 'warden')
     const api = initLoadoutStation(() => undefined)
 
     api.open()

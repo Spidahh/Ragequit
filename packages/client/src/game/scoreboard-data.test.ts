@@ -83,9 +83,9 @@ function playersMap(entries: Record<string, EndPlayerLike>) {
 function baseAssemble(over: Record<string, unknown> = {}) {
   return {
     players: playersMap({
-      a: { name: 'ALPHA', classId: 'tank', activeWeapon: 'sword' },
-      b: { name: 'BRAVO', classId: 'mage', activeWeapon: 'staff' },
-      c: { name: 'CHARLIE', classId: 'archer', activeWeapon: 'bow' },
+      a: { name: 'ALPHA', classId: 'breaker', activeWeapon: 'sword' },
+      b: { name: 'BRAVO', classId: 'warden', activeWeapon: 'staff' },
+      c: { name: 'CHARLIE', classId: 'talon', activeWeapon: 'bow' },
     }),
     selfId: 'b',
     selfStats: stats(),
@@ -145,8 +145,8 @@ describe('assembleEndScreen — duel fallback', () => {
       baseAssemble({
         mode: 'duel_arena',
         players: playersMap({
-          a: { name: 'ALPHA', classId: 'tank', activeWeapon: 'sword' },
-          b: { name: 'BRAVO', classId: 'mage', activeWeapon: 'staff' },
+          a: { name: 'ALPHA', classId: 'breaker', activeWeapon: 'sword' },
+          b: { name: 'BRAVO', classId: 'warden', activeWeapon: 'staff' },
         }),
         eloDeltas: { b: 18, a: -18 },
       }),

@@ -9,7 +9,7 @@ function makeTestHost() {
   self.hp = 200
   self.mana = 200
   self.stamina = 200
-  self.classId = 'hybrid'
+  self.classId = 'drift'
   self.activeWeapon = 'sword'
 
   const opponent = new Player()
@@ -17,7 +17,7 @@ function makeTestHost() {
   opponent.hp = 200
   opponent.mana = 200
   opponent.stamina = 200
-  opponent.classId = 'hybrid'
+  opponent.classId = 'drift'
   opponent.activeWeapon = 'sword'
 
   let currentTick = 0

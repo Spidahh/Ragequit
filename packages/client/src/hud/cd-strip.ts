@@ -85,11 +85,36 @@ function slotMeta(loadout: ReadonlyArray<string>, slotIdx: number): HotbarSlotMe
   return null
 }
 
+// English, like every other string a player can read. The panels stay separate
+// per the owner's explicit call on 2026-08-12; what changes is that they stop
+// shouting — the head is a quiet caption, not a titled frame.
 const SECTION_PRESENTATION: Record<HotbarSectionKind, { icon: string; label: string }> = {
-  melee: { icon: '⚔', label: 'SPADA' },
-  bow: { icon: '➶', label: 'ARCO' },
+  melee: { icon: '⚔', label: 'SWORD' },
+  bow: { icon: '➶', label: 'BOW' },
   staff: { icon: '✦', label: 'STAFF' },
   utility: { icon: '◆', label: 'UTILITY' },
+}
+
+/**
+ * Right-hand tag on a panel head.
+ *
+ * Now always empty, and that is the point. `ATTIVA` / `SEMPRE` / `TAB` existed to
+ * tell the player which of their abilities were usable — but every ability is
+ * ALWAYS usable. A weapon-bound cast makes the server swap the weapon for you
+ * (`AbilityEngine.forceWeaponSwap`), and the client's preflight deliberately
+ * does not check the equipped weapon either.
+ *
+ * So the tag was answering a question the game never asks, and answering it
+ * wrong: it read as "press TAB first", which turns a build of eight abilities
+ * into two sets of four in the player's head. The panel that is equipped is
+ * still raised and lit — that is how you see which weapon is in your hands —
+ * and nothing claims the rest are locked.
+ *
+ * Kept as a function rather than deleted at the call sites: the head has a slot
+ * for a tag, and a real one (out of ammo, silenced, disabled) may earn it later.
+ */
+function sectionTag(_family: HotbarSectionKind, _active: boolean): string {
+  return ''
 }
 
 export function initCooldownStrip(
@@ -117,7 +142,7 @@ export function initCooldownStrip(
       const section = document.createElement('section')
       section.className = `hotbar-section ${kind}-section`
       section.dataset['family'] = kind
-      section.innerHTML = `<div class="hotbar-section-head"><b>${presentation.icon} ${presentation.label}</b><span>${kind === 'utility' ? 'SEMPRE' : 'TAB'}</span></div>`
+      section.innerHTML = `<div class="hotbar-section-head"><b>${presentation.icon} ${presentation.label}</b><span>${sectionTag(kind, false)}</span></div>`
       const rail = document.createElement('div')
       rail.className = 'hotbar-rail'
       section.appendChild(rail)
@@ -255,7 +280,7 @@ export function initCooldownStrip(
       section.classList.toggle('active-family', active)
       section.classList.toggle('wrong-weapon', !active)
       const state = section.querySelector<HTMLElement>('.hotbar-section-head span')
-      if (state) state.textContent = family === 'utility' ? 'SEMPRE' : active ? 'ATTIVA' : 'TAB'
+      if (state) state.textContent = sectionTag(family as HotbarSectionKind, active)
     }
     for (let slotIdx = 0; slotIdx < loadoutRef.length; slotIdx++) {
       const id = loadoutRef[slotIdx] ?? ''
@@ -321,7 +346,7 @@ export function initCooldownStrip(
   })
 
   // Start empty; rebuild() is called by self-hud when the real loadout arrives.
-  rebuild([], 'hybrid')
+  rebuild([], 'drift')
 
   return {
     currentSignature: () => loadoutSig,

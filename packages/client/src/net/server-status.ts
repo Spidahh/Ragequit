@@ -1,6 +1,6 @@
 // What the connection indicator is allowed to claim, and when.
 //
-// The Fly machine runs with scale-to-zero (02_TECH/10_deploy_status.md), so the
+// The Fly machine runs with scale-to-zero (AGENTS.md), so the
 // first visitor after an idle period pays a cold start and the health probe can
 // take seconds — its timeout is 20 s. Booting the menu straight into "offline"
 // told every one of those visitors the game was dead while the server was in

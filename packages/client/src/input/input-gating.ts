@@ -1,6 +1,6 @@
 // "Is the player actually driving the game right now?"
 //
-// Extracted out of main.ts (file-budget: 02_TECH/08). These predicates decide
+// Extracted out of main.ts (file-budget: AGENTS.md). These predicates decide
 // whether a key press is a game input or a UI input, so getting one wrong means
 // either the pause menu eats your movement or your movement eats the menu.
 //

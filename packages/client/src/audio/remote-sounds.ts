@@ -1,5 +1,5 @@
 // Spatialised sounds for OTHER players. Split out of SoundEngine
-// (file-budget: 02_TECH/08); the engine owns the context, the mute flag and
+// (file-budget: AGENTS.md); the engine owns the context, the mute flag and
 // the HRTF panner and just delegates the synthesis.
 
 export function remoteHit(

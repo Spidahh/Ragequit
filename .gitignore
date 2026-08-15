@@ -95,3 +95,5 @@ _tmp_*
 
 # Texture-resize backups (local only)
 tools/asset-pipeline/.tex-backup/
+godot-build/
+godot-build/

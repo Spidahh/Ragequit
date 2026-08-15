@@ -15,8 +15,8 @@ describe('loadout slot helpers', () => {
       'adaptive_mend',
       'quick_dash',
     ]
-    expect(buildLoadoutMessage(hybridBuild, 'hybrid')).toEqual({
-      classId: 'hybrid',
+    expect(buildLoadoutMessage(hybridBuild, 'drift')).toEqual({
+      classId: 'drift',
       melee: ['uppercut', 'gap_closer'],
       bow: ['marksman_shot'],
       magicBase: ['fireball', 'lightning_dash'],
@@ -25,8 +25,8 @@ describe('loadout slot helpers', () => {
       // The third axis travels with the build. '' is the legal "none" pick.
       specializationId: '',
     })
-    // Default classId falls back to 'hybrid'
-    expect(buildLoadoutMessage(['quick_dash'])['classId']).toBe('hybrid')
+    // Default classId falls back to 'drift'
+    expect(buildLoadoutMessage(['quick_dash'])['classId']).toBe('drift')
   })
 
   it('normalizeLoadoutSlots pads to 8 without injecting abilities', () => {

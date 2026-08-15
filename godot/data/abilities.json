@@ -1,0 +1,2085 @@
+[
+ {
+  "id": "riposte",
+  "name": "Riposte",
+  "slot": "melee",
+  "element": "none",
+  "weapon": "sword",
+  "cost_mana": 0,
+  "cost_stamina": 25,
+  "cooldown": 7,
+  "windup": 0,
+  "range": 2.2,
+  "targeting": "forward",
+  "role": "counter",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 22
+   },
+   {
+    "at": "onCast",
+    "kind": "knockup",
+    "airborneSec": 0.4,
+    "knockbackDistance": 0.6
+   }
+  ],
+  "description": "Instant counter-cut that lifts the target off their feet. No wind-up to read.",
+  "mini_malus": "Shortest reach in the kit — you must already be inside their swing."
+ },
+ {
+  "id": "skewer",
+  "name": "Skewer",
+  "slot": "melee",
+  "element": "none",
+  "weapon": "sword",
+  "cost_mana": 0,
+  "cost_stamina": 22,
+  "cooldown": 6,
+  "windup": 0.2,
+  "range": 4.2,
+  "targeting": "forward",
+  "role": "pressure",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 20
+   },
+   {
+    "at": "onCast",
+    "kind": "applyStatus",
+    "status": "bleed",
+    "durationSec": 3,
+    "stacks": 1
+   }
+  ],
+  "description": "Long lunging thrust that opens a bleeding wound. Reaches where a swing cannot.",
+  "mini_malus": "Committed and straight — a strafing target simply is not there."
+ },
+ {
+  "id": "cleave",
+  "name": "Cleave",
+  "slot": "melee",
+  "element": "none",
+  "weapon": "sword",
+  "cost_mana": 0,
+  "cost_stamina": 18,
+  "cooldown": 5,
+  "windup": 0.15,
+  "range": 3,
+  "targeting": "forward",
+  "role": "pressure",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 14,
+    "radius": 3
+   }
+  ],
+  "description": "Wide horizontal arc that catches everyone in front of you.",
+  "mini_malus": "Spread thin — it hits many for little, and one target for less."
+ },
+ {
+  "id": "hamstring",
+  "name": "Hamstring",
+  "slot": "melee",
+  "element": "none",
+  "weapon": "sword",
+  "cost_mana": 0,
+  "cost_stamina": 20,
+  "cooldown": 8,
+  "windup": 0,
+  "range": 2.5,
+  "targeting": "forward",
+  "role": "starter",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 12
+   },
+   {
+    "at": "onCast",
+    "kind": "applyStatus",
+    "status": "slow",
+    "durationSec": 3,
+    "stacks": 1,
+    "slowFraction": 0.45
+   }
+  ],
+  "description": "Low cut across the legs. They keep every option except running away.",
+  "mini_malus": "Barely damages — this buys you position, not a kill."
+ },
+ {
+  "id": "executioner",
+  "name": "Executioner's Blow",
+  "slot": "melee",
+  "element": "none",
+  "weapon": "sword",
+  "cost_mana": 0,
+  "cost_stamina": 40,
+  "cooldown": 11,
+  "windup": 0.55,
+  "range": 2.6,
+  "targeting": "forward",
+  "role": "finisher",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 52
+   },
+   {
+    "at": "onCast",
+    "kind": "knockup",
+    "airborneSec": 0.35,
+    "knockbackDistance": 2.2
+   }
+  ],
+  "description": "Overhead swing with everything behind it. Lands like a wall.",
+  "mini_malus": "The longest wind-up in the game — everyone sees it coming."
+ },
+ {
+  "id": "bloodthirst",
+  "name": "Bloodthirst",
+  "slot": "melee",
+  "element": "none",
+  "weapon": "sword",
+  "cost_mana": 0,
+  "cost_stamina": 26,
+  "cooldown": 9,
+  "windup": 0.1,
+  "range": 2.4,
+  "targeting": "forward",
+  "role": "survival",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 18
+   },
+   {
+    "at": "onCast",
+    "kind": "lifesteal",
+    "fraction": 0.9
+   }
+  ],
+  "description": "Savage bite of a swing that returns almost everything it takes.",
+  "mini_malus": "Heals nothing if it misses — your sustain depends on your aim."
+ },
+ {
+  "id": "ground_slam",
+  "name": "Ground Slam",
+  "slot": "melee",
+  "element": "none",
+  "weapon": "sword",
+  "cost_mana": 0,
+  "cost_stamina": 32,
+  "cooldown": 9.5,
+  "windup": 0.3,
+  "range": 4,
+  "targeting": "self",
+  "role": "counter",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 24,
+    "radius": 4
+   },
+   {
+    "at": "onCast",
+    "kind": "applyStatus",
+    "status": "root",
+    "durationSec": 1.2,
+    "stacks": 1,
+    "radius": 4
+   }
+  ],
+  "description": "Drive the blade into the ground. Everything around you is pinned where it stands.",
+  "mini_malus": "Centred on you — it cannot reach anyone who kept their distance."
+ },
+ {
+  "id": "momentum_strike",
+  "name": "Momentum Strike",
+  "slot": "melee",
+  "element": "none",
+  "weapon": "sword",
+  "cost_mana": 0,
+  "cost_stamina": 12,
+  "cooldown": 4,
+  "windup": 0,
+  "range": 2.3,
+  "targeting": "forward",
+  "role": "pressure",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 15
+   },
+   {
+    "at": "onCast",
+    "kind": "restoreStamina",
+    "amount": 18
+   }
+  ],
+  "description": "Quick committed cut that pays its own stamina back when it connects.",
+  "mini_malus": "Refunds nothing on a miss — whiffing it costs you the fight."
+ },
+ {
+  "id": "point_blank",
+  "name": "Point Blank",
+  "slot": "bow",
+  "element": "none",
+  "weapon": "bow",
+  "cost_mana": 0,
+  "cost_stamina": 24,
+  "cooldown": 7.5,
+  "windup": 0,
+  "range": 4,
+  "targeting": "forward",
+  "role": "counter",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 38
+   },
+   {
+    "at": "onCast",
+    "kind": "knockup",
+    "airborneSec": 0.3,
+    "knockbackDistance": 3.2
+   }
+  ],
+  "description": "Arrow loosed into someone already on top of you, and the shove that follows it.",
+  "mini_malus": "Four metres of reach — useless at the range you are supposed to fight at."
+ },
+ {
+  "id": "steady_aim",
+  "name": "Steady Aim",
+  "slot": "bow",
+  "element": "none",
+  "weapon": "bow",
+  "cost_mana": 0,
+  "cost_stamina": 20,
+  "cooldown": 9,
+  "windup": 0.5,
+  "range": 30,
+  "targeting": "forward",
+  "role": "finisher",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "projectile",
+    "damage": 48,
+    "speedMps": 70,
+    "gravityMps2": 0
+   }
+  ],
+  "description": "A drawn, flat, fast shot that crosses the arena without dropping.",
+  "mini_malus": "Half a second rooted to the draw — you are a target while you hold it."
+ },
+ {
+  "id": "skyfall",
+  "name": "Skyfall",
+  "slot": "bow",
+  "element": "none",
+  "weapon": "bow",
+  "cost_mana": 0,
+  "cost_stamina": 26,
+  "cooldown": 8,
+  "windup": 0.2,
+  "range": 22,
+  "targeting": "point",
+  "role": "pressure",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 26,
+    "radius": 3
+   },
+   {
+    "at": "onCast",
+    "kind": "applyStatus",
+    "status": "slow",
+    "durationSec": 2,
+    "stacks": 1,
+    "radius": 3,
+    "slowFraction": 0.3
+   }
+  ],
+  "description": "Arrows arced high to fall on a spot. Walls do not help them.",
+  "mini_malus": "Placed, not aimed — a moving target simply walks out of it."
+ },
+ {
+  "id": "bola",
+  "name": "Bola",
+  "slot": "bow",
+  "element": "none",
+  "weapon": "bow",
+  "cost_mana": 0,
+  "cost_stamina": 18,
+  "cooldown": 7,
+  "windup": 0,
+  "range": 18,
+  "targeting": "forward",
+  "role": "starter",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "projectile",
+    "damage": 6,
+    "speedMps": 34,
+    "gravityMps2": 2
+   },
+   {
+    "at": "onLand",
+    "kind": "applyStatus",
+    "status": "root",
+    "durationSec": 1.1,
+    "stacks": 1
+   }
+  ],
+  "description": "Weighted cord that wraps the legs. They can still fight — they cannot leave.",
+  "mini_malus": "Almost no damage, and slow enough in flight to be read."
+ },
+ {
+  "id": "siphon_arrow",
+  "name": "Siphon Arrow",
+  "slot": "bow",
+  "element": "dark",
+  "weapon": "bow",
+  "cost_mana": 0,
+  "cost_stamina": 22,
+  "cooldown": 9.5,
+  "windup": 0.15,
+  "range": 20,
+  "targeting": "forward",
+  "role": "survival",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "projectile",
+    "damage": 16,
+    "speedMps": 48,
+    "gravityMps2": 1
+   },
+   {
+    "at": "onLand",
+    "kind": "lifesteal",
+    "fraction": 1.2
+   }
+  ],
+  "description": "Barbed shaft that drags some of them back to you along its own flight.",
+  "mini_malus": "Hits softly, and heals you nothing at all if you miss."
+ },
+ {
+  "id": "split_shot",
+  "name": "Split Shot",
+  "slot": "bow",
+  "element": "none",
+  "weapon": "bow",
+  "cost_mana": 0,
+  "cost_stamina": 20,
+  "cooldown": 6.5,
+  "windup": 0.1,
+  "range": 16,
+  "targeting": "forward",
+  "role": "pressure",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 18,
+    "radius": 2.6
+   }
+  ],
+  "description": "Three shafts loosed at once across a shallow fan.",
+  "mini_malus": "Spread wide — one target catches a fraction of what one arrow would do."
+ },
+ {
+  "id": "whirlwind",
+  "name": "Whirlwind Slash",
+  "slot": "melee",
+  "element": "none",
+  "weapon": "sword",
+  "cost_mana": 0,
+  "cost_stamina": 30,
+  "cooldown": 8,
+  "windup": 0,
+  "range": 4,
+  "targeting": "self",
+  "role": "pressure",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "channel",
+    "durationSec": 1,
+    "tickEverySec": 0.3333333333333333,
+    "perTick": {
+     "at": "onTick",
+     "kind": "damage",
+     "amount": 11,
+     "radius": 4
+    },
+    "breakOnMove": false
+   },
+   {
+    "at": "onCast",
+    "kind": "applyStatus",
+    "status": "slow",
+    "durationSec": 1,
+    "stacks": 1,
+    "slowFraction": 0.2
+   }
+  ],
+  "description": "Sustained spin that cleaves all nearby enemies repeatedly. Movement is reduced while channeling.",
+  "mini_malus": "Committed channel — you cannot freely reposition while spinning."
+ },
+ {
+  "id": "gap_closer",
+  "name": "Gap Closer",
+  "slot": "melee",
+  "element": "none",
+  "weapon": "sword",
+  "cost_mana": 0,
+  "cost_stamina": 25,
+  "cooldown": 7,
+  "windup": 0,
+  "range": 6,
+  "targeting": "forward",
+  "role": "mobility",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "move",
+    "mode": "dash",
+    "distance": 6,
+    "cancelOnCollision": true
+   },
+   {
+    "at": "onLand",
+    "kind": "damage",
+    "amount": 18,
+    "radius": 1.5
+   },
+   {
+    "at": "onLand",
+    "kind": "applyStatus",
+    "status": "slow",
+    "durationSec": 3,
+    "stacks": 1,
+    "radius": 1.5,
+    "slowFraction": 0.5
+   }
+  ],
+  "description": "Engage dash that closes distance rapidly. The landing impact hits nearby enemies and Slows them.",
+  "mini_malus": "Linear path — collision stops the dash. The landing blow is parryable."
+ },
+ {
+  "id": "uppercut",
+  "name": "Uppercut",
+  "slot": "melee",
+  "element": "none",
+  "weapon": "sword",
+  "cost_mana": 0,
+  "cost_stamina": 40,
+  "cooldown": 8.5,
+  "windup": 0.4,
+  "range": 2.5,
+  "targeting": "forward",
+  "role": "starter",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 16
+   },
+   {
+    "at": "onCast",
+    "kind": "knockup",
+    "airborneSec": 0.7,
+    "knockbackDistance": 0.8
+   }
+  ],
+  "description": "Rising strike that launches the target briefly Airborne. Strong combo starter.",
+  "mini_malus": "Requires a windup — opponents can interrupt or parry."
+ },
+ {
+  "id": "bleed_strike",
+  "name": "Bleed Strike",
+  "slot": "melee",
+  "element": "none",
+  "weapon": "sword",
+  "cost_mana": 0,
+  "cost_stamina": 20,
+  "cooldown": 7,
+  "windup": 0,
+  "range": 2.5,
+  "targeting": "forward",
+  "role": "pressure",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 10
+   },
+   {
+    "at": "onCast",
+    "kind": "applyStatus",
+    "status": "bleed",
+    "durationSec": 3,
+    "stacks": 1
+   }
+  ],
+  "description": "Quick slash that leaves the target Bleeding over time.",
+  "mini_malus": "Bleed can be cleansed by the opponent."
+ },
+ {
+  "id": "guard_break",
+  "name": "Guard Break",
+  "slot": "melee",
+  "element": "none",
+  "weapon": "sword",
+  "cost_mana": 0,
+  "cost_stamina": 30,
+  "cooldown": 8.5,
+  "windup": 0.25,
+  "range": 2.2,
+  "targeting": "forward",
+  "role": "starter",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 10
+   },
+   {
+    "at": "onCast",
+    "kind": "applyStatus",
+    "status": "stun",
+    "durationSec": 1.5,
+    "stacks": 1
+   },
+   {
+    "at": "onCast",
+    "kind": "knockup",
+    "airborneSec": 0.45,
+    "knockbackDistance": 1.2
+   }
+  ],
+  "description": "Crushing blow that Stuns the target and briefly launches them Airborne. Hard CC setup.",
+  "mini_malus": "Very short reach and fully parryable."
+ },
+ {
+  "id": "rending_dash",
+  "name": "Rending Dash",
+  "slot": "melee",
+  "element": "none",
+  "weapon": "sword",
+  "cost_mana": 0,
+  "cost_stamina": 28,
+  "cooldown": 8,
+  "windup": 0,
+  "range": 5,
+  "targeting": "forward",
+  "role": "mobility",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "move",
+    "mode": "dash",
+    "distance": 5,
+    "cancelOnCollision": true
+   },
+   {
+    "at": "onLand",
+    "kind": "damage",
+    "amount": 12,
+    "radius": 2
+   },
+   {
+    "at": "onLand",
+    "kind": "applyStatus",
+    "status": "bleed",
+    "durationSec": 5,
+    "stacks": 1,
+    "radius": 2
+   }
+  ],
+  "description": "Slashing dash with wide landing arc. The impact applies a long Bleed — 42 total damage over 5 s versus Gap Closer's burst CC. Different tools for different fights.",
+  "mini_malus": "Damage is delayed via Bleed — vulnerable to cleanse. Collision stops the dash."
+ },
+ {
+  "id": "piercing_shot",
+  "name": "Piercing Shot",
+  "slot": "bow",
+  "element": "none",
+  "weapon": "bow",
+  "cost_mana": 0,
+  "cost_stamina": 0,
+  "cooldown": 7,
+  "windup": 0.35,
+  "range": 20,
+  "targeting": "forward",
+  "role": "finisher",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "projectile",
+    "speedMps": 150,
+    "gravityMps2": 0,
+    "damage": 40
+   }
+  ],
+  "description": "Fast, straight shot with no arc. Maximum velocity and precision at long range.",
+  "mini_malus": "Narrow hitbox — misses hard against lateral movement."
+ },
+ {
+  "id": "volley",
+  "name": "Volley",
+  "slot": "bow",
+  "element": "none",
+  "weapon": "bow",
+  "cost_mana": 0,
+  "cost_stamina": 0,
+  "cooldown": 8.5,
+  "windup": 0,
+  "range": 30,
+  "targeting": "point",
+  "role": "pressure",
+  "effects": [
+   {
+    "at": "onLand",
+    "kind": "zone",
+    "radius": 3.5,
+    "durationSec": 1.5,
+    "tickEverySec": 0.5,
+    "damagePerTick": 11,
+    "applyStatus": {
+     "status": "slow",
+     "durationSec": 3,
+     "stacks": 1,
+     "slowFraction": 0.45
+    }
+   }
+  ],
+  "description": "Arcing arrow rain that creates a damage zone. Enemies caught inside are repeatedly Slowed.",
+  "mini_malus": "Landing zone is telegraphed — targets can walk out before waves hit."
+ },
+ {
+  "id": "pin_shot",
+  "name": "Pin Shot",
+  "slot": "bow",
+  "element": "none",
+  "weapon": "bow",
+  "cost_mana": 0,
+  "cost_stamina": 0,
+  "cooldown": 8.5,
+  "windup": 0.4,
+  "range": 25,
+  "targeting": "forward",
+  "role": "starter",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "projectile",
+    "speedMps": 90,
+    "gravityMps2": 2,
+    "damage": 14,
+    "onHitStatus": {
+     "status": "root",
+     "durationSec": 2.8,
+     "stacks": 1
+    }
+   }
+  ],
+  "description": "Aimed arrow that Roots the target on hit. Strong setup for follow-up attacks.",
+  "mini_malus": "Short charge — requires clear aim and line of sight."
+ },
+ {
+  "id": "snare_trap",
+  "name": "Snare Trap",
+  "slot": "bow",
+  "element": "none",
+  "weapon": "bow",
+  "cost_mana": 0,
+  "cost_stamina": 0,
+  "cooldown": 9,
+  "windup": 0,
+  "range": 5,
+  "targeting": "self",
+  "role": "starter",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "zone",
+    "radius": 1.5,
+    "placement": "self",
+    "durationSec": 20,
+    "tickEverySec": 1,
+    "armDelaySec": 2,
+    "expiresOnTrigger": true,
+    "damagePerTick": 10,
+    "applyStatus": {
+     "status": "root",
+     "durationSec": 3,
+     "stacks": 1
+    }
+   }
+  ],
+  "description": "Place a trap at your feet that arms after a short delay. First enemy to trigger it is damaged and Rooted.",
+  "mini_malus": "No effect before the arm delay — place it preemptively."
+ },
+ {
+  "id": "marksman_shot",
+  "name": "Marksman Shot",
+  "slot": "bow",
+  "element": "none",
+  "weapon": "bow",
+  "cost_mana": 20,
+  "cost_stamina": 0,
+  "cooldown": 10,
+  "windup": 1,
+  "range": 100,
+  "targeting": "forward",
+  "role": "finisher",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "projectile",
+    "speedMps": 500,
+    "gravityMps2": 0,
+    "damage": 50
+   }
+  ],
+  "description": "Extreme-range precision shot. Highest single-target damage in the bow arsenal.",
+  "mini_malus": "Long aim window — you are exposed and can be interrupted before release."
+ },
+ {
+  "id": "disengage_shot",
+  "name": "Disengage Shot",
+  "slot": "bow",
+  "element": "none",
+  "weapon": "bow",
+  "cost_mana": 0,
+  "cost_stamina": 15,
+  "cooldown": 8,
+  "windup": 0,
+  "range": 15,
+  "targeting": "forward",
+  "role": "counter",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "move",
+    "mode": "dash",
+    "distance": -3,
+    "cancelOnCollision": true
+   },
+   {
+    "at": "onCast",
+    "kind": "projectile",
+    "speedMps": 60,
+    "gravityMps2": 1,
+    "damage": 12
+   }
+  ],
+  "description": "Step backward while simultaneously firing a shot forward. Creates distance from the target.",
+  "mini_malus": "Low damage — primarily a repositioning tool."
+ },
+ {
+  "id": "broadhead",
+  "name": "Broadhead",
+  "slot": "bow",
+  "element": "none",
+  "weapon": "bow",
+  "cost_mana": 0,
+  "cost_stamina": 10,
+  "cooldown": 7,
+  "windup": 0.25,
+  "range": 24,
+  "targeting": "forward",
+  "role": "pressure",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "projectile",
+    "speedMps": 80,
+    "gravityMps2": 2.5,
+    "damage": 14,
+    "onHitStatus": {
+     "status": "bleed",
+     "durationSec": 4,
+     "stacks": 1
+    }
+   }
+  ],
+  "description": "Heavy arrow that Bleeds the target on hit. Good for sustained pressure.",
+  "mini_malus": "Arc drop — long shots require leading the target."
+ },
+ {
+  "id": "blast_arrow",
+  "name": "Blast Arrow",
+  "slot": "bow",
+  "element": "fire",
+  "weapon": "bow",
+  "cost_mana": 15,
+  "cost_stamina": 0,
+  "cooldown": 9,
+  "windup": 0.45,
+  "range": 22,
+  "targeting": "forward",
+  "role": "finisher",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "projectile",
+    "speedMps": 44,
+    "gravityMps2": 5,
+    "damage": 45,
+    "splashRadius": 3,
+    "element": "fire",
+    "knockbackDistance": 1.4,
+    "onHitStatus": {
+     "status": "burn",
+     "durationSec": 3,
+     "stacks": 2
+    }
+   }
+  ],
+  "description": "Explosive fire arrow that detonates on impact, blasting and Burning all targets in the area.",
+  "mini_malus": "Slow heavy arc — distant targets can dodge the impact point."
+ },
+ {
+  "id": "fireball",
+  "name": "Fireball",
+  "slot": "magic",
+  "element": "fire",
+  "weapon": "staff",
+  "cost_mana": 20,
+  "cost_stamina": 0,
+  "cooldown": 8.5,
+  "windup": 0,
+  "range": 20,
+  "targeting": "forward",
+  "role": "finisher",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "projectile",
+    "speedMps": 30,
+    "gravityMps2": 5,
+    "damage": 40,
+    "splashRadius": 2.6,
+    "element": "fire",
+    "knockbackDistance": 1.8,
+    "onHitStatus": {
+     "status": "burn",
+     "durationSec": 3,
+     "stacks": 1
+    }
+   }
+  ],
+  "description": "Arcing fire orb that explodes on impact, dealing AoE fire damage, applying Burn, and blasting targets away.",
+  "mini_malus": "Visible travel arc — lateral movement can dodge it."
+ },
+ {
+  "id": "flame_wall",
+  "name": "Flame Wall",
+  "slot": "magic",
+  "element": "fire",
+  "weapon": "staff",
+  "cost_mana": 30,
+  "cost_stamina": 0,
+  "cooldown": 9,
+  "windup": 0,
+  "range": 10,
+  "targeting": "point",
+  "role": "pressure",
+  "effects": [
+   {
+    "at": "onLand",
+    "kind": "zone",
+    "radius": 0,
+    "width": 7,
+    "durationSec": 3.5,
+    "tickEverySec": 0.7,
+    "damagePerTick": 6,
+    "element": "fire",
+    "applyStatus": {
+     "status": "burn",
+     "durationSec": 3,
+     "stacks": 1
+    }
+   }
+  ],
+  "description": "Conjure a wide wall of fire at a target point. Enemies who cross it take damage and Burn.",
+  "mini_malus": "Wall is visible — no instant burst, enemies can choose to avoid it."
+ },
+ {
+  "id": "ignite",
+  "name": "Ignite",
+  "slot": "magic",
+  "element": "fire",
+  "weapon": "staff",
+  "cost_mana": 20,
+  "cost_stamina": 0,
+  "cooldown": 8,
+  "windup": 0,
+  "range": 12,
+  "targeting": "forward",
+  "role": "pressure",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "applyStatus",
+    "status": "burn",
+    "durationSec": 3,
+    "stacks": 3
+   }
+  ],
+  "description": "Instant cast that applies multiple Burn stacks to the target. Pure status tool with no direct damage.",
+  "mini_malus": "No direct damage — requires clear line of sight."
+ },
+ {
+  "id": "meteor",
+  "name": "Meteor",
+  "slot": "magic",
+  "element": "fire",
+  "weapon": "staff",
+  "cost_mana": 40,
+  "cost_stamina": 0,
+  "cooldown": 11,
+  "windup": 1,
+  "range": 25,
+  "targeting": "point",
+  "role": "finisher",
+  "effects": [
+   {
+    "at": "onLand",
+    "kind": "damage",
+    "amount": 55,
+    "radius": 3.5,
+    "element": "fire"
+   },
+   {
+    "at": "onLand",
+    "kind": "applyStatus",
+    "status": "burn",
+    "durationSec": 3,
+    "stacks": 1,
+    "radius": 3.5
+   },
+   {
+    "at": "onLand",
+    "kind": "knockup",
+    "airborneSec": 1.2,
+    "radius": 3.5,
+    "knockbackDistance": 2.8
+   }
+  ],
+  "description": "Massive delayed impact that launches all nearby targets Airborne and applies Burn. Highest AoE damage in fire.",
+  "mini_malus": "Long windup and visible impact point — easily dodged if spotted."
+ },
+ {
+  "id": "eruption",
+  "name": "Eruption",
+  "slot": "magic",
+  "element": "fire",
+  "weapon": "staff",
+  "cost_mana": 30,
+  "cost_stamina": 0,
+  "cooldown": 9.5,
+  "windup": 0,
+  "range": 10,
+  "targeting": "forward",
+  "role": "starter",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 8,
+    "radius": 2.4,
+    "element": "fire"
+   },
+   {
+    "at": "onCast",
+    "kind": "knockup",
+    "airborneSec": 0.7,
+    "radius": 2.4,
+    "knockbackDistance": 1
+   }
+  ],
+  "description": "Instant detonation under the aimed enemy. Launches nearby targets Airborne. Reliable fire combo starter.",
+  "mini_malus": "Short detonation range — needs to be close."
+ },
+ {
+  "id": "fire_blink",
+  "name": "Fire Blink",
+  "slot": "magic",
+  "element": "fire",
+  "weapon": "staff",
+  "cost_mana": 30,
+  "cost_stamina": 0,
+  "cooldown": 8.5,
+  "windup": 0,
+  "range": 7,
+  "targeting": "forward",
+  "role": "mobility",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "zone",
+    "radius": 1.5,
+    "placement": "self",
+    "durationSec": 1.2,
+    "tickEverySec": 0.4,
+    "damagePerTick": 6,
+    "element": "fire",
+    "applyStatus": {
+     "status": "burn",
+     "durationSec": 2,
+     "stacks": 1
+    }
+   },
+   {
+    "at": "onCast",
+    "kind": "move",
+    "mode": "teleport",
+    "distance": 7,
+    "cancelOnCollision": true
+   }
+  ],
+  "description": "Teleport forward, leaving a burning fire zone at your origin. Good for repositioning while pressuring.",
+  "mini_malus": "Blocked if destination is occupied."
+ },
+ {
+  "id": "frost_bolt",
+  "name": "Frost Bolt",
+  "slot": "magic",
+  "element": "ice",
+  "weapon": "staff",
+  "cost_mana": 20,
+  "cost_stamina": 0,
+  "cooldown": 8,
+  "windup": 0,
+  "range": 20,
+  "targeting": "forward",
+  "role": "pressure",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "projectile",
+    "speedMps": 55,
+    "gravityMps2": 1.5,
+    "damage": 16,
+    "element": "ice",
+    "knockbackDistance": 0.6,
+    "onHitStatus": {
+     "status": "chill",
+     "durationSec": 6,
+     "stacks": 1
+    }
+   }
+  ],
+  "description": "Fast frost projectile that Chills on hit and pushes the target back. Repeated Chills build toward a full Freeze.",
+  "mini_malus": "Lower direct damage than fire or bow finishers — value is in CC buildup."
+ },
+ {
+  "id": "ice_wall",
+  "name": "Ice Wall",
+  "slot": "magic",
+  "element": "ice",
+  "weapon": "staff",
+  "cost_mana": 30,
+  "cost_stamina": 0,
+  "cooldown": 10,
+  "windup": 0,
+  "range": 8,
+  "targeting": "point",
+  "role": "pressure",
+  "effects": [
+   {
+    "at": "onLand",
+    "kind": "zone",
+    "radius": 0,
+    "width": 6,
+    "durationSec": 4.5,
+    "tickEverySec": 0.25,
+    "damagePerTick": 0,
+    "element": "ice",
+    "applyStatus": {
+     "status": "root",
+     "durationSec": 1.5,
+     "stacks": 1
+    }
+   }
+  ],
+  "description": "Creates an ice strip that repeatedly Roots any enemy who steps on it. Strong zone denial.",
+  "mini_malus": "No damage — purely crowd control."
+ },
+ {
+  "id": "blizzard",
+  "name": "Blizzard",
+  "slot": "magic",
+  "element": "ice",
+  "weapon": "staff",
+  "cost_mana": 30,
+  "cost_stamina": 0,
+  "cooldown": 10,
+  "windup": 0,
+  "range": 20,
+  "targeting": "point",
+  "role": "pressure",
+  "effects": [
+   {
+    "at": "onLand",
+    "kind": "zone",
+    "radius": 7,
+    "durationSec": 5,
+    "tickEverySec": 1,
+    "damagePerTick": 4,
+    "element": "ice",
+    "applyStatus": {
+     "status": "slow",
+     "durationSec": 3.5,
+     "stacks": 1,
+     "slowFraction": 0.6
+    }
+   }
+  ],
+  "description": "Large slow-moving storm zone that repeatedly Slows enemies inside and deals periodic damage.",
+  "mini_malus": "No hard lock — enemies can dash out or still shoot while inside."
+ },
+ {
+  "id": "freeze_target",
+  "name": "Freeze Target",
+  "slot": "magic",
+  "element": "ice",
+  "weapon": "staff",
+  "cost_mana": 35,
+  "cost_stamina": 0,
+  "cooldown": 10.5,
+  "windup": 0.4,
+  "range": 12,
+  "targeting": "forward",
+  "role": "starter",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 8,
+    "element": "ice"
+   },
+   {
+    "at": "onCast",
+    "kind": "applyStatus",
+    "status": "freeze",
+    "durationSec": 2.5,
+    "stacks": 1
+   }
+  ],
+  "description": "Quick cast that Freezes the target completely. Hard lockdown for follow-up attacks.",
+  "mini_malus": "Short windup — parryable and requires line of sight."
+ },
+ {
+  "id": "frost_pillar",
+  "name": "Frost Pillar",
+  "slot": "magic",
+  "element": "ice",
+  "weapon": "staff",
+  "cost_mana": 30,
+  "cost_stamina": 0,
+  "cooldown": 9.5,
+  "windup": 0.3,
+  "range": 10,
+  "targeting": "forward",
+  "role": "starter",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 12,
+    "element": "ice"
+   },
+   {
+    "at": "onCast",
+    "kind": "knockup",
+    "airborneSec": 0.7,
+    "knockbackDistance": 0.6
+   }
+  ],
+  "description": "Frost pillar that erupts under the target, launching them briefly Airborne. Ice combo starter.",
+  "mini_malus": "Erupts at a fixed point — sidestep before it lands and it misses."
+ },
+ {
+  "id": "chain_bolt",
+  "name": "Chain Bolt",
+  "slot": "magic",
+  "element": "lightning",
+  "weapon": "staff",
+  "cost_mana": 25,
+  "cost_stamina": 0,
+  "cooldown": 6,
+  "windup": 0,
+  "range": 15,
+  "targeting": "forward",
+  "role": "pressure",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 22,
+    "element": "lightning"
+   },
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 10,
+    "radius": 6,
+    "element": "lightning",
+    "excludePrimary": true
+   }
+  ],
+  "description": "Instant cast that deals heavy damage to the primary target, then arcs electricity to nearby enemies.",
+  "mini_malus": "Chain damage requires a secondary target nearby."
+ },
+ {
+  "id": "thunder_clap",
+  "name": "Thunder Clap",
+  "slot": "magic",
+  "element": "lightning",
+  "weapon": "staff",
+  "cost_mana": 30,
+  "cost_stamina": 0,
+  "cooldown": 9,
+  "windup": 0,
+  "range": 3,
+  "targeting": "self",
+  "role": "counter",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 16,
+    "radius": 3.2,
+    "element": "lightning"
+   },
+   {
+    "at": "onCast",
+    "kind": "applyStatus",
+    "status": "stun",
+    "durationSec": 1.8,
+    "stacks": 1,
+    "radius": 3.2
+   },
+   {
+    "at": "onCast",
+    "kind": "knockup",
+    "airborneSec": 0.45,
+    "radius": 3.2,
+    "knockbackDistance": 2.5
+   }
+  ],
+  "description": "Release a shockwave around you that Stuns nearby enemies and blasts them away. Devastating in close range.",
+  "mini_malus": "Short range — must be in melee contact to connect."
+ },
+ {
+  "id": "storm_field",
+  "name": "Storm Field",
+  "slot": "magic",
+  "element": "lightning",
+  "weapon": "staff",
+  "cost_mana": 35,
+  "cost_stamina": 0,
+  "cooldown": 11,
+  "windup": 0,
+  "range": 20,
+  "targeting": "point",
+  "role": "pressure",
+  "effects": [
+   {
+    "at": "onLand",
+    "kind": "zone",
+    "radius": 4.5,
+    "durationSec": 3.2,
+    "tickEverySec": 0.4,
+    "damagePerTick": 4,
+    "element": "lightning",
+    "applyStatus": {
+     "status": "slow",
+     "durationSec": 2,
+     "stacks": 1,
+     "slowFraction": 0.45
+    }
+   }
+  ],
+  "description": "Create an electric storm zone that Slows enemies inside and deals periodic lightning damage.",
+  "mini_malus": "Zone is visible — enemies can choose to avoid it."
+ },
+ {
+  "id": "lightning_dash",
+  "name": "Lightning Dash",
+  "slot": "magic",
+  "element": "lightning",
+  "weapon": "staff",
+  "cost_mana": 25,
+  "cost_stamina": 0,
+  "cooldown": 8,
+  "windup": 0,
+  "range": 5,
+  "targeting": "forward",
+  "role": "mobility",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "move",
+    "mode": "teleport",
+    "distance": 5,
+    "cancelOnCollision": true
+   },
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 15,
+    "radius": 1,
+    "element": "lightning"
+   }
+  ],
+  "description": "Instant teleport that deals AoE lightning damage at the destination. High-speed repositioning.",
+  "mini_malus": "Damage only at the destination — no area at origin."
+ },
+ {
+  "id": "arc_lift",
+  "name": "Arc Lift",
+  "slot": "magic",
+  "element": "lightning",
+  "weapon": "staff",
+  "cost_mana": 30,
+  "cost_stamina": 0,
+  "cooldown": 9,
+  "windup": 0,
+  "range": 15,
+  "targeting": "forward",
+  "role": "starter",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "projectile",
+    "speedMps": 30,
+    "gravityMps2": 0,
+    "damage": 8
+   },
+   {
+    "at": "onLand",
+    "kind": "knockup",
+    "airborneSec": 0.7,
+    "knockbackDistance": 1.4
+   }
+  ],
+  "description": "Lightning bolt at 30 m/s that launches whoever it hits Airborne. Lightning combo starter.",
+  "mini_malus": "Travels — you have to lead a moving target."
+ },
+ {
+  "id": "shadow_bolt",
+  "name": "Shadow Bolt",
+  "slot": "magic",
+  "element": "dark",
+  "weapon": "staff",
+  "cost_mana": 25,
+  "cost_stamina": 0,
+  "cooldown": 5,
+  "windup": 0,
+  "range": 20,
+  "targeting": "forward",
+  "role": "pressure",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "projectile",
+    "speedMps": 42,
+    "gravityMps2": 2,
+    "damage": 18,
+    "element": "dark",
+    "lifestealFraction": 0.25,
+    "knockbackDistance": 0.8
+   }
+  ],
+  "description": "Dark projectile that steals life on hit. Sustain tool that works at range.",
+  "mini_malus": "Projectile can be dodged or blocked by cover."
+ },
+ {
+  "id": "curse_of_weakness",
+  "name": "Curse of Weakness",
+  "slot": "magic",
+  "element": "dark",
+  "weapon": "staff",
+  "cost_mana": 30,
+  "cost_stamina": 0,
+  "cooldown": 9.5,
+  "windup": 0.35,
+  "range": 15,
+  "targeting": "forward",
+  "role": "starter",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "applyStatus",
+    "status": "curse",
+    "durationSec": 5,
+    "stacks": 1
+   },
+   {
+    "at": "onCast",
+    "kind": "applyStatus",
+    "status": "blind",
+    "durationSec": 4,
+    "stacks": 1
+   },
+   {
+    "at": "onCast",
+    "kind": "resourceDrain",
+    "resource": "mana",
+    "amount": 18,
+    "gainFraction": 0.5
+   }
+  ],
+  "description": "Ray that Curses, Blinds, and drains Mana from the target. Refunds half the drained Mana to you.",
+  "mini_malus": "Windup required — parryable and needs line of sight."
+ },
+ {
+  "id": "life_drain",
+  "name": "Life Drain",
+  "slot": "magic",
+  "element": "dark",
+  "weapon": "staff",
+  "cost_mana": 35,
+  "cost_stamina": 0,
+  "cooldown": 9.5,
+  "windup": 0,
+  "range": 12,
+  "targeting": "forward",
+  "role": "pressure",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "channel",
+    "durationSec": 2.4,
+    "tickEverySec": 0.6,
+    "perTick": {
+     "at": "onTick",
+     "kind": "damage",
+     "amount": 6,
+     "element": "dark"
+    },
+    "lifestealFraction": 0.7,
+    "breakOnMove": true,
+    "breakOnDamage": true
+   },
+   {
+    "at": "onCast",
+    "kind": "resourceDrain",
+    "resource": "stamina",
+    "amount": 20,
+    "gainFraction": 0.5
+   }
+  ],
+  "description": "Channel a drain beam that first rips Stamina from the target, then leeches their HP back to you each tick.",
+  "mini_malus": "Movement or taking damage interrupts the beam immediately."
+ },
+ {
+  "id": "dark_barrier",
+  "name": "Dark Barrier",
+  "slot": "magic",
+  "element": "dark",
+  "weapon": "staff",
+  "cost_mana": 30,
+  "cost_stamina": 0,
+  "cooldown": 10.5,
+  "windup": 0,
+  "range": 0,
+  "targeting": "self",
+  "role": "survival",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "applyStatus",
+    "status": "shield",
+    "durationSec": 5,
+    "stacks": 38
+   }
+  ],
+  "description": "Instantly conjure a dark barrier that absorbs incoming damage. Pure defensive tool.",
+  "mini_malus": "No offensive component — no damage, cleanse, or mobility."
+ },
+ {
+  "id": "void_spike",
+  "name": "Void Spike",
+  "slot": "magic",
+  "element": "dark",
+  "weapon": "staff",
+  "cost_mana": 30,
+  "cost_stamina": 0,
+  "cooldown": 9.5,
+  "windup": 0,
+  "range": 10,
+  "targeting": "forward",
+  "role": "starter",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 14,
+    "element": "dark"
+   },
+   {
+    "at": "onCast",
+    "kind": "knockup",
+    "airborneSec": 0.7,
+    "knockbackDistance": 1
+   },
+   {
+    "at": "onCast",
+    "kind": "resourceDrain",
+    "resource": "mana",
+    "amount": 12,
+    "gainFraction": 0.5
+   }
+  ],
+  "description": "Dark ray that launches the target Airborne and drains their Mana. Combo starter with resource pressure.",
+  "mini_malus": "Short range and clear line of sight required."
+ },
+ {
+  "id": "poison_dart",
+  "name": "Poison Dart",
+  "slot": "magic",
+  "element": "nature",
+  "weapon": "staff",
+  "cost_mana": 20,
+  "cost_stamina": 0,
+  "cooldown": 5,
+  "windup": 0,
+  "range": 18,
+  "targeting": "forward",
+  "role": "pressure",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "projectile",
+    "speedMps": 58,
+    "gravityMps2": 1,
+    "damage": 8,
+    "element": "nature",
+    "onHitStatus": {
+     "status": "poison",
+     "durationSec": 4,
+     "stacks": 1
+    }
+   }
+  ],
+  "description": "Fast dart that Poisons the target on hit. Good for sustained pressure at range.",
+  "mini_malus": "Poison damage is delayed and can be cleansed."
+ },
+ {
+  "id": "thorn_field",
+  "name": "Thorn Field",
+  "slot": "magic",
+  "element": "nature",
+  "weapon": "staff",
+  "cost_mana": 35,
+  "cost_stamina": 0,
+  "cooldown": 10.5,
+  "windup": 0,
+  "range": 12,
+  "targeting": "point",
+  "role": "pressure",
+  "effects": [
+   {
+    "at": "onLand",
+    "kind": "zone",
+    "radius": 3.5,
+    "durationSec": 5,
+    "tickEverySec": 0.75,
+    "damagePerTick": 4,
+    "element": "nature",
+    "applyStatus": {
+     "status": "slow",
+     "durationSec": 3,
+     "stacks": 1,
+     "slowFraction": 0.5
+    }
+   }
+  ],
+  "description": "Summon a thorn zone that Slows and deals periodic damage to enemies who stay inside.",
+  "mini_malus": "Visible zone — enemies can walk out to avoid it."
+ },
+ {
+  "id": "entangle",
+  "name": "Entangle",
+  "slot": "magic",
+  "element": "nature",
+  "weapon": "staff",
+  "cost_mana": 25,
+  "cost_stamina": 0,
+  "cooldown": 9.5,
+  "windup": 0.3,
+  "range": 10,
+  "targeting": "forward",
+  "role": "starter",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 4,
+    "element": "nature"
+   },
+   {
+    "at": "onCast",
+    "kind": "applyStatus",
+    "status": "root",
+    "durationSec": 3.2,
+    "stacks": 1
+   }
+  ],
+  "description": "Quick cast that Roots the target in place. Hard CC for setting up combos.",
+  "mini_malus": "Short windup — needs clear line of sight."
+ },
+ {
+  "id": "healing_totem",
+  "name": "Healing Totem",
+  "slot": "magic",
+  "element": "nature",
+  "weapon": "staff",
+  "cost_mana": 30,
+  "cost_stamina": 0,
+  "cooldown": 11.5,
+  "windup": 0,
+  "range": 0,
+  "targeting": "self",
+  "role": "survival",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "channel",
+    "durationSec": 5,
+    "tickEverySec": 1,
+    "perTick": {
+     "at": "onTick",
+     "kind": "heal",
+     "amount": 8
+    },
+    "breakOnMove": false
+   }
+  ],
+  "description": "Channel nature energy to heal yourself over time. Best used safely between fights.",
+  "mini_malus": "No burst heal — requires multiple ticks to recover significant HP."
+ },
+ {
+  "id": "root_upthrow",
+  "name": "Root Upthrow",
+  "slot": "magic",
+  "element": "nature",
+  "weapon": "staff",
+  "cost_mana": 30,
+  "cost_stamina": 0,
+  "cooldown": 9.5,
+  "windup": 0,
+  "range": 10,
+  "targeting": "forward",
+  "role": "starter",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 8,
+    "element": "nature"
+   },
+   {
+    "at": "onCast",
+    "kind": "knockup",
+    "airborneSec": 1,
+    "requiresGroundedTarget": true
+   }
+  ],
+  "description": "Erupting vines that launch a grounded target Airborne. Fails if they are already in the air.",
+  "mini_malus": "Cannot be used on airborne targets — time it before a knockup, not after."
+ },
+ {
+  "id": "vine_dash",
+  "name": "Vine Dash",
+  "slot": "magic",
+  "element": "nature",
+  "weapon": "staff",
+  "cost_mana": 25,
+  "cost_stamina": 0,
+  "cooldown": 9,
+  "windup": 0,
+  "range": 5,
+  "targeting": "forward",
+  "role": "mobility",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "move",
+    "mode": "dash",
+    "distance": 5,
+    "cancelOnCollision": true
+   },
+   {
+    "at": "onLand",
+    "kind": "zone",
+    "radius": 2,
+    "placement": "self",
+    "durationSec": 2.5,
+    "tickEverySec": 0.25,
+    "damagePerTick": 0,
+    "element": "nature",
+    "applyStatus": {
+     "status": "root",
+     "durationSec": 2.8,
+     "stacks": 1
+    }
+   }
+  ],
+  "description": "Dash forward and leave a Root zone at your landing point. Traps enemies who follow you.",
+  "mini_malus": "Collision stops the dash early."
+ },
+ {
+  "id": "self_heal",
+  "name": "Healing Potion",
+  "slot": "utility",
+  "element": "none",
+  "weapon": "none",
+  "cost_mana": 0,
+  "cost_stamina": 0,
+  "cooldown": 11.5,
+  "windup": 0,
+  "range": 0,
+  "targeting": "self",
+  "role": "survival",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "channel",
+    "durationSec": 2,
+    "tickEverySec": 1,
+    "perTick": {
+     "at": "onTick",
+     "kind": "heal",
+     "amount": 20
+    },
+    "breakOnMove": true
+   }
+  ],
+  "description": "Drink a healing potion that restores HP over time. Must stand still to benefit fully.",
+  "mini_malus": "Movement cancels the channel — cannot fight and heal simultaneously."
+ },
+ {
+  "id": "quick_dash",
+  "name": "Quick Dash",
+  "slot": "utility",
+  "element": "none",
+  "weapon": "none",
+  "cost_mana": 0,
+  "cost_stamina": 10,
+  "cooldown": 6,
+  "windup": 0,
+  "range": 4,
+  "targeting": "forward",
+  "role": "mobility",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "move",
+    "mode": "dash",
+    "distance": 4,
+    "useMovementDirection": true,
+    "cancelOnCollision": true
+   }
+  ],
+  "description": "Quick dash in your current movement direction. Universal repositioning tool.",
+  "mini_malus": "No invulnerability frames — you can still be hit mid-dash."
+ },
+ {
+  "id": "ping_mark",
+  "name": "Mark Target",
+  "slot": "utility",
+  "element": "none",
+  "weapon": "none",
+  "cost_mana": 0,
+  "cost_stamina": 0,
+  "cooldown": 4,
+  "windup": 0,
+  "range": 30,
+  "targeting": "forward",
+  "role": "pressure",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "damage",
+    "amount": 6
+   },
+   {
+    "at": "onCast",
+    "kind": "applyStatus",
+    "status": "mark",
+    "durationSec": 5,
+    "stacks": 1
+   },
+   {
+    "at": "onCast",
+    "kind": "resourceDrain",
+    "resource": "stamina",
+    "amount": 12,
+    "gainFraction": 0
+   }
+  ],
+  "description": "Long-range ray that Marks the target and drains their Stamina, refunding nothing.",
+  "mini_malus": "Low direct damage — requires line of sight."
+ },
+ {
+  "id": "cleanse_surge",
+  "name": "Cleanse Surge",
+  "slot": "utility",
+  "element": "none",
+  "weapon": "none",
+  "cost_mana": 0,
+  "cost_stamina": 20,
+  "cooldown": 11,
+  "windup": 0,
+  "range": 0,
+  "targeting": "self",
+  "role": "counter",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "cleanse"
+   },
+   {
+    "at": "onCast",
+    "kind": "applyStatus",
+    "status": "haste",
+    "durationSec": 2,
+    "stacks": 1
+   }
+  ],
+  "description": "Instantly cleanse all debuffs, then surge forward with Haste. Best used when CC breaks your momentum.",
+  "mini_malus": "No healing — purely removes debuffs and boosts movement."
+ },
+ {
+  "id": "barrier",
+  "name": "Barrier",
+  "slot": "utility",
+  "element": "none",
+  "weapon": "none",
+  "cost_mana": 0,
+  "cost_stamina": 0,
+  "cooldown": 11,
+  "windup": 0,
+  "range": 0,
+  "targeting": "self",
+  "role": "survival",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "applyStatus",
+    "status": "shield",
+    "durationSec": 8,
+    "stacks": 42
+   }
+  ],
+  "description": "Instantly conjure a personal shield that absorbs incoming damage. Long-duration defensive cooldown.",
+  "mini_malus": "No cleanse or heal — only absorbs damage."
+ },
+ {
+  "id": "energize",
+  "name": "Energize",
+  "slot": "utility",
+  "element": "none",
+  "weapon": "none",
+  "cost_mana": 0,
+  "cost_stamina": 0,
+  "cooldown": 9,
+  "windup": 0,
+  "range": 0,
+  "targeting": "self",
+  "role": "survival",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "restoreStamina",
+    "amount": 35
+   }
+  ],
+  "description": "Instantly restore a large chunk of Stamina. Enables more dashes, parries, and melee abilities.",
+  "mini_malus": "No Mana restore."
+ },
+ {
+  "id": "phase_shift",
+  "name": "Phase Shift",
+  "slot": "utility",
+  "element": "none",
+  "weapon": "none",
+  "cost_mana": 0,
+  "cost_stamina": 15,
+  "cooldown": 12,
+  "windup": 0,
+  "range": 0,
+  "targeting": "self",
+  "role": "counter",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "applyStatus",
+    "status": "invulnerable",
+    "durationSec": 0.6,
+    "stacks": 1
+   }
+  ],
+  "description": "Brief invulnerability window — immune to all damage and crowd control. Use to dodge a critical hit.",
+  "mini_malus": "Cannot attack or cast during the phase — purely defensive."
+ },
+ {
+  "id": "smoke_screen",
+  "name": "Smoke Screen",
+  "slot": "utility",
+  "element": "none",
+  "weapon": "none",
+  "cost_mana": 20,
+  "cost_stamina": 0,
+  "cooldown": 10.5,
+  "windup": 0,
+  "range": 8,
+  "targeting": "forward",
+  "role": "pressure",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "zone",
+    "radius": 3.5,
+    "durationSec": 3.5,
+    "tickEverySec": 0.5,
+    "applyStatus": {
+     "status": "blind",
+     "durationSec": 3,
+     "stacks": 1
+    }
+   }
+  ],
+  "description": "Throw a smoke bomb that creates a zone repeatedly Blinding enemies inside. Strong area denial.",
+  "mini_malus": "No damage — purely crowd control."
+ },
+ {
+  "id": "brace_recovery",
+  "name": "Brace Recovery",
+  "slot": "utility",
+  "element": "none",
+  "weapon": "none",
+  "cost_mana": 0,
+  "cost_stamina": 40,
+  "cooldown": 10,
+  "windup": 0,
+  "range": 0,
+  "targeting": "self",
+  "role": "survival",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "heal",
+    "amount": 50
+   },
+   {
+    "at": "onCast",
+    "kind": "applyStatus",
+    "status": "shield",
+    "durationSec": 3,
+    "stacks": 20
+   }
+  ],
+  "description": "Breaker exclusive. Plant your feet, restore a large chunk of HP and raise a damage shield on top of it.",
+  "mini_malus": "High Stamina cost — for a moment afterwards you can neither parry nor dash."
+ },
+ {
+  "id": "hunters_flow",
+  "name": "Hunter's Flow",
+  "slot": "utility",
+  "element": "none",
+  "weapon": "none",
+  "cost_mana": 20,
+  "cost_stamina": 10,
+  "cooldown": 9.5,
+  "windup": 0,
+  "range": 0,
+  "targeting": "self",
+  "role": "survival",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "heal",
+    "amount": 35
+   },
+   {
+    "at": "onCast",
+    "kind": "move",
+    "mode": "dash",
+    "distance": 3,
+    "useMovementDirection": true
+   }
+  ],
+  "description": "Talon exclusive. Restore HP while performing a quick repositioning dash. Heals less than the others because it heals while you move.",
+  "mini_malus": "Dash has no invulnerability frames — can be hit mid-dash."
+ },
+ {
+  "id": "arcane_rebind",
+  "name": "Arcane Rebind",
+  "slot": "utility",
+  "element": "none",
+  "weapon": "none",
+  "cost_mana": 45,
+  "cost_stamina": 0,
+  "cooldown": 10.5,
+  "windup": 0.4,
+  "range": 0,
+  "targeting": "self",
+  "role": "survival",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "heal",
+    "amount": 60
+   }
+  ],
+  "description": "Warden exclusive. Channel arcane energy to restore HP. The largest heal in the game.",
+  "mini_malus": "Windup required — vulnerable to interrupts during the cast."
+ },
+ {
+  "id": "adaptive_mend",
+  "name": "Adaptive Mend",
+  "slot": "utility",
+  "element": "none",
+  "weapon": "none",
+  "cost_mana": 15,
+  "cost_stamina": 15,
+  "cooldown": 9,
+  "windup": 0,
+  "range": 0,
+  "targeting": "self",
+  "role": "survival",
+  "effects": [
+   {
+    "at": "onCast",
+    "kind": "heal",
+    "amount": 30
+   }
+  ],
+  "description": "Drift exclusive. Restore HP at dual resource cost, on the shortest cooldown of the four. You do not come back in one go — you come back often.",
+  "mini_malus": "Lowest healing of the four recoveries — one cast will not save you."
+ }
+]

@@ -10,7 +10,7 @@ import {
 } from '@ragequit/shared'
 
 export function getPlayerMaxima(player: Player): { hp: number; mana: number; stamina: number } {
-  const classId = (player.classId || 'hybrid') as ClassId
+  const classId = (player.classId || 'drift') as ClassId
   return (
     TARGET_CLASS_DEFS[classId]?.resourceMaxima ?? {
       hp: HP_MAX,

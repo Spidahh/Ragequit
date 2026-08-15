@@ -1,0 +1,35 @@
+# Il server dedicato di RAGEQUIT.
+#
+# PERCHE' UN'IMMAGINE COSI' PICCOLA. L'esportato di Godot per Linux e' un
+# eseguibile SOLO: contiene il motore, il pacchetto del gioco e nient'altro.
+# Non serve installare Godot nell'immagine, non serve un runtime, non serve
+# npm. Si copia un file e lo si esegue.
+#
+# L'immagine e' Debian slim e non `scratch` perche' l'eseguibile e' dinamico e
+# vuole la libc e poche altre librerie di sistema. Provare con `scratch`
+# produce un container che parte e muore subito con "no such file or
+# directory" — che e' il messaggio che Linux da' quando manca il LINKER, non
+# quando manca il file, ed e' una delle mezz'ore piu' facili da perdere.
+FROM debian:bookworm-slim
+
+# Quello che l'eseguibile headless di Godot vuole davvero. Non serve niente di
+# grafico: `--headless` non apre nessun contesto, e infatti non c'e' mesa qui
+# dentro.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      libfreetype6 \
+      ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY godot-build/server/ragequit-server /app/ragequit-server
+RUN chmod +x /app/ragequit-server
+
+# La porta la decide la piattaforma di hosting: si legge da `PORT`, e questo
+# e' solo il valore di partenza.
+ENV PORT=8080
+EXPOSE 8080
+
+# `--headless` e non `--display-driver headless`: senza, il motore cerca un
+# server grafico su una macchina che non ce l'ha e non parte.
+CMD ["/app/ragequit-server", "--headless", "--", "--server"]

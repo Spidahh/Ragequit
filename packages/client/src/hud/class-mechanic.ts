@@ -45,7 +45,7 @@ const pipCount = (n: number, max: number): number =>
 /** Translate the replicated mechanic fields into what the strip should show. */
 export function classMechanicView(s: ClassMechanicState): MechanicView {
   switch (s.classId) {
-    case 'tank':
+    case 'breaker':
       return {
         kind: 'pips',
         label: 'FURY',
@@ -56,7 +56,7 @@ export function classMechanicView(s: ClassMechanicState): MechanicView {
         // watch, not the stack count.
         flag: s.furyNextMeleeIsSurge ? 'SURGE' : '',
       }
-    case 'archer':
+    case 'talon':
       return {
         kind: 'bar',
         label: 'MOMENTUM',
@@ -64,7 +64,7 @@ export function classMechanicView(s: ClassMechanicState): MechanicView {
         markFrac: MOMENTUM_BOW_BONUS_THRESHOLD / MOMENTUM_MAX,
         flag: s.momentum >= MOMENTUM_BOW_BONUS_THRESHOLD ? 'RAPIDO' : '',
       }
-    case 'mage':
+    case 'warden':
       return {
         kind: 'armed',
         label: 'RISONANZA',
@@ -73,7 +73,7 @@ export function classMechanicView(s: ClassMechanicState): MechanicView {
         // left over from a lapsed window must not keep the light on.
         armed: Boolean(s.risonanzaElement) && s.risonanzaArmedUntilTick > s.tickNow,
       }
-    case 'hybrid':
+    case 'drift':
       return {
         kind: 'pips',
         label: 'FLOW',

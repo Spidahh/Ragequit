@@ -1,5 +1,5 @@
 // World / physics constants.
-// Authority: 01_DESIGN/11_map_philosophy.md (pending) + 02_TECH/01_entity_component_model.md.
+// Authority: VERITA.md.
 // These are sim numbers, not gameplay — tune before touching stats.ts.
 
 // Gravity (m/s^2), pointing down Y.

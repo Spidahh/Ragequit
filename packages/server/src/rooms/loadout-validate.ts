@@ -40,7 +40,7 @@ export type LoadoutValidation =
 export function validateLoadoutMessage(msg: ClientLoadoutMessage, mode = ''): LoadoutValidation {
   // Dynamic Class Validation
   const classId: ClassId =
-    msg.classId && CLASS_IDS.includes(msg.classId as ClassId) ? (msg.classId as ClassId) : 'hybrid'
+    msg.classId && CLASS_IDS.includes(msg.classId as ClassId) ? (msg.classId as ClassId) : 'drift'
 
   // Reject malformed / oversized payloads before any per-element work. A
   // legit client sends <= 8 ids total; without this an array of millions of

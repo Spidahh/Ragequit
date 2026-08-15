@@ -2336,14 +2336,16 @@ button.locked {
   width: clamp(300px, 26vh, 460px);
   display: grid;
   gap: clamp(3px, 0.55vh, 7px);
-  padding: clamp(6px, 0.9vh, 12px) clamp(8px, 1.1vh, 14px);
-  border: 1px solid var(--line);
-  border-left: 4px solid var(--gold);
-  border-radius: var(--radius);
-  background: var(--panel);
+  padding: 0 0 clamp(4px, 0.6vh, 8px);
   user-select: none;
   pointer-events: none;
 }
+/* The panel chrome is gone on purpose. A measured capture of live gameplay had
+   the vitals sitting in a bordered box with a gold rule down its left edge,
+   centred on screen, with "200 / 200" set in monospace inside each bar — which
+   is the visual language of a debug readout, not of a game. Shipped action games
+   float their vitals: the bar IS the widget, and its colour is its label. What
+   is removed here is chrome, not information. */
 
 #hud.dragging {
   border-color: var(--gold);
@@ -2360,33 +2362,61 @@ button.locked {
 
 .bar {
   position: relative;
-  height: clamp(16px, 2.3vh, 28px);
+  /* Slimmer, and HP gets the height (see #hud-hp): a uniform stack of three
+     identical bars makes the player read three equal things, when one of them
+     is whether you are about to die. */
+  height: clamp(9px, 1.2vh, 14px);
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-left: 5px solid var(--bar-color);
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.35);
+  border-radius: 2px;
+  /* Sits on its own soft shadow instead of a box: it stays readable over both
+     the bright sand floor and the dark wall without drawing a frame. */
+  background: rgba(0, 0, 0, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.65),
+    0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
 .bar .fill {
   width: 100%;
   height: 100%;
   transition: width 100ms linear;
+  /* A hot inner edge along the top of the fill. This is what stops a flat
+     rectangle reading as a CSS progress bar. */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
+/* The word "HP" inside the bar and the "200 / 200" fraction beside it were the
+   loudest debug tell in the frame. The colour already says which resource it
+   is, and the length already says how much is left. Only HP keeps a number,
+   because "how close am I to dying" is the one value worth reading exactly —
+   and it sits OUTSIDE the bar, right-aligned, so it never fights the fill. */
 .bar .label {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 10px;
-  color: var(--text);
-  font: 900 11px/1 var(--font-mono);
+  justify-content: flex-end;
+  padding: 0 6px;
+  color: rgba(255, 255, 255, 0.92);
+  font: 800 clamp(9px, 1.05vh, 12px) / 1 var(--font-mono);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+/* Resource names are decoration on a colour-coded bar. */
+.bar .label > span:first-child {
+  display: none;
+}
+/* Mana and stamina carry no number at all: you play them by how full they look,
+   never by their exact value. */
+#hud-mana .label,
+#hud-stam .label {
+  display: none;
 }
 
+/* HP is the one that decides whether you keep playing, so it is physically
+   bigger than the other two. Hierarchy by size, not by a label. */
 #hud-hp {
   --bar-color: var(--hp);
+  height: clamp(15px, 2vh, 24px);
 }
 #hud-mana {
   --bar-color: var(--mana);
@@ -2670,15 +2700,21 @@ button.locked {
   pointer-events: auto;
 }
 
+/* The panels stay separate — the owner rejected a single merged rail on
+   2026-08-12 — but they stop being FRAMES. A captured frame showed four boxed,
+   titled, colour-outlined containers occupying the bottom quarter of the screen,
+   which reads as a spreadsheet of the build rather than a hotbar. Grouping is
+   now carried by spacing and a hairline top rule in the family colour: the same
+   information, without four competing rectangles. */
 .hotbar-section {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  padding: 5px;
-  border: 1px solid rgba(255, 255, 255, 0.11);
+  padding: 4px 5px 5px;
+  border: 0;
   border-top: 2px solid var(--family-color, rgba(255, 255, 255, 0.2));
-  background: linear-gradient(180deg, rgba(15, 17, 26, 0.96), rgba(5, 7, 12, 0.94));
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.48);
+  background: linear-gradient(180deg, rgba(8, 10, 16, 0.72), rgba(4, 6, 10, 0.3));
+  box-shadow: none;
   transition:
     border-color 150ms ease,
     filter 150ms ease,
@@ -2698,24 +2734,35 @@ button.locked {
   --family-color: #ffd260;
 }
 
+/* A caption, not a title. It was set at the same weight as the ability names
+   below it, in the family colour, so the word SWORD competed with the icons for
+   attention every frame — and the icons are the thing you actually read. */
 .hotbar-section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 13px;
-  color: var(--family-color);
-  font: 900 9px/1 var(--font-mono);
-  letter-spacing: 0.09em;
+  min-height: 11px;
+  color: color-mix(in srgb, var(--family-color) 55%, transparent);
+  font: 700 8px/1 var(--font-mono);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
+/* Only prints when the panel is NOT usable, and then it prints the key that
+   fixes it. An outlined chip that permanently said ATTIVA on the panel you are
+   already holding was pure noise. `:empty` collapses it so no ghost box is left
+   behind on the active panel. */
 .hotbar-section-head span {
-  padding: 2px 4px;
-  border: 1px solid currentColor;
-  color: #8e98aa;
+  padding: 1px 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.09);
+  color: #aab3c4;
   font-size: 7px;
   letter-spacing: 0.06em;
+}
+.hotbar-section-head span:empty {
+  display: none;
 }
 
 .hotbar-section.active-family {
@@ -2731,8 +2778,16 @@ button.locked {
   background: color-mix(in srgb, var(--family-color) 12%, transparent);
 }
 
+/* An ability bound to a weapon you are not holding is STILL CASTABLE: the server
+   swaps the weapon for you (AbilityEngine: `forceWeaponSwap` on a bound cast)
+   and the client's own preflight says so in as many words — "Deliberately does
+   NOT check the equipped weapon". Dimming those pips to 68 % brightness told the
+   player that half their build was unavailable, every second of every fight,
+   about a restriction the game does not have.
+   The equipped panel is still raised and lit, so which weapon you hold is
+   visible; the others are simply not lied about. */
 .hotbar-section.wrong-weapon .hotbar-rail {
-  filter: saturate(0.45) brightness(0.68);
+  filter: none;
 }
 
 .hotbar-rail {

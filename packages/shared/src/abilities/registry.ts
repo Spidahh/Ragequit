@@ -1,13 +1,12 @@
-// Ability registry — the **only** place ability data lives. Server engine
-// reads from here; client HUD reads from here. Adding a new ability is
-// adding a new entry to ABILITY_DEFS — zero engine code touches.
-//
-// Authority: 01_DESIGN/05_abilities_*.md (philosophy, melee, bow, magic, utility).
+// Ability registry. Adding an ability is adding an entry — zero engine code.
+// Second batches live in melee-extended.ts / bow-extended.ts (budget ratchet).
 
+import { BOW_EXTENDED } from './bow-extended.js'
+import { MELEE_EXTENDED } from './melee-extended.js'
 import type { AbilityDef, AbilityRegistry } from './types.js'
 
 // ============================================================================
-// MELEE — 6 abilities (sword)
+// MELEE — first batch (sword). Second batch: abilities/melee-extended.ts
 // ============================================================================
 
 export const ABILITY_M1_WHIRLWIND: AbilityDef = {
@@ -1346,7 +1345,7 @@ export const ABILITY_U_BRACE_RECOVERY: AbilityDef = {
   name: 'Brace Recovery',
   slot: 'utility',
   targetSlotFamily: 'utility',
-  targetLegalClasses: ['tank'],
+  targetLegalClasses: ['breaker'],
   element: 'none',
   weapon: 'none',
   costMana: 0,
@@ -1361,8 +1360,8 @@ export const ABILITY_U_BRACE_RECOVERY: AbilityDef = {
     { at: 'onCast', kind: 'applyStatus', status: 'shield', durationSec: 3, stacks: 20 },
   ],
   description:
-    'Tank exclusive. Spend Stamina to restore HP and gain a damage shield. At max Fury, consumes all stacks to heal for twice as much.',
-  miniMalus: 'High Stamina cost — using it leaves you vulnerable to melee pressure.',
+    'Breaker exclusive. Plant your feet, restore a large chunk of HP and raise a damage shield on top of it.',
+  miniMalus: 'High Stamina cost — for a moment you can neither parry nor dash.',
 }
 
 export const ABILITY_U_HUNTERS_FLOW: AbilityDef = {
@@ -1370,7 +1369,7 @@ export const ABILITY_U_HUNTERS_FLOW: AbilityDef = {
   name: "Hunter's Flow",
   slot: 'utility',
   targetSlotFamily: 'utility',
-  targetLegalClasses: ['archer'],
+  targetLegalClasses: ['talon'],
   element: 'none',
   weapon: 'none',
   costMana: 20,
@@ -1385,7 +1384,7 @@ export const ABILITY_U_HUNTERS_FLOW: AbilityDef = {
     { at: 'onCast', kind: 'move', mode: 'dash', distance: 3, useMovementDirection: true },
   ],
   description:
-    'Archer exclusive. Restore HP while performing a quick repositioning dash. At high Momentum, healing is amplified.',
+    'Talon exclusive. Restore HP while performing a quick repositioning dash. Heals less than the others because it heals while you move.',
   miniMalus: 'Dash has no invulnerability frames — can be hit mid-dash.',
 }
 
@@ -1394,7 +1393,7 @@ export const ABILITY_U_ARCANE_REBIND: AbilityDef = {
   name: 'Arcane Rebind',
   slot: 'utility',
   targetSlotFamily: 'utility',
-  targetLegalClasses: ['mage'],
+  targetLegalClasses: ['warden'],
   element: 'none',
   weapon: 'none',
   costMana: 45,
@@ -1406,7 +1405,7 @@ export const ABILITY_U_ARCANE_REBIND: AbilityDef = {
   comboRole: 'survival',
   effects: [{ at: 'onCast', kind: 'heal', amount: 60 }],
   description:
-    'Mage exclusive. Channel arcane energy to restore HP. When elemental Resonance is active, the heal is nearly doubled.',
+    'Warden exclusive. Channel arcane energy to restore HP. The largest heal in the game.',
   miniMalus: 'Windup required — vulnerable to interrupts during the cast.',
 }
 
@@ -1415,7 +1414,7 @@ export const ABILITY_U_ADAPTIVE_MEND: AbilityDef = {
   name: 'Adaptive Mend',
   slot: 'utility',
   targetSlotFamily: 'utility',
-  targetLegalClasses: ['hybrid'],
+  targetLegalClasses: ['drift'],
   element: 'none',
   weapon: 'none',
   costMana: 15,
@@ -1427,8 +1426,8 @@ export const ABILITY_U_ADAPTIVE_MEND: AbilityDef = {
   comboRole: 'survival',
   effects: [{ at: 'onCast', kind: 'heal', amount: 30 }],
   description:
-    'Hybrid exclusive. Restore HP at dual resource cost. At full Flow stacks, the heal is dramatically amplified.',
-  miniMalus: 'Low base healing — requires Flow stacks from weapon swapping to be effective.',
+    'Drift exclusive. Restore HP at dual resource cost, on the shortest cooldown of the four. You do not come back in one go — you come back often.',
+  miniMalus: 'Lowest healing of the four recoveries — one cast will not save you.',
 }
 
 // ============================================================================
@@ -1436,7 +1435,8 @@ export const ABILITY_U_ADAPTIVE_MEND: AbilityDef = {
 // ============================================================================
 
 export const ABILITY_DEFS: AbilityRegistry = Object.freeze({
-  // Melee
+  ...MELEE_EXTENDED,
+  ...BOW_EXTENDED,
   whirlwind: ABILITY_M1_WHIRLWIND,
   gap_closer: ABILITY_M2_GAP_CLOSER,
   uppercut: ABILITY_M3_UPPERCUT,

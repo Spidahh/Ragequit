@@ -95,7 +95,7 @@ export function seedBotIdentity(
   classDefs: Readonly<Record<string, { weapons: readonly string[] }>>,
 ): string {
   player.name = names[botNum % names.length] ?? 'Bot'
-  const classId = classIds[botNum % classIds.length] ?? 'hybrid'
+  const classId = classIds[botNum % classIds.length] ?? 'drift'
   player.classId = classId
   for (const id of presets[classId] ?? []) player.loadout.push(id)
   player.activeWeapon = classDefs[classId]?.weapons[0] ?? 'sword'

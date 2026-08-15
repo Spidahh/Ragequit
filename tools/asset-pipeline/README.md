@@ -31,7 +31,7 @@ asset source and does not define UI, loadout, menu, VFX or gameplay direction.
   tests.
 - Projectiles, zones and short-lived VFX still rely heavily on cheap code-driven
   geometry/materials for readability and performance.
-- Character acceptance follows `02_TECH/07_character_animation_contract.md`.
+- Character acceptance follows `AGENTS.md`.
 
 ## Where this is wired
 

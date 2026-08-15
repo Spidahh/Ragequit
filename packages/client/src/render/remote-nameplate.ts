@@ -1,7 +1,7 @@
 // Remote-player nameplates: the HP fill and the status-badge row.
 //
 // Extracted out of remote-players.ts, which sits on the 800-line hard limit
-// (02_TECH/08). Both functions were already module-level and take everything
+// (file-budget: AGENTS.md). Both functions were already module-level and take everything
 // they need as arguments, so they are typed against the narrow shape they
 // actually touch rather than the whole RemoteState.
 
