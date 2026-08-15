@@ -1370,11 +1370,11 @@ prima che la precedente sia verde.
 | 3   | Rete autoritativa e lag compensation                             | **✅ fatto**            |
 | 4   | **Struttura di partita**: modalità, punteggio, vittoria, respawn | **✅ fatto**            |
 | 5   | **Audio completo** (§10)                                         | **✅ fatto**            |
-| 6   | **Classi, sottoclassi e le 67 abilità** lette dai dati           | ⬜                      |
-| 7   | **Le sette schermate** (§11) e le comodità (§12)                 | ⬜                      |
-| 8   | **L'arena vera** (§8) al posto del blockout                      | ⬜                      |
-| 9   | **Personaggi e armi** al posto delle capsule                     | ⬜                      |
-| 10  | **Bot** a tre difficoltà e riempimento della lobby               | ⬜                      |
+| 6   | **Classi, sottoclassi e le 67 abilità** lette dai dati           | **✅ fatto**            |
+| 7   | **Le sette schermate** (§11) e le comodità (§12)                 | **✅ fatto**            |
+| 8   | **L'arena vera** (§8) al posto del blockout                      | **✅ fatto**            |
+| 9   | **Personaggi e armi** al posto delle capsule                     | **✅ fatto**            |
+| 10  | **Bot** a tre difficoltà e riempimento della lobby               | **✅ fatto**            |
 | 11  | **Pubblicazione** su itch.io e server ospitato                   | **✅ pacchetto pronto** |
 | 12  | Sblocchi e livello account                                       | **✅ fatto**            |
 
