@@ -22,6 +22,7 @@ const Content := preload("res://src/content.gd")
 const Status := preload("res://src/status.gd")
 const Effects := preload("res://src/effects.gd")
 const ZoneScript := preload("res://src/zone.gd")
+const ViewmodelScript := preload("res://src/viewmodel.gd")
 
 const MOUSE_SENSITIVITY := 0.0022
 const PITCH_LIMIT := deg_to_rad(89.0)
@@ -84,12 +85,21 @@ var _bob_phase := 0.0
 var _land_dip := 0.0
 var _was_on_ground := true
 var _vm_rest := Vector3.ZERO
+var _vm: Node = null
 
 
 func _ready() -> void:
 	_sim = Movement.make_state(global_position)
+	# I parallelepipedi bianchi che stavano nella scena erano un segnaposto, e
+	# nel primo frame renderizzato erano una barra che tagliava lo schermo in due.
+	# Al loro posto l'arma vera, in un viewport suo.
 	if _viewmodel:
-		_vm_rest = _viewmodel.position
+		_viewmodel.queue_free()
+	_vm = ViewmodelScript.new()
+	add_child(_vm)
+	_vm.build(self)
+	_viewmodel = _vm.root
+	_vm_rest = _vm.REST_POS
 	equip(class_id, sub_id)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
@@ -118,6 +128,12 @@ func equip(new_class: String, new_sub: String, kit_ids: Array = []) -> void:
 			if not a.is_empty():
 				_kit.append(a)
 	_cooldowns = AbilityRuntime.Cooldowns.new()
+
+	# L'arma in mano DAL PRIMO FRAME, non dal primo lancio: aprire il gioco a
+	# mani vuote è il segnale più forte che manchi qualcosa.
+	var weapons: Array = stats.get("weapons", [])
+	_weapon = ""
+	_equip_weapon(String(weapons[0]) if not weapons.is_empty() else "sword")
 
 
 func kit() -> Array:
@@ -283,6 +299,8 @@ func _equip_weapon(weapon: String) -> void:
 	if weapon == "none" or weapon == _weapon:
 		return
 	_weapon = weapon
+	if _vm:
+		_vm.equip(weapon)
 	# Un accenno di peso: l'arma nuova arriva in mano, non ci si teletrasporta.
 	_sway += Vector2(0.0, -0.04)
 
@@ -481,4 +499,7 @@ func _update_viewmodel(delta: float) -> void:
 		_sway.y + bob_y - _land_dip,
 		0.0
 	)
-	_viewmodel.rotation = Vector3(_sway.y * 2.0, -_sway.x * 2.0, _sway.x * 3.0)
+	_viewmodel.rotation = (
+		Vector3(deg_to_rad(ViewmodelScript.REST_ROT.x), deg_to_rad(ViewmodelScript.REST_ROT.y), deg_to_rad(ViewmodelScript.REST_ROT.z))
+		+ Vector3(_sway.y * 2.0, -_sway.x * 2.0, _sway.x * 3.0)
+	)

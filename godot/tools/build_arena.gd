@@ -31,9 +31,9 @@ func _init() -> void:
 	sky.sky_material = sky_mat
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_sky_contribution = 0.6
+	env.ambient_light_sky_contribution = 0.46
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
-	env.tonemap_exposure = 1.15
+	env.tonemap_exposure = 1.08
 	env.glow_enabled = true
 	env.glow_intensity = 0.55
 	env.glow_bloom = 0.15
@@ -55,95 +55,252 @@ func _init() -> void:
 	var sun := DirectionalLight3D.new()
 	sun.name = "KeyLight"
 	sun.light_color = Color(0.74, 0.78, 0.91)
-	sun.light_energy = 1.6
+	sun.light_energy = 1.25
 	sun.shadow_enabled = true
 	sun.rotation_degrees = Vector3(-52, 34, 0)
 	root.add_child(sun)
 
-	# --- Arena: pavimento e muro perimetrale ---------------------------------
-	var ground_mat := StandardMaterial3D.new()
-	ground_mat.albedo_color = Color(0.42, 0.36, 0.27)
-	ground_mat.roughness = 0.95
+	# --- L'arena: un colosseo, non una scatola -------------------------------
+	#
+	# La forma e' ROTONDA e non quadrata, e non e' un gusto: in una scatola gli
+	# angoli sono quattro posti dove nascondersi con le spalle coperte, e il
+	# combattimento ci si accuccia dentro. In un cerchio non esiste un angolo, e
+	# il centro — che e' il posto pericoloso — resta il posto che tutti devono
+	# attraversare.
+	#
+	# Il pavimento e' sabbia compattata, PIU' CHIARO E CONSUMATO AL CENTRO: la
+	# mappa sembra usata prima che tu arrivi, ed e' una traccia di storia che
+	# costa un secondo cilindro.
+	var sand := StandardMaterial3D.new()
+	sand.albedo_color = Color(0.33, 0.28, 0.21)
+	sand.roughness = 1.0
 
-	var wall_mat := StandardMaterial3D.new()
-	wall_mat.albedo_color = Color(0.29, 0.16, 0.13)
-	wall_mat.roughness = 0.9
+	var sand_worn := StandardMaterial3D.new()
+	sand_worn.albedo_color = Color(0.40, 0.34, 0.25)
+	sand_worn.roughness = 1.0
+
+	var stone := StandardMaterial3D.new()
+	stone.albedo_color = Color(0.24, 0.22, 0.20)
+	stone.roughness = 0.92
+
+	var brick := StandardMaterial3D.new()
+	brick.albedo_color = Color(0.26, 0.15, 0.12)
+	brick.roughness = 0.88
 
 	var ground := StaticBody3D.new()
 	ground.name = "Ground"
-	var gmesh := MeshInstance3D.new()
-	var gbox := BoxMesh.new()
-	gbox.size = Vector3(60, 1, 60)
-	gmesh.mesh = gbox
-	gmesh.material_override = ground_mat
-	gmesh.position = Vector3(0, -0.5, 0)
-	ground.add_child(gmesh)
+	var disc := MeshInstance3D.new()
+	var disc_mesh := CylinderMesh.new()
+	disc_mesh.top_radius = 30.0
+	disc_mesh.bottom_radius = 30.0
+	disc_mesh.height = 1.0
+	disc_mesh.radial_segments = 48
+	disc.mesh = disc_mesh
+	disc.material_override = sand
+	disc.position = Vector3(0, -0.5, 0)
+	ground.add_child(disc)
+	var worn := MeshInstance3D.new()
+	var worn_mesh := CylinderMesh.new()
+	worn_mesh.top_radius = 13.0
+	worn_mesh.bottom_radius = 13.0
+	worn_mesh.height = 0.04
+	worn_mesh.radial_segments = 40
+	worn.mesh = worn_mesh
+	worn.material_override = sand_worn
+	worn.position = Vector3(0, 0.005, 0)
+	ground.add_child(worn)
 	var gcol := CollisionShape3D.new()
-	var gshape := BoxShape3D.new()
-	gshape.size = Vector3(60, 1, 60)
+	var gshape := CylinderShape3D.new()
+	gshape.radius = 30.0
+	gshape.height = 1.0
 	gcol.shape = gshape
 	gcol.position = Vector3(0, -0.5, 0)
 	ground.add_child(gcol)
 	root.add_child(ground)
 
-	# Quattro muri: danno all'arena un bordo e, soprattutto, danno allo sguardo
-	# qualcosa a cui agganciare la distanza. Nel frame catturato dal vecchio
-	# progetto non si capiva se una parete fosse a 5 o a 50 metri.
-	for i in 4:
-		var wall := StaticBody3D.new()
-		wall.name = "Wall%d" % i
-		var ang := i * PI * 0.5
-		var pos := Vector3(sin(ang) * 26.0, 4.0, cos(ang) * 26.0)
-		var size := Vector3(56, 8, 2) if i % 2 == 0 else Vector3(2, 8, 56)
-		var wmesh := MeshInstance3D.new()
-		var wbox := BoxMesh.new()
-		wbox.size = size
-		wmesh.mesh = wbox
-		wmesh.material_override = wall_mat
-		wall.add_child(wmesh)
-		var wcol := CollisionShape3D.new()
-		var wshape := BoxShape3D.new()
-		wshape.size = size
-		wcol.shape = wshape
-		wall.add_child(wcol)
-		wall.position = pos
-		root.add_child(wall)
+	# Il muro: 32 segmenti su un cerchio da 25 m. Un cilindro cavo non esiste
+	# come primitiva, e 32 pareti dritte a 11 gradi l'una dall'altra si leggono
+	# come una curva — con il vantaggio che ognuna e' una collisione banale.
+	var SEGMENTS := 32
+	var RADIUS := 25.0
+	var seg_w: float = TAU * RADIUS / float(SEGMENTS) * 1.04
+	for i in SEGMENTS:
+		var ang := float(i) * TAU / float(SEGMENTS)
+		var w := StaticBody3D.new()
+		w.name = "Wall%02d" % i
+		var wm := MeshInstance3D.new()
+		var wb := BoxMesh.new()
+		wb.size = Vector3(seg_w, 9.0, 1.2)
+		wm.mesh = wb
+		wm.material_override = brick
+		w.add_child(wm)
+		var wc := CollisionShape3D.new()
+		var ws := BoxShape3D.new()
+		ws.size = Vector3(seg_w, 9.0, 1.2)
+		wc.shape = ws
+		w.add_child(wc)
+		w.position = Vector3(sin(ang) * RADIUS, 4.5, cos(ang) * RADIUS)
+		w.rotation.y = ang
+		root.add_child(w)
 
-	# --- Coperture: il livello partecipa al combattimento ---------------------
-	var cover_mat := StandardMaterial3D.new()
-	cover_mat.albedo_color = Color(0.35, 0.33, 0.30)
-	cover_mat.roughness = 0.85
+		# La gradinata dietro il muro: due anelli di pietra che salgono. Non ci
+		# si arriva e non serve in partita — serve a dire che l'arena sta DENTRO
+		# un posto, e a togliere allo sguardo l'orizzonte piatto che fa sembrare
+		# tutto un livello di prova.
+		for tier in 2:
+			var t := MeshInstance3D.new()
+			var tb := BoxMesh.new()
+			tb.size = Vector3(seg_w, 2.4, 3.0)
+			t.mesh = tb
+			t.material_override = stone
+			var r2: float = RADIUS + 2.2 + float(tier) * 2.6
+			var y2: float = 9.0 + float(tier) * 2.0
+			t.position = Vector3(sin(ang) * r2, y2, cos(ang) * r2)
+			t.rotation.y = ang
+			root.add_child(t)
+
+	# --- Coperture: la geometria partecipa al movimento -----------------------
+	#
+	# Ogni blocco e' alto abbastanza da nasconderti (1,9 m) e basso abbastanza da
+	# saltarci sopra: il salto arriva a 1,5 m da fermo, e da un blocco si prende
+	# il successivo. Un muretto che ferma i proiettili e basta e' arredamento.
 	var covers := [
-		Vector3(8, 1.5, 6), Vector3(-9, 1.5, 4), Vector3(3, 1.5, -11),
-		Vector3(-6, 1.5, -8), Vector3(14, 1.5, -3), Vector3(-14, 1.5, -12),
+		Vector3(9, 0.95, 7), Vector3(-10, 0.95, 5), Vector3(4, 0.95, -12),
+		Vector3(-7, 0.95, -9), Vector3(15, 0.95, -4), Vector3(-15, 0.95, -13),
+		Vector3(12, 0.95, 13), Vector3(-13, 0.95, 14),
 	]
 	for idx in covers.size():
 		var c := StaticBody3D.new()
 		c.name = "Cover%d" % idx
 		var cm := MeshInstance3D.new()
 		var cb := BoxMesh.new()
-		cb.size = Vector3(3, 3, 3)
+		cb.size = Vector3(3.2, 1.9, 3.2)
 		cm.mesh = cb
-		cm.material_override = cover_mat
+		cm.material_override = stone
 		c.add_child(cm)
 		var cc := CollisionShape3D.new()
 		var cs := BoxShape3D.new()
-		cs.size = Vector3(3, 3, 3)
+		cs.size = Vector3(3.2, 1.9, 3.2)
 		cc.shape = cs
 		c.add_child(cc)
 		c.position = covers[idx]
+		# Ognuno ruotato di suo: otto cubi allineati alla griglia si leggono come
+		# un editor di livelli, non come un posto.
+		c.rotation.y = float(idx) * 0.7
 		root.add_child(c)
+		_scatter_props(root, covers[idx], idx)
 
-	# --- Torce: le uniche sorgenti calde, e ciò che dà gamma tonale ----------
-	for i in 6:
-		var ang := i * TAU / 6.0
+	# Due ballatoi rialzati, raggiungibili SENZA abilita': si sale sul gradino
+	# accanto e da li' si passa. La verticalita' e' di tutti, non solo di chi ha
+	# scelto lo scatto.
+	for side in 2:
+		var sgn: float = 1.0 if side == 0 else -1.0
+		var p := StaticBody3D.new()
+		p.name = "Platform%d" % side
+		var pm := MeshInstance3D.new()
+		var pb := BoxMesh.new()
+		pb.size = Vector3(9.0, 0.6, 5.0)
+		pm.mesh = pb
+		pm.material_override = stone
+		p.add_child(pm)
+		var pc := CollisionShape3D.new()
+		var ps := BoxShape3D.new()
+		ps.size = Vector3(9.0, 0.6, 5.0)
+		pc.shape = ps
+		p.add_child(pc)
+		p.position = Vector3(sgn * 17.0, 3.2, sgn * 2.0)
+		p.rotation.y = sgn * 0.4
+		root.add_child(p)
+
+		var step := StaticBody3D.new()
+		step.name = "Step%d" % side
+		var sm := MeshInstance3D.new()
+		var sb := BoxMesh.new()
+		sb.size = Vector3(3.0, 1.7, 3.0)
+		sm.mesh = sb
+		sm.material_override = stone
+		step.add_child(sm)
+		var sc := CollisionShape3D.new()
+		var ss := BoxShape3D.new()
+		ss.size = Vector3(3.0, 1.7, 3.0)
+		sc.shape = ss
+		step.add_child(sc)
+		step.position = Vector3(sgn * 13.5, 0.85, sgn * 4.5)
+		root.add_child(step)
+
+	# --- Torce: le uniche sorgenti calde, e cio' che da' gamma tonale ---------
+	#
+	# Dodici sul muro. Fra una e l'altra restano zone d'ombra vere, e quella
+	# alternanza non e' decorazione: e' la mappa che partecipa al combattimento —
+	# chi conosce le ombre attraversa il campo aperto.
+	var torch_scene: PackedScene = load("res://assets/arena/props/Torch_Metal.gltf")
+	for i in 12:
+		var ang := float(i) * TAU / 12.0
+		var holder := Node3D.new()
+		holder.name = "Torch%02d" % i
+		holder.position = Vector3(sin(ang) * (RADIUS - 0.9), 3.4, cos(ang) * (RADIUS - 0.9))
+		holder.rotation.y = ang + PI
+		root.add_child(holder)
+
+		if torch_scene:
+			var t2 := torch_scene.instantiate()
+			t2.scale = Vector3(1.6, 1.6, 1.6)
+			holder.add_child(t2)
+
 		var lamp := OmniLight3D.new()
-		lamp.name = "Torch%d" % i
+		lamp.name = "Light"
 		lamp.light_color = Color(1.0, 0.46, 0.13)
-		lamp.light_energy = 6.0
-		lamp.omni_range = 18.0
-		lamp.position = Vector3(sin(ang) * 20.0, 4.5, cos(ang) * 20.0)
-		root.add_child(lamp)
+		lamp.light_energy = 4.2
+		lamp.omni_range = 16.0
+		lamp.position = Vector3(0, 0.9, 0.35)
+		holder.add_child(lamp)
+
+		# La fiamma: particelle vere, non un cubo arancione. Costa poco ed e'
+		# l'unica cosa che si muove nell'illuminazione di tutta la mappa.
+		var fire := GPUParticles3D.new()
+		fire.name = "Flame"
+		fire.amount = 24
+		fire.lifetime = 0.9
+		fire.position = Vector3(0, 0.95, 0.35)
+		var pmat := ParticleProcessMaterial.new()
+		pmat.direction = Vector3(0, 1, 0)
+		pmat.spread = 12.0
+		pmat.initial_velocity_min = 0.6
+		pmat.initial_velocity_max = 1.3
+		pmat.gravity = Vector3(0, 0.4, 0)
+		pmat.scale_min = 0.12
+		pmat.scale_max = 0.3
+		pmat.color = Color(1.0, 0.62, 0.18)
+		fire.process_material = pmat
+		var qm := QuadMesh.new()
+		qm.size = Vector2(0.26, 0.26)
+		var fm := StandardMaterial3D.new()
+		fm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		fm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		fm.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		fm.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+		fm.albedo_color = Color(1.0, 0.45, 0.10, 0.42)
+		fm.emission_enabled = true
+		fm.emission = Color(1.0, 0.5, 0.12)
+		fm.emission_energy_multiplier = 1.8
+		qm.material = fm
+		fire.draw_pass_1 = qm
+		holder.add_child(fire)
+
+	# Gli stendardi, fra una torcia e l'altra: sono l'unico rosso saturo della
+	# mappa e danno alla parete una scala verticale che il mattone non ha.
+	var banner_scene: PackedScene = load("res://assets/arena/props/banner_patternA_red.gltf")
+	if banner_scene:
+		for i in 12:
+			var ang := (float(i) + 0.5) * TAU / 12.0
+			var b := banner_scene.instantiate()
+			b.scale = Vector3(1.9, 1.9, 1.9)
+			# Spenti del 45 %: erano la cosa piu chiara del frame, e la regola e
+			# che il mondo sta sotto e le azioni sopra.
+			_darken(b, 0.30)
+			b.position = Vector3(sin(ang) * (RADIUS - 0.7), 6.6, cos(ang) * (RADIUS - 0.7))
+			b.rotation.y = ang + PI
+			root.add_child(b)
 
 	# --- I bersagli -----------------------------------------------------------
 	# Tre, e sono i tre che servono per allenare le tre forme: fermo (provi le
@@ -293,6 +450,60 @@ func _init() -> void:
 		return
 	print("arena.tscn scritta — %d nodi" % _count(root))
 	quit(0)
+
+
+## Qualche cassa e qualche barile ai piedi di ogni copertura.
+##
+## Non fanno collisione e non cambiano il gioco: rompono la silhouette di un
+## cubo, che e' la differenza fra "un blocco di prova" e "roba appoggiata in un
+## posto dove qualcuno vive". Costano tre mesh a copertura.
+func _scatter_props(root: Node, at: Vector3, seed_i: int) -> void:
+	var files := ["barrel_large.gltf", "Crate_Wooden.gltf", "barrel_small.gltf", "box_large.gltf"]
+	var rng := RandomNumberGenerator.new()
+	# Seme fisso: l'arena deve essere IDENTICA a ogni avvio, o due giocatori
+	# nella stessa partita vedono due mappe diverse.
+	rng.seed = 1000 + seed_i
+	for k in 3:
+		var f: String = files[(seed_i + k) % files.size()]
+		var ps: PackedScene = load("res://assets/arena/props/%s" % f)
+		if ps == null:
+			continue
+		var p := ps.instantiate()
+		var ang := rng.randf() * TAU
+		var dist := 1.9 + rng.randf() * 0.7
+		p.position = at + Vector3(sin(ang) * dist, -0.95, cos(ang) * dist)
+		p.rotation.y = rng.randf() * TAU
+		# Un barile e' alto un metro: la scala e' quella che lo porta li, non
+		# quella che riempie lo spazio.
+		var k2 := 0.55 + rng.randf() * 0.2
+		p.scale = Vector3(k2, k2, k2)
+		_darken(p, 0.7)
+		root.add_child(p)
+
+
+## Abbassa l'albedo di un modello importato.
+##
+## I props arrivano da pacchetti diversi, tarati per scene illuminate a giorno.
+## Nell'arena di notte la stessa texture e' la cosa piu chiara dello schermo, e
+## il mondo desaturato smette di essere desaturato.
+func _darken(node: Node, k: float) -> void:
+	var stack: Array = [node]
+	while not stack.is_empty():
+		var n = stack.pop_back()
+		for c in n.get_children():
+			stack.append(c)
+		if n is MeshInstance3D:
+			var mi := n as MeshInstance3D
+			if mi.mesh == null:
+				continue
+			for i in mi.mesh.get_surface_count():
+				var m = mi.mesh.surface_get_material(i)
+				if m == null or not (m is StandardMaterial3D):
+					continue
+				var d := (m as StandardMaterial3D).duplicate()
+				d.albedo_color = d.albedo_color * k
+				d.albedo_color.a = 1.0
+				mi.set_surface_override_material(i, d)
 
 
 func _own(node: Node, owner: Node) -> void:

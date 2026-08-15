@@ -14,6 +14,10 @@ var failures := 0
 var _arena: Node3D
 var _kills := 0
 var _respawns_seen := 0
+## Bot che le regole dichiarano vivi mentre il corpo è ancora a terra.
+var _ghosts := 0
+## Quante volte ogni bot è tornato in campo.
+var _rientri_per_bot: Dictionary = {}
 var _step := 0
 
 
@@ -60,16 +64,24 @@ func _process(delta: float) -> bool:
 			bot.take_damage(9999.0)
 			_kills += 1
 
-	# I rientri si contano PER BOT: se rientrano nello stesso frame, contare i
-	# morti prima e dopo ne vede uno solo — e il conto sarebbe sbagliato in
-	# silenzio, che è il modo peggiore di sbagliare in un test.
+	# I rientri si contano SULLE REGOLE, non sui nodi: è la regola che decide
+	# quando si torna in vita, e un nodo che non torna mentre la regola dice che
+	# è vivo è proprio il difetto che questo test deve trovare — contarlo sui
+	# nodi lo renderebbe invisibile.
 	var was_dead := {}
 	for id in _arena._bots.keys():
-		was_dead[id] = _arena._bots[id].dead
+		was_dead[id] = not bool(_arena._match["alive"].get(id, true))
 	_arena._process(dt)
 	for id in _arena._bots.keys():
-		if bool(was_dead[id]) and not _arena._bots[id].dead:
+		var alive_now := bool(_arena._match["alive"].get(id, true))
+		if bool(was_dead[id]) and alive_now:
 			_respawns_seen += 1
+			# E il corpo deve essere tornato con la regola: se la regola dice
+			# "vivo" e il nodo è ancora a terra, il giocatore vede un cadavere
+			# che gli spara.
+			if _arena._bots[id].dead:
+				_ghosts += 1
+			_rientri_per_bot[id] = int(_rientri_per_bot.get(id, 0)) + 1
 
 	if _arena._match["phase"] == M.Phase.OVER:
 		_check(
@@ -78,12 +90,23 @@ func _process(delta: float) -> bool:
 			"%d uccisioni" % int(_arena._match["score"][1])
 		)
 		_check("e la vince chi ha segnato", int(_arena._match["winner"]) == 1, "vincitore = giocatore")
+		# Non un RAPPORTO fra rientri e uccisioni: quel numero dipende da quante
+		# volte il test riesce a sparare in una finestra di respawn, e una soglia
+		# scelta a occhio è una soglia che si rompe quando cambia il ritmo.
+		# L'invariante vera è che il ciclo GIRI: ogni bot cade e torna, più volte,
+		# per tutta la partita.
+		var min_rientri: int = 1 << 30
+		for id in _rientri_per_bot:
+			min_rientri = mini(min_rientri, int(_rientri_per_bot[id]))
 		_check(
-			# A partita finita i morti restano morti: la tolleranza copre chi è
-			# caduto negli ultimi istanti e non ha più avuto un turno per tornare.
-			"ogni bot ucciso è tornato in campo finché la partita era viva",
-			_respawns_seen >= _kills - _arena._bots.size() * 2,
-			"%d rientri su %d uccisioni" % [_respawns_seen, _kills]
+			"ogni bot cade e torna, più volte",
+			_arena._bots.size() > 0 and min_rientri >= 2,
+			"il bot che è tornato meno lo ha fatto %d volte (%d rientri, %d uccisioni)" % [min_rientri, _respawns_seen, _kills]
+		)
+		_check(
+			"e il corpo è tornato insieme alla regola",
+			_ghosts == 0,
+			"%d rientri con il corpo ancora a terra" % _ghosts
 		)
 		_check(
 			"e sono tornati vivi, non fantasmi",

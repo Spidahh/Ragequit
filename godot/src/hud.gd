@@ -248,8 +248,8 @@ func _build_bar() -> void:
 
 	var kit: Array = _player.kit() if _player.has_method("kit") else []
 	var bar := _bar
-	var w := 58.0
-	var gap := 8.0
+	var w := 52.0
+	var gap := 6.0
 	var total := kit.size() * w + (kit.size() - 1) * gap
 	for i in kit.size():
 		var x := -total * 0.5 + i * (w + gap)
@@ -272,7 +272,10 @@ func _build_bar() -> void:
 		key.add_theme_color_override("font_color", Color(1, 1, 1, 0.75))
 		bar.add_child(key)
 		var nm := Label.new()
-		nm.text = kit[i].name
+		# Il nome si taglia invece di sovrapporsi al vicino: due nomi lunghi
+		# affiancati si leggevano come una parola sola.
+		nm.text = String(kit[i].name)
+		nm.clip_text = true
 		nm.position = Vector2(x, w + 2)
 		nm.size = Vector2(w, 14)
 		nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

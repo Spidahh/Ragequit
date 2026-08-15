@@ -15,6 +15,8 @@ extends CharacterBody3D
 
 const Combat := preload("res://src/combat.gd")
 const Status := preload("res://src/status.gd")
+const CharacterScript := preload("res://src/character.gd")
+const SettingsScript := preload("res://src/settings.gd")
 
 @export var max_hp: float = Combat.HP_MAX
 ## Gradi al secondo di rotazione: quanto in fretta ti insegue con la mira.
@@ -25,6 +27,10 @@ const Status := preload("res://src/status.gd")
 @export var fire_period: float = 1.15
 @export var damage: float = 9.0
 @export var sight_range: float = 34.0
+## Che classe interpreta questo bot. Decide modello, arma e silhouette — e in
+## un'arena dove le classi sono quattro, vedere sempre lo stesso corpo
+## significa non imparare mai a riconoscerle.
+@export var class_id: String = "drift"
 
 var hp: float
 var target: Node3D = null
@@ -47,21 +53,50 @@ signal fired(from: Vector3, to: Vector3, hit: bool)
 signal died
 
 
+var body_view: Node3D = null
+
+
 func _ready() -> void:
 	hp = max_hp
 	_rng.randomize()
 	_aim = -global_transform.basis.z
+	_build_body()
+
+
+## Il corpo vero al posto della capsula. La capsula di collisione resta — è
+## quella che il gioco usa per colpire, ed è la stessa per tutti: due giocatori
+## non devono essere più facili o più difficili da prendere per via del modello
+## che hanno scelto.
+func _build_body() -> void:
+	for c in get_children():
+		if c is MeshInstance3D:
+			c.queue_free()
+	body_view = CharacterScript.new()
+	body_view.name = "Body"
+	add_child(body_view)
+	var colors: Dictionary = SettingsScript.COLORBLIND["none"]
+	body_view.setup(class_id, colors["enemy"])
 
 
 func take_damage(amount: float) -> void:
 	if dead:
 		return
 	hp = maxf(0.0, hp - amount)
+	if hp > 0.0:
+		# Il colpo subito si VEDE addosso a chi lo prende: è metà del feedback di
+		# aver colpito, e l'unica metà che vede anche chi sta guardando da fuori.
+		if body_view:
+			body_view.act("hit", 0.25)
+		return
 	if hp <= 0.0:
 		dead = true
+		if body_view:
+			body_view.die()
 		# Non `queue_free`: un nemico distrutto non può tornare, e una partita in
 		# cui gli avversari finiscono non è una partita — è un livello. Qui esce
 		# di scena e ci rientra quando le regole lo dicono.
+		# Il corpo resta visibile per un attimo mentre cade: sparire di colpo
+		# toglie la conferma di averlo ucciso.
 		visible = false
 		process_mode = Node.PROCESS_MODE_DISABLED
 		# E smette di essere un bersaglio: senza questo, i secondi di attesa sono
@@ -81,6 +116,8 @@ func revive(at: Vector3) -> void:
 	_tracking = 0.0
 	visible = true
 	process_mode = Node.PROCESS_MODE_INHERIT
+	if body_view:
+		body_view.revive()
 	if _layer != 0:
 		collision_layer = _layer
 
@@ -144,6 +181,12 @@ func _physics_process(delta: float) -> void:
 	var max_turn := deg_to_rad(turn_speed_deg) * delta
 	_aim = _aim.slerp(wanted, clampf(max_turn / maxf(_aim.angle_to(wanted), 0.0001), 0.0, 1.0))
 
+	# Il corpo guarda dove mira: senza, un nemico che strafa sembra scivolare di
+	# lato invece di inseguirti, e non si legge più da che parte sta per sparare.
+	var flat := Vector3(_aim.x, 0.0, _aim.z)
+	if flat.length_squared() > 0.001:
+		rotation.y = atan2(flat.x, flat.z) + PI
+
 	# Si muove di lato mentre spara: un nemico fermo è un bersaglio, non un
 	# avversario, e insegna al giocatore l'abitudine sbagliata.
 	var strafe := to_target.cross(Vector3.UP).normalized()
@@ -155,9 +198,14 @@ func _physics_process(delta: float) -> void:
 	velocity.z = move.z * 5.5 * slow
 	move_and_slide()
 
+	if body_view:
+		body_view.drive(velocity, is_on_floor(), delta)
+
 	_fire_t -= delta
 	if _fire_t <= 0.0 and status.can_cast():
 		_fire_t = fire_period
+		if body_view:
+			body_view.act("attack", 0.4)
 		_shoot()
 
 

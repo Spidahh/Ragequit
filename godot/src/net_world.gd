@@ -24,6 +24,8 @@ const MatchRules := preload("res://src/match_rules.gd")
 const Content := preload("res://src/content.gd")
 const Effects := preload("res://src/effects.gd")
 const SpawnsScript := preload("res://src/spawns.gd")
+const CharacterScript := preload("res://src/character.gd")
+const SettingsScript := preload("res://src/settings.gd")
 
 ## Oltre questo scarto fra predizione e verità del server, il client si allinea.
 const RECONCILE_M := 0.35
@@ -70,12 +72,13 @@ func _spawn_body(peer_id: int) -> void:
 	caps.radius = 0.4
 	col.shape = caps
 	body.add_child(col)
-	var mesh := MeshInstance3D.new()
-	var cm := CapsuleMesh.new()
-	cm.height = 1.8
-	cm.radius = 0.4
-	mesh.mesh = cm
-	body.add_child(mesh)
+	# Il corpo che si vede. La capsula di collisione resta la stessa per tutti:
+	# due giocatori non devono essere più facili o più difficili da colpire per
+	# via del modello che hanno scelto.
+	var view := CharacterScript.new()
+	view.name = "Body"
+	body.add_child(view)
+	view.setup("breaker", SettingsScript.COLORBLIND["none"]["enemy"])
 	# Dove si nasce lo decide un file solo: vedi spawns.gd.
 	body.position = SpawnsScript.farthest_from(_occupied_positions())
 	add_child(body)
@@ -225,6 +228,12 @@ func apply_state(ids: PackedInt32Array, positions: PackedVector3Array) -> void:
 			# Gli ALTRI: si interpolano verso la verità invece di saltarci sopra,
 			# o a 20 pacchetti al secondo si muovono a scatti.
 			body.global_position = body.global_position.lerp(truth, 0.35)
+			# Gli altri si animano dalla velocità che il server ha appena
+			# comunicato: senza, tutti corrono in posa di attesa.
+			var view2 = body.get_node_or_null("Body")
+			if view2 and view2.has_method("drive"):
+				var moved: Vector3 = truth - body.global_position
+				view2.drive(moved * 20.0, true, 0.05)
 
 
 func _on_cast_requested(peer_id: int, slot: int, origin: Vector3, dir: Vector3) -> void:
