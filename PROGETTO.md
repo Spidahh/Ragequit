@@ -1609,6 +1609,140 @@ riconciliazione a ogni uso.
 
 ## **Niente pagamenti, niente account, niente email.** Si apre la pagina e si gioca.
 
+## 19 · Cosa non abbiamo scritto noi, e perché
+
+Questa sezione esiste perché **non è stata fatta prima**, ed è l'errore di metodo
+più costoso di tutto il progetto.
+
+La domanda che va posta **prima** di scrivere qualunque sistema è una sola:
+
+> Godot lo offre già? Esiste un addon aperto e mantenuto? Esiste un progetto con
+> una licenza permissiva da adattare? **Solo se le risposte sono no, lo scriviamo
+> noi.**
+
+Non l'ho fatto. Ho scritto da zero predizione, riconciliazione, lag
+compensation, il sistema di abilità e la gestione degli stati senza chiedermelo
+una volta. Qui sotto c'è la risposta che avrei dovuto avere prima — e in un caso
+su cinque dice che **quello che ho scritto va sostituito**.
+
+| Sistema                 | Verdetto                 | Perché                                                     |
+| ----------------------- | ------------------------ | ---------------------------------------------------------- |
+| Netcode predittivo      | **ADDON — da adottare**  | `netfox` fa esattamente questo, MIT, mantenuto             |
+| Sistema di abilità      | CUSTOM — si tiene        | l'addon copre la metà facile, non l'ordine degli effetti   |
+| Stati di combattimento  | CUSTOM — si tiene        | non è una macchina a stati, è una borsa di effetti a tempo |
+| Stati del giocatore     | **ADDON — debito**       | qui sì, e sta già diventando un problema                   |
+| Controller di movimento | CUSTOM — si tiene        | il nostro è **misurato**, un generico no                   |
+| Bot                     | CUSTOM — si tiene        | 120 righe e due parametri leggibili                        |
+| Corpo, collisioni, RPC  | **BUILT-IN** — già usati | `CharacterBody3D`, multiplayer di alto livello, RPC        |
+
+### Netcode: `netfox` — e qui ho sbagliato
+
+**[netfox](https://github.com/foxssake/netfox)** è un pacchetto di addon per
+Godot 4 pensato esattamente per i giochi online responsive: tempo di rete
+condiviso, **predizione lato client, riconciliazione lato server,
+interpolazione e rollback**. Licenza **MIT**, ultimo rilascio **v1.35.3 del
+novembre 2025**.
+
+È l'elenco delle cose che ho scritto a mano in `net_world.gd` e `lag_comp.gd`.
+
+**E si appoggia al multiplayer di alto livello di Godot, che è agnostico
+rispetto al trasporto** — quindi funziona sopra il nostro WebSocket, che è il
+vincolo da cui non si scappa (§14).
+
+**Cosa costa adottarlo, detto onestamente:** non è un innesto, è una
+ristrutturazione. netfox possiede il proprio ciclo di tick (`NetworkTime`,
+`NetworkRollback`), quindi `server_tick` e il ciclo di predizione vanno riscritti
+attorno al suo. Le regole — movimento, combattimento, partita — non si toccano:
+sono già funzioni pure, ed è l'unica ragione per cui questa sostituzione è
+possibile senza rifare il gioco.
+
+**Cosa si guadagna:** il rollback vero, che noi non abbiamo. Oggi c'è predizione
+e riavvolgimento delle hitbox; non c'è la risimulazione dei tick dopo una
+correzione — e senza quella, una correzione oltre i 35 cm si vede come uno
+scatto invece che come una divergenza riassorbita.
+
+> **La prova che questa roba non va scritta a mano:** il nostro riavvolgimento
+> aveva un difetto che non dava nessun errore — Godot sincronizza le
+> trasformazioni al passo di fisica, quindi una query subito dopo lo spostamento
+> vedeva la posizione **vecchia**. Il riavvolgimento _sembrava_ avvenire e il
+> colpo mancava lo stesso. L'ho trovato con un test scritto apposta. Chi mantiene
+> netfox quel difetto lo ha già pagato.
+
+### Abilità: si tiene il nostro, ma il ragionamento era rovesciato
+
+**[godot-gameplay-abilities](https://github.com/OctoD/godot-gameplay-abilities)**
+modella un'abilità come `Resource` e gestisce ciclo di vita, ricarica, durata,
+annullamento, blocco, concessione e revoca.
+
+Copre **la metà facile**. La metà che ha conseguenze di progetto è l'ordine con
+cui gli effetti si applicano, ed è tutta in `effects.gd`: lo sbalzo **prima** del
+danno (se il danno uccide, chi è morto non vola più e il colpo che doveva aprire
+una finestra la chiude), lo scudo prima della vita, il furto di vita sul danno
+**realmente inflitto**. L'addon non decide niente di tutto questo, e adottarlo
+vorrebbe dire scrivere comunque quella parte **più** riadattare 67 abilità già
+guidate dai dati al suo modello.
+
+Il verdetto è "si tiene". Ma ci sono arrivato **dopo** aver scritto il sistema, e
+questo è il punto: la conclusione giusta raggiunta al contrario è fortuna, non
+metodo.
+
+### Stati: due domande diverse, due risposte diverse
+
+**`status.gd` si tiene.** Non è una macchina a stati: è una borsa di effetti a
+tempo che si sommano — quattordici stati che possono stare addosso tutti insieme.
+Uno state chart modella l'esclusività, e qui l'esclusività non c'è.
+
+**Il giocatore no, e questo è un debito che ho contratto senza dichiararlo.**
+`dead`, `_parry_holding`, `_parry_until`, `_lock`, `practice`, `_capture_for`:
+sono già sei variabili che descrivono _in che stato sei_, sparse, e ogni
+combinazione nuova è una condizione in più da ricordarsi. È esattamente il
+"ottocento booleani" contro cui serve
+**[Godot State Charts](https://github.com/derkork/godot-statecharts)** — addon
+per Godot 4, aggiornato per la 4.7.
+
+Non lo sto sostituendo adesso perché il gioco è online e funziona, ma **è la
+prossima cosa strutturale**, non un'idea per il futuro.
+
+### Movimento: si tiene, e questa è netta
+
+Esistono controller FPS aperti e ben fatti. Il nostro **non si sostituisce**, per
+una ragione che non è affezione: è **misurato**. Spazio di frenata 0,812 m contro
+0,81 dichiarati, strafe aereo verificato oltre i 9 m/s di terra, salto che
+conserva la velocità perché precede l'attrito nell'ordine di calcolo.
+
+Sostituire una cosa verificata con una non verificata è un peggioramento anche
+quando il codice nuovo è più bello. E il feel del movimento è la prima cosa che
+questo gioco vende.
+
+### Bot: si tiene, finché restano semplici
+
+**[LimboAI](https://github.com/limbonaut/limboai)** — behavior tree e macchine a
+stati con debugger visuale — è la risposta giusta il giorno in cui i bot avranno
+obiettivi, coordinamento o ruoli di squadra. Oggi sono 120 righe con **due**
+parametri leggibili dal comportamento, e un behavior tree sarebbe più
+impalcatura che comportamento.
+
+### Quello che era già di Godot, e che infatti non abbiamo riscritto
+
+`CharacterBody3D` e `move_and_slide` per corpo e collisioni, il multiplayer di
+alto livello con le RPC, `AnimationPlayer`, `GPUParticles3D`, l'ambiente e il
+tonemapping, l'importatore di GLTF, `AudioServer` con i bus. È la ragione per cui
+il progetto è passato a Godot: ~11.600 righe del progetto precedente rifacevano a
+mano cose che un motore dà di serie.
+
+---
+
+### La regola, da qui in poi
+
+**È vietato iniziare a implementare perché si è "capito abbastanza".** Prima di
+scrivere un sistema si dichiara qui che ricerca è stata fatta e che verdetto ne è
+uscito — `BUILT-IN`, `ADDON` o `CUSTOM`, con il motivo. E prima di adottare un
+addon si verificano cinque cose, non una: **versione di Godot, licenza,
+manutenzione, dipendenze, e costo di integrazione** — perché un addon abbandonato
+è codice tuo che non hai scritto tu.
+
+---
+
 # Appendice · I numeri
 
 Tutto quello che sopra è descritto a parole, qui è deciso in cifre. Se una cifra
