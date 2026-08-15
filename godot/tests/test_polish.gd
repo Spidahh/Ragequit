@@ -61,6 +61,7 @@ func _process(_d: float) -> bool:
 			_chi_cade_ha_trenta_secondi()
 			_quattro_segnali_e_nessuna_chat()
 			_tutti_i_tasti_uno_per_uno()
+			_la_rotella_e_lo_spettatore_sono_cablati()
 			print("")
 			if failures == 0:
 				print("Tutto verde.\n")
@@ -468,6 +469,31 @@ La rimappatura, tasto per tasto")
 		"tastiera su V, mouse ancora RMB"
 	)
 	st.reset_bindings()
+
+
+func _la_rotella_e_lo_spettatore_sono_cablati() -> void:
+	print("
+Cablati in partita, non solo scritti")
+	# È la categoria di errore di questo progetto: un sistema che esiste, ha il
+	# suo test, e non lo chiama nessuno. Qui si controlla il collegamento.
+	_check("l'HUD sa disegnare la rotella", _hud != null and _hud.has_method("show_wheel"), "show_wheel")
+	_check("l'arena la fa girare", _arena.has_method("_tick_wheel"), "_tick_wheel")
+	_check("e sa passare a spettatore", _arena.has_method("enter_spectator"), "enter_spectator")
+
+	if _hud and _hud.has_method("show_wheel"):
+		_hud.show_wheel(Wheel.Signal_.NICE, Wheel.LABELS, Wheel.ANGLES)
+		var texts := _labels(_hud)
+		_check("e la rotella mostra tutti e quattro", texts.contains("NICE") and texts.contains("SORRY"), "quattro voci")
+		_hud.hide_wheel()
+		_check("e si chiude al rilascio", not _labels(_hud).contains("FALLING BACK"), "via")
+
+	_arena.enter_spectator()
+	_check("lo spettatore entra", _arena._spectator != null, "camera libera pronta")
+	# E due volte non ne crea due: entrare due volte è quello che succede quando
+	# muori mentre il round sta già finendo.
+	var first = _arena._spectator
+	_arena.enter_spectator()
+	_check("e non si duplica", _arena._spectator == first, "uno solo")
 
 
 ## Tutto il testo visibile in un sottoalbero, in una stringa sola.

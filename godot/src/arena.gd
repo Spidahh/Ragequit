@@ -11,6 +11,8 @@ const MatchRules := preload("res://src/match_rules.gd")
 const SpawnsScript := preload("res://src/spawns.gd")
 const Bots := preload("res://src/bots.gd")
 const RangeDrills := preload("res://src/range_drills.gd")
+const Wheel := preload("res://src/signals_wheel.gd")
+const SpectatorScript := preload("res://src/spectator.gd")
 const Sfx := preload("res://src/sfx.gd")
 
 ## Il giocatore è il peer 1; i nemici prendono 101, 102… Gli stessi id che
@@ -32,6 +34,10 @@ var _bots: Dictionary = {}
 var _bot_names: Dictionary = {}
 var _scoreboard_open := false
 var _drills = null
+## La rotella dei segnali: si tiene premuto, si punta, si rilascia.
+var _wheel := Wheel.new()
+var _wheel_open := false
+var _spectator: Node3D = null
 ## La difficoltà di questa partita. In partita mista il default è Veterano: è
 ## l'unico che si può battere sudando, ed è quello su cui è tarato il resto.
 @export var difficulty: int = Bots.DEFAULT_LEVEL
@@ -53,6 +59,7 @@ var _taken: Dictionary = {}
 var _dealt := 0.0
 ## Da che parte è arrivato l'ultimo colpo, per il lampo direzionale.
 var _hurt_from := Vector3.ZERO
+var _wheel_pick := -1
 ## Danno per abilità, per la riga "BEST" della schermata dei risultati.
 var _by_ability: Dictionary = {}
 
@@ -220,6 +227,49 @@ func _refresh_drills() -> void:
 	_hud.show_drills(rows)
 
 
+## La rotella: tenuta aperta con `V`, puntata col mouse, mandata al rilascio.
+##
+## Il puntamento usa lo scostamento del mouse DAL CENTRO DELLO SCHERMO e non la
+## posizione assoluta: in partita il mouse è catturato e non ha una posizione
+## che il giocatore possa vedere.
+func _tick_wheel() -> void:
+	if _hud == null or not _hud.has_method("show_wheel"):
+		return
+	var held := Input.is_key_pressed(KEY_V)
+	if held:
+		var vp := get_viewport().get_visible_rect().size
+		var offset := (get_viewport().get_mouse_position() - vp * 0.5) / (vp.y * 0.25)
+		_wheel_pick = Wheel.pick(offset)
+		_hud.show_wheel(_wheel_pick, Wheel.LABELS, Wheel.ANGLES)
+		_wheel_open = true
+		return
+	if not _wheel_open:
+		return
+	_wheel_open = false
+	_hud.hide_wheel()
+	var text := _wheel.send(_wheel_pick, Time.get_ticks_msec() / 1000.0)
+	if not text.is_empty():
+		_hud.push_signal("YOU:  %s" % text)
+		Sfx.play("ui_confirm", Sfx.UI, -6.0)
+
+
+## Chi è fuori dal torneo resta a guardare. Buttarlo al menù significa che metà
+## delle persone in un torneo da otto smette di giocare dopo novanta secondi.
+func enter_spectator() -> void:
+	if _spectator != null:
+		return
+	_spectator = SpectatorScript.new()
+	add_child(_spectator)
+	var alive := []
+	for id in _bots.keys():
+		var b = _bots[id]
+		if is_instance_valid(b) and not b.dead:
+			alive.append(b)
+	_spectator.set_targets(alive)
+	if _player and is_instance_valid(_player):
+		_player.set_process_input(false)
+
+
 func _bot_name(peer_id: int) -> String:
 	return String(_bot_names.get(peer_id, "SOMEONE"))
 
@@ -267,6 +317,10 @@ func _on_player_died() -> void:
 	# giocatore, ma la morte va contata comunque — è la metà onesta del risultato.
 	MatchRules.on_kill(_match, -1, PLAYER_ID)
 	_streak = 0
+	# Nel torneo non si respawna: se sei caduto, il round è finito e da qui in
+	# poi guardi. Il tuo posto nel tabellone resta.
+	if int(_match.get("mode", 0)) == MatchRules.Mode.TOURNAMENT:
+		enter_spectator()
 	# Il recap: chi ti ha ucciso, con cosa e per quanto, e quanto avevi fatto tu.
 	var breakdown := []
 	for k in _taken:
@@ -290,6 +344,8 @@ func _process(delta: float) -> void:
 		_hurt_flash.color.a = maxf(0.0, _hurt_flash.color.a - delta * 1.6)
 	if _hurt_edge and _hurt_edge.color.a > 0.0:
 		_hurt_edge.color.a = maxf(0.0, _hurt_edge.color.a - delta * 1.1)
+
+	_tick_wheel()
 
 	# Il tabellone su `Tab`: si tiene premuto, non si apre e si chiude. In un
 	# fight non si preme due volte niente.

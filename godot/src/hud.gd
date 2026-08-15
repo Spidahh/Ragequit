@@ -52,6 +52,7 @@ var _combo_world := Vector3.ZERO
 var _combo_has_world := false
 var _drills: Control = null
 var _netstat: Label = null
+var _wheel: Control = null
 var _ping_ms := 0
 var _fps_smooth := 60.0
 
@@ -390,6 +391,40 @@ func show_drills(rows: Array) -> void:
 			line.custom_minimum_size = Vector2(300, 0)
 			box.add_child(line)
 		_drills.add_child(box)
+
+
+## La rotella dei segnali. `picked` è il settore puntato, o -1 per nessuno.
+##
+## Si disegna al centro perché è lì che sta il mouse quando la apri: una rotella
+## in un angolo obbliga a cercarla, e in un fight nessuno cerca niente.
+func show_wheel(picked: int, labels: Dictionary, angles: Dictionary) -> void:
+	if _wheel == null:
+		_wheel = Control.new()
+		_wheel.set_anchors_preset(Control.PRESET_CENTER)
+		_wheel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(_wheel)
+	_clear(_wheel)
+	for k in labels:
+		var deg: float = float(angles.get(k, 0.0))
+		var rad := deg_to_rad(deg)
+		var at := Vector2(sin(rad), -cos(rad)) * 118.0
+		var chosen: bool = int(k) == picked
+		var l := UI.label(String(labels[k]), 15 if chosen else 13, UI.ACCENT if chosen else UI.TEXT_DIM)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.size = Vector2(180, 22)
+		l.position = at - Vector2(90, 11)
+		_wheel.add_child(l)
+
+
+func hide_wheel() -> void:
+	_drop(_wheel)
+	_wheel = null
+
+
+## Un segnale ricevuto. Va nella stessa colonna del kill feed: sono la stessa
+## cosa — righe che dicono cosa è successo, non cosa fare.
+func push_signal(text: String) -> void:
+	push_feed(text)
 
 
 func set_ping(ms: int) -> void:
