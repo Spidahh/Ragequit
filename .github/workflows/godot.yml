@@ -101,12 +101,20 @@ jobs:
       - name: Via il server dal pacchetto pubblico
         run: rm -rf godot-build/server
 
-      - name: Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+      # `npx wrangler` e non l'azione ufficiale: quella cerca il gestore di
+      # pacchetti dichiarato nel repository e qui trova `pnpm`, che sul runner
+      # non c'e'. Installarlo per pubblicare una cartella di file statici
+      # sarebbe due minuti di build per niente.
+      - uses: actions/setup-node@v4
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy godot-build --project-name=ragequit --branch=main
+          node-version: 22
+
+      - name: Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx --yes wrangler@latest pages deploy godot-build             --project-name=ragequit-godot --branch=main --commit-dirty=true
 
   deploy-server:
     needs: build
