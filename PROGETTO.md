@@ -907,7 +907,7 @@ simulazione. `[M]`
 | Frame time medio        | ≤ 16,6 ms | **6,98 ms** `[M]` |
 | Frame time p99          | ≤ 33,3 ms | 7,79 ms `[M]`     |
 | Draw call               | < 300     | **70** `[M]`      |
-| Peso scaricato (brotli) | < 20 MB   | **6,8 MB** `[M]`  |
+| Peso scaricato (brotli) | < 20 MB   | **15,9 MB** `[M]` |
 
 Il margine serve: quei numeri sono misurati su una macchina da sviluppo, e il
 gioco deve girare su un portatile con la grafica integrata.
@@ -1315,7 +1315,7 @@ dal browser come contenuto misto.
 | Percorsi                                  | relativi: itch serve da una sottocartella                                                  |
 | Connessione                               | solo `wss://`                                                                              |
 | Pacchetto                                 | zip con `index.html` in radice                                                             |
-| Peso                                      | **6,8 MB** in brotli `[M]`                                                                 |
+| Peso                                      | **15,9 MB** scaricati, in brotli `[M]`                                                     |
 
 Sono sette righe, e ognuna è una cosa che se scoperta dopo costa una settimana. Il
 pointer lock in particolare: se non funzionasse dentro l'iframe di itch, tutto il
@@ -1362,21 +1362,21 @@ PvP che vuole essere giusto.
 Ogni fase lascia il gioco **giocabile e verificabile**. Nessuna fase comincia
 prima che la precedente sia verde.
 
-| #   | Fase                                                             | Stato        |
-| --- | ---------------------------------------------------------------- | ------------ |
-| 0   | Motore, movimento portato e verificato                           | **✅ fatto** |
-| 1   | Combattimento: le tre forme, ricariche, danno                    | **✅ fatto** |
-| 2   | Nemici, HUD, effetti                                             | **✅ fatto** |
-| 3   | Rete autoritativa e lag compensation                             | **✅ fatto** |
-| 4   | **Struttura di partita**: modalità, punteggio, vittoria, respawn | **✅ fatto** |
-| 5   | **Audio completo** (§10)                                         | **✅ fatto** |
-| 6   | **Classi, sottoclassi e le 67 abilità** lette dai dati           | ⬜           |
-| 7   | **Le sette schermate** (§11) e le comodità (§12)                 | ⬜           |
-| 8   | **L'arena vera** (§8) al posto del blockout                      | ⬜           |
-| 9   | **Personaggi e armi** al posto delle capsule                     | ⬜           |
-| 10  | **Bot** a tre difficoltà e riempimento della lobby               | ⬜           |
-| 11  | **Pubblicazione** su itch.io e server ospitato                   | ⬜           |
-| 12  | Sblocchi e livello account                                       | **✅ fatto** |
+| #   | Fase                                                             | Stato                   |
+| --- | ---------------------------------------------------------------- | ----------------------- |
+| 0   | Motore, movimento portato e verificato                           | **✅ fatto**            |
+| 1   | Combattimento: le tre forme, ricariche, danno                    | **✅ fatto**            |
+| 2   | Nemici, HUD, effetti                                             | **✅ fatto**            |
+| 3   | Rete autoritativa e lag compensation                             | **✅ fatto**            |
+| 4   | **Struttura di partita**: modalità, punteggio, vittoria, respawn | **✅ fatto**            |
+| 5   | **Audio completo** (§10)                                         | **✅ fatto**            |
+| 6   | **Classi, sottoclassi e le 67 abilità** lette dai dati           | ⬜                      |
+| 7   | **Le sette schermate** (§11) e le comodità (§12)                 | ⬜                      |
+| 8   | **L'arena vera** (§8) al posto del blockout                      | ⬜                      |
+| 9   | **Personaggi e armi** al posto delle capsule                     | ⬜                      |
+| 10  | **Bot** a tre difficoltà e riempimento della lobby               | ⬜                      |
+| 11  | **Pubblicazione** su itch.io e server ospitato                   | **✅ pacchetto pronto** |
+| 12  | Sblocchi e livello account                                       | **✅ fatto**            |
 
 **La 4 prima di tutto**, e non è un'opinione. Finché una partita non comincia e
 non finisce, tutto il resto è roba bella dentro qualcosa che non si può né vincere
@@ -1411,6 +1411,9 @@ lanciano tutte con un comando: `node run_tests.mjs` dentro `godot/`.
 | `test_net`             | due processi veri si parlano — non un albero di scena che finge         |
 | `test_net_world`       | due corpi, movimento autoritativo                                       |
 | `bench`                | frame time, draw call, e stampa i numeri                                |
+| `web_size.mjs`         | quanto pesa DAVVERO l'export: brotli, non i byte su disco               |
+| `package_itch.mjs`     | le sette cose che devono essere vere per pubblicare, prima di caricare  |
+| `luminance.mjs`        | i quattro bersagli di §9 su un frame, invece di guardarlo               |
 
 **Le quattro regole che valgono più dei test**, e che vengono tutte da un errore
 già fatto:
@@ -1598,7 +1601,7 @@ era **485×**, e una classe da sola copriva il 95 % del contenuto del gioco. `[M
 | Frame time medio        | ≤ 16,6 ms | **6,98 ms** `[M]` |
 | Frame time p99          | ≤ 33,3 ms | 7,79 ms `[M]`     |
 | Draw call               | < 300     | **70** `[M]`      |
-| Peso scaricato (brotli) | < 20 MB   | **6,8 MB** `[M]`  |
+| Peso scaricato (brotli) | < 20 MB   | **15,9 MB** `[M]` |
 
 ---
 

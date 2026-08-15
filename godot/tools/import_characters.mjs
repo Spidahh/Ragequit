@@ -17,7 +17,7 @@
 //   node tools/import_characters.mjs
 import { NodeIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
-import { dequantize, textureCompress } from '@gltf-transform/functions'
+import { dedup, dequantize, prune, textureCompress } from '@gltf-transform/functions'
 import { readdirSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -37,9 +37,23 @@ for (const file of readdirSync(DIR).filter((f) => f.endsWith('.glb'))) {
   // (`size is not iterable`): prima si decodifica in PNG, e solo dopo si
   // ridimensiona.
   await doc.transform(textureCompress({ encoder: sharp, targetFormat: 'png' }))
+  // Via le normal map. Su una direzione artistica a silhouette forti, viste da
+  // dieci metri in un'arena di notte, non si distinguono — e valevano meta' del
+  // peso del pacchetto scaricato. Il tetto e' 20 MB e il gioco deve starci
+  // dentro con tutto il resto.
+  for (const mat of doc.getRoot().listMaterials()) {
+    mat.setNormalTexture(null)
+    mat.setOcclusionTexture(null)
+    mat.setMetallicRoughnessTexture(null)
+  }
+
   await doc.transform(
-    textureCompress({ encoder: sharp, targetFormat: 'png', resize: [1024, 1024] }),
+    // 512: su un corpo alto due metri visto da dieci non si distingue da 1024,
+    // e pesa un quarto.
+    textureCompress({ encoder: sharp, targetFormat: 'png', resize: [512, 512] }),
     dequantize(),
+    prune(),
+    dedup(),
   )
   await io.write(path, doc)
   const after = statSync(path).size
