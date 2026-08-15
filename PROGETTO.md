@@ -1332,6 +1332,12 @@ per la maggior parte delle ore **non è acceso**.
 
 Nessuna riga di questa tabella ha un contatore che gira.
 
+> **Perché non Cloudflare Pages.** Era la prima scelta, ed è stata scartata da
+> un limite misurato: **Pages rifiuta i file sopra i 25 MiB**, e il `.wasm` di
+> Godot ne pesa 37 non compresso. Non si aggira comprimendo — quello che si
+> carica è quello che serve al browser. GitHub Pages arriva a 100 MB per file.
+> Lo si è scoperto pubblicando, non leggendo.
+
 ### Il pezzo che ha deciso tutto: il browser non sa fare UDP
 
 **Nessun browser può aprire una socket UDP.** Non è una limitazione di Godot: è
