@@ -20,6 +20,7 @@ const BOT_ID_BASE := 101
 var _player: Node = null
 var _hud: Node = null
 var _hurt_flash: ColorRect
+var _hurt_edge: ColorRect
 ## Chi ti ha colpito per ultimo: serve al kill feed e al recap di morte, che
 ## devono dire un nome e non "sei morto".
 var _last_attacker := -1
@@ -28,6 +29,7 @@ var _match: Dictionary = {}
 var _bots: Dictionary = {}
 ## peer id → nome di battaglia
 var _bot_names: Dictionary = {}
+var _scoreboard_open := false
 ## La difficoltà di questa partita. In partita mista il default è Veterano: è
 ## l'unico che si può battere sudando, ed è quello su cui è tarato il resto.
 @export var difficulty: int = Bots.DEFAULT_LEVEL
@@ -43,6 +45,12 @@ var _streak := 0
 var _best_streak := 0
 var _shots := 0
 var _hits := 0
+## Cosa ti ha colpito e per quanto, da quando sei vivo. Si azzera a ogni
+## rinascita: un recap che somma tutta la partita non dice come sei morto.
+var _taken: Dictionary = {}
+var _dealt := 0.0
+## Da che parte è arrivato l'ultimo colpo, per il lampo direzionale.
+var _hurt_from := Vector3.ZERO
 
 signal match_finished(rows: Array, won: bool, stats: Dictionary)
 
@@ -61,6 +69,7 @@ func _ready() -> void:
 			_shots += 1
 			if hits > 0:
 				_hits += 1)
+	_scoreboard_open = false
 
 	# Ogni nemico insegue il giocatore ed entra in partita con un suo id.
 	var next_id := BOT_ID_BASE
@@ -105,6 +114,17 @@ func _ready() -> void:
 	_hurt_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(_hurt_flash)
 
+	# Il lampo direzionale: una banda sul bordo dalla parte da cui sei stato
+	# colpito. È metà dell'informazione che hai su chi ti sta uccidendo.
+	_hurt_edge = ColorRect.new()
+	_hurt_edge.color = Color(0.95, 0.10, 0.14, 0.0)
+	_hurt_edge.anchor_top = 0.0
+	_hurt_edge.anchor_bottom = 1.0
+	_hurt_edge.anchor_left = 0.0
+	_hurt_edge.anchor_right = 0.25
+	_hurt_edge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(_hurt_edge)
+
 	if _player.has_signal("damaged"):
 		_player.damaged.connect(_on_player_damaged)
 
@@ -142,6 +162,12 @@ func _on_enemy_fired(from: Vector3, to: Vector3, hit: bool) -> void:
 		var b = _bots[id]
 		if is_instance_valid(b) and b.global_position.distance_to(from) < 2.5:
 			_last_attacker = id
+			if hit:
+				# Il nome dell'arma con cui ti hanno preso: è quello che il recap
+				# deve dire, e senza tracciarlo qui non lo sa nessuno.
+				var key := "%s's shot" % _bot_name(id)
+				_taken[key] = float(_taken.get(key, 0.0)) + float(b.damage)
+				_hurt_from = from
 			break
 	Vfx.tracer(self, from, to)
 	if hit:
@@ -156,9 +182,27 @@ func _bot_name(peer_id: int) -> String:
 	return String(_bot_names.get(peer_id, "SOMEONE"))
 
 
-func _on_player_damaged(_amount: float, _remaining: float) -> void:
+func _on_player_damaged(amount: float, _remaining: float) -> void:
+	if amount <= 0.0:
+		# Parata riuscita: nessun lampo. Un lampo rosso su un colpo che hai
+		# bloccato dice che hai sbagliato proprio mentre hai fatto giusto.
+		return
 	if _hurt_flash:
 		_hurt_flash.color.a = 0.32
+	# Da dove è arrivato: i bordi lampeggiano DALLA PARTE del colpo, o il lampo
+	# dice solo "stai morendo" e non "gira a destra".
+	if _player and is_instance_valid(_player) and _hurt_edge:
+		var to_them: Vector3 = _hurt_from - _player.global_position
+		var fwd: Vector3 = -_player.global_transform.basis.z
+		var right: Vector3 = _player.global_transform.basis.x
+		var side: float = right.dot(to_them.normalized())
+		var front: float = fwd.dot(to_them.normalized())
+		_hurt_edge.anchor_left = 0.0 if side < 0.0 else 0.72
+		_hurt_edge.anchor_right = 0.28 if side < 0.0 else 1.0
+		if front > 0.6:
+			_hurt_edge.anchor_left = 0.0
+			_hurt_edge.anchor_right = 1.0
+		_hurt_edge.color.a = 0.42
 
 
 ## Un bot è caduto: il punto è di chi lo ha ucciso, e qui l'unico che uccide è
@@ -181,6 +225,20 @@ func _on_player_died() -> void:
 	# giocatore, ma la morte va contata comunque — è la metà onesta del risultato.
 	MatchRules.on_kill(_match, -1, PLAYER_ID)
 	_streak = 0
+	# Il recap: chi ti ha ucciso, con cosa e per quanto, e quanto avevi fatto tu.
+	var breakdown := []
+	for k in _taken:
+		breakdown.append({"name": k, "damage": _taken[k]})
+	breakdown.sort_custom(func(a, b): return float(a["damage"]) > float(b["damage"]))
+	if _hud and _hud.has_method("show_death_recap"):
+		_hud.show_death_recap(
+			_bot_name(_last_attacker),
+			breakdown,
+			_dealt,
+			float(MatchRules.RESPAWN_SEC[_match["mode"]])
+		)
+	_taken = {}
+	_dealt = 0.0
 	if _hud and _hud.has_method("push_feed"):
 		_hud.push_feed("%s  ▸  YOU" % _bot_name(_last_attacker))
 
@@ -188,6 +246,18 @@ func _on_player_died() -> void:
 func _process(delta: float) -> void:
 	if _hurt_flash and _hurt_flash.color.a > 0.0:
 		_hurt_flash.color.a = maxf(0.0, _hurt_flash.color.a - delta * 1.6)
+	if _hurt_edge and _hurt_edge.color.a > 0.0:
+		_hurt_edge.color.a = maxf(0.0, _hurt_edge.color.a - delta * 1.1)
+
+	# Il tabellone su `Tab`: si tiene premuto, non si apre e si chiude. In un
+	# fight non si preme due volte niente.
+	if _hud and _hud.has_method("show_scoreboard"):
+		if Input.is_key_pressed(KEY_TAB) and not _scoreboard_open:
+			_scoreboard_open = true
+			_hud.show_scoreboard(scoreboard())
+		elif not Input.is_key_pressed(KEY_TAB) and _scoreboard_open:
+			_scoreboard_open = false
+			_hud.hide_scoreboard()
 
 	if _match.is_empty():
 		return
@@ -248,9 +318,22 @@ func scoreboard() -> Array:
 			"deaths": int(_match["deaths"].get(peer, 0)),
 			"mine": int(peer) == PLAYER_ID,
 			"best": "—",
+			"ping": 0,
+			"hit_you_with": _hit_you_with(int(peer)),
 		})
 	rows.sort_custom(func(a, b): return int(a["score"]) > int(b["score"]))
 	return rows
+
+
+## Con cosa quell'avversario ti ha colpito. È l'unica riga in più che il
+## tabellone mostra, e serve a imparare i kit degli altri senza spiegazioni.
+func _hit_you_with(peer_id: int) -> String:
+	var prefix := "%s's" % _bot_name(peer_id)
+	var out := []
+	for k in _taken:
+		if String(k).begins_with(prefix):
+			out.append("%s (%d)" % [String(k).replace(prefix + " ", ""), int(_taken[k])])
+	return " · ".join(out)
 
 
 func match_stats() -> Dictionary:

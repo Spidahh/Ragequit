@@ -63,6 +63,26 @@ var hp: float = Combat.HP_MAX
 ## il cadavere continua a far salire il punteggio di chi lo ha ucciso.
 var dead := false
 
+## LA PARATA.
+##
+## Tasto destro. Un TAP apre una finestra breve che blocca tutto; TENUTO blocca
+## una parte finche' regge la stamina. Sono due gesti diversi sullo stesso tasto
+## perche' sono due decisioni diverse: il tap e' una lettura — hai visto arrivare
+## quel colpo — e il tenuto e' una rinuncia, perche' mentre pari non attacchi e
+## la stamina che consumi e' quella che ti serviva per gli scatti.
+##
+## E si vede addosso al personaggio: una parata invisibile e' una meccanica che
+## esiste solo per chi la usa, e chi ci sta davanti non impara mai a leggerla.
+const PARRY_WINDOW := 0.5
+const PARRY_COST := 20.0
+const PARRY_COOLDOWN := 3.0
+const PARRY_HOLD_FRACTION := 0.7
+const PARRY_HOLD_DRAIN := 15.0
+
+var _parry_until := -1.0
+var _parry_ready_at := 0.0
+var _parry_holding := false
+
 var _weapon := "none"
 var _step_t := 0.0
 var _was_grounded_sfx := true
@@ -315,9 +335,43 @@ func _sound_cast(shape: int) -> void:
 			Sfx.play("cast_burst")
 
 
+## Quanto di un colpo passa la parata. Zero se sei dentro la finestra del tap,
+## una frazione se stai tenendo, tutto se non stai parando.
+func parry_absorb(amount: float) -> float:
+	if _clock <= _parry_until:
+		return 0.0
+	if _parry_holding and stamina > 0.0:
+		return amount * (1.0 - PARRY_HOLD_FRACTION)
+	return amount
+
+
+func parrying() -> bool:
+	return _clock <= _parry_until or (_parry_holding and stamina > 0.0)
+
+
+func _try_parry() -> void:
+	if _clock < _parry_ready_at or stamina < PARRY_COST or not status.can_cast():
+		Sfx.play("unavailable", Sfx.UI, -8.0)
+		return
+	stamina -= PARRY_COST
+	_parry_until = _clock + PARRY_WINDOW
+	_parry_ready_at = _clock + PARRY_COOLDOWN
+	# L'arma sale: e' il segnale che chi ti sta davanti deve poter leggere.
+	_sway += Vector2(0.0, 0.07)
+	Sfx.play("parry")
+
+
 func take_damage(amount: float) -> void:
 	if dead:
 		return
+	var passed := parry_absorb(amount)
+	if passed <= 0.0:
+		# Una parata riuscita non e' silenzio: e' il metallo secco, ed e' la
+		# ricompensa per aver letto il colpo.
+		Sfx.play("parry")
+		damaged.emit(0.0, hp)
+		return
+	amount = passed
 	hp = maxf(0.0, hp - amount)
 	damaged.emit(amount, hp)
 	Sfx.play("hurt")
@@ -395,6 +449,14 @@ func _physics_process(delta: float) -> void:
 	for i in SLOTS:
 		if Input.is_action_just_pressed("ability_%d" % (i + 1)):
 			cast_slot(i)
+
+	if Input.is_action_just_pressed("parry"):
+		_try_parry()
+	_parry_holding = Input.is_action_pressed("parry")
+	if _parry_holding and _clock > _parry_until:
+		# Tenere costa: e' la meta' onesta di una difesa che non ha un limite di
+		# tempo. Chi para tutto resta senza scatti.
+		stamina = maxf(0.0, stamina - PARRY_HOLD_DRAIN * delta)
 
 	# Gli stati scorrono qui e in nessun altro punto: veleni che pulsano,
 	# rallentamenti che scadono, scudi che finiscono.

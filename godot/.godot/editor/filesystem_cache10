@@ -76,7 +76,7 @@ arena.tscn::PackedScene::-1::1786774158::0::1::::<><><>0<>0<><>::res://src/arena
 main.tscn::PackedScene::-1::1786776222::0::1::::<><><>0<>0<><>::res://src/main.gd
 ::res://src/::1786776397
 ability_runtime.gd::GDScript::5958152086815797147::1786722988::0::1::::AbilityRuntime<>RefCounted<><>0<>0<><>::
-arena.gd::GDScript::2635323021064943214::1786776222::0::1::::<>Node3D<><>0<>0<><>::
+arena.gd::GDScript::2635323021064943214::1786777161::0::1::::<>Node3D<><>0<>0<><>::
 audio.gd::GDScript::6152928227849457422::1786752104::0::1::::<>Node<><>0<>0<><>::
 bolt.gd::GDScript::5010183107853443432::1786753861::0::1::::<>Area3D<><>0<>0<><>::
 bots.gd::GDScript::3077537192233776425::1786775935::0::1::::<>RefCounted<><>0<>0<><>::
@@ -85,7 +85,7 @@ combat.gd::GDScript::2238664619612307309::1786722257::0::1::::Combat<>RefCounted
 content.gd::GDScript::1813277862621768472::1786753964::0::1::::<>RefCounted<><>0<>0<><>::
 effects.gd::GDScript::5488169635248278582::1786754030::0::1::::<>RefCounted<><>0<>0<><>::
 enemy.gd::GDScript::436349412035560793::1786773680::0::1::::<>CharacterBody3D<><>0<>0<><>::
-hud.gd::GDScript::6250346515386969338::1786774065::0::1::::<>CanvasLayer<><>0<>0<><>::
+hud.gd::GDScript::6250346515386969338::1786777231::0::1::::<>CanvasLayer<><>0<>0<><>::
 lag_comp.gd::GDScript::7716296449703120574::1786732863::0::1::::LagComp<>RefCounted<><>0<>0<><>::
 main.gd::GDScript::7028775568227832650::1786776201::0::1::::<>Node<><>0<>0<><>::
 match_rules.gd::GDScript::7474968152898546800::1786751417::0::1::::MatchRules<>RefCounted<><>0<>0<><>::
@@ -93,7 +93,7 @@ movement.gd::GDScript::4314776407596275168::1786720417::0::1::::Movement<>RefCou
 net.gd::GDScript::6478717251711814909::1786751454::0::1::::<>Node<><>0<>0<><>::
 net_body.gd::GDScript::4615683764664968339::1786753922::0::1::::<>CharacterBody3D<><>0<>0<><>::
 net_world.gd::GDScript::2547384051689429467::1786774890::0::1::::<>Node3D<><>0<>0<><>::
-player.gd::GDScript::4656949308107586918::1786773825::0::1::::<>CharacterBody3D<><>0<>0<><>::
+player.gd::GDScript::4656949308107586918::1786776876::0::1::::<>CharacterBody3D<><>0<>0<><>::
 progression.gd::GDScript::4116341414521074176::1786754644::0::1::::<>RefCounted<><>0<>0<><>::
 screens.gd::GDScript::2592687563290904121::1786776176::0::1::::<>CanvasLayer<><>0<>0<><>::
 settings.gd::GDScript::5496392208221712163::1786754548::0::1::::<>RefCounted<><>0<>0<><>::
@@ -105,7 +105,7 @@ ui.gd::GDScript::8946574595119920662::1786776061::0::1::::<>RefCounted<><>0<>0<>
 vfx.gd::GDScript::4335291906495577841::1786729330::0::1::::Vfx<>RefCounted<><>0<>0<><>::
 viewmodel.gd::GDScript::2920000670566855551::1786774112::0::1::::<>Node<><>0<>0<><>::
 zone.gd::GDScript::5986457867776277451::1786753731::0::1::::<>Area3D<><>0<>0<><>::
-::res://tests/::1786776397
+::res://tests/::1786777207
 test_ability_runtime.gd::GDScript::6149268147413375165::1786722951::0::1::::<>SceneTree<><>0<>0<><>::
 test_arena_match.gd::GDScript::2628559530109809715::1786775098::0::1::::<>SceneTree<><>0<>0<><>::
 test_arena_play.gd::GDScript::4897526549176353012::1786754014::0::1::::<>SceneTree<><>0<>0<><>::
@@ -120,11 +120,12 @@ test_match_world.gd::GDScript::7205812931707175165::1786754356::0::1::::<>SceneT
 test_movement.gd::GDScript::3540310454443861137::1786720449::0::1::::<>SceneTree<><>0<>0<><>::
 test_net.gd::GDScript::9094693724269357422::1786730534::0::1::::<>SceneTree<><>0<>0<><>::
 test_net_world.gd::GDScript::8723421896701893791::1786732357::0::1::::<>SceneTree<><>0<>0<><>::
+test_polish.gd::GDScript::8770220918241120896::1786777207::0::1::::<>SceneTree<><>0<>0<><>::
 test_progression.gd::GDScript::5298463479044511736::1786754644::0::1::::<>SceneTree<><>0<>0<><>::
 test_screens.gd::GDScript::4439343534693592689::1786776269::0::1::::<>SceneTree<><>0<>0<><>::
 test_settings.gd::GDScript::557413386677653251::1786754548::0::1::::<>SceneTree<><>0<>0<><>::
 test_status.gd::GDScript::1133225869442432971::1786753748::0::1::::<>SceneTree<><>0<>0<><>::
-::res://tools/::1786776421
+::res://tools/::1786776487
 bench.gd::GDScript::4310555938918885135::1786721637::0::1::::<>SceneTree<><>0<>0<><>::
 build_arena.gd::GDScript::2177647745841898652::1786774158::0::1::::<>SceneTree<><>0<>0<><>::
 build_main.gd::GDScript::9066983206260311282::1786776222::0::1::::<>SceneTree<><>0<>0<><>::

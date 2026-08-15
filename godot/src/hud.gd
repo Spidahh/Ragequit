@@ -17,6 +17,8 @@
 extends CanvasLayer
 
 const Combat := preload("res://src/combat.gd")
+const SettingsScript := preload("res://src/settings.gd")
+const UI := preload("res://src/ui.gd")
 
 const COL_HP := Color(1.0, 0.20, 0.27)
 const COL_STAM := Color(0.0, 1.0, 0.53)
@@ -42,6 +44,10 @@ var _leader_label: Label
 ## Le righe del kill feed, con il tempo che resta a ciascuna.
 var _feed: Array = []
 var _feed_box: VBoxContainer
+var _scoreboard: Control = null
+var _recap: Control = null
+var _recap_label: Label = null
+var _recap_left := 0.0
 
 
 ## I tasti degli otto slot, nell'ordine in cui stanno sotto le dita.
@@ -74,18 +80,7 @@ func _build() -> void:
 	_crosshair.set_anchors_preset(Control.PRESET_CENTER)
 	_crosshair.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_crosshair)
-	for i in 4:
-		var tick := ColorRect.new()
-		tick.color = Color(1, 1, 1, 0.85)
-		var horizontal := i < 2
-		tick.size = Vector2(9, 2) if horizontal else Vector2(2, 9)
-		var off := 6.0
-		match i:
-			0: tick.position = Vector2(-off - 9, -1)
-			1: tick.position = Vector2(off, -1)
-			2: tick.position = Vector2(-1, -off - 9)
-			3: tick.position = Vector2(-1, off)
-		_crosshair.add_child(tick)
+	_build_crosshair()
 
 	# --- Conferma di colpo ----------------------------------------------------
 	# La X che compare quando prendi qualcuno. È l'unico feedback che un FPS non
@@ -242,8 +237,7 @@ func push_feed(text: String, mine: bool = false) -> void:
 func _build_bar() -> void:
 	if _bar == null or _player == null:
 		return
-	for child in _bar.get_children():
-		child.queue_free()
+	_clear(_bar)
 	_slots.clear()
 
 	var kit: Array = _player.kit() if _player.has_method("kit") else []
@@ -284,6 +278,169 @@ func _build_bar() -> void:
 		bar.add_child(nm)
 		_slots.append({"id": kit[i].id, "fill": fill, "h": w, "cd": float(kit[i].cooldown)})
 
+## Toglie un nodo dall'albero SUBITO, non a fine frame.
+##
+## `queue_free` libera alla fine del frame, e nel frattempo il nodo è ancora
+## figlio: ricostruire il mirino subito dopo produce due mirini sovrapposti, e
+## nascondere il tabellone lo lascia visibile fino al frame dopo. Sono due bug
+## che a occhio si vedono come uno sfarfallio e che in un test si vedono come
+## "il conto non torna".
+func _drop(node: Node) -> void:
+	if node == null or not is_instance_valid(node):
+		return
+	if node.get_parent():
+		node.get_parent().remove_child(node)
+	node.queue_free()
+
+
+func _clear(node: Node) -> void:
+	for c in node.get_children():
+		_drop(c)
+
+
+## Il mirino, costruito dalle impostazioni del giocatore.
+##
+## Spessore, lunghezza, buco, colore, punto: chi ha una mira sua vuole anche il
+## suo mirino, e un mirino imposto è la prima cosa che fa sentire un gioco
+## altrui. Si ricostruisce quando le impostazioni cambiano, non al riavvio.
+func _build_crosshair() -> void:
+	if _crosshair == null:
+		return
+	_clear(_crosshair)
+	var st := SettingsScript.new()
+	var th: float = float(st.get_value("crosshair_thickness"))
+	var ln: float = float(st.get_value("crosshair_length"))
+	var gap: float = float(st.get_value("crosshair_gap"))
+	var col: Color = st.get_value("crosshair_color")
+
+	for i in 4:
+		var tick := ColorRect.new()
+		tick.color = col
+		var horizontal := i < 2
+		tick.size = Vector2(ln, th) if horizontal else Vector2(th, ln)
+		match i:
+			0: tick.position = Vector2(-gap - ln, -th * 0.5)
+			1: tick.position = Vector2(gap, -th * 0.5)
+			2: tick.position = Vector2(-th * 0.5, -gap - ln)
+			3: tick.position = Vector2(-th * 0.5, gap)
+		_crosshair.add_child(tick)
+
+	if bool(st.get_value("crosshair_dot")):
+		var dot := ColorRect.new()
+		dot.color = col
+		dot.size = Vector2(th, th)
+		dot.position = Vector2(-th * 0.5, -th * 0.5)
+		_crosshair.add_child(dot)
+
+
+## Il tabellone, su `Tab`. Sotto ogni avversario ci sono LE ABILITÀ CON CUI TI
+## HA COLPITO: è così che si impara il kit degli altri senza che nessuno lo
+## spieghi, ed è l'unico posto in partita dove il gioco dice qualcosa in più.
+func show_scoreboard(rows: Array) -> void:
+	hide_scoreboard()
+	_scoreboard = Control.new()
+	_scoreboard.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_scoreboard.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_scoreboard)
+
+	var dim := ColorRect.new()
+	dim.color = Color(0.02, 0.03, 0.05, 0.72)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_scoreboard.add_child(dim)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_scoreboard.add_child(center)
+	var col := VBoxContainer.new()
+	col.custom_minimum_size = Vector2(700, 0)
+	center.add_child(col)
+
+	var head := HBoxContainer.new()
+	for h in [["PLAYER", 300], ["KILLS", 100], ["DEATHS", 100], ["PING", 100]]:
+		var l := UI.eyebrow(String(h[0]))
+		l.custom_minimum_size = Vector2(float(h[1]), 0)
+		head.add_child(l)
+	col.add_child(head)
+	col.add_child(UI.rule(700))
+
+	for r in rows:
+		var line := HBoxContainer.new()
+		var mine: bool = bool(r.get("mine", false))
+		for cell in [
+			[String(r.get("name", "")), 300],
+			[str(int(r.get("score", 0))), 100],
+			[str(int(r.get("deaths", 0))), 100],
+			["%d ms" % int(r.get("ping", 0)), 100],
+		]:
+			var l := UI.label(String(cell[0]), 15, UI.ACCENT if mine else UI.TEXT_DIM)
+			l.custom_minimum_size = Vector2(float(cell[1]), 24)
+			line.add_child(l)
+		col.add_child(line)
+		var hits := String(r.get("hit_you_with", ""))
+		if not hits.is_empty():
+			col.add_child(UI.label("      " + hits, 11, UI.TEXT_FAINT))
+
+
+func hide_scoreboard() -> void:
+	_drop(_scoreboard)
+	_scoreboard = null
+
+
+## Il recap di morte. Sta QUI e non durante il fight per una ragione precisa:
+## il gioco non insegna mentre giochi. In partita c'è solo quello che dice cosa
+## è successo, mai cosa fare — e questo è il momento in cui "cosa è successo" è
+## l'unica cosa che serve sapere.
+func show_death_recap(killer: String, breakdown: Array, dealt: float, seconds: float) -> void:
+	hide_death_recap()
+	_recap = Control.new()
+	_recap.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_recap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_recap)
+
+	var dim := ColorRect.new()
+	dim.color = Color(0.35, 0.02, 0.04, 0.30)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_recap.add_child(dim)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_recap.add_child(center)
+	var col := VBoxContainer.new()
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	center.add_child(col)
+
+	var head := UI.label("KILLED BY  %s" % killer, 26, COL_HP)
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	head.custom_minimum_size = Vector2(520, 0)
+	col.add_child(head)
+
+	var parts := []
+	for b in breakdown:
+		parts.append("%s %d" % [String(b.get("name", "")), int(b.get("damage", 0))])
+	var line := UI.label(" · ".join(parts), 14, UI.TEXT_DIM)
+	line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	line.custom_minimum_size = Vector2(520, 0)
+	col.add_child(line)
+
+	var mine := UI.label("You dealt %d." % int(dealt), 14, UI.TEXT_FAINT)
+	mine.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mine.custom_minimum_size = Vector2(520, 0)
+	col.add_child(mine)
+
+	col.add_child(UI.spacer(14))
+	_recap_label = UI.label("%.0f" % ceilf(seconds), 44, COL_READY)
+	_recap_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_recap_label.custom_minimum_size = Vector2(520, 0)
+	col.add_child(_recap_label)
+	_recap_left = seconds
+
+
+func hide_death_recap() -> void:
+	_drop(_recap)
+	_recap = null
+	_recap_label = null
+
+
 func _on_cast(_ability_name: String, hits: int) -> void:
 	if hits <= 0:
 		return
@@ -318,6 +475,15 @@ func _process(delta: float) -> void:
 			fill.size.y = h * ready_frac
 			fill.position.y = h - h * ready_frac
 			fill.color = COL_READY if ready_frac >= 1.0 else COL_COOLING
+
+	# Il conto alla rovescia del respawn scorre: un numero fermo mentre aspetti
+	# è un numero che non dice se il gioco è ancora vivo.
+	if _recap_left > 0.0:
+		_recap_left -= delta
+		if _recap_label and is_instance_valid(_recap_label):
+			_recap_label.text = "%.0f" % maxf(ceilf(_recap_left), 0.0)
+		if _recap_left <= 0.0:
+			hide_death_recap()
 
 	# Le righe del feed sbiadiscono e se ne vanno.
 	for entry in _feed.duplicate():
