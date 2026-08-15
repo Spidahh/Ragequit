@@ -39,6 +39,8 @@ const SINGLE = [
   'test_audio',
   'test_content',
   'test_status',
+  'test_settings',
+  'test_progression',
 ]
 const PAIRED = ['test_net', 'test_net_world']
 

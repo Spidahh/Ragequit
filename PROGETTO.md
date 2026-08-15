@@ -1376,7 +1376,7 @@ prima che la precedente sia verde.
 | 9   | **Personaggi e armi** al posto delle capsule                     | ⬜           |
 | 10  | **Bot** a tre difficoltà e riempimento della lobby               | ⬜           |
 | 11  | **Pubblicazione** su itch.io e server ospitato                   | ⬜           |
-| 12  | Sblocchi e livello account                                       | ⬜           |
+| 12  | Sblocchi e livello account                                       | **✅ fatto** |
 
 **La 4 prima di tutto**, e non è un'opinione. Finché una partita non comincia e
 non finisce, tutto il resto è roba bella dentro qualcosa che non si può né vincere
@@ -1392,7 +1392,7 @@ regola.
 
 ## 17 · Come si controlla che sia vero
 
-Ogni fase entra solo con la sua verifica automatica. Oggi ne girano **quattordici,
+Ogni fase entra solo con la sua verifica automatica. Oggi ne girano **sedici,
 tutte verdi**, più un benchmark che stampa i numeri invece di giudicarli. Si
 lanciano tutte con un comando: `node run_tests.mjs` dentro `godot/`.
 
