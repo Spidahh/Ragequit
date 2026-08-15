@@ -13,6 +13,7 @@ const WorldScript = preload("res://src/net_world.gd")
 const M = preload("res://src/match_rules.gd")
 const Combat = preload("res://src/combat.gd")
 const Spawns = preload("res://src/spawns.gd")
+const Content = preload("res://src/content.gd")
 
 var failures := 0
 var net: Node
@@ -149,7 +150,10 @@ func _process(delta: float) -> bool:
 func _uccidi() -> void:
 	var me: CharacterBody3D = world.bodies[1]["node"]
 	var him: CharacterBody3D = world.bodies[2]["node"]
-	him.global_position = me.global_position + Vector3(0, 0, -5)
+	# A tiro DELL'ABILITÀ: il kit dipende dalla classe, e il primo slot del
+	# BREAKER arriva a due metri e mezzo, non a cinque.
+	var reach: float = maxf(float(Content.preset_kit("breaker")[0]["range_m"]) * 0.6, 1.2)
+	him.global_position = me.global_position + Vector3(0, 0, -reach)
 	world.bodies[2]["hp"] = 1.0
 	world.cooldowns.erase(1)
 	# La risoluzione passa dallo storico del riavvolgimento, non dalle posizioni

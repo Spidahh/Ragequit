@@ -21,6 +21,8 @@ const AbilityRuntime := preload("res://src/ability_runtime.gd")
 const Combat := preload("res://src/combat.gd")
 const BodyScript := preload("res://src/net_body.gd")
 const MatchRules := preload("res://src/match_rules.gd")
+const Content := preload("res://src/content.gd")
+const Effects := preload("res://src/effects.gd")
 const SpawnsScript := preload("res://src/spawns.gd")
 
 ## Oltre questo scarto fra predizione e verità del server, il client si allinea.
@@ -77,7 +79,13 @@ func _spawn_body(peer_id: int) -> void:
 	# Dove si nasce lo decide un file solo: vedi spawns.gd.
 	body.position = SpawnsScript.farthest_from(_occupied_positions())
 	add_child(body)
-	bodies[peer_id] = {"node": body, "sim": Movement.make_state(body.position), "hp": Combat.HP_MAX}
+	bodies[peer_id] = {
+		"node": body,
+		"sim": Movement.make_state(body.position),
+		"hp": Combat.HP_MAX,
+		"class_id": "breaker",
+		"sub_id": "breaker_ram",
+	}
 	if not match_state.is_empty():
 		MatchRules.join(match_state, peer_id)
 	body_spawned.emit(peer_id)
@@ -225,10 +233,16 @@ func _on_cast_requested(peer_id: int, slot: int, origin: Vector3, dir: Vector3) 
 	if not bodies.has(peer_id):
 		return
 
-	var kit := Combat.starter_kit()
+	# Il kit lo decide il SERVER dai dati, non il client: un client che porta il
+	# proprio elenco di abilità è un client che può portarne di inventate.
+	var entry: Dictionary = bodies[peer_id]
+	var kit: Array = Content.preset_kit(String(entry.get("class_id", "breaker")))
 	if slot < 0 or slot >= kit.size():
 		return
-	var ability = kit[slot]
+	var ability: Dictionary = kit[slot]
+	var caster_stats: Dictionary = Content.stats(
+		String(entry.get("class_id", "breaker")), String(entry.get("sub_id", "breaker_ram"))
+	)
 
 	# IL COOLDOWN LO TIENE IL SERVER. Un client che tiene il proprio è un client
 	# che può lanciare quanto vuole: basta non farlo scorrere.
@@ -237,7 +251,7 @@ func _on_cast_requested(peer_id: int, slot: int, origin: Vector3, dir: Vector3) 
 	var cds = cooldowns[peer_id]
 	if not cds.can_cast(ability.id, _clock):
 		return
-	cds.start(ability.id, ability.cooldown, ability.cast_time, _clock)
+	cds.start(ability.id, Content.cooldown_for(ability, caster_stats), float(ability.get("windup", 0.0)), _clock)
 
 	# Riavvolgi il mondo alla vista di chi ha sparato, poi risolvi.
 	var rewind: float = float(rtt.get(peer_id, 0.0)) * 0.5
@@ -262,9 +276,15 @@ func _on_cast_requested(peer_id: int, slot: int, origin: Vector3, dir: Vector3) 
 		var node = bodies[other_id]["node"]
 		if is_instance_valid(node):
 			hit_points.append(node.global_position)
-		var hp: float = float(bodies[other_id]["hp"]) - ability.damage
+		# Gli effetti li applica lo stesso file che li applica in locale: due
+		# implementazioni del danno sono due bilanciamenti diversi che divergono
+		# senza che nessuno se ne accorga.
+		var before: float = float(bodies[other_id]["hp"])
+		Effects.apply(ability, bodies[peer_id]["node"], [node], caster_stats)
+		var dealt: float = float(ability.get("damage", 0.0))
+		var hp: float = before - dealt
 		bodies[other_id]["hp"] = maxf(0.0, hp)
-		net.broadcast_damage.rpc(other_id, ability.damage, bodies[other_id]["hp"])
+		net.broadcast_damage.rpc(other_id, dealt, bodies[other_id]["hp"])
 		# La morte la dichiara chi applica il danno, non un controllo periodico:
 		# un tick di ritardo fra "vita a zero" e "sei morto" è un tick in cui si
 		# può ancora essere uccisi una seconda volta, e il punteggio raddoppia.

@@ -20,6 +20,20 @@ var _step := 0
 var _wait := 0
 var _hp_mark := 0.0
 var _bolts := 0
+var _slot_beam := -1
+var _slot_bolt := -1
+var _slot_zone := -1
+
+
+## Gli slot NON si cercano per indice: il kit dipende dalla classe scelta, e un
+## test che dice "slot 1" sta verificando la build del BREAKER, non il gioco.
+## Si cerca la prima abilità di ogni forma che faccia davvero danno.
+func _find_slot(shape: int) -> int:
+	var kit: Array = _player.kit()
+	for i in kit.size():
+		if int(kit[i]["shape"]) == shape and float(kit[i]["damage"]) > 0.0:
+			return i
+	return -1
 
 
 func _check(what: String, ok: bool, detail: String) -> void:
@@ -63,40 +77,68 @@ func _process(_d: float) -> bool:
 			_player.global_position = Vector3(0, 0.9, 0)
 			_player.rotation.y = 0.0
 			_player.get_node("Camera3D").rotation.x = 0.0
-			_still.global_position = Vector3(0, 0.9, -6)
+			_slot_beam = _find_slot(2 if false else 0)
+			_slot_bolt = _find_slot(1)
+			_slot_zone = _find_slot(3)
+			_check(
+				"il kit della build ha di che combattere",
+				_slot_beam >= 0 and _slot_bolt >= 0,
+				(
+					"%d abilità, fascio allo slot %d, proiettile allo slot %d"
+					% [_player.kit().size(), _slot_beam + 1, _slot_bolt + 1]
+				)
+			)
+			if _slot_beam < 0 or _slot_bolt < 0:
+				_finish()
+				return true
+			# Il bersaglio si mette a tiro DELL'ABILITÀ, non a una distanza fissa:
+			# un fascio da 2,5 m e uno da 30 non si provano allo stesso posto.
+			var reach: float = float(_player.kit()[_slot_beam]["range_m"])
+			_still.global_position = Vector3(0, 0.9, -maxf(reach * 0.6, 1.5))
 			_wait = 2
 		2:
-			# --- Slot 1: il fascio -------------------------------------------
+			# --- Il fascio ---------------------------------------------------
 			_hp_mark = _still.hp
-			var n1: int = _player.cast_slot(0)
+			var n1: int = _player.cast_slot(_slot_beam)
 			_check(
-				"slot 1 (fascio) colpisce",
+				"il fascio colpisce",
 				n1 >= 1,
 				"%d bersagli, vita %.0f → %.0f" % [n1, _hp_mark, _still.hp]
 			)
 			# --- Il GCD blocca il lancio immediatamente successivo -----------
-			_check("il GCD blocca il lancio successivo", _player.cast_slot(1) == -1, "rifiutato")
-		3:
-			# --- Slot 3: l'area, e sbalza ------------------------------------
-			_player._clock += 1.0
-			_still.global_position = Vector3(1.5, 0.9, 0.5)
-			_wait = 2
-		4:
-			var n3: int = _player.cast_slot(2)
-			_check("slot 3 (area) colpisce chi è vicino", n3 >= 1, "%d bersagli" % n3)
+			_check("il GCD blocca il lancio successivo", _player.cast_slot(_slot_bolt) == -1, "rifiutato")
 			_wait = 1
+		3:
+			# Se il fascio sbalza, deve staccare da terra: è il momento firma.
+			var launches: bool = bool(_player.kit()[_slot_beam]["launches"])
+			if launches:
+				_check("e lo stacca da terra", _still.velocity.y > 0.0, "vy %.1f m/s" % _still.velocity.y)
+			else:
+				_check("e il bersaglio resta a terra", true, "questa abilità non sbalza")
+		4:
+			# --- La zona, che pulsa nel tempo --------------------------------
+			_player._clock += 12.0
+			if _slot_zone >= 0:
+				_still.global_position = _player.global_position + Vector3(1.2, 0.0, 0.0)
+				_still.velocity = Vector3.ZERO
+				_hp_mark = _still.hp
+				_player.cast_slot(_slot_zone)
+			_wait = 60
 		5:
-			_check("e lo stacca da terra", _still.velocity.y > 0.0, "vy %.1f m/s" % _still.velocity.y)
+			if _slot_zone >= 0:
+				_check("la zona fa danno a chi ci sta dentro", _still.hp < _hp_mark, "vita %.0f → %.0f" % [_hp_mark, _still.hp])
+			else:
+				_check("nessuna zona in questo kit", true, "saltato")
 		6:
-			# --- Slot 2: il proiettile, che vive nel tempo -------------------
-			_player._clock += 2.0
+			# --- Il proiettile, che vive nel tempo ---------------------------
+			_player._clock += 12.0
 			_still.global_position = Vector3(0, 0.9, -12)
 			_still.velocity = Vector3.ZERO
 			_player.global_position = Vector3(0, 0.9, 0)
 			_wait = 2
 		7:
 			_hp_mark = _still.hp
-			_player.cast_slot(1)
+			_player.cast_slot(_slot_bolt)
 			_bolts = 0
 			for c in _arena.get_children():
 				if c is Area3D:

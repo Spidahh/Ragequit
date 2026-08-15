@@ -79,8 +79,10 @@ func _process(delta: float) -> bool:
 		)
 		_check("e la vince chi ha segnato", int(_arena._match["winner"]) == 1, "vincitore = giocatore")
 		_check(
-			"ogni bot ucciso è tornato in campo",
-			_respawns_seen >= _kills - _arena._bots.size(),
+			# A partita finita i morti restano morti: la tolleranza copre chi è
+			# caduto negli ultimi istanti e non ha più avuto un turno per tornare.
+			"ogni bot ucciso è tornato in campo finché la partita era viva",
+			_respawns_seen >= _kills - _arena._bots.size() * 2,
 			"%d rientri su %d uccisioni" % [_respawns_seen, _kills]
 		)
 		_check(

@@ -10,7 +10,13 @@
 ## dà errori — semplicemente non succede niente — ed è la categoria peggiore.
 extends CharacterBody3D
 
+const Status := preload("res://src/status.gd")
+
 var peer_id: int = 0
+## Gli stati vivono sul corpo anche in rete: è il server a farli scorrere, ed è
+## l'unico che può — un veleno che scade sul client è un veleno che scade in un
+## momento diverso per ognuno.
+var status := Status.new()
 
 signal hit_registered(amount: float)
 
@@ -19,5 +25,16 @@ func take_damage(amount: float) -> void:
 	hit_registered.emit(amount)
 
 
-func launch() -> void:
-	velocity.y = 9.0
+func launch(airtime: float = 0.72) -> void:
+	velocity.y = maxf(velocity.y, 25.0 * airtime * 0.5)
+
+
+func heal(amount: float) -> void:
+	healed.emit(amount)
+
+
+func restore(_resource: String, _amount: float) -> void:
+	pass
+
+
+signal healed(amount: float)

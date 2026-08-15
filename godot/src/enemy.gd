@@ -14,6 +14,7 @@
 extends CharacterBody3D
 
 const Combat := preload("res://src/combat.gd")
+const Status := preload("res://src/status.gd")
 
 @export var max_hp: float = Combat.HP_MAX
 ## Gradi al secondo di rotazione: quanto in fretta ti insegue con la mira.
@@ -27,6 +28,10 @@ const Combat := preload("res://src/combat.gd")
 
 var hp: float
 var target: Node3D = null
+## Anche i bot subiscono veleni, rallentamenti e radici. Un nemico immune agli
+## stati renderebbe inutile meta' del gioco proprio contro l'avversario che si
+## incontra piu' spesso.
+var status := Status.new()
 ## Fuori scena in attesa di rientrare. Un morto non spara e non si colpisce.
 var dead := false
 
@@ -80,11 +85,30 @@ func revive(at: Vector3) -> void:
 		collision_layer = _layer
 
 
-func launch() -> void:
-	velocity.y = 9.0
+func launch(airtime: float = 0.72) -> void:
+	velocity.y = maxf(velocity.y, 25.0 * airtime * 0.5)
+
+
+func heal(amount: float) -> void:
+	hp = minf(max_hp, hp + amount)
+
+
+## I bot non hanno mana ne' stamina: non lanciano abilita' che li consumino.
+## Il metodo esiste perche' chi drena una risorsa non debba sapere chi ha davanti.
+func restore(_resource: String, _amount: float) -> void:
+	pass
 
 
 func _physics_process(delta: float) -> void:
+	var dot := status.tick(delta)
+	if dot > 0.0:
+		take_damage(dot)
+	if not status.can_move():
+		velocity.x = 0.0
+		velocity.z = 0.0
+		move_and_slide()
+		return
+
 	if not is_on_floor():
 		velocity.y -= 25.0 * delta
 	else:
@@ -126,12 +150,13 @@ func _physics_process(delta: float) -> void:
 	var approach: float = 1.0 if dist > 14.0 else (-1.0 if dist < 7.0 else 0.0)
 	var move := (to_target.normalized() * approach + strafe * sin(_tracking * 1.7) * 0.8)
 	move.y = 0.0
-	velocity.x = move.x * 5.5
-	velocity.z = move.z * 5.5
+	var slow := status.move_multiplier()
+	velocity.x = move.x * 5.5 * slow
+	velocity.z = move.z * 5.5 * slow
 	move_and_slide()
 
 	_fire_t -= delta
-	if _fire_t <= 0.0:
+	if _fire_t <= 0.0 and status.can_cast():
 		_fire_t = fire_period
 		_shoot()
 

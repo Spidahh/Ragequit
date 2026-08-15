@@ -29,6 +29,7 @@ var _hp_bar: ColorRect
 var _hp_back: ColorRect
 var _hp_num: Label
 var _slots: Array[Dictionary] = []
+var _bar: Control = null
 var _crosshair: Control
 var _hitmark: Control
 var _hitmark_t := 0.0
@@ -43,10 +44,17 @@ var _feed: Array = []
 var _feed_box: VBoxContainer
 
 
+## I tasti degli otto slot, nell'ordine in cui stanno sotto le dita.
+const SLOT_KEYS := ["1", "2", "3", "4", "Q", "E", "R", "F"]
+
+
 func setup(player: Node) -> void:
 	_player = player
 	if player.has_signal("cast_resolved"):
 		player.cast_resolved.connect(_on_cast)
+	# La barra si costruisce QUI e non in `_ready`: le abilità sono quelle della
+	# build scelta, e l'HUD non può conoscerle prima di sapere chi sta giocando.
+	_build_bar()
 
 
 func _ready() -> void:
@@ -130,45 +138,11 @@ func _build() -> void:
 	vitals.add_child(stam)
 
 	# --- Slot abilità, in basso al centro ------------------------------------
-	var bar := Control.new()
-	bar.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	bar.position = Vector2(0, -84)
-	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(bar)
-
-	var kit := Combat.starter_kit()
-	var w := 58.0
-	var gap := 8.0
-	var total := kit.size() * w + (kit.size() - 1) * gap
-	for i in kit.size():
-		var x := -total * 0.5 + i * (w + gap)
-		var back := ColorRect.new()
-		back.color = COL_PANEL
-		back.size = Vector2(w, w)
-		back.position = Vector2(x, 0)
-		bar.add_child(back)
-		# Il riempimento sale dal basso mentre il cooldown scorre: il tempo si
-		# guarda, non si legge.
-		var fill := ColorRect.new()
-		fill.color = COL_READY
-		fill.size = Vector2(w, w)
-		fill.position = Vector2(x, 0)
-		bar.add_child(fill)
-		var key := Label.new()
-		key.text = str(i + 1)
-		key.position = Vector2(x + 5, -1)
-		key.add_theme_font_size_override("font_size", 13)
-		key.add_theme_color_override("font_color", Color(1, 1, 1, 0.75))
-		bar.add_child(key)
-		var nm := Label.new()
-		nm.text = kit[i].name
-		nm.position = Vector2(x, w + 2)
-		nm.size = Vector2(w, 14)
-		nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		nm.add_theme_font_size_override("font_size", 10)
-		nm.add_theme_color_override("font_color", Color(1, 1, 1, 0.55))
-		bar.add_child(nm)
-		_slots.append({"id": kit[i].id, "fill": fill, "h": w})
+	_bar = Control.new()
+	_bar.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_bar.position = Vector2(0, -84)
+	_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_bar)
 
 	# --- Punteggio e timer, in alto al centro --------------------------------
 	# Le due sole cose che dicono a che punto è la partita. Stanno in alto perché
@@ -264,6 +238,49 @@ func push_feed(text: String, mine: bool = false) -> void:
 			old["node"].queue_free()
 
 
+
+func _build_bar() -> void:
+	if _bar == null or _player == null:
+		return
+	for child in _bar.get_children():
+		child.queue_free()
+	_slots.clear()
+
+	var kit: Array = _player.kit() if _player.has_method("kit") else []
+	var bar := _bar
+	var w := 58.0
+	var gap := 8.0
+	var total := kit.size() * w + (kit.size() - 1) * gap
+	for i in kit.size():
+		var x := -total * 0.5 + i * (w + gap)
+		var back := ColorRect.new()
+		back.color = COL_PANEL
+		back.size = Vector2(w, w)
+		back.position = Vector2(x, 0)
+		bar.add_child(back)
+		# Il riempimento sale dal basso mentre il cooldown scorre: il tempo si
+		# guarda, non si legge.
+		var fill := ColorRect.new()
+		fill.color = COL_READY
+		fill.size = Vector2(w, w)
+		fill.position = Vector2(x, 0)
+		bar.add_child(fill)
+		var key := Label.new()
+		key.text = SLOT_KEYS[i] if i < SLOT_KEYS.size() else str(i + 1)
+		key.position = Vector2(x + 5, -1)
+		key.add_theme_font_size_override("font_size", 13)
+		key.add_theme_color_override("font_color", Color(1, 1, 1, 0.75))
+		bar.add_child(key)
+		var nm := Label.new()
+		nm.text = kit[i].name
+		nm.position = Vector2(x, w + 2)
+		nm.size = Vector2(w, 14)
+		nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		nm.add_theme_font_size_override("font_size", 10)
+		nm.add_theme_color_override("font_color", Color(1, 1, 1, 0.55))
+		bar.add_child(nm)
+		_slots.append({"id": kit[i].id, "fill": fill, "h": w, "cd": float(kit[i].cooldown)})
+
 func _on_cast(_ability_name: String, hits: int) -> void:
 	if hits <= 0:
 		return
@@ -289,10 +306,9 @@ func _process(delta: float) -> void:
 	var cds = _player.get("_cooldowns")
 	var now: float = _player.get("_clock") if _player.get("_clock") != null else 0.0
 	if cds != null:
-		var kit := Combat.starter_kit()
 		for i in _slots.size():
 			var left: float = cds.remaining(_slots[i]["id"], now)
-			var total: float = kit[i].cooldown
+			var total: float = float(_slots[i]["cd"])
 			var ready_frac: float = 1.0 if total <= 0.0 else clampf(1.0 - left / total, 0.0, 1.0)
 			var h: float = _slots[i]["h"]
 			var fill: ColorRect = _slots[i]["fill"]

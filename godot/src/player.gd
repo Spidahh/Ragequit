@@ -18,19 +18,41 @@ const Sfx := preload("res://src/sfx.gd")
 # Anche il movimento: `class_name Movement` esiste, ma dipende dalla cache
 # delle classi globali, che su un checkout appena clonato non c'è ancora.
 const Movement := preload("res://src/movement.gd")
+const Content := preload("res://src/content.gd")
+const Status := preload("res://src/status.gd")
+const Effects := preload("res://src/effects.gd")
+const ZoneScript := preload("res://src/zone.gd")
 
 const MOUSE_SENSITIVITY := 0.0022
 const PITCH_LIMIT := deg_to_rad(89.0)
+## Otto slot: `1 2 3 4` e `Q E R F`. È il cluster che ogni sparatutto usa, perché
+## dalla presa WASD l'indice non arriva a `5`-`8` senza staccare la mano — e metà
+## della build diventerebbe inutilizzabile in movimento.
+const SLOTS := 8
 
 @onready var _camera: Camera3D = $Camera3D
 @onready var _viewmodel: Node3D = $Camera3D/Viewmodel
 
-## Il kit in mano: quattro abilità sui tasti 1-4. Quattro perché quattro verbi si
-## imparano in una partita — vedi combat.gd.
+## Chi sei. Si sceglie prima di entrare; qui c'è il default con cui il gioco si
+## apre, così l'arena è giocabile senza passare da nessuna schermata.
+@export var class_id := "breaker"
+@export var sub_id := "breaker_ram"
+
+## Il kit in mano: otto abilità dal pool della classe.
 var _kit: Array = []
 var _cooldowns := AbilityRuntime.Cooldowns.new()
 var _clock := 0.0
 var _cam_kick := 0.0
+
+## I numeri del personaggio: vita, velocità, ricariche, durata degli sbalzi.
+## Vengono dai dati, non da costanti qui dentro — un numero che nessun file
+## importa è un numero che nessuno può correggere.
+var stats: Dictionary = {}
+## Cosa hai addosso: veleni, rallentamenti, radici, scudi.
+var status := Status.new()
+
+var mana := 100.0
+var stamina := 150.0
 
 ## Vita del giocatore. Sta qui e non in un componente separato finche non serve:
 ## un sistema in piu senza un secondo utente e complessita comprata a credito.
@@ -40,6 +62,7 @@ var hp: float = Combat.HP_MAX
 ## il cadavere continua a far salire il punteggio di chi lo ha ucciso.
 var dead := false
 
+var _weapon := "none"
 var _step_t := 0.0
 var _was_grounded_sfx := true
 var _fall_speed := 0.0
@@ -67,23 +90,82 @@ func _ready() -> void:
 	_sim = Movement.make_state(global_position)
 	if _viewmodel:
 		_vm_rest = _viewmodel.position
-	_kit = Combat.starter_kit()
+	equip(class_id, sub_id)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
-## Lancia lo slot `idx` (0-3). Ritorna quanti bersagli ha preso, -1 se non era
+## Prende classe e sottoclasse e ne monta il personaggio: numeri e kit insieme.
+## È l'unico punto che decide chi sei, e si può richiamare — è così che si
+## cambia build fra una partita e l'altra senza ricaricare la scena.
+func equip(new_class: String, new_sub: String, kit_ids: Array = []) -> void:
+	class_id = new_class
+	sub_id = new_sub
+	stats = Content.stats(class_id, sub_id)
+	hp = float(stats.get("max_hp", Combat.HP_MAX))
+	mana = float(stats.get("max_mana", 100.0))
+	stamina = float(stats.get("max_stamina", 150.0))
+	status = Status.new()
+
+	if kit_ids.is_empty():
+		# Nessuna scelta: il preset della classe. Chi vuole solo giocare deve
+		# poterlo fare, e un kit vuoto è una schermata obbligatoria travestita
+		# da libertà.
+		_kit = Content.preset_kit(class_id)
+	else:
+		_kit = []
+		for id in kit_ids:
+			var a := Content.ability(String(id))
+			if not a.is_empty():
+				_kit.append(a)
+	_cooldowns = AbilityRuntime.Cooldowns.new()
+
+
+func kit() -> Array:
+	return _kit
+
+
+## Lancia lo slot `idx` (0-7). Ritorna quanti bersagli ha preso, -1 se non era
 ## disponibile — così il chiamante (e i test) sanno distinguere "mancato" da
 ## "non potevi".
 func cast_slot(idx: int) -> int:
 	if idx < 0 or idx >= _kit.size():
 		return -1
 	var ability = _kit[idx]
-	if not _cooldowns.can_cast(ability.id, _clock):
+
+	# Tre cose possono impedire un lancio, e sono tre "no" diversi. Suonano tutti
+	# uguali di proposito: al giocatore serve sapere che non è partito, il
+	# perché lo legge dall'HUD.
+	var cd := Content.cooldown_for(ability, stats)
+	if (
+		not _cooldowns.can_cast(ability.id, _clock)
+		or not status.can_cast()
+		or mana < float(ability.get("cost_mana", 0.0))
+		or stamina < float(ability.get("cost_stamina", 0.0))
+	):
 		# Un tasto premuto a vuoto deve rispondere qualcosa. Il silenzio si legge
 		# come "il gioco non mi ha sentito", che è la lamentela peggiore.
 		Sfx.play("unavailable", Sfx.UI, -8.0)
 		return -1
-	_cooldowns.start(ability.id, ability.cooldown, ability.cast_time, _clock)
+	_cooldowns.start(ability.id, cd, float(ability.get("windup", 0.0)), _clock)
+	mana -= float(ability.get("cost_mana", 0.0))
+	stamina -= float(ability.get("cost_stamina", 0.0))
+
+	# Nessuna abilità è mai bloccata dall'arma sbagliata: se serve un'altra arma,
+	# il gioco la cambia. Mostrare metà build come "non disponibile" è una bugia
+	# che trasforma otto abilità in due gruppi da quattro nella testa di chi gioca.
+	_equip_weapon(String(ability.get("weapon", "none")))
+
+	# Le due forme che non raggiungono nessuno: partono già addosso a qualcuno.
+	if ability.shape == Content.Shape.SELF:
+		Effects.apply(ability, self, [], stats)
+		_punch(Combat.Shape.BURST)
+		Sfx.play("cast_burst")
+		cast_resolved.emit(ability.name, 0)
+		return 0
+	if ability.shape == Content.Shape.ZONE:
+		_cast_zone(ability)
+		cast_resolved.emit(ability.name, 0)
+		return 0
 
 	# L'origine è l'occhio, non i piedi: la forma parte da dove guardi, o quello
 	# che vedi e quello che colpisci non coincidono.
@@ -115,14 +197,19 @@ func cast_slot(idx: int) -> int:
 		mesh.material_override = glow
 		bolt.add_child(mesh)
 		get_tree().current_scene.add_child(bolt)
-		bolt.fire(origin, dir, ability, self)
+		bolt.fire(origin, dir, ability, self, stats)
 		_sound_cast(ability.shape)
 		cast_resolved.emit(ability.name, 0)
 		return 0
 
 	var space := get_world_3d().direct_space_state
 	var result := AbilityRuntime.resolve_instant(space, ability, origin, dir, [get_rid()])
-	var n := AbilityRuntime.apply(result)
+	# La geometria dice CHI è stato colpito; cosa succede a chi è stato colpito lo
+	# decide `effects.gd`, in un posto solo. Sono due domande diverse, e tenerle
+	# separate è ciò che permette a un'abilità di fare danno, sbalzare, avvelenare
+	# e rubare vita nello stesso colpo senza che la risoluzione lo sappia.
+	Effects.apply(ability, self, result.hits, stats)
+	var n := result.hits.size()
 
 	# Il VFX usa la geometria che il colpo ha DAVVERO occupato — result.end_point
 	# è dove la forma si è fermata, non dove sarebbe arrivata al massimo. È così
@@ -164,6 +251,42 @@ func cast_slot(idx: int) -> int:
 	return n
 
 
+## Le abilità che rivendicano un pezzo di pavimento. Si posano dove guardi, o ai
+## tuoi piedi se guardi il cielo: una zona che non atterra da nessuna parte è un
+## cooldown speso per niente.
+func _cast_zone(ability: Dictionary) -> void:
+	var origin := _camera.global_position
+	var dir := -_camera.global_transform.basis.z
+	var reach: float = maxf(float(ability.get("range_m", 10.0)), 1.0)
+	var at := global_position
+	var q := PhysicsRayQueryParameters3D.create(origin, origin + dir * reach)
+	q.exclude = [get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	if hit and hit.has("position"):
+		at = hit["position"]
+	else:
+		at = origin + dir * reach
+		at.y = global_position.y - 0.9
+
+	var world := get_tree().current_scene
+	for e in ability.get("effects", []):
+		if String(e.get("kind", "")) == "zone":
+			var placement := String(e.get("placement", "point"))
+			ZoneScript.spawn(world, global_position if placement == "self" else at, e, self)
+	_punch(Combat.Shape.BURST)
+	Sfx.play("cast_burst")
+
+
+## Cambia arma senza chiedere. Il cambio è istantaneo di proposito: un tempo di
+## estrazione trasformerebbe otto abilità in due gruppi che non si mescolano.
+func _equip_weapon(weapon: String) -> void:
+	if weapon == "none" or weapon == _weapon:
+		return
+	_weapon = weapon
+	# Un accenno di peso: l'arma nuova arriva in mano, non ci si teletrasporta.
+	_sway += Vector2(0.0, -0.04)
+
+
 func _sound_cast(shape: int) -> void:
 	match shape:
 		Combat.Shape.BEAM:
@@ -194,10 +317,34 @@ func respawn() -> void:
 	_sim["vel"] = Vector3.ZERO
 
 
-func launch() -> void:
-	_sim["vel"].y = 9.0
+## Sbalzato. La durata in aria decide la velocità iniziale, non un numero fisso:
+## con gravità `g` un corpo lanciato a `v` ricade dopo `2v/g`, quindi la finestra
+## che ANVIL compra al 28 % in più è davvero il 28 % in più.
+##
+## E lo slancio orizzontale RESTA. Azzerarlo trasformerebbe la vittima in un
+## bersaglio fermo, che è l'esatto opposto del rocket di Quake da cui viene
+## l'idea: se stava correndo, vola in diagonale.
+func launch(airtime: float = 0.72) -> void:
+	_sim["vel"].y = maxf(_sim["vel"].y, Effects.launch_speed(airtime, Movement.GRAVITY))
 	_sim["knockback_ticks"] = 6
 	Sfx.play("launched")
+
+
+func heal(amount: float) -> void:
+	if dead:
+		return
+	hp = minf(float(stats.get("max_hp", Combat.HP_MAX)), hp + amount)
+
+
+## Mana e stamina, in un metodo solo. Un valore negativo toglie: è così che una
+## maledizione svuota il mana di chi la subisce e ne restituisce metà a chi la
+## lancia, senza che nessuno dei due debba conoscere l'altro.
+func restore(resource: String, amount: float) -> void:
+	match resource:
+		"mana":
+			mana = clampf(mana + amount, 0.0, float(stats.get("max_mana", 100.0)))
+		"stamina":
+			stamina = clampf(stamina + amount, 0.0, float(stats.get("max_stamina", 150.0)))
 
 
 func _punch(shape: int) -> void:
@@ -227,11 +374,28 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _physics_process(delta: float) -> void:
 	_clock += delta
-	for i in 4:
+	for i in SLOTS:
 		if Input.is_action_just_pressed("ability_%d" % (i + 1)):
 			cast_slot(i)
 
+	# Gli stati scorrono qui e in nessun altro punto: veleni che pulsano,
+	# rallentamenti che scadono, scudi che finiscono.
+	var dot := status.tick(delta)
+	if dot > 0.0:
+		take_damage(dot)
+
+	# Le risorse rientrano da sole. La stamina più lentamente in movimento —
+	# chi corre e para di continuo deve finire per restare a secco.
+	var moving := Vector2(velocity.x, velocity.z).length() > 1.0
+	stamina = minf(float(stats.get("max_stamina", 150.0)), stamina + (5.0 if moving else 12.0) * delta)
+	mana = minf(float(stats.get("max_mana", 100.0)), mana + 8.0 * delta)
+
 	var wish := Input.get_vector("move_left", "move_right", "move_back", "move_forward")
+	# Rallentamenti, gelo e radici agiscono sull'INTENZIONE, non sulla velocità
+	# risultante: così chi è rallentato accelera comunque come sempre, arriva
+	# solo più in basso. Tagliare la velocità dopo produce uno scatto quando lo
+	# stato scade, e il movimento di Quake non deve mai scattare.
+	wish *= status.move_multiplier() * float(stats.get("move_speed_mult", 1.0))
 
 	# Il motore ha già risolto la collisione: rileggi da lui la posizione e lo
 	# stato di appoggio prima di simulare, o la nostra funzione integra contro un

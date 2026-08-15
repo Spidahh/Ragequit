@@ -1392,7 +1392,7 @@ regola.
 
 ## 17 · Come si controlla che sia vero
 
-Ogni fase entra solo con la sua verifica automatica. Oggi ne girano **dodici,
+Ogni fase entra solo con la sua verifica automatica. Oggi ne girano **quattordici,
 tutte verdi**, più un benchmark che stampa i numeri invece di giudicarli. Si
 lanciano tutte con un comando: `node run_tests.mjs` dentro `godot/`.
 
