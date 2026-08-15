@@ -916,9 +916,15 @@ gioco deve girare su un portatile con la grafica integrata.
 
 ## 10 · Come suona
 
-**Oggi il gioco è muto, ed è la mancanza che a parità di sforzo cambia di più.**
-Metà del peso di uno sparatutto sta nelle orecchie: un colpo senza suono non pesa,
-per quanto bene sia disegnato.
+Metà del peso di uno sparatutto sta nelle orecchie: un colpo senza suono non
+pesa, per quanto bene sia disegnato. Era la mancanza che, a parità di sforzo,
+cambiava di più.
+
+**I suoni sono sintetizzati, non scaricati.** Ventidue forme d'onda generate da
+uno script — mezzo megabyte in tutto — invece di una cartella di campioni con
+dietro una rincorsa di licenze. Non sono un segnaposto: sono la forma d'onda
+giusta per ogni evento, e se un giorno arriva un campione migliore prende lo
+stesso nome e lo stesso posto.
 
 ### La regola
 
@@ -1363,7 +1369,7 @@ prima che la precedente sia verde.
 | 2   | Nemici, HUD, effetti                                             | **✅ fatto** |
 | 3   | Rete autoritativa e lag compensation                             | **✅ fatto** |
 | 4   | **Struttura di partita**: modalità, punteggio, vittoria, respawn | **✅ fatto** |
-| 5   | **Audio completo** (§10)                                         | ⬜           |
+| 5   | **Audio completo** (§10)                                         | **✅ fatto** |
 | 6   | **Classi, sottoclassi e le 67 abilità** lette dai dati           | ⬜           |
 | 7   | **Le sette schermate** (§11) e le comodità (§12)                 | ⬜           |
 | 8   | **L'arena vera** (§8) al posto del blockout                      | ⬜           |
@@ -1386,7 +1392,7 @@ regola.
 
 ## 17 · Come si controlla che sia vero
 
-Ogni fase entra solo con la sua verifica automatica. Oggi ne girano **undici,
+Ogni fase entra solo con la sua verifica automatica. Oggi ne girano **dodici,
 tutte verdi**, più un benchmark che stampa i numeri invece di giudicarli. Si
 lanciano tutte con un comando: `node run_tests.mjs` dentro `godot/`.
 
@@ -1401,6 +1407,7 @@ lanciano tutte con un comando: `node run_tests.mjs` dentro `godot/`.
 | `test_match`           | le tre modalità cominciano, segnano e finiscono                         |
 | `test_match_world`     | il colpo che uccide fa punto, e il morto smette di essere un bersaglio  |
 | `test_arena_match`     | nell'arena vera si arriva a 25 e si vince                               |
+| `test_audio`           | ogni evento ha il suo suono, e gli ambienti si ripetono davvero         |
 | `test_net`             | due processi veri si parlano — non un albero di scena che finge         |
 | `test_net_world`       | due corpi, movimento autoritativo                                       |
 | `bench`                | frame time, draw call, e stampa i numeri                                |

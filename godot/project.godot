@@ -14,6 +14,13 @@ config/description="Arena PvP: scegli una build, entra in arena, combatti."
 run/main_scene="res://scenes/arena.tscn"
 config/features=PackedStringArray("4.4", "Forward Plus")
 
+[autoload]
+
+; L'audio è un servizio, non un nodo di scena: ogni cosa che suona deve poterlo
+; chiamare senza sapere dove sta, e le voci si allocano UNA volta all'avvio
+; invece che a ogni colpo.
+Audio="*res://src/audio.gd"
+
 [display]
 
 window/size/viewport_width=1280

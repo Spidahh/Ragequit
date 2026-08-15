@@ -36,6 +36,7 @@ const SINGLE = [
   'test_match',
   'test_match_world',
   'test_arena_match',
+  'test_audio',
 ]
 const PAIRED = ['test_net', 'test_net_world']
 

@@ -9,6 +9,7 @@ extends Node3D
 const Vfx := preload("res://src/vfx.gd")
 const MatchRules := preload("res://src/match_rules.gd")
 const SpawnsScript := preload("res://src/spawns.gd")
+const Sfx := preload("res://src/sfx.gd")
 
 ## Il giocatore è il peer 1; i nemici prendono 101, 102… Gli stessi id che
 ## userebbe la rete, così le regole non sanno se stanno arbitrando umani o bot.
@@ -70,6 +71,32 @@ func _ready() -> void:
 	if _player.has_signal("damaged"):
 		_player.damaged.connect(_on_player_damaged)
 
+	_start_ambience()
+
+
+## Il fondo sonoro dell'arena: il vento sotto tutto, e una torcia che crepita su
+## ognuna delle luci calde. Le torce hanno un suono PROPRIO e spazializzato per
+## la stessa ragione per cui hanno una luce propria: sono i punti di riferimento
+## della mappa, e ci si orienta anche a orecchie.
+func _start_ambience() -> void:
+	Sfx.ambience("wind_loop", -20.0)
+	var lit := 0
+	for node in _all_descendants(self):
+		if node is OmniLight3D and node.light_color.r > node.light_color.b:
+			Sfx.ambience_at("torch_loop", node, -16.0)
+			lit += 1
+	if lit == 0:
+		# Nessuna torcia trovata: meglio un crepitio non spazializzato che il
+		# silenzio, ma vale la pena saperlo.
+		push_warning("arena: nessuna torcia trovata per l'audio d'ambiente")
+
+
+func _all_descendants(node: Node, out: Array = []) -> Array:
+	for child in node.get_children():
+		out.append(child)
+		_all_descendants(child, out)
+	return out
+
 
 func _on_enemy_fired(from: Vector3, to: Vector3, hit: bool) -> void:
 	# Il tracciante rosso: senza, non sai da dove ti stanno sparando, e morire
@@ -77,6 +104,10 @@ func _on_enemy_fired(from: Vector3, to: Vector3, hit: bool) -> void:
 	Vfx.tracer(self, from, to)
 	if hit:
 		Vfx.impact(self, to, Vfx.COL_ENEMY)
+	# Il colpo del nemico suona DAL PUNTO IN CUI PARTE, sempre — anche quando
+	# manca. È metà dell'informazione direzionale che hai su chi ti sta sparando,
+	# e l'unica che funziona quando non lo vedi.
+	Sfx.play_at("cast_beam", from, -9.0)
 
 
 func _on_player_damaged(_amount: float, _remaining: float) -> void:
@@ -90,6 +121,7 @@ func _on_bot_died(bot_id: int) -> void:
 	if _match.is_empty():
 		return
 	MatchRules.on_kill(_match, PLAYER_ID, bot_id)
+	Sfx.play("kill")
 	if _hud and _hud.has_method("push_feed"):
 		_hud.push_feed("YOU  ▸  BOT %d" % (bot_id - BOT_ID_BASE + 1), true)
 

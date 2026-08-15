@@ -14,6 +14,10 @@ const Combat := preload("res://src/combat.gd")
 const AbilityRuntime := preload("res://src/ability_runtime.gd")
 const BoltScript := preload("res://src/bolt.gd")
 const Vfx := preload("res://src/vfx.gd")
+const Sfx := preload("res://src/sfx.gd")
+# Anche il movimento: `class_name Movement` esiste, ma dipende dalla cache
+# delle classi globali, che su un checkout appena clonato non c'è ancora.
+const Movement := preload("res://src/movement.gd")
 
 const MOUSE_SENSITIVITY := 0.0022
 const PITCH_LIMIT := deg_to_rad(89.0)
@@ -35,6 +39,10 @@ var hp: float = Combat.HP_MAX
 ## e non incassa: senza questo, i tre secondi di attesa sono tre secondi in cui
 ## il cadavere continua a far salire il punteggio di chi lo ha ucciso.
 var dead := false
+
+var _step_t := 0.0
+var _was_grounded_sfx := true
+var _fall_speed := 0.0
 
 signal died
 
@@ -71,6 +79,9 @@ func cast_slot(idx: int) -> int:
 		return -1
 	var ability = _kit[idx]
 	if not _cooldowns.can_cast(ability.id, _clock):
+		# Un tasto premuto a vuoto deve rispondere qualcosa. Il silenzio si legge
+		# come "il gioco non mi ha sentito", che è la lamentela peggiore.
+		Sfx.play("unavailable", Sfx.UI, -8.0)
 		return -1
 	_cooldowns.start(ability.id, ability.cooldown, ability.cast_time, _clock)
 
@@ -105,6 +116,7 @@ func cast_slot(idx: int) -> int:
 		bolt.add_child(mesh)
 		get_tree().current_scene.add_child(bolt)
 		bolt.fire(origin, dir, ability, self)
+		_sound_cast(ability.shape)
 		cast_resolved.emit(ability.name, 0)
 		return 0
 
@@ -141,8 +153,25 @@ func cast_slot(idx: int) -> int:
 		_cam_kick = 0.035
 		_sway += Vector2(0.0, -0.045)
 
+	# Il suono del lancio parte SEMPRE, quello del colpo a segno solo se prendi:
+	# sono due informazioni diverse, e confonderle è il modo più veloce di
+	# togliere a un FPS l'unico feedback che non può non avere.
+	_sound_cast(ability.shape)
+	if n > 0:
+		Sfx.play("hit_confirm")
+
 	cast_resolved.emit(ability.name, n)
 	return n
+
+
+func _sound_cast(shape: int) -> void:
+	match shape:
+		Combat.Shape.BEAM:
+			Sfx.play("cast_beam")
+		Combat.Shape.BOLT:
+			Sfx.play("cast_bolt")
+		Combat.Shape.BURST:
+			Sfx.play("cast_burst")
 
 
 func take_damage(amount: float) -> void:
@@ -150,8 +179,10 @@ func take_damage(amount: float) -> void:
 		return
 	hp = maxf(0.0, hp - amount)
 	damaged.emit(amount, hp)
+	Sfx.play("hurt")
 	if hp <= 0.0:
 		dead = true
+		Sfx.play("death")
 		died.emit()
 
 
@@ -166,6 +197,7 @@ func respawn() -> void:
 func launch() -> void:
 	_sim["vel"].y = 9.0
 	_sim["knockback_ticks"] = 6
+	Sfx.play("launched")
 
 
 func _punch(shape: int) -> void:
@@ -217,6 +249,8 @@ func _physics_process(delta: float) -> void:
 	_sim["vel"] = velocity
 	_sim["pos"] = global_position
 
+	_footsteps(delta)
+
 	rotation.y = _yaw
 	# Il kick si somma al pitch e rientra a molla: la camera ricorda il colpo
 	# per un attimo, poi torna dove stavi mirando.
@@ -224,6 +258,34 @@ func _physics_process(delta: float) -> void:
 	_camera.rotation.x = _pitch + _cam_kick
 
 	_update_viewmodel(delta)
+
+
+## Passi, salto e atterraggio.
+##
+## I passi sono legati alla VELOCITÀ REALE, non a un timer: chi accelera sente
+## il ritmo salire, chi frena lo sente calare, e in un gioco dove la velocità si
+## accumula è quello che dice all'orecchio quanto stai andando forte.
+## L'atterraggio suona più forte se cadi da più in alto, per lo stesso motivo.
+func _footsteps(delta: float) -> void:
+	var grounded := is_on_floor()
+	if grounded and not _was_grounded_sfx:
+		Sfx.play_at("land", global_position, clampf(-14.0 + absf(_fall_speed) * 0.9, -14.0, 0.0))
+		_step_t = 0.22
+	if not grounded and _was_grounded_sfx and _sim["vel"].y > 0.5:
+		Sfx.play("jump", Sfx.SFX, -14.0)
+	_fall_speed = _sim["vel"].y if not grounded else 0.0
+	_was_grounded_sfx = grounded
+
+	if not grounded:
+		return
+	var speed := Vector2(velocity.x, velocity.z).length()
+	if speed < 1.5:
+		_step_t = 0.12
+		return
+	_step_t -= delta * (speed / Movement.MOVE_SPEED)
+	if _step_t <= 0.0:
+		_step_t = 0.34
+		Sfx.step(global_position)
 
 
 func _update_viewmodel(delta: float) -> void:
