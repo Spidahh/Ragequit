@@ -114,6 +114,15 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
+          # Il progetto si crea al primo giro. `|| true` perche' dal secondo in
+          # poi esiste gia' e il comando fallisce dicendo esattamente questo:
+          # e' l'unico modo di avere una pipeline che funziona sia la prima
+          # volta sia tutte le altre, senza un passo manuale in mezzo.
+          #
+          # E' un progetto NUOVO e non quello del gioco vecchio: sostituire un
+          # sito pubblico vivo con un altro e' una cosa che si fa apposta, non
+          # come effetto collaterale di un deploy.
+          npx --yes wrangler@latest pages project create ragequit-godot             --production-branch=main || true
           npx --yes wrangler@latest pages deploy godot-build             --project-name=ragequit-godot --branch=main --commit-dirty=true
 
   deploy-server:
