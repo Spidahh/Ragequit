@@ -1310,6 +1310,11 @@ dal browser come contenuto misto.
 
 ## 14 · Come sta in piedi gratis, per sempre
 
+> **È online.**
+> Il gioco: **https://spidahh.github.io/Ragequit/**
+> Il server: **wss://ragequit-server.fly.dev** — connessione aperta dal browser
+> in **294 ms**, misurata dalla pagina pubblicata. `[M]`
+
 Questo è il piano completo per pubblicare il gioco e tenerlo vivo **a costo
 zero**, e non "zero finché sono pochi": zero anche se domani ci gioca gente.
 
