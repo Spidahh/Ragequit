@@ -1,7 +1,8 @@
 # RAGEQUIT — Il gioco
 
-> Questo documento descrive **il gioco finito**: cosa vedi, cosa fai, come si
-> sente. Non è una lista di cose da fare — è come sarà quando è fatto.
+> Questo documento descrive il bersaglio di design e, dove indicato, lo stato
+> realmente spedito. Non chiamare "fatto" ciò che esiste solo come test o
+> infrastruttura scollegata dal percorso pubblico.
 >
 > I numeri stanno dove servono, a sostegno di una descrizione, mai al posto suo.
 > Quando ne leggi uno, quello è deciso: `[M]` misurato sul motore, `[B]`
@@ -9,6 +10,12 @@
 >
 > Redatto il 2026-08-15. Motore **Godot 4.7.1**, renderer **Compatibility** —
 > l'unico che il browser supporta. Tutto il testo di gioco è in **inglese**.
+
+> **STATO REALE 2026-08-15:** la pagina pubblica avvia una partita locale contro
+> otto bot. Menu, roster, Loadout Forge, Range e arena sono giocabili. I moduli
+> di rete hanno test a due processi, ma l'arena pubblica non effettua ancora il
+> matchmaking con giocatori umani: non descriverla come PvP online finché quel
+> collegamento non viene verificato dal browser pubblicato.
 
 **Cosa c'è dentro**
 
@@ -38,7 +45,7 @@ poco più di mezzo secondo, e chiuderlo è la cosa più difficile e più soddisf
 del gioco.
 
 **Non c'è niente da pagare. Non c'è niente da grindare.** Si scarica in sette
-megabyte, gira in una scheda del browser, e si sblocca tutto giocando.
+nel browser e si sblocca tutto giocando.
 
 ---
 
@@ -48,8 +55,8 @@ megabyte, gira in una scheda del browser, e si sblocca tutto giocando.
 
 Fondo scuro, quasi nero-blu. Il logo brucia in alto — lettere arancioni con dentro
 un movimento di fuoco. Sotto, un unico bottone grande: **PLAY**. Sotto ancora,
-tre tessere per le modalità, e su ognuna un numero: **quanta gente ci sta giocando
-adesso**. Non è un ornamento: è l'informazione che ti dice se vale la pena entrare.
+tre tessere per le modalità. La build attuale dichiara onestamente
+**LOCAL · 8 BOTS**; non mostra un conteggio utenti inventato.
 
 Tutto il resto — profilo, impostazioni, poligono — sta piccolo in un angolo. Il
 menù non è il gioco, e non deve sembrarlo.
@@ -152,9 +159,9 @@ Tasto destro è la **parata**. Un tap apre una finestra di mezzo secondo che blo
 tutto; tenendolo premuto blocchi il 70 % finché ti regge la stamina. E si vede
 addosso al personaggio: chi para davanti a te è leggibile da fuori.
 
-Le otto abilità stanno su `1 2 3 4` e `Q E R F` — il cluster che ogni sparatutto
-usa, perché dalla presa WASD l'indice non arriva a `5`-`8` senza staccare la
-mano. Il break sta su **`Shift`**: è il tasto che in ogni altro gioco ti fa
+Le otto abilità hanno tasti diretti `1`-`8`. In alternativa, tieni **E** per gli
+slot 1-4 o **Q** per gli slot 5-8, scegli un settore col mouse, rilascia per
+prepararlo e conferma con LMB. Il break sta su **`Shift`**: è il tasto che in ogni altro gioco ti fa
 correre, e qui è libero proprio perché correre è già la tua velocità normale.
 
 **Nessuna abilità è mai bloccata dall'arma sbagliata.** Se lanci una spell mentre
@@ -1028,36 +1035,19 @@ mai toccare le abilità: ogni sottoclasse arriva con una build già fatta e sens
 
 ### BUILD — scegliere cosa porti
 
-Otto slot in fila, con i loro tasti sotto: `1 2 3 4 Q E R F`. Clicchi uno slot e
-si apre il pool della classe, filtrato per scuola.
-
-Ogni abilità nel pool mostra il nome, l'arma, cosa fa **in parole**, i tre numeri
-che contano e il difetto (§7). Passandoci sopra, **al centro dello schermo una
-sagoma la esegue**, in loop, con il suo VFX vero: vedi il fascio partire, il
-proiettile viaggiare, l'area espandersi. Il raggio disegnato è quello vero.
-
-In alto, tre indicatori che si aggiornano mentre scegli — e sono l'unico
-"consiglio" che il gioco dà, senza mai dire cosa fare:
-
-```
-TIME TO KILL  5.4 s        LAUNCHES  2        RECOVERY  yes
-```
-
-Se una build non ha nessuno sbalzo, l'indicatore lo dice. Se non ha una cura, lo
-dice. Non ti impedisce niente.
-
-Sotto, **PRESETS**: tre build già fatte per sottoclasse, con un nome che dice come
-si gioca, non cosa contiene. E **RANDOM**, che ne genera una legale — il modo più
-veloce che esista per scoprire un'abilità che non avresti mai preso.
-
-Le build si salvano, se ne tengono **cinque per classe**, e hanno un nome tuo.
+Gli otto slot sono sempre visibili in due lane da quattro: **E WHEEL** e
+**Q WHEEL**. Ogni card mostra tasto diretto, arma/famiglia, natura funzionale,
+icona, istruzione di mira, forma reale del colpo, danno, cooldown e costo. Le
+alternative scorrono sotto senza nascondere né schiacciare il build. Il preset
+può essere ripristinato con un solo bottone.
 
 ### ARENA
 
 Il gioco. L'HUD è descritto al §2, e non c'è nient'altro sopra: **nessun
 suggerimento, nessuna freccia, nessun tasto che lampeggia.**
 
-Con `Tab` si apre il tabellone: nomi, punteggio, sottoclasse di ognuno, ping.
+Con `T` si apre il tabellone: nomi, punteggio, sottoclasse di ognuno, ping.
+`Tab` cambia l'arma attiva.
 Sotto ogni nome della squadra avversaria, **le abilità che ti hanno già colpito**
 — è il modo del gioco di dirti contro cosa stai giocando senza spiegarti niente.
 
@@ -1301,19 +1291,18 @@ intollerabile. Quindi si taglia lì, e chi ha il ping peggiore paga.
 
 ### Dove gira
 
-Il client è un pacchetto statico su itch.io. Il server è headless, su una macchina
-gratuita già attiva e già collegata alla CI. La connessione è **`wss://`** e non
-può essere altro: itch serve in https, e una connessione in chiaro viene bloccata
-dal browser come contenuto misto.
+Il client è un pacchetto statico su GitHub Pages. Esiste anche un export server
+headless nella CI, ma il percorso pubblico attuale entra nella partita locale
+con bot. La presenza del server o dei test di rete non dimostra da sola che il
+matchmaking Web sia collegato.
 
 ---
 
 ## 14 · Come sta in piedi gratis, per sempre
 
-> **È online.**
-> Il gioco: **https://spidahh.github.io/Ragequit/**
-> Il server: **wss://ragequit-server.fly.dev** — connessione aperta dal browser
-> in **294 ms**, misurata dalla pagina pubblicata. `[M]`
+> **La build Web è online:** https://spidahh.github.io/Ragequit/
+> La modalità attualmente verificata dal browser è locale contro bot. Il PvP
+> umano resta da integrare e verificare end-to-end.
 
 Questo è il piano completo per pubblicare il gioco e tenerlo vivo **a costo
 zero**, e non "zero finché sono pochi": zero anche se domani ci gioca gente.
@@ -1328,7 +1317,7 @@ per la maggior parte delle ore **non è acceso**.
 
 | Cosa                 | Dove                    | Perché è gratis                                                   |
 | -------------------- | ----------------------- | ----------------------------------------------------------------- |
-| **Il gioco**         | Cloudflare Pages        | statico, banda illimitata, nessun tetto di richieste              |
+| **Il gioco**         | GitHub Pages            | statico, pubblicato dalla CI del repository                       |
 | **La seconda casa**  | itch.io                 | statico, gratis, ed è dove il pubblico di questi giochi già passa |
 | **Il server**        | Fly.io, `shared-cpu-1x` | si **spegne da solo** quando non c'è nessuno                      |
 | **La costruzione**   | GitHub Actions          | gratis sui repository pubblici                                    |
@@ -1507,21 +1496,21 @@ PvP che vuole essere giusto.
 Ogni fase lascia il gioco **giocabile e verificabile**. Nessuna fase comincia
 prima che la precedente sia verde.
 
-| #   | Fase                                                             | Stato                   |
-| --- | ---------------------------------------------------------------- | ----------------------- |
-| 0   | Motore, movimento portato e verificato                           | **✅ fatto**            |
-| 1   | Combattimento: le tre forme, ricariche, danno                    | **✅ fatto**            |
-| 2   | Nemici, HUD, effetti                                             | **✅ fatto**            |
-| 3   | Rete autoritativa e lag compensation                             | **✅ fatto**            |
-| 4   | **Struttura di partita**: modalità, punteggio, vittoria, respawn | **✅ fatto**            |
-| 5   | **Audio completo** (§10)                                         | **✅ fatto**            |
-| 6   | **Classi, sottoclassi e le 67 abilità** lette dai dati           | **✅ fatto**            |
-| 7   | **Le sette schermate** (§11) e le comodità (§12)                 | **✅ fatto**            |
-| 8   | **L'arena vera** (§8) al posto del blockout                      | **✅ fatto**            |
-| 9   | **Personaggi e armi** al posto delle capsule                     | **✅ fatto**            |
-| 10  | **Bot** a tre difficoltà e riempimento della lobby               | **✅ fatto**            |
-| 11  | **Pubblicazione** su itch.io e server ospitato                   | **✅ pacchetto pronto** |
-| 12  | Sblocchi e livello account                                       | **✅ fatto**            |
+| #   | Fase                                                             | Stato                                          |
+| --- | ---------------------------------------------------------------- | ---------------------------------------------- |
+| 0   | Motore, movimento portato e verificato                           | **✅ fatto**                                   |
+| 1   | Combattimento: le tre forme, ricariche, danno                    | **✅ fatto**                                   |
+| 2   | Nemici, HUD, effetti                                             | **✅ fatto**                                   |
+| 3   | Rete autoritativa e lag compensation                             | **🟡 moduli testati, arena Web non collegata** |
+| 4   | **Struttura di partita**: modalità, punteggio, vittoria, respawn | **✅ fatto**                                   |
+| 5   | **Audio completo** (§10)                                         | **✅ fatto**                                   |
+| 6   | **Classi, sottoclassi e le 67 abilità** lette dai dati           | **✅ fatto**                                   |
+| 7   | **Le sette schermate** (§11) e le comodità (§12)                 | **✅ fatto**                                   |
+| 8   | **L'arena vera** (§8) al posto del blockout                      | **🟡 giocabile, art pass ancora parziale**     |
+| 9   | **Personaggi e armi** al posto delle capsule                     | **✅ fatto**                                   |
+| 10  | **Bot** a tre difficoltà e riempimento della lobby               | **✅ fatto**                                   |
+| 11  | **Pubblicazione** Web                                            | **✅ GitHub Pages**                            |
+| 12  | Sblocchi e livello account                                       | **✅ fatto**                                   |
 
 **La 4 prima di tutto**, e non è un'opinione. Finché una partita non comincia e
 non finisce, tutto il resto è roba bella dentro qualcosa che non si può né vincere
@@ -1537,28 +1526,30 @@ regola.
 
 ## 17 · Come si controlla che sia vero
 
-Ogni fase entra solo con la sua verifica automatica. Oggi ne girano **diciannove,
+Ogni fase entra solo con la sua verifica automatica. Oggi ne girano **ventidue,
 tutte verdi**, più un benchmark che stampa i numeri invece di giudicarli. Si
 lanciano tutte con un comando: `node run_tests.mjs` dentro `godot/`.
 
-| Verifica               | Cosa protegge                                                           |
-| ---------------------- | ----------------------------------------------------------------------- |
-| `test_movement`        | il feel di Quake: frenata, salto che conserva la velocità, strafe aereo |
-| `test_combat`          | le quattro invarianti della scala                                       |
-| `test_ability_runtime` | le forme colpiscono chi devono e mancano chi devono                     |
-| `test_arena_play`      | premi il tasto, il colpo parte, il danno arriva                         |
-| `test_fight`           | si può vincere **e perdere**                                            |
-| `test_lag_comp`        | il colpo che vedi andare a segno va a segno                             |
-| `test_match`           | le tre modalità cominciano, segnano e finiscono                         |
-| `test_match_world`     | il colpo che uccide fa punto, e il morto smette di essere un bersaglio  |
-| `test_arena_match`     | nell'arena vera si arriva a 25 e si vince                               |
-| `test_audio`           | ogni evento ha il suo suono, e gli ambienti si ripetono davvero         |
-| `test_net`             | due processi veri si parlano — non un albero di scena che finge         |
-| `test_net_world`       | due corpi, movimento autoritativo                                       |
-| `bench`                | frame time, draw call, e stampa i numeri                                |
-| `web_size.mjs`         | quanto pesa DAVVERO l'export: brotli, non i byte su disco               |
-| `package_itch.mjs`     | le sette cose che devono essere vere per pubblicare, prima di caricare  |
-| `luminance.mjs`        | i quattro bersagli di §9 su un frame, invece di guardarlo               |
+| Verifica                  | Cosa protegge                                                           |
+| ------------------------- | ----------------------------------------------------------------------- |
+| `test_movement`           | il feel di Quake: frenata, salto che conserva la velocità, strafe aereo |
+| `test_combat`             | le quattro invarianti della scala                                       |
+| `test_ability_runtime`    | le forme colpiscono chi devono e mancano chi devono                     |
+| `test_arena_play`         | premi il tasto, il colpo parte, il danno arriva                         |
+| `test_fight`              | si può vincere **e perdere**                                            |
+| `test_lag_comp`           | il colpo che vedi andare a segno va a segno                             |
+| `test_match`              | le tre modalità cominciano, segnano e finiscono                         |
+| `test_match_world`        | il colpo che uccide fa punto, e il morto smette di essere un bersaglio  |
+| `test_arena_match`        | nell'arena vera si arriva a 25 e si vince                               |
+| `test_audio`              | ogni evento ha il suo suono, e gli ambienti si ripetono davvero         |
+| `test_net`                | due processi veri si parlano — non un albero di scena che finge         |
+| `test_net_world`          | due corpi, movimento autoritativo                                       |
+| `test_main_flow`          | dal menu all'arena senza cambio-scena illegale                          |
+| `test_combat_readability` | windup reale, LMB, wheel, famiglie HUD e zone leggibili                 |
+| `bench`                   | frame time, draw call, e stampa i numeri                                |
+| `web_size.mjs`            | quanto pesa DAVVERO l'export: brotli, non i byte su disco               |
+| `package_itch.mjs`        | le sette cose che devono essere vere per pubblicare, prima di caricare  |
+| `luminance.mjs`           | i quattro bersagli di §9 su un frame, invece di guardarlo               |
 
 **Le quattro regole che valgono più dei test**, e che vengono tutte da un errore
 già fatto:

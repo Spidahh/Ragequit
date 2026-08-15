@@ -20,7 +20,7 @@ extends Node
 ## Quanto e' lunga l'arma a schermo, in metri, davanti alla camera del
 ## viewmodel. E' una lunghezza normalizzata e non un moltiplicatore di scala:
 ## un modello nuovo entra senza ritarare niente.
-const WEAPON_LENGTH_M := 0.55
+const WEAPON_LENGTH_M := 0.43
 
 ## Il campo visivo dell'arma, indipendente da quello del mondo. Chi gioca a 110
 ## gradi vuole l'arma piu' piccola, non piu' distorta.
@@ -28,7 +28,7 @@ const VIEWMODEL_FOV := 62.0
 
 ## La posa di riposo: in basso a destra, inclinata. Non e' un gusto — un'arma
 ## centrata copre il mirino, e un'arma orizzontale non ha profondita'.
-const REST_POS := Vector3(0.21, -0.26, -0.52)
+const REST_POS := Vector3(0.36, -0.36, -0.64)
 ## Le armi KayKit hanno la lama lungo il proprio +Y: 90 gradi su X la fanno
 ## puntare in avanti, lontano dalla camera. Senza, la si guarda di taglio e
 ## sembra un'asse — nel primo frame renderizzato era esattamente cosi'.
@@ -107,7 +107,7 @@ func equip(weapon: String) -> void:
 		return
 	_weapon = packed.instantiate()
 	root.add_child(_weapon)
-	_fit(_weapon, WEAPON_LENGTH_M if weapon != "staff" else WEAPON_LENGTH_M * 1.5)
+	_fit(_weapon, WEAPON_LENGTH_M if weapon != "staff" else WEAPON_LENGTH_M * 1.35)
 
 
 ## Porta il modello a una lunghezza a schermo nota, qualunque scala nativa abbia.

@@ -83,16 +83,23 @@ const BINDINGS := {
 	"ability_2": KEY_2,
 	"ability_3": KEY_3,
 	"ability_4": KEY_4,
-	"ability_5": KEY_Q,
-	"ability_6": KEY_E,
-	"ability_7": KEY_R,
-	"ability_8": KEY_F,
+	"ability_5": KEY_5,
+	"ability_6": KEY_6,
+	"ability_7": KEY_7,
+	"ability_8": KEY_8,
 	# Il break e la parata SI RIMAPPANO come tutto il resto: "tutti i tasti"
 	# significa tutti, compresi quelli che nessuno pensa di voler cambiare.
 	"break_free": KEY_SHIFT,
 	# La parata sta sul tasto destro del mouse, ma nella mappa c'e' lo stesso:
 	# "tutti i tasti" comprende quelli che non sono tasti.
 	"parry": KEY_C,
+}
+
+const LEGACY_WHEEL_CONFLICTS := {
+	"ability_5": KEY_Q,
+	"ability_6": KEY_E,
+	"ability_7": KEY_R,
+	"ability_8": KEY_F,
 }
 
 const LEFT_HANDED := {
@@ -220,3 +227,10 @@ func load_from_disk() -> void:
 	for action in BINDINGS:
 		if cfg.has_section_key("keys", action):
 			bindings[action] = cfg.get_value("keys", action)
+	var legacy := true
+	for action in LEGACY_WHEEL_CONFLICTS:
+		legacy = legacy and int(bindings.get(action, 0)) == int(LEGACY_WHEEL_CONFLICTS[action])
+	if legacy:
+		for action in LEGACY_WHEEL_CONFLICTS:
+			bindings[action] = BINDINGS[action]
+		save()

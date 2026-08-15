@@ -75,7 +75,10 @@ func _open_arena(
 	arena.set("practice", practice)
 	arena.set("match_mode", mode)
 	add_child(arena)
-	get_tree().current_scene = arena
+	# Main resta la scena corrente per tutta la sessione. L'arena e' un suo
+	# figlio temporaneo: assegnarla a `current_scene` dopo `add_child` e'
+	# illegale in Godot (la scena corrente deve essere figlia diretta di root) e
+	# produceva un errore ogni volta che si premeva PLAY nella build web.
 
 	var player := arena.get_node_or_null("Player")
 	if player and player.has_method("equip"):

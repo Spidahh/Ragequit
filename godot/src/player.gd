@@ -24,14 +24,14 @@ const Effects := preload("res://src/effects.gd")
 const ZoneScript := preload("res://src/zone.gd")
 const ViewmodelScript := preload("res://src/viewmodel.gd")
 const SettingsScript := preload("res://src/settings.gd")
+const BasicWeaponsScript := preload("res://src/basic_weapons.gd")
+const AbilityWheelScript := preload("res://src/ability_wheel.gd")
 
 ## La sensibilita' di serie, prima del moltiplicatore del giocatore.
 const SENSITIVITY_BASE := 0.0012
 const MOUSE_SENSITIVITY := 0.0022
 const PITCH_LIMIT := deg_to_rad(89.0)
-## Otto slot: `1 2 3 4` e `Q E R F`. È il cluster che ogni sparatutto usa, perché
-## dalla presa WASD l'indice non arriva a `5`-`8` senza staccare la mano — e metà
-## della build diventerebbe inutilizzabile in movimento.
+## Otto slot, otto tasti diretti. E/Q restano liberi per le due wheel alternative.
 const SLOTS := 8
 
 @onready var _camera: Camera3D = $Camera3D
@@ -47,6 +47,17 @@ var _kit: Array = []
 var _cooldowns := AbilityRuntime.Cooldowns.new()
 var _clock := 0.0
 var _cam_kick := 0.0
+## Un cast con windup vive davvero nel tempo. Prima il valore `windup` veniva
+## usato solo per il GCD, mentre danno e VFX uscivano nello stesso frame.
+var _pending_cast: Dictionary = {}
+var _release_anim := 0.0
+var _basic := BasicWeaponsScript.new()
+## Il click che preme PLAY non deve attraversare il cambio scena e diventare
+## il primo fendente. L'arma si arma solo dopo aver visto LMB rilasciato.
+var _combat_input_armed := false
+var _combat_input_release_frames := 0
+var _ability_wheel := AbilityWheelScript.new()
+var _primed_slot := -1
 
 ## I numeri del personaggio: vita, velocità, ricariche, durata degli sbalzi.
 ## Vengono dai dati, non da costanti qui dentro — un numero che nessun file
@@ -112,6 +123,8 @@ var _fall_speed := 0.0
 signal died
 
 signal cast_resolved(ability_name: String, hits: int)
+signal cast_state_changed(state: String, ability_name: String, weapon: String, duration: float)
+signal ability_wheel_changed(page: int, picked: int, items: Array)
 signal damaged(amount: float, remaining: float)
 
 ## Dove è finito l'ultimo colpo a segno. Serve al contatore combo, che va
@@ -151,6 +164,7 @@ func _ready() -> void:
 	_vm.build(self)
 	_viewmodel = _vm.root
 	_vm_rest = _vm.REST_POS
+	_basic.setup(self)
 	equip(class_id, sub_id)
 	apply_settings(SettingsScript.new())
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -206,6 +220,74 @@ func kit() -> Array:
 	return _kit
 
 
+## Riceve l'intenzione del giocatore. `cast_slot` resta la risoluzione
+## immediata e testabile; l'input reale passa di qui e rispetta il windup.
+func request_cast(idx: int) -> bool:
+	if idx < 0 or idx >= _kit.size() or not _pending_cast.is_empty():
+		Sfx.play("unavailable", Sfx.UI, -8.0)
+		return false
+	var ability: Dictionary = _kit[idx]
+	if not _cast_available(ability):
+		Sfx.play("unavailable", Sfx.UI, -8.0)
+		cast_state_changed.emit("failed", String(ability["name"]), String(ability["weapon"]), 0.3)
+		return false
+
+	var windup := maxf(0.0, float(ability.get("windup", 0.0)))
+	_equip_weapon(String(ability.get("weapon", "none")))
+	cast_state_changed.emit("windup", String(ability["name"]), String(ability["weapon"]), windup)
+	if windup <= 0.01:
+		var instant_result := cast_slot(idx)
+		_release_anim = 1.0
+		cast_state_changed.emit(
+			"released" if instant_result >= 0 else "failed",
+			String(ability["name"]),
+			String(ability["weapon"]),
+			0.32
+		)
+		return instant_result >= 0
+
+	_pending_cast = {
+		"idx": idx,
+		"ability": ability,
+		"started": _clock,
+		"release_at": _clock + windup,
+		"duration": windup,
+	}
+	return true
+
+
+func _cast_available(ability: Dictionary) -> bool:
+	return (
+		(practice or _cooldowns.can_cast(String(ability["id"]), _clock))
+		and status.can_cast()
+		and mana >= float(ability.get("cost_mana", 0.0))
+		and stamina >= float(ability.get("cost_stamina", 0.0))
+	)
+
+
+func _advance_pending_cast() -> void:
+	if _pending_cast.is_empty():
+		return
+	var ability: Dictionary = _pending_cast["ability"]
+	if dead or not status.can_cast():
+		_pending_cast.clear()
+		cast_state_changed.emit("failed", String(ability["name"]), String(ability["weapon"]), 0.4)
+		Sfx.play("unavailable", Sfx.UI, -8.0)
+		return
+	if _clock < float(_pending_cast["release_at"]):
+		return
+	var idx := int(_pending_cast["idx"])
+	_pending_cast.clear()
+	var result := cast_slot(idx)
+	_release_anim = 1.0
+	cast_state_changed.emit(
+		"released" if result >= 0 else "failed",
+		String(ability["name"]),
+		String(ability["weapon"]),
+		0.32
+	)
+
+
 ## Lancia lo slot `idx` (0-7). Ritorna quanti bersagli ha preso, -1 se non era
 ## disponibile — così il chiamante (e i test) sanno distinguere "mancato" da
 ## "non potevi".
@@ -218,12 +300,7 @@ func cast_slot(idx: int) -> int:
 	# uguali di proposito: al giocatore serve sapere che non è partito, il
 	# perché lo legge dall'HUD.
 	var cd := Content.cooldown_for(ability, stats)
-	if (
-		(not practice and not _cooldowns.can_cast(ability.id, _clock))
-		or not status.can_cast()
-		or mana < float(ability.get("cost_mana", 0.0))
-		or stamina < float(ability.get("cost_stamina", 0.0))
-	):
+	if not _cast_available(ability):
 		# Un tasto premuto a vuoto deve rispondere qualcosa. Il silenzio si legge
 		# come "il gioco non mi ha sentito", che è la lamentela peggiore.
 		Sfx.play("unavailable", Sfx.UI, -8.0)
@@ -237,12 +314,16 @@ func cast_slot(idx: int) -> int:
 	# il gioco la cambia. Mostrare metà build come "non disponibile" è una bugia
 	# che trasforma otto abilità in due gruppi da quattro nella testa di chi gioca.
 	_equip_weapon(String(ability.get("weapon", "none")))
+	var moved := _apply_movement_effects(ability)
 
 	# Le due forme che non raggiungono nessuno: partono già addosso a qualcuno.
 	if ability.shape == Content.Shape.SELF:
 		Effects.apply(ability, self, [], stats)
 		_punch(Combat.Shape.BURST)
 		Sfx.play("cast_burst")
+		var self_world := _combat_world()
+		if self_world:
+			Vfx.self_effect(self_world, global_position, ability)
 		cast_resolved.emit(ability.name, 0)
 		return 0
 	if ability.shape == Content.Shape.ZONE:
@@ -254,6 +335,13 @@ func cast_slot(idx: int) -> int:
 	# che vedi e quello che colpisci non coincidono.
 	var origin := _camera.global_position
 	var dir := -_camera.global_transform.basis.z
+	if moved and float(ability.get("damage", 0.0)) <= 0.0:
+		var move_world := _combat_world()
+		if move_world:
+			Vfx.mobility(move_world, global_position, dir, ability)
+		_sound_cast(Combat.Shape.BURST)
+		cast_resolved.emit(ability.name, 0)
+		return 0
 
 	# Il kick dell'arma parte QUI, prima che il colpo esista nel mondo: è ciò che
 	# fa sentire che l'attacco è partito da te.
@@ -267,19 +355,12 @@ func cast_slot(idx: int) -> int:
 		sph.radius = 0.2
 		col.shape = sph
 		bolt.add_child(col)
-		var mesh := MeshInstance3D.new()
-		var sm := SphereMesh.new()
-		sm.radius = 0.16
-		sm.height = 0.32
-		mesh.mesh = sm
-		var glow := StandardMaterial3D.new()
-		glow.albedo_color = Color(1.0, 0.55, 0.2)
-		glow.emission_enabled = true
-		glow.emission = Color(1.0, 0.45, 0.1)
-		glow.emission_energy_multiplier = 3.0
-		mesh.material_override = glow
-		bolt.add_child(mesh)
-		get_tree().current_scene.add_child(bolt)
+		bolt.add_child(Vfx.projectile_visual(ability))
+		var bolt_world := _combat_world()
+		if bolt_world == null:
+			bolt.queue_free()
+			return -1
+		bolt_world.add_child(bolt)
 		bolt.fire(origin, dir, ability, self, stats)
 		_sound_cast(ability.shape)
 		cast_resolved.emit(ability.name, 0)
@@ -300,10 +381,10 @@ func cast_slot(idx: int) -> int:
 	# Il VFX usa la geometria che il colpo ha DAVVERO occupato — result.end_point
 	# è dove la forma si è fermata, non dove sarebbe arrivata al massimo. È così
 	# che disegnato e colpito restano la stessa cosa.
-	var world := get_tree().current_scene
+	var world := _combat_world()
 	if world:
 		if ability.shape == Combat.Shape.BURST:
-			Vfx.burst(world, global_position)
+			Vfx.burst(world, global_position, maxf(float(ability.get("range_m", 0.0)), 1.0), ability)
 		else:
 			# Il VFX parte dalla BOCCA DELL'ARMA, non dall'occhio.
 			# Il test di collisione parte dall'occhio ed è giusto così — quello
@@ -312,10 +393,15 @@ func cast_slot(idx: int) -> int:
 			# scuro del frame passava da 0 a 96 e metà schermo finiva sopra l'80%
 			# di luminanza. Due origini diverse per due scopi diversi.
 			var muzzle := origin + dir * 1.1 + _camera.global_transform.basis.x * 0.22 - _camera.global_transform.basis.y * 0.16
-			Vfx.beam(world, muzzle, result.end_point)
+			Vfx.beam(world, muzzle, result.end_point, ability)
 		for h in result.hits:
 			if is_instance_valid(h):
-				Vfx.impact(world, h.global_position + Vector3(0, 0.9, 0))
+				Vfx.impact(
+					world,
+					h.global_position + Vector3(0, 0.9, 0),
+					Vfx.ability_color(ability),
+					ability
+				)
 
 	# Il peso del colpo: un calcio alla camera e al viewmodel, NON un freeze del
 	# motore. Avevo usato Engine.time_scale, ed è uno strumento troppo grosso:
@@ -359,13 +445,51 @@ func _cast_zone(ability: Dictionary) -> void:
 		at = origin + dir * reach
 		at.y = global_position.y - 0.9
 
-	var world := get_tree().current_scene
+	var world := _combat_world()
+	if world == null:
+		return
 	for e in ability.get("effects", []):
 		if String(e.get("kind", "")) == "zone":
 			var placement := String(e.get("placement", "point"))
-			ZoneScript.spawn(world, global_position if placement == "self" else at, e, self)
+			var zone_at := global_position + Vector3(0, -0.85, 0) if placement == "self" else at
+			ZoneScript.spawn(world, zone_at, e, self, ability)
 	_punch(Combat.Shape.BURST)
 	Sfx.play("cast_burst")
+
+
+## Applica gli spostamenti dichiarati nei dati. Prima `move` veniva ignorato:
+## Gap Closer e Quick Dash consumavano risorse senza muovere il giocatore.
+func _apply_movement_effects(ability: Dictionary) -> bool:
+	var applied := false
+	for effect in ability.get("effects", []):
+		if String(effect.get("kind", "")) != "move":
+			continue
+		var distance := float(effect.get("distance", 0.0))
+		if is_zero_approx(distance):
+			continue
+		var dir := -_camera.global_transform.basis.z
+		dir.y = 0.0
+		if bool(effect.get("useMovementDirection", false)):
+			var moving := Vector3(velocity.x, 0.0, velocity.z)
+			if moving.length_squared() > 0.04:
+				dir = moving.normalized()
+		if distance < 0.0:
+			dir = -dir
+		var duration := 0.18
+		var dash_speed := absf(distance) / duration
+		_sim["vel"].x = dir.x * dash_speed
+		_sim["vel"].z = dir.z * dash_speed
+		_sim["knockback_ticks"] = int(ceilf(duration * 60.0))
+		applied = true
+	return applied
+
+
+## Il contenitore del combattimento. Main resta la scena corrente mentre
+## l'arena nasce e muore sotto di lui, quindi `get_tree().current_scene` non e'
+## il posto in cui aggiungere proiettili e VFX.
+func _combat_world() -> Node3D:
+	var parent := get_parent()
+	return parent as Node3D
 
 
 ## Cambia arma senza chiedere. Il cambio è istantaneo di proposito: un tempo di
@@ -374,6 +498,7 @@ func _equip_weapon(weapon: String) -> void:
 	if weapon == "none" or weapon == _weapon:
 		return
 	_weapon = weapon
+	_basic.cancel()
 	if _vm:
 		_vm.equip(weapon)
 	# Un accenno di peso: l'arma nuova arriva in mano, non ci si teletrasporta.
@@ -521,6 +646,32 @@ func _punch(shape: int) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and not event.echo:
+		var is_e: bool = event.keycode == KEY_E or event.physical_keycode == KEY_E
+		var page := 0 if is_e else 1
+		var is_wheel_key: bool = (
+			event.keycode == KEY_E or event.physical_keycode == KEY_E
+			or event.keycode == KEY_Q or event.physical_keycode == KEY_Q
+		)
+		if is_wheel_key and event.pressed and not _ability_wheel.is_open():
+			_ability_wheel.begin(page)
+			ability_wheel_changed.emit(page, 0, _kit.slice(page * 4, page * 4 + 4))
+			get_viewport().set_input_as_handled()
+			return
+		if (
+			is_wheel_key and not event.pressed and _ability_wheel.is_open()
+			and page == _ability_wheel.page
+		):
+			_prime_from_wheel()
+			get_viewport().set_input_as_handled()
+			return
+	if event is InputEventMouseMotion and _ability_wheel.is_open():
+		var picked := _ability_wheel.move(event.relative)
+		ability_wheel_changed.emit(
+			_ability_wheel.page, picked,
+			_kit.slice(_ability_wheel.page * 4, _ability_wheel.page * 4 + 4)
+		)
+		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		_yaw -= event.relative.x * _sensitivity
 		_pitch = clampf(_pitch - event.relative.y * _sensitivity, -PITCH_LIMIT, PITCH_LIMIT)
@@ -535,11 +686,42 @@ func _unhandled_input(event: InputEvent) -> void:
 		)
 
 
+func _prime_from_wheel() -> void:
+	_primed_slot = _ability_wheel.finish()
+	ability_wheel_changed.emit(-1, -1, [])
+	if _primed_slot < 0 or _primed_slot >= _kit.size():
+		return
+	var ability: Dictionary = _kit[_primed_slot]
+	_equip_weapon(String(ability.get("weapon", "none")))
+	cast_state_changed.emit(
+		"selected", String(ability["name"]), String(ability.get("weapon", "none")), 0.0
+	)
+	Sfx.play("ui_confirm", Sfx.UI, -8.0)
+
+
 func _physics_process(delta: float) -> void:
 	_clock += delta
+	_advance_pending_cast()
+	_basic.tick(_clock)
+	if not Input.is_action_pressed("attack"):
+		_combat_input_release_frames += 1
+		if _combat_input_release_frames >= 2:
+			_combat_input_armed = true
+	else:
+		_combat_input_release_frames = 0
+	if _combat_input_armed and Input.is_action_just_pressed("attack"):
+		if _primed_slot >= 0:
+			var selected := _primed_slot
+			_primed_slot = -1
+			request_cast(selected)
+		else:
+			_basic.press(_clock)
+	if Input.is_action_just_released("attack"):
+		_basic.release(_clock)
 	for i in SLOTS:
 		if Input.is_action_just_pressed("ability_%d" % (i + 1)):
-			cast_slot(i)
+			_primed_slot = -1
+			request_cast(i)
 
 	if Input.is_action_just_pressed("break_free"):
 		_try_break()
@@ -598,6 +780,14 @@ func _physics_process(delta: float) -> void:
 	_update_viewmodel(delta)
 
 
+func cycle_weapon() -> void:
+	var weapons: Array = stats.get("weapons", [])
+	if weapons.size() < 2 or not _pending_cast.is_empty():
+		return
+	var current := weapons.find(_weapon)
+	_equip_weapon(String(weapons[(current + 1) % weapons.size()]))
+
+
 ## Passi, salto e atterraggio.
 ##
 ## I passi sono legati alla VELOCITÀ REALE, non a un timer: chi accelera sente
@@ -649,13 +839,34 @@ func _update_viewmodel(delta: float) -> void:
 		_land_dip = 0.12
 	_was_on_ground = is_on_floor()
 	_land_dip *= exp(-7.0 * step)
+	_release_anim *= exp(-15.0 * step)
+	var windup := 0.0
+	if not _pending_cast.is_empty():
+		var duration := maxf(float(_pending_cast["duration"]), 0.001)
+		windup = clampf((_clock - float(_pending_cast["started"])) / duration, 0.0, 1.0)
+
+	# Ogni arma prepara e rilascia in modo diverso. Il gesto resta nel viewport
+	# del viewmodel, quindi non compenetra il mondo e non altera la simulazione.
+	var action_pos := Vector3.ZERO
+	var action_rot := Vector3.ZERO
+	match _weapon:
+		"sword":
+			action_pos = Vector3(-0.055 * windup, 0.035 * windup, 0.07 * windup)
+			action_rot = Vector3(-0.10 * windup, 0.0, -0.52 * windup + 0.72 * _release_anim)
+		"bow":
+			action_pos = Vector3(0.0, 0.015 * windup, 0.09 * windup - 0.06 * _release_anim)
+			action_rot = Vector3(0.0, 0.12 * windup, -0.08 * windup)
+		"staff":
+			action_pos = Vector3(0.0, 0.07 * windup + 0.025 * _release_anim, 0.04 * windup)
+			action_rot = Vector3(-0.20 * windup + 0.16 * _release_anim, 0.0, 0.12 * windup)
 
 	_viewmodel.position = _vm_rest + Vector3(
 		-_sway.x + bob_x,
 		_sway.y + bob_y - _land_dip,
 		0.0
-	)
+	) + action_pos
 	_viewmodel.rotation = (
 		Vector3(deg_to_rad(ViewmodelScript.REST_ROT.x), deg_to_rad(ViewmodelScript.REST_ROT.y), deg_to_rad(ViewmodelScript.REST_ROT.z))
 		+ Vector3(_sway.y * 2.0, -_sway.x * 2.0, _sway.x * 3.0)
+		+ action_rot
 	)

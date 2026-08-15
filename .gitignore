@@ -39,6 +39,7 @@ coverage/
 .eslintcache
 .parcel-cache/
 .vite/
+godot/.godot/
 
 # Playtest data
 replay-archive/

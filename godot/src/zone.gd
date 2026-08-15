@@ -16,6 +16,7 @@
 extends Area3D
 
 const Status := preload("res://src/status.gd")
+const Vfx := preload("res://src/vfx.gd")
 
 var radius := 3.0
 var duration := 4.0
@@ -31,11 +32,14 @@ var _age := 0.0
 var _next_tick := 0.0
 var _clock := 0.0
 var _mesh: MeshInstance3D = null
+var _ability: Dictionary = {}
 
 signal triggered(bodies: Array)
 
 
-static func spawn(world: Node, at: Vector3, effect: Dictionary, from: Node) -> Node:
+static func spawn(
+	world: Node, at: Vector3, effect: Dictionary, from: Node, ability: Dictionary = {}
+) -> Node:
 	var z := Area3D.new()
 	z.set_script(load("res://src/zone.gd"))
 	z.radius = maxf(float(effect.get("radius", 0.0)), float(effect.get("width", 0.0)) * 0.5)
@@ -48,6 +52,7 @@ static func spawn(world: Node, at: Vector3, effect: Dictionary, from: Node) -> N
 	z.arm_delay = float(effect.get("armDelaySec", 0.0))
 	z.expires_on_trigger = bool(effect.get("expiresOnTrigger", false))
 	z.owner_node = from
+	z._ability = ability
 	z.position = at
 	world.add_child(z)
 	return z
@@ -61,24 +66,24 @@ func _ready() -> void:
 	add_child(col)
 	monitoring = true
 
-	# Il disco a terra, con lo STESSO raggio del volume. Sta ai piedi e non
-	# all'altezza del petto: un anello all'altezza degli occhi riempie meta'
-	# schermo e non si capisce piu' dove finisce.
+	# Solo il bordo della zona: il vecchio cilindro trasparente diventava un
+	# lenzuolo arancione che copriva quasi tutta la visuale in prima persona.
 	_mesh = MeshInstance3D.new()
-	var cyl := CylinderMesh.new()
-	cyl.top_radius = radius
-	cyl.bottom_radius = radius
-	cyl.height = 0.06
-	_mesh.mesh = cyl
+	var ring := TorusMesh.new()
+	ring.inner_radius = maxf(radius - 0.12, 0.05)
+	ring.outer_radius = radius
+	ring.rings = 36
+	_mesh.mesh = ring
 	var mat := StandardMaterial3D.new()
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.albedo_color = Color(1.0, 0.46, 0.13, 0.22)
+	var color := Vfx.ability_color(_ability)
+	mat.albedo_color = Color(color.r, color.g, color.b, 0.72)
 	mat.emission_enabled = true
-	mat.emission = Color(1.0, 0.42, 0.1)
-	mat.emission_energy_multiplier = 1.4
+	mat.emission = color
+	mat.emission_energy_multiplier = 1.8
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	_mesh.material_override = mat
-	_mesh.position.y = -0.85
+	_mesh.position.y = 0.04
 	add_child(_mesh)
 
 
@@ -93,13 +98,13 @@ func _process(delta: float) -> void:
 	# meta' del contratto con chi ci cammina dentro.
 	if _age < arm_delay:
 		if _mesh:
-			_mesh.material_override.albedo_color.a = 0.10
+			_mesh.material_override.albedo_color.a = 0.30
 		return
 	if _mesh:
 		var left := (duration + arm_delay) - _age
 		# Sbiadisce sul finire: chi ci sta dentro deve poter contare gli ultimi
 		# istanti invece di vederla sparire di colpo.
-		_mesh.material_override.albedo_color.a = 0.22 * clampf(left / 0.8, 0.25, 1.0)
+		_mesh.material_override.albedo_color.a = 0.72 * clampf(left / 0.8, 0.25, 1.0)
 
 	if _clock < _next_tick:
 		return
@@ -108,6 +113,9 @@ func _process(delta: float) -> void:
 
 
 func _pulse() -> void:
+	var world := get_parent() as Node3D
+	if world:
+		Vfx.burst(world, global_position + Vector3(0, 0.86, 0), radius, _ability)
 	var caught := []
 	for body in get_overlapping_bodies():
 		if body == owner_node:

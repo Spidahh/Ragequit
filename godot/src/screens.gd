@@ -108,37 +108,39 @@ func show_screen(which: int) -> void:
 
 
 func _build_menu() -> void:
-	var col := _column(Vector2(0, 0), 520)
+	# Il menu e' una schermata di gioco: key art a sinistra, comando compatto a
+	# destra. Niente colonna da form web nel mezzo dell'illustrazione.
+	var col := VBoxContainer.new()
+	col.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
+	col.position = Vector2(-466, -330)
+	col.size = Vector2(430, 660)
+	col.add_theme_constant_override("separation", 7)
+	_body.add_child(col)
 
-	# Il logo brucia: e' l'unica cosa animata del menu, e dice il nome del gioco
-	# con la stessa luce delle torce dell'arena.
-	var logo := UI.label("RAGEQUIT", 76, UI.ACCENT)
-	logo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	logo.custom_minimum_size = Vector2(520, 0)
+	var logo := TextureRect.new()
+	logo.texture = load("res://assets/ui/ragequit-logo-full.webp")
+	logo.custom_minimum_size = Vector2(430, 170)
+	logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	col.add_child(logo)
-	var tag := UI.label("Pick a build. Enter the arena. Take them off the ground.", 14, UI.TEXT_DIM)
+	var tag := UI.label("BUILD YOUR KIT  ·  BREAK THEIR AIM", 12, UI.TEXT_DIM)
 	tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tag.custom_minimum_size = Vector2(520, 0)
+	tag.custom_minimum_size = Vector2(430, 20)
 	col.add_child(tag)
-	col.add_child(UI.spacer(26))
+	col.add_child(UI.spacer(4))
 
-	# UN bottone grande. Il resto e' piu' piccolo di proposito.
-	var play := UI.button("PLAY", true, 520)
+	var play := UI.button("PLAY", true, 430)
 	play.pressed.connect(_on_play)
 	col.add_child(play)
-	col.add_child(UI.spacer(14))
+	col.add_child(UI.spacer(3))
 
-	# Le tre tessere, e su ognuna QUANTA GENTE CI STA GIOCANDO. E' l'unico numero
-	# che il menu mostra, ed e' quello che dice se vale la pena entrare.
-	var tiles := HBoxContainer.new()
-	tiles.add_theme_constant_override("separation", 10)
-	col.add_child(tiles)
+	# Non fingiamo giocatori online: questa build riempie la partita con bot.
 	for m in MODES:
-		tiles.add_child(_mode_tile(m))
+		col.add_child(_mode_tile(m))
 
-	col.add_child(UI.spacer(30))
-	col.add_child(UI.rule(520))
-	col.add_child(UI.spacer(14))
+	col.add_child(UI.spacer(4))
+	col.add_child(UI.rule(430))
+	col.add_child(UI.spacer(3))
 
 	# In fondo, piccolo: chi sei, il poligono, le impostazioni. Il menu non e' il
 	# gioco, e questa riga non deve competere con PLAY.
@@ -147,17 +149,17 @@ func _build_menu() -> void:
 	col.add_child(foot)
 
 	var st := Content.stats(class_id, sub_id)
-	var who := UI.button("%s · %s" % [st.get("label", ""), st.get("sub_name", "")], false, 240)
+	var who := UI.button("%s · %s" % [st.get("label", ""), st.get("sub_name", "")], false, 200)
 	who.pressed.connect(func(): _go(Screen.ROSTER))
 	foot.add_child(who)
 
-	var range_btn := UI.button("RANGE", false, 120)
+	var range_btn := UI.button("RANGE", false, 100)
 	range_btn.pressed.connect(func():
 		Sfx.play("ui_confirm", Sfx.UI)
 		range_requested.emit())
 	foot.add_child(range_btn)
 
-	var set_btn := UI.button("SETTINGS", false, 140)
+	var set_btn := UI.button("SETTINGS", false, 110)
 	set_btn.pressed.connect(func(): _go(Screen.SETTINGS))
 	foot.add_child(set_btn)
 
@@ -168,32 +170,44 @@ func _build_menu() -> void:
 		UI.TEXT_FAINT
 	)
 	lvl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lvl.custom_minimum_size = Vector2(520, 0)
+	lvl.custom_minimum_size = Vector2(430, 0)
 	col.add_child(lvl)
 
 
 func _mode_tile(m: Dictionary) -> Control:
 	var chosen: bool = int(m["id"]) == mode
-	var p := UI.panel(Vector2(166, 92), UI.PANEL_HI if chosen else UI.PANEL)
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 3)
-	p.add_child(v)
+	var p := Control.new()
+	p.custom_minimum_size = Vector2(430, 73)
+	var frame := TextureRect.new()
+	frame.texture = load("res://assets/ui/frame_but.webp")
+	frame.set_anchors_preset(Control.PRESET_FULL_RECT)
+	frame.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	frame.stretch_mode = TextureRect.STRETCH_SCALE
+	frame.modulate = Color(1.0, 0.72, 0.28, 1.0) if chosen else Color(0.65, 0.68, 0.76, 0.62)
+	p.add_child(frame)
 
-	var head := HBoxContainer.new()
-	head.add_child(UI.label(String(m["name"]), 15, UI.ACCENT if chosen else UI.TEXT))
-	v.add_child(head)
-	v.add_child(UI.label(String(m["players"]), 11, UI.TEXT_FAINT))
-
+	var head := Label.new()
+	head.text = String(m["name"])
+	head.position = Vector2(24, 12)
+	head.size = Vector2(190, 22)
+	head.add_theme_font_size_override("font_size", 16)
+	head.add_theme_color_override("font_color", UI.ACCENT if chosen else UI.TEXT)
+	p.add_child(head)
+	var players := UI.label(String(m["players"]), 11, UI.TEXT_FAINT)
+	players.position = Vector2(318, 14)
+	players.size = Vector2(82, 18)
+	players.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	p.add_child(players)
 	var line := UI.label(String(m["line"]), 11, UI.TEXT_DIM)
-	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	line.custom_minimum_size = Vector2(138, 28)
-	v.add_child(line)
-
-	# Quanta gente c'e' ora. Finche' non c'e' un server vero il numero e' quello
-	# dei bot che riempirebbero la lobby: e' una risposta onesta alla domanda
-	# "trovo qualcuno?", che e' sempre si'.
-	var live := Bots.fill_count(0, 8)
-	v.add_child(UI.label("%d in game" % live, 11, UI.GOOD))
+	line.position = Vector2(24, 37)
+	line.size = Vector2(270, 18)
+	line.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	p.add_child(line)
+	var state := UI.label("LOCAL · %d BOTS" % Bots.fill_count(0, 8), 10, UI.GOOD)
+	state.position = Vector2(300, 38)
+	state.size = Vector2(100, 18)
+	state.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	p.add_child(state)
 
 	var btn := Button.new()
 	btn.flat = true
@@ -336,77 +350,18 @@ func _current_kit() -> Array:
 
 
 func _build_loadout() -> void:
-	var col := _column(Vector2(0, 0), 980)
-	col.add_child(_header("LOADOUT"))
-
+	var col := _column(Vector2.ZERO, 1000)
+	var identity := Content.stats(class_id, sub_id)
+	col.add_child(_header("LOADOUT FORGE  ·  %s / %s" % [identity["label"], identity["sub_name"]]))
 	var kit := _current_kit()
-
-	# I tre indicatori. Sono l'unico "consiglio" che il gioco da', e non dicono
-	# mai cosa fare: dicono cosa hai. Una build senza sbalzi lo dice, e ti lascia
-	# giocarla.
-	var ttk := 0.0
-	var launches := 0
-	var recovery := false
-	for id in kit:
-		var a := Content.ability(String(id))
-		if a.is_empty():
-			continue
-		if float(a["airtime"]) > 0.0:
-			launches += 1
-		if float(a["heal"]) > 0.0:
-			recovery = true
-		var cd: float = maxf(Content.cooldown_for(a, Content.stats(class_id, sub_id)), 0.1)
-		ttk += float(a["damage"]) / cd
-	var hp: float = float(Content.stats(class_id, sub_id)["max_hp"])
-	var seconds: float = hp / maxf(ttk + 15.0, 1.0)
-
-	var meters := HBoxContainer.new()
-	meters.add_theme_constant_override("separation", 30)
-	col.add_child(meters)
-	meters.add_child(_stat("TIME TO KILL", "%.1f s" % seconds))
-	meters.add_child(_stat("LAUNCHES", str(launches)))
-	meters.add_child(_stat("RECOVERY", "yes" if recovery else "NONE"))
-	col.add_child(UI.spacer(12))
-
-	# Gli otto slot, con i tasti sotto le dita.
-	var slots := HBoxContainer.new()
-	slots.add_theme_constant_override("separation", 8)
-	col.add_child(slots)
-	var keys := ["1", "2", "3", "4", "Q", "E", "R", "F"]
-	for i in 8:
-		var id: String = String(kit[i]) if i < kit.size() else ""
-		var a := Content.ability(id)
-		var p := UI.panel(Vector2(112, 86), UI.PANEL_HI if i == _editing_slot else UI.PANEL)
-		var v := VBoxContainer.new()
-		v.add_theme_constant_override("separation", 2)
-		p.add_child(v)
-		v.add_child(UI.label(keys[i], 12, UI.ACCENT))
-		var nm := UI.label(String(a.get("name", "—")), 12, UI.TEXT)
-		nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		nm.custom_minimum_size = Vector2(88, 30)
-		v.add_child(nm)
-		v.add_child(UI.label(String(a.get("school", "")), 10, UI.TEXT_FAINT))
-		var btn := Button.new()
-		btn.flat = true
-		btn.set_anchors_preset(Control.PRESET_FULL_RECT)
-		var slot := i
-		btn.pressed.connect(func():
-			_editing_slot = slot
-			Sfx.play("ui_click", Sfx.UI)
-			show_screen(Screen.BUILD))
-		p.add_child(btn)
-		slots.add_child(p)
-
-	col.add_child(UI.spacer(14))
-
-	if _editing_slot >= 0:
-		col.add_child(_pool_list(kit))
-	else:
-		col.add_child(
-			UI.label("Pick a slot to change what it holds.", 13, UI.TEXT_DIM)
-		)
-
-	col.add_child(UI.spacer(16))
+	col.add_child(_loadout_lane("E WHEEL  ·  HOLD E", 0, kit))
+	col.add_child(UI.spacer(6))
+	col.add_child(_loadout_lane("Q WHEEL  ·  HOLD Q", 4, kit))
+	col.add_child(UI.spacer(8))
+	var chosen := _editing_slot if _editing_slot >= 0 else 0
+	col.add_child(UI.eyebrow("ALTERNATIVES FOR SLOT %d  ·  CLICK ANY BUILD CARD TO CHANGE LANE" % (chosen + 1)))
+	col.add_child(_pool_list(kit, chosen))
+	col.add_child(UI.spacer(8))
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 10)
 	col.add_child(actions)
@@ -433,81 +388,111 @@ func _build_loadout() -> void:
 ##
 ## Le abilita' bloccate SI VEDONO, con scritto cosa fare per averle: nasconderle
 ## e' come non averle mai scritte, e l'obiettivo scritto e' il tutorial.
-func _pool_list(kit: Array) -> Control:
+func _loadout_lane(title: String, first: int, kit: Array) -> Control:
+	var lane := VBoxContainer.new()
+	lane.add_theme_constant_override("separation", 4)
+	lane.add_child(UI.label(title, 12, UI.ACCENT))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	lane.add_child(row)
+	for i in range(first, first + 4):
+		var ability := Content.ability(String(kit[i])) if i < kit.size() else {}
+		var slot := i
+		row.add_child(_ability_card(ability, i, i == _editing_slot, func():
+			_editing_slot = slot
+			Sfx.play("ui_click", Sfx.UI)
+			show_screen(Screen.BUILD)))
+	return lane
+
+
+func _ability_card(a: Dictionary, slot: int, selected: bool, pressed: Callable) -> Control:
+	var p := UI.panel(Vector2(244, 118), UI.PANEL_HI if selected else UI.PANEL)
+	var root := Control.new()
+	root.custom_minimum_size = Vector2(216, 96)
+	p.add_child(root)
+	var weapon := String(a.get("weapon", "utility"))
+	if weapon == "none": weapon = "utility"
+	var nature := String(a.get("element", "none"))
+	if nature == "none": nature = String(a.get("role", "action"))
+	var key := UI.label("%d  ·  %s  ·  %s" % [slot + 1, weapon.to_upper(), nature.to_upper()], 10, UI.ACCENT)
+	key.position = Vector2(0, 0)
+	key.size = Vector2(150, 18)
+	root.add_child(key)
+	var name := UI.label(String(a.get("name", "EMPTY")).to_upper(), 14, UI.TEXT)
+	name.position = Vector2(0, 18)
+	name.size = Vector2(150, 20)
+	name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	root.add_child(name)
+	var desc := UI.label(_ability_instruction(a), 10, UI.TEXT_DIM)
+	desc.position = Vector2(0, 39)
+	desc.size = Vector2(150, 32)
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc.max_lines_visible = 2
+	desc.clip_text = true
+	root.add_child(desc)
+	var shape_names := ["HITSCAN", "PROJECTILE", "BURST", "ZONE", "SELF"]
+	var shape := int(a.get("shape", 0))
+	var cost := "%.0fM" % float(a.get("cost_mana", 0)) if float(a.get("cost_mana", 0)) > 0 else "%.0fS" % float(a.get("cost_stamina", 0)) if float(a.get("cost_stamina", 0)) > 0 else "FREE"
+	var result := "%s  ·  %.0f DMG  ·  %.1fs  ·  %s" % [shape_names[shape], float(a.get("damage", 0)), Content.cooldown_for(a, Content.stats(class_id, sub_id)), cost]
+	var numbers := UI.label(result, 10, UI.ACCENT)
+	numbers.position = Vector2(0, 74)
+	numbers.size = Vector2(216, 18)
+	root.add_child(numbers)
+	var icon := TextureRect.new()
+	icon.position = Vector2(156, 3)
+	icon.size = Vector2(58, 58)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	var path := "res://assets/ui/ability-icons/%s.webp" % String(a.get("id", ""))
+	if ResourceLoader.exists(path):
+		icon.texture = load(path)
+	root.add_child(icon)
+	var btn := Button.new()
+	btn.flat = true
+	btn.set_anchors_preset(Control.PRESET_FULL_RECT)
+	btn.pressed.connect(pressed)
+	root.add_child(btn)
+	return p
+
+
+func _ability_instruction(a: Dictionary) -> String:
+	var shape := int(a.get("shape", 0))
+	var line: String = ["Aim a straight hit", "Lead a moving projectile", "Hits around your body", "Place pressure on the ground", "Activates on yourself"][shape]
+	if float(a.get("airtime", 0)) > 0.0:
+		line += " · launches %.2fs" % float(a["airtime"])
+	elif float(a.get("heal", 0)) > 0.0:
+		line += " · heals %.0f" % float(a["heal"])
+	elif float(a.get("range_m", 0)) > 0.0:
+		line += " · %.0fm" % float(a["range_m"])
+	return line
+
+
+func _pool_list(kit: Array, chosen: int) -> Control:
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(960, 260)
-	var grid := VBoxContainer.new()
-	grid.add_theme_constant_override("separation", 4)
-	scroll.add_child(grid)
+	scroll.custom_minimum_size = Vector2(1000, 132)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	scroll.add_child(row)
 
 	for a in Content.pool(class_id):
 		var id := String(a["id"])
 		var unlocked := progress.is_unlocked(id)
-		var used := kit.has(id)
-		var p := UI.panel(Vector2(940, 0), UI.PANEL_HI if used else UI.PANEL)
-		var v := VBoxContainer.new()
-		v.add_theme_constant_override("separation", 1)
-		p.add_child(v)
-
-		var head := HBoxContainer.new()
-		head.add_theme_constant_override("separation", 12)
-		v.add_child(head)
-		head.add_child(UI.label(String(a["name"]), 15, UI.TEXT if unlocked else UI.TEXT_FAINT))
-		head.add_child(
-			UI.label(
-				"%s · %s · %.0f m" % [String(a["weapon"]), String(a["school"]), float(a["range_m"])],
-				11,
-				UI.TEXT_FAINT
-			)
-		)
-
-		var desc := UI.label(String(a["description"]), 12, UI.TEXT_DIM)
-		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		desc.custom_minimum_size = Vector2(900, 0)
-		v.add_child(desc)
-
-		# I tre numeri che contano, e nient'altro: se un'informazione serve a
-		# scegliere sta qui, se non serve non c'e'.
-		v.add_child(
-			UI.label(
-				(
-					"%.0f damage · %.1f s cooldown%s"
-					% [
-						float(a["damage"]),
-						Content.cooldown_for(a, Content.stats(class_id, sub_id)),
-						(" · %.2f s airborne" % float(a["airtime"])) if float(a["airtime"]) > 0.0 else "",
-					]
-				),
-				12,
-				UI.ACCENT
-			)
-		)
-
-		# Il difetto. Ogni abilita' ne dichiara uno, e non e' modestia: e' come
-		# il giocatore capisce contro cosa la sta scegliendo.
-		var malus := UI.label("⚠  " + String(a["mini_malus"]), 11, UI.DANGER)
-		malus.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		malus.custom_minimum_size = Vector2(900, 0)
-		v.add_child(malus)
-
+		var p := _ability_card(a, chosen, kit.has(id), func():
+			if not unlocked:
+				Sfx.play("unavailable", Sfx.UI)
+				return
+			var k := _current_kit()
+			while k.size() < 8: k.append("")
+			k[chosen] = id
+			kit_ids = k
+			_editing_slot = chosen
+			Sfx.play("ui_confirm", Sfx.UI)
+			show_screen(Screen.BUILD))
 		if not unlocked:
-			v.add_child(UI.label("🔒  " + progress.progress_text(id), 11, UI.TEXT_FAINT))
-		else:
-			var btn := Button.new()
-			btn.flat = true
-			btn.set_anchors_preset(Control.PRESET_FULL_RECT)
-			btn.pressed.connect(func():
-				var k := _current_kit()
-				while k.size() < 8:
-					k.append("")
-				k[_editing_slot] = id
-				kit_ids = k
-				_editing_slot = -1
-				Sfx.play("ui_confirm", Sfx.UI)
-				show_screen(Screen.BUILD))
-			p.add_child(btn)
-
-		grid.add_child(p)
+			p.modulate = Color(0.38, 0.38, 0.42, 0.75)
+		row.add_child(p)
 	return scroll
 
 

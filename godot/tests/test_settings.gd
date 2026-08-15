@@ -29,6 +29,7 @@ func _init() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(Settings.PATH))
 
 	_tutti_i_tasti_si_rimappano()
+	_i_vecchi_salvataggi_liberano_le_wheel()
 	_i_conflitti_si_vedono_prima()
 	_la_mira_si_porta_da_un_altro_gioco()
 	_i_daltonici_vedono_due_colori_diversi()
@@ -54,7 +55,7 @@ func _tutti_i_tasti_si_rimappano() -> void:
 
 	s.apply_bindings()
 	s.bind("ability_5", KEY_Z)
-	_check("il nuovo tasto risponde", InputMap.action_has_event("ability_5", _key(KEY_Z)), "Q → Z")
+	_check("il nuovo tasto risponde", InputMap.action_has_event("ability_5", _key(KEY_Z)), "5 → Z")
 	# E il vecchio NON deve rispondere più: aggiungere invece di sostituire lascia
 	# due tasti che fanno la stessa cosa, e chi rimappa non capisce perché.
 	_check("e il vecchio no", not InputMap.action_has_event("ability_5", _key(KEY_Q)), "Q è libero")
@@ -68,11 +69,26 @@ func _tutti_i_tasti_si_rimappano() -> void:
 	_check(
 		"e lascia stare le abilità",
 		int(s.bindings["ability_1"]) == KEY_1,
-		"1-4 e QERF restano dove sono"
+		"1-8 restano dove sono"
 	)
 
 	s.reset_bindings()
 	_check("e si torna indietro", int(s.bindings["move_forward"]) == KEY_W, "WASD")
+	_check("gli otto slot tornano sui numeri", int(s.bindings["ability_8"]) == KEY_8, "1-8")
+
+
+func _i_vecchi_salvataggi_liberano_le_wheel() -> void:
+	print("\nI vecchi tasti non rompono E/Q")
+	var cfg := ConfigFile.new()
+	for action in Settings.LEGACY_WHEEL_CONFLICTS:
+		cfg.set_value("keys", action, Settings.LEGACY_WHEEL_CONFLICTS[action])
+	cfg.save(Settings.PATH)
+	var migrated := Settings.new()
+	_check(
+		"Q ed E tornano liberi per le wheel",
+		int(migrated.bindings["ability_5"]) == KEY_5 and int(migrated.bindings["ability_6"]) == KEY_6,
+		"slot 5-8 migrati sui numeri"
+	)
 
 
 func _i_conflitti_si_vedono_prima() -> void:

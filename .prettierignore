@@ -15,3 +15,5 @@ pnpm-lock.yaml
 # Godot sono generati da tools, non scritti a mano.
 godot-build/
 godot/data/
+# Addon Godot di terze parti: formattarlo riscrive il codice vendorizzato.
+godot/addons/

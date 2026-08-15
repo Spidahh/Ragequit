@@ -173,27 +173,35 @@ static func checkbox(text: String, on: bool) -> CheckBox:
 static func background() -> Control:
 	var root := Control.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	var flat := ColorRect.new()
-	flat.color = BG
-	flat.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.add_child(flat)
+	var art_path := "res://assets/ui/sfondo.webp"
+	if ResourceLoader.exists(art_path):
+		var art := TextureRect.new()
+		art.texture = load(art_path)
+		art.set_anchors_preset(Control.PRESET_FULL_RECT)
+		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		root.add_child(art)
+	else:
+		var flat := ColorRect.new()
+		flat.color = BG
+		flat.set_anchors_preset(Control.PRESET_FULL_RECT)
+		root.add_child(flat)
 
-	var glow := ColorRect.new()
-	glow.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var shade := ColorRect.new()
+	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
 	var sh := Shader.new()
 	sh.code = """
 shader_type canvas_item;
-uniform vec3 warm = vec3(1.0, 0.46, 0.13);
 void fragment() {
-	// Un alone caldo dal basso, appena percettibile: il menu deve appartenere
-	// alla stessa notte dell'arena, non essere una schermata di sistema.
-	float d = distance(UV, vec2(0.5, 1.15));
-	float a = clamp(0.20 - d * 0.22, 0.0, 1.0);
-	COLOR = vec4(warm, a);
+	// L'art resta visibile, ma a destra diventa il fondale leggibile dei menu.
+	float right = smoothstep(0.42, 0.86, UV.x);
+	float edge = smoothstep(0.9, 0.35, distance(UV, vec2(0.5)));
+	float a = clamp(0.20 + right * 0.64 + (1.0 - edge) * 0.18, 0.0, 0.88);
+	COLOR = vec4(0.025, 0.03, 0.055, a);
 }
 """
 	var mat := ShaderMaterial.new()
 	mat.shader = sh
-	glow.material = mat
-	root.add_child(glow)
+	shade.material = mat
+	root.add_child(shade)
 	return root

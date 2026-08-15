@@ -53,12 +53,24 @@ var _combo_has_world := false
 var _drills: Control = null
 var _netstat: Label = null
 var _wheel: Control = null
+var _weapon_headers: Dictionary = {}
+var _cast_banner: Label = null
+var _cast_meter_back: ColorRect = null
+var _cast_meter: ColorRect = null
+var _cast_t := 0.0
 var _ping_ms := 0
 var _fps_smooth := 60.0
 
 
 ## I tasti degli otto slot, nell'ordine in cui stanno sotto le dita.
-const SLOT_KEYS := ["1", "2", "3", "4", "Q", "E", "R", "F"]
+const SLOT_KEYS := ["1", "2", "3", "4", "5", "6", "7", "8"]
+const ICON_ROOT := "res://assets/ui/ability-icons/"
+const FAMILY_COLORS := {
+	"SWORD": Color("ff3344"),
+	"BOW": Color("39ff14"),
+	"STAFF": Color("00d0ff"),
+	"UTILITY": Color("ffd260"),
+}
 
 
 func setup(player: Node) -> void:
@@ -68,6 +80,10 @@ func setup(player: Node) -> void:
 			_on_cast(n, hits)
 			if hits > 0 and "last_hit_point" in player:
 				combo_at(player.last_hit_point))
+	if player.has_signal("cast_state_changed"):
+		player.cast_state_changed.connect(_on_cast_state_changed)
+	if player.has_signal("ability_wheel_changed"):
+		player.ability_wheel_changed.connect(_on_ability_wheel_changed)
 	# La barra si costruisce QUI e non in `_ready`: le abilità sono quelle della
 	# build scelta, e l'HUD non può conoscerle prima di sapere chi sta giocando.
 	_build_bar()
@@ -91,6 +107,34 @@ func _build() -> void:
 	_crosshair.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_crosshair)
 	_build_crosshair()
+
+	# Riscontro del cast vicino al mirino: cosa e' stato premuto, con quale arma
+	# e quanto manca al rilascio. E' feedback dell'azione, non una spiegazione.
+	_cast_banner = Label.new()
+	_cast_banner.set_anchors_preset(Control.PRESET_CENTER)
+	_cast_banner.position = Vector2(-190, 42)
+	_cast_banner.size = Vector2(380, 24)
+	_cast_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_cast_banner.add_theme_font_size_override("font_size", 14)
+	_cast_banner.add_theme_color_override("font_color", COL_READY)
+	_cast_banner.modulate.a = 0.0
+	root.add_child(_cast_banner)
+
+	_cast_meter_back = ColorRect.new()
+	_cast_meter_back.set_anchors_preset(Control.PRESET_CENTER)
+	_cast_meter_back.position = Vector2(-90, 68)
+	_cast_meter_back.size = Vector2(180, 3)
+	_cast_meter_back.color = Color(0.02, 0.025, 0.04, 0.8)
+	_cast_meter_back.modulate.a = 0.0
+	root.add_child(_cast_meter_back)
+
+	_cast_meter = ColorRect.new()
+	_cast_meter.set_anchors_preset(Control.PRESET_CENTER)
+	_cast_meter.position = Vector2(-90, 68)
+	_cast_meter.size = Vector2(0, 3)
+	_cast_meter.color = COL_READY
+	_cast_meter.modulate.a = 0.0
+	root.add_child(_cast_meter)
 
 	# --- Conferma di colpo ----------------------------------------------------
 	# La X che compare quando prendi qualcuno. È l'unico feedback che un FPS non
@@ -145,7 +189,9 @@ func _build() -> void:
 	# --- Slot abilità, in basso al centro ------------------------------------
 	_bar = Control.new()
 	_bar.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	_bar.position = Vector2(0, -84)
+	# Separato dal bordo e dal viewmodel: gli slot Utility non devono finire
+	# sotto l'arma in prima persona.
+	_bar.position = Vector2(0, -122)
 	_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_bar)
 
@@ -263,44 +309,178 @@ func _build_bar() -> void:
 		return
 	_clear(_bar)
 	_slots.clear()
+	_weapon_headers.clear()
 
 	var kit: Array = _player.kit() if _player.has_method("kit") else []
-	var bar := _bar
-	var w := 52.0
-	var gap := 6.0
-	var total := kit.size() * w + (kit.size() - 1) * gap
+	if kit.is_empty():
+		return
+
+	# Le abilita' non sono otto quadrati anonimi: vengono separate per arma.
+	# L'ordine degli slot resta identico, ma la cornice e l'intestazione dicono
+	# subito quale gesto il tasto attivera'.
+	var groups: Array = []
 	for i in kit.size():
-		var x := -total * 0.5 + i * (w + gap)
-		var back := ColorRect.new()
-		back.color = COL_PANEL
-		back.size = Vector2(w, w)
-		back.position = Vector2(x, 0)
-		bar.add_child(back)
-		# Il riempimento sale dal basso mentre il cooldown scorre: il tempo si
-		# guarda, non si legge.
-		var fill := ColorRect.new()
-		fill.color = COL_READY
-		fill.size = Vector2(w, w)
-		fill.position = Vector2(x, 0)
-		bar.add_child(fill)
-		var key := Label.new()
-		key.text = SLOT_KEYS[i] if i < SLOT_KEYS.size() else str(i + 1)
-		key.position = Vector2(x + 5, -1)
-		key.add_theme_font_size_override("font_size", 13)
-		key.add_theme_color_override("font_color", Color(1, 1, 1, 0.75))
-		bar.add_child(key)
-		var nm := Label.new()
-		# Il nome si taglia invece di sovrapporsi al vicino: due nomi lunghi
-		# affiancati si leggevano come una parola sola.
-		nm.text = String(kit[i].name)
-		nm.clip_text = true
-		nm.position = Vector2(x, w + 2)
-		nm.size = Vector2(w, 14)
-		nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		nm.add_theme_font_size_override("font_size", 10)
-		nm.add_theme_color_override("font_color", Color(1, 1, 1, 0.55))
-		bar.add_child(nm)
-		_slots.append({"id": kit[i].id, "fill": fill, "h": w, "cd": float(kit[i].cooldown)})
+		var family := _slot_family(kit[i])
+		if groups.is_empty() or String(groups[-1]["family"]) != family:
+			groups.append({"family": family, "items": []})
+		groups[-1]["items"].append({"ability": kit[i], "index": i})
+
+	var slot_w := 76.0
+	var slot_h := 76.0
+	var inner_gap := 5.0
+	var group_gap := 16.0
+	var total := 0.0
+	for group in groups:
+		var count: int = group["items"].size()
+		total += count * slot_w + maxf(0.0, float(count - 1)) * inner_gap
+	total += maxf(0.0, float(groups.size() - 1)) * group_gap
+
+	var x := -total * 0.5
+	for group in groups:
+		var family := String(group["family"])
+		var items: Array = group["items"]
+		var group_w := items.size() * slot_w + maxf(0.0, float(items.size() - 1)) * inner_gap
+		var head := Label.new()
+		head.text = family
+		head.position = Vector2(x, -25)
+		head.size = Vector2(group_w, 20)
+		head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		head.add_theme_font_size_override("font_size", 11)
+		head.add_theme_color_override("font_color", FAMILY_COLORS[family])
+		_bar.add_child(head)
+		_weapon_headers[family] = head
+
+		for item in items:
+			var ability: Dictionary = item["ability"]
+			var idx := int(item["index"])
+			var frame := Panel.new()
+			frame.position = Vector2(x, 0)
+			frame.size = Vector2(slot_w, slot_h)
+			var frame_style := StyleBoxFlat.new()
+			frame_style.bg_color = Color(0.035, 0.043, 0.065, 0.92)
+			frame_style.border_color = FAMILY_COLORS[family]
+			frame_style.set_border_width_all(2)
+			frame_style.corner_radius_top_left = 4
+			frame_style.corner_radius_top_right = 4
+			frame_style.corner_radius_bottom_left = 4
+			frame_style.corner_radius_bottom_right = 4
+			frame.add_theme_stylebox_override("panel", frame_style)
+			_bar.add_child(frame)
+
+			var icon := TextureRect.new()
+			icon.position = Vector2(7, 6)
+			icon.size = Vector2(62, 50)
+			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			var icon_path := "%s%s.webp" % [ICON_ROOT, String(ability["id"])]
+			if ResourceLoader.exists(icon_path):
+				icon.texture = load(icon_path)
+			frame.add_child(icon)
+
+			# Il cooldown scende dall'alto lasciando riapparire l'icona. Non colora
+			# tutto di giallo: forma e colore dell'abilita' restano leggibili.
+			var shade := ColorRect.new()
+			shade.color = Color(0.015, 0.02, 0.035, 0.82)
+			shade.position = Vector2(7, 6)
+			shade.size = Vector2(62, 0)
+			shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			frame.add_child(shade)
+
+			var key_back := ColorRect.new()
+			key_back.color = Color(0.02, 0.025, 0.04, 0.94)
+			key_back.position = Vector2(4, 3)
+			key_back.size = Vector2(20, 19)
+			frame.add_child(key_back)
+			var key := Label.new()
+			key.text = SLOT_KEYS[idx] if idx < SLOT_KEYS.size() else str(idx + 1)
+			key.position = Vector2(4, 1)
+			key.size = Vector2(20, 20)
+			key.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			key.add_theme_font_size_override("font_size", 13)
+			key.add_theme_color_override("font_color", Color.WHITE)
+			frame.add_child(key)
+
+			var cd_text := Label.new()
+			cd_text.position = Vector2(7, 20)
+			cd_text.size = Vector2(62, 28)
+			cd_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			cd_text.add_theme_font_size_override("font_size", 18)
+			cd_text.add_theme_color_override("font_color", Color.WHITE)
+			frame.add_child(cd_text)
+
+			var nm := Label.new()
+			nm.text = String(ability["name"])
+			nm.position = Vector2(3, 56)
+			nm.size = Vector2(slot_w - 6, 18)
+			nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+			nm.add_theme_font_size_override("font_size", 9)
+			nm.add_theme_color_override("font_color", Color(1, 1, 1, 0.82))
+			frame.add_child(nm)
+
+			_slots.append({
+				"id": ability["id"],
+				"icon": icon,
+				"name": nm,
+				"shade": shade,
+				"cd_text": cd_text,
+				"icon_h": 50.0,
+				"cd": float(ability["cooldown"]),
+				"family": family,
+			})
+			x += slot_w + inner_gap
+		x += group_gap - inner_gap
+
+
+func _slot_family(ability: Dictionary) -> String:
+	match String(ability.get("school", "utility")):
+		"melee": return "SWORD"
+		"bow": return "BOW"
+		"magicBase", "magicAdvanced": return "STAFF"
+		_: return "UTILITY"
+
+
+func _on_cast_state_changed(state: String, ability_name: String, weapon: String, duration: float) -> void:
+	if _cast_banner == null:
+		return
+	var weapon_name := weapon.to_upper() if not weapon.is_empty() and weapon != "none" else "UTILITY"
+	match state:
+		"selected":
+			_cast_banner.text = "PRIMED  ·  %s  ·  LMB TO CAST" % ability_name.to_upper()
+			_cast_banner.add_theme_color_override(
+				"font_color", FAMILY_COLORS.get(weapon_name, COL_READY)
+			)
+			_cast_t = 9999.0
+		"windup":
+			_cast_banner.text = "%s  ·  %s" % [ability_name.to_upper(), weapon_name]
+			_cast_banner.add_theme_color_override(
+				"font_color", FAMILY_COLORS.get(weapon_name, COL_READY)
+			)
+			_cast_t = maxf(duration, 0.16)
+		"released":
+			_cast_banner.text = "CAST  ·  %s" % ability_name.to_upper()
+			_cast_banner.add_theme_color_override("font_color", Color.WHITE)
+			_cast_t = maxf(duration, 0.28)
+		"failed":
+			_cast_banner.text = "BLOCKED  ·  %s" % ability_name.to_upper()
+			_cast_banner.add_theme_color_override("font_color", COL_HP)
+			_cast_t = maxf(duration, 0.35)
+	_cast_banner.modulate.a = 1.0
+	_cast_meter_back.modulate.a = 1.0
+	_cast_meter.modulate.a = 1.0
+
+
+func _on_ability_wheel_changed(page: int, picked: int, items: Array) -> void:
+	if page < 0:
+		hide_wheel()
+		return
+	var labels := {}
+	var angles := {}
+	for i in items.size():
+		var ability: Dictionary = items[i]
+		labels[i] = "%d  %s" % [page * 4 + i + 1, String(ability.get("name", "—"))]
+		angles[i] = float(i * 90)
+	show_wheel(picked, labels, angles)
 
 ## Toglie un nodo dall'albero SUBITO, non a fine frame.
 ##
@@ -436,7 +616,7 @@ func hide_drills() -> void:
 	_drills = null
 
 
-## Il tabellone, su `Tab`. Sotto ogni avversario ci sono LE ABILITÀ CON CUI TI
+## Il tabellone, su `T`. Sotto ogni avversario ci sono LE ABILITÀ CON CUI TI
 ## HA COLPITO: è così che si impara il kit degli altri senza che nessuno lo
 ## spieghi, ed è l'unico posto in partita dove il gioco dice qualcosa in più.
 func show_scoreboard(rows: Array) -> void:
@@ -578,16 +758,47 @@ func _process(delta: float) -> void:
 	# Cooldown: il riquadro si riempie dal basso.
 	var cds = _player.get("_cooldowns")
 	var now: float = _player.get("_clock") if _player.get("_clock") != null else 0.0
+	var pending = _player.get("_pending_cast")
+	if pending is Dictionary and not pending.is_empty():
+		var duration := maxf(float(pending.get("duration", 0.0)), 0.001)
+		var progress := clampf((now - float(pending.get("started", now))) / duration, 0.0, 1.0)
+		_cast_meter.size.x = 180.0 * progress
+		_cast_banner.modulate.a = 1.0
+		_cast_meter_back.modulate.a = 1.0
+		_cast_meter.modulate.a = 1.0
+	else:
+		_cast_t = maxf(0.0, _cast_t - delta)
+		var cast_alpha := clampf(_cast_t / 0.18, 0.0, 1.0)
+		if _cast_banner:
+			_cast_banner.modulate.a = cast_alpha
+		if _cast_meter_back:
+			_cast_meter_back.modulate.a = cast_alpha
+		if _cast_meter:
+			_cast_meter.modulate.a = cast_alpha
+			if _cast_t <= 0.0:
+				_cast_meter.size.x = 0.0
 	if cds != null:
 		for i in _slots.size():
 			var left: float = cds.remaining(_slots[i]["id"], now)
 			var total: float = float(_slots[i]["cd"])
-			var ready_frac: float = 1.0 if total <= 0.0 else clampf(1.0 - left / total, 0.0, 1.0)
-			var h: float = _slots[i]["h"]
-			var fill: ColorRect = _slots[i]["fill"]
-			fill.size.y = h * ready_frac
-			fill.position.y = h - h * ready_frac
-			fill.color = COL_READY if ready_frac >= 1.0 else COL_COOLING
+			var remaining_frac: float = 0.0 if total <= 0.0 else clampf(left / total, 0.0, 1.0)
+			var h: float = _slots[i]["icon_h"]
+			var shade: ColorRect = _slots[i]["shade"]
+			shade.size.y = h * remaining_frac
+			var cd_text: Label = _slots[i]["cd_text"]
+			cd_text.text = str(int(ceilf(left))) if left > 0.05 else ""
+
+	# L'arma corrente e' dichiarata sopra il suo gruppo. Il giocatore non deve
+	# dedurla dalla forma del modello mentre sta mirando.
+	var active_weapon := String(_player.get("_weapon")) if _player else ""
+	for family in _weapon_headers:
+		var header: Label = _weapon_headers[family]
+		var weapon := String(family).to_lower()
+		var active: bool = family != "UTILITY" and active_weapon == weapon
+		header.text = "%s  ·  %s" % [family, "ACTIVE" if active else ("" if family == "UTILITY" else "TAB")]
+		header.add_theme_color_override(
+			"font_color", FAMILY_COLORS[family] if active or family == "UTILITY" else Color(1, 1, 1, 0.42)
+		)
 
 	# Ping e FPS. Gli FPS si mediano: un numero che salta fra 58 e 61 dieci volte
 	# al secondo non è un'informazione, è rumore.

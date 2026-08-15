@@ -31,8 +31,9 @@ sky_material = SubResource("ProceduralSkyMaterial_nqmqx")
 [sub_resource type="Environment" id="Environment_8jgwj"]
 background_mode = 2
 sky = SubResource("Sky_swrx8")
-ambient_light_source = 3
-ambient_light_sky_contribution = 0.46
+ambient_light_source = 2
+ambient_light_color = Color(0.22, 0.27, 0.4, 1)
+ambient_light_energy = 0.62
 tonemap_mode = 3
 tonemap_exposure = 1.08
 glow_enabled = true
@@ -78,7 +79,8 @@ size = Vector3(5.105088, 9, 1.2)
 size = Vector3(5.105088, 9, 1.2)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_jnmui"]
-albedo_color = Color(0.24, 0.22, 0.2, 1)
+shading_mode = 0
+albedo_color = Color(0.16, 0.14, 0.12, 1)
 roughness = 0.92
 
 [sub_resource type="BoxMesh" id="BoxMesh_nag6q"]
@@ -1551,6 +1553,11 @@ transform = Transform3D(0.8290376, -0.44065, 0.34427354, 0, 0.6156615, 0.7880107
 light_color = Color(0.74, 0.78, 0.91, 1)
 light_energy = 1.25
 shadow_enabled = true
+
+[node name="FillLight" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-38, -132, 0)
+light_color = Color(0.36, 0.46, 0.68, 1)
+light_energy = 0.42
 
 [node name="Ground" type="StaticBody3D" parent="." unique_id=1184580407]
 

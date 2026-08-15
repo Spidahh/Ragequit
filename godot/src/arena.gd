@@ -33,6 +33,7 @@ var _bots: Dictionary = {}
 ## peer id → nome di battaglia
 var _bot_names: Dictionary = {}
 var _scoreboard_open := false
+var _weapon_tab_down := false
 var _drills = null
 ## La rotella dei segnali: si tiene premuto, si punta, si rilascia.
 var _wheel := Wheel.new()
@@ -199,7 +200,9 @@ func _on_enemy_fired(from: Vector3, to: Vector3, hit: bool) -> void:
 				_hurt_from = from
 			break
 	Vfx.tracer(self, from, to)
-	if hit:
+	# Sul giocatore il punto d'impatto puo' stare dietro la camera: una sfera
+	# additiva vista dall'interno diventava un poligono rosso a pieno schermo.
+	if not hit:
 		Vfx.impact(self, to, Vfx.COL_ENEMY)
 	# Il colpo del nemico suona DAL PUNTO IN CUI PARTE, sempre — anche quando
 	# manca. È metà dell'informazione direzionale che hai su chi ti sta sparando,
@@ -280,7 +283,7 @@ func _on_player_damaged(amount: float, _remaining: float) -> void:
 		# bloccato dice che hai sbagliato proprio mentre hai fatto giusto.
 		return
 	if _hurt_flash:
-		_hurt_flash.color.a = 0.32
+		_hurt_flash.color.a = 0.10
 	# Da dove è arrivato: i bordi lampeggiano DALLA PARTE del colpo, o il lampo
 	# dice solo "stai morendo" e non "gira a destra".
 	if _player and is_instance_valid(_player) and _hurt_edge:
@@ -289,12 +292,24 @@ func _on_player_damaged(amount: float, _remaining: float) -> void:
 		var right: Vector3 = _player.global_transform.basis.x
 		var side: float = right.dot(to_them.normalized())
 		var front: float = fwd.dot(to_them.normalized())
-		_hurt_edge.anchor_left = 0.0 if side < 0.0 else 0.72
-		_hurt_edge.anchor_right = 0.28 if side < 0.0 else 1.0
-		if front > 0.6:
-			_hurt_edge.anchor_left = 0.0
-			_hurt_edge.anchor_right = 1.0
-		_hurt_edge.color.a = 0.42
+		_hurt_edge.anchor_left = 0.0 if side < 0.0 else 0.86
+		_hurt_edge.anchor_right = 0.14 if side < 0.0 else 1.0
+		# Mai coprire il mirino: il flash deve indicare, non accecare.
+		_hurt_edge.color.a = 0.20 if front <= 0.6 else 0.14
+
+
+func _input(event: InputEvent) -> void:
+	# La build Web puo' consumare Tab prima del polling del frame. L'evento e il
+	# polling condividono il latch, quindi uno swap produce sempre un solo passo.
+	if (
+		event is InputEventKey
+		and event.pressed
+		and not event.echo
+		and (event.keycode == KEY_TAB or event.physical_keycode == KEY_TAB)
+	):
+		if not _weapon_tab_down and _player and _player.has_method("cycle_weapon"):
+			_player.cycle_weapon()
+		_weapon_tab_down = true
 
 
 ## Un bot è caduto: il punto è di chi lo ha ucciso, e qui l'unico che uccide è
@@ -346,20 +361,23 @@ func _process(delta: float) -> void:
 		_hurt_edge.color.a = maxf(0.0, _hurt_edge.color.a - delta * 1.1)
 
 	_tick_wheel()
+	# Qui, accanto al tabellone: il polling di Tab e' affidabile anche nella
+	# build Web, dove l'evento tastiera puo' essere consumato dal canvas.
+	var weapon_tab_down := Input.is_key_pressed(KEY_TAB)
+	if weapon_tab_down and not _weapon_tab_down and _player and _player.has_method("cycle_weapon"):
+		_player.cycle_weapon()
+	_weapon_tab_down = weapon_tab_down
 
-	# Il tabellone su `Tab`: si tiene premuto, non si apre e si chiude. In un
-	# fight non si preme due volte niente.
+	# Tab cambia arma: il tabellone resta su T e si tiene premuto. Usare lo
+	# stesso tasto per entrambe le azioni copriva proprio il feedback dello swap.
 	if _hud and _hud.has_method("show_scoreboard"):
-		if Input.is_key_pressed(KEY_TAB) and not _scoreboard_open:
+		if Input.is_action_pressed("scoreboard") and not _scoreboard_open:
 			_scoreboard_open = true
 			_hud.show_scoreboard(scoreboard())
-		elif not Input.is_key_pressed(KEY_TAB) and _scoreboard_open:
+		elif not Input.is_action_pressed("scoreboard") and _scoreboard_open:
 			_scoreboard_open = false
 
 	if practice:
-		_drills = RangeDrills.new()
-		_drills.drill_done.connect(func(_w): _refresh_drills())
-		_refresh_drills()
 		# Nel poligono le abilita' non hanno ricarica e non si muore: si prova,
 		# e provare non deve costare attese.
 		if _player:

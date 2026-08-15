@@ -74,9 +74,9 @@ func _physics_process(delta: float) -> void:
 			hit_target.emit(n)
 		# Muro o bersaglio: in entrambi i casi il proiettile finisce lì.
 		global_position = hit["position"]
-		var world := get_tree().current_scene
+		var world := get_parent() as Node3D
 		if world:
-			Vfx.impact(world, global_position, Vfx.COL_BOLT)
+			Vfx.impact(world, global_position, Vfx.ability_color(_ability), _ability)
 		queue_free()
 		return
 
