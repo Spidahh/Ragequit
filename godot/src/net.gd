@@ -16,14 +16,76 @@
 ## Colyseus più uno schema replicato scritto a mano.
 extends Node
 
+## IL TRASPORTO E' WEBSOCKET, NON ENET, E NON E' UNA PREFERENZA.
+##
+## **Nessun browser puo' aprire una socket UDP.** Non e' una limitazione di
+## Godot: e' la sandbox del web, e vale per qualunque motore. ENet e' UDP,
+## quindi un client ENet dentro una scheda del browser non si connette mai — e
+## non fallisce con un errore chiaro, fallisce e basta.
+##
+## Le alternative erano due:
+##
+##   - **WebRTC**, che da' datagrammi veri (UDP) ma vuole un server di
+##     segnalazione, STUN e — quando il NAT e' ostile — TURN, che e' l'unico
+##     pezzo dell'intera infrastruttura che NON esiste gratis. Un gioco che
+##     deve restare gratis per sempre non puo' appoggiarsi a un relay a
+##     consumo;
+##   - **WebSocket**, che e' TCP: un pacchetto perso blocca quelli dopo finche'
+##     non viene ritrasmesso.
+##
+## Si prende WebSocket, e si paga quel prezzo con gli occhi aperti. A venti
+## pacchetti di stato al secondo su otto giocatori il blocco di testa si sente
+## solo su una connessione gia' rotta, e in cambio ci sono zero componenti da
+## pagare e un solo trasporto da far funzionare — lo stesso su desktop e su web,
+## quindi quello che si prova in sviluppo e' quello che si spedisce.
+##
+## E' la stessa ragione per cui il renderer e' Compatibility ovunque.
 const PORT := 27015
 const MAX_PLAYERS := 8
+
+## In produzione il client si connette in `wss://`: itch.io e Cloudflare Pages
+## servono in https, e una connessione in chiaro viene bloccata dal browser
+## come contenuto misto. In locale resta `ws://`.
+const DEFAULT_URL := "ws://127.0.0.1:27015"
+
+## Il server di produzione. Sta qui e non in un file di configurazione perche'
+## un file in piu' da caricare all'avvio e' un file in piu' che puo' mancare:
+## il client deve sapere dove andare senza chiedere niente a nessuno.
+const PRODUCTION_URL := "wss://ragequit-server.fly.dev"
+
+
+## Dove connettersi davvero.
+##
+## In una pagina servita in https si DEVE usare `wss://`: una connessione in
+## chiaro viene bloccata dal browser come contenuto misto, e il blocco non
+## somiglia a un errore di rete — somiglia a un gioco che non parte.
+##
+## `?server=` nell'indirizzo la scavalca, ed e' l'unico modo che ho di provare
+## una build pubblicata contro un server diverso senza ripubblicarla.
+static func server_url() -> String:
+	if OS.has_feature("web"):
+		var q := _query_param("server")
+		if not q.is_empty():
+			return q
+		return PRODUCTION_URL
+	return DEFAULT_URL
+
+
+static func _query_param(key: String) -> String:
+	if not OS.has_feature("web"):
+		return ""
+	var href := str(JavaScriptBridge.eval("window.location.search", true))
+	for pair in href.trim_prefix("?").split("&"):
+		var kv := pair.split("=")
+		if kv.size() == 2 and kv[0] == key:
+			return kv[1].uri_decode()
+	return ""
 
 signal player_joined(id: int)
 signal player_left(id: int)
 signal net_status(msg: String)
 
-var peer: ENetMultiplayerPeer = null
+var peer: MultiplayerPeer = null
 var is_server := false
 ## Ultimo input ricevuto da ogni peer, letto dal server nel suo tick.
 var inputs: Dictionary = {}
@@ -38,26 +100,33 @@ func _ready() -> void:
 
 
 func host(port := PORT) -> bool:
-	peer = ENetMultiplayerPeer.new()
-	var err := peer.create_server(port, MAX_PLAYERS)
+	var ws := WebSocketMultiplayerPeer.new()
+	# Senza handshake TLS lato server: davanti c'e' sempre un proxy che fa
+	# https e inoltra in chiaro all'interno della macchina. Mettere i
+	# certificati anche qui vorrebbe dire gestirne il rinnovo a mano.
+	var err := ws.create_server(port)
 	if err != OK:
 		net_status.emit("host fallito: %d" % err)
 		return false
+	peer = ws
 	multiplayer.multiplayer_peer = peer
 	is_server = true
 	net_status.emit("in ascolto sulla porta %d" % port)
 	return true
 
 
-func join(address := "127.0.0.1", port := PORT) -> bool:
-	peer = ENetMultiplayerPeer.new()
-	var err := peer.create_client(address, port)
+## `url` e' un indirizzo completo: `ws://127.0.0.1:27015` in locale,
+## `wss://ragequit-server.fly.dev` in produzione.
+func join(url := DEFAULT_URL) -> bool:
+	var ws := WebSocketMultiplayerPeer.new()
+	var err := ws.create_client(url)
 	if err != OK:
 		net_status.emit("join fallito: %d" % err)
 		return false
+	peer = ws
 	multiplayer.multiplayer_peer = peer
 	is_server = false
-	net_status.emit("connessione a %s:%d" % [address, port])
+	net_status.emit("connessione a %s" % url)
 	return true
 
 

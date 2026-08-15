@@ -14,6 +14,7 @@ extends Node
 const ScreensScript := preload("res://src/screens.gd")
 const MatchRules := preload("res://src/match_rules.gd")
 const Sfx := preload("res://src/sfx.gd")
+const ServerScript := preload("res://src/server_main.gd")
 
 const ARENA := "res://scenes/arena.tscn"
 
@@ -22,6 +23,24 @@ var arena: Node3D = null
 
 
 func _ready() -> void:
+	# IL SERVER PARTE DA QUI, non da una scena sua.
+	#
+	# L'esportatore non permette di cambiare la scena principale per preset,
+	# quindi la radice e' la stessa e si biforca al primo frame. `--server`
+	# serve per provarlo in locale; `dedicated_server` e' la funzionalita' che
+	# Godot accende da sola sull'esportato del server, ed e' quella che conta in
+	# produzione — un flag dimenticato nel comando di avvio farebbe partire un
+	# client senza schermo su una macchina senza schermo.
+	# Sia prima sia dopo il `--`: chi lancia a mano lo mette di la', il servizio
+	# lo passa di qua, e cercarlo in un solo posto vuol dire un avvio su due che
+	# parte come client senza dirlo.
+	var argv := OS.get_cmdline_args() + OS.get_cmdline_user_args()
+	if OS.has_feature("dedicated_server") or "--server" in argv:
+		var srv := ServerScript.new()
+		srv.name = "Server"
+		add_child(srv)
+		return
+
 	screens = ScreensScript.new()
 	screens.name = "Screens"
 	add_child(screens)

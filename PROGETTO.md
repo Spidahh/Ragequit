@@ -12,13 +12,13 @@
 
 **Cosa c'è dentro**
 
-|                           |                               |                      |                            |
-| ------------------------- | ----------------------------- | -------------------- | -------------------------- |
-| 1 · Che gioco è           | 6 · I nemici del gioco        | 11 · Le schermate    | 16 · L'ordine              |
-| 2 · Cosa vedi quando apri | 7 · **Le spell, una per una** | 12 · **Le comodità** | 17 · Le verifiche          |
-| 3 · Come si gioca         | 8 · L'arena                   | 13 · La rete         | 18 · Cosa non si fa        |
-| 4 · Le modalità           | 9 · La grafica                | 14 · Su itch.io      | **Appendice** · i numeri   |
-| 5 · Le classi             | 10 · L'audio                  | 15 · Venti ore       | **Appendice** · le abilità |
+|                           |                               |                        |                            |
+| ------------------------- | ----------------------------- | ---------------------- | -------------------------- |
+| 1 · Che gioco è           | 6 · I nemici del gioco        | 11 · Le schermate      | 16 · L'ordine              |
+| 2 · Cosa vedi quando apri | 7 · **Le spell, una per una** | 12 · **Le comodità**   | 17 · Le verifiche          |
+| 3 · Come si gioca         | 8 · L'arena                   | 13 · La rete           | 18 · Cosa non si fa        |
+| 4 · Le modalità           | 9 · La grafica                | 14 · Gratis per sempre | **Appendice** · i numeri   |
+| 5 · Le classi             | 10 · L'audio                  | 15 · Venti ore         | **Appendice** · le abilità |
 
 ---
 
@@ -1308,21 +1308,152 @@ dal browser come contenuto misto.
 
 ---
 
-## 14 · Su itch.io
+## 14 · Come sta in piedi gratis, per sempre
 
-| Requisito                                 | Stato                                                                                      |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Pointer lock dentro l'iframe cross-origin | **verificato, funziona** — anche senza `allow` `[M]`                                       |
-| Renderer                                  | **Compatibility** — Forward+ non parte sul web                                             |
-| Template di export                        | **nothreads** — quelli con i thread vogliono header cross-origin che su itch non controlli |
-| Percorsi                                  | relativi: itch serve da una sottocartella                                                  |
-| Connessione                               | solo `wss://`                                                                              |
-| Pacchetto                                 | zip con `index.html` in radice                                                             |
-| Peso                                      | **15,9 MB** scaricati, in brotli `[M]`                                                     |
+Questo è il piano completo per pubblicare il gioco e tenerlo vivo **a costo
+zero**, e non "zero finché sono pochi": zero anche se domani ci gioca gente.
 
-Sono sette righe, e ognuna è una cosa che se scoperta dopo costa una settimana. Il
-pointer lock in particolare: se non funzionasse dentro l'iframe di itch, tutto il
-progetto sarebbe da rifare per un'altra piattaforma. È stato verificato **prima**.
+La regola che decide ogni scelta qui sotto: **niente a consumo.** Un gioco
+gratis che ha una bolletta è un gioco che a un certo punto sparisce — e sparisce
+proprio nel momento in cui sta funzionando, perché è allora che la bolletta
+arriva. Ogni pezzo di questa catena o è gratis senza tetto, o è gratis perché
+per la maggior parte delle ore **non è acceso**.
+
+### La catena, pezzo per pezzo
+
+| Cosa                 | Dove                    | Perché è gratis                                                   |
+| -------------------- | ----------------------- | ----------------------------------------------------------------- |
+| **Il gioco**         | Cloudflare Pages        | statico, banda illimitata, nessun tetto di richieste              |
+| **La seconda casa**  | itch.io                 | statico, gratis, ed è dove il pubblico di questi giochi già passa |
+| **Il server**        | Fly.io, `shared-cpu-1x` | si **spegne da solo** quando non c'è nessuno                      |
+| **La costruzione**   | GitHub Actions          | gratis sui repository pubblici                                    |
+| **Personaggi, armi** | Mixamo, KayKit          | già scaricati, licenza che permette la ridistribuzione            |
+| **I suoni**          | `tools/make_sounds.mjs` | **sintetizzati**: nessuna licenza da rincorrere, 1,7 MB in tutto  |
+
+Nessuna riga di questa tabella ha un contatore che gira.
+
+### Il pezzo che ha deciso tutto: il browser non sa fare UDP
+
+**Nessun browser può aprire una socket UDP.** Non è una limitazione di Godot: è
+la sandbox del web, e vale per qualunque motore. ENet — il trasporto su cui era
+costruito il multigiocatore — è UDP, quindi dentro una scheda del browser non si
+connette mai. E non fallisce con un errore chiaro: fallisce e basta.
+
+Le alternative erano due, e la scelta è stata decisa dal vincolo del costo zero:
+
+- **WebRTC** dà datagrammi veri, cioè UDP con tutti i suoi vantaggi. Ma vuole un
+  server di segnalazione, uno STUN e — quando il NAT è ostile — un **TURN**, che
+  è l'unico pezzo dell'intera infrastruttura che **non esiste gratis**. Un relay
+  a consumo dentro un gioco che deve restare gratis per sempre è la bolletta di
+  cui sopra, con l'aggravante che cresce proprio col successo.
+- **WebSocket** è TCP: un pacchetto perso blocca quelli dopo finché non viene
+  ritrasmesso.
+
+**Si prende WebSocket, e si paga quel prezzo con gli occhi aperti.** A venti
+pacchetti di stato al secondo su otto giocatori il blocco di testa si sente solo
+su una connessione già rotta, e in cambio ci sono zero componenti da pagare e un
+solo trasporto da far funzionare — **lo stesso su desktop e su web**, quindi
+quello che si prova in sviluppo è quello che si spedisce. È la stessa ragione per
+cui il renderer è Compatibility ovunque.
+
+### Il server è lo stesso progetto
+
+Non un altro programma, non un'altra lingua, non un'altra copia delle regole: è
+`godot/` esportato senza finestra. Il server esegue **lo stesso file**
+`movement.gd` che il client esegue per predire, e non possono divergere perché
+non sono due.
+
+È la cosa che al progetto precedente è costata di più: server e client erano
+entrambi TypeScript ma erano due basi di codice, e ogni divergenza era un
+giocatore che vedeva una cosa e ne subiva un'altra.
+
+L'esportato è un **eseguibile solo** — motore e gioco dentro un file — quindi
+l'immagine Docker copia un file e lo lancia: niente Godot da installare, niente
+runtime, niente npm.
+
+```
+godot --headless --export-release "Linux Server" → un binario
+Dockerfile.godot: debian-slim + libfreetype + quel binario
+```
+
+> **Perché Debian e non `scratch`.** L'eseguibile è dinamico e vuole la libc.
+> Con `scratch` il container parte e muore subito con _"no such file or
+> directory"_ — che è il messaggio che Linux dà quando manca il **linker**, non
+> quando manca il file. È una delle mezz'ore più facili da perdere.
+
+### La macchina che dorme
+
+`min_machines_running = 0`: quando non c'è nessuno la macchina è **spenta**, e
+sotto la soglia gratuita non ci si arriva nemmeno. Si riaccende da sola alla
+prima connessione.
+
+Il prezzo è che il primo giocatore della giornata aspetta qualche secondo in più
+— ed è esattamente per questo che **i bot riempiono la lobby all'istante**:
+mentre la macchina si sveglia, chi ha premuto PLAY sta già combattendo. Le due
+scelte non sono indipendenti, una copre l'altra.
+
+> **Il controllo di salute è TCP e non HTTP.** Il server parla WebSocket, e una
+> `GET /health` su una porta che aspetta un handshake di upgrade viene
+> rifiutata: un controllo HTTP dichiarerebbe morta una macchina viva, e la
+> piattaforma la riavvierebbe in tondo per sempre.
+
+### Il TLS non è un problema di nessuno
+
+Il client si connette in `wss://`, la piattaforma termina il TLS e inoltra in
+chiaro dentro la macchina. Il server non gestisce nessun certificato e non ne
+rinnova nessuno — che è il modo più comune di svegliarsi con un gioco offline
+dopo tre mesi.
+
+E `wss://` non è opzionale: la pagina è servita in https, e una connessione in
+chiaro viene **bloccata dal browser come contenuto misto**. Il blocco non
+somiglia a un errore di rete: somiglia a un gioco che non parte.
+
+### Le sette condizioni di itch.io
+
+Ognuna è una settimana persa se scoperta dopo, e per questo **le controlla uno
+script prima di ogni pubblicazione** (`tools/package_itch.mjs`) invece di una
+lista che qualcuno rilegge:
+
+| Requisito                             | Stato                                                                         |
+| ------------------------------------- | ----------------------------------------------------------------------------- |
+| Pointer lock nell'iframe cross-origin | **verificato, funziona** — anche senza `allow` `[M]`                          |
+| Renderer                              | **Compatibility** — Forward+ non parte sul web                                |
+| Template di export                    | **nothreads** — quelli con i thread vogliono header che su itch non controlli |
+| Percorsi                              | relativi: itch serve da una sottocartella                                     |
+| Connessione                           | solo `wss://`                                                                 |
+| Pacchetto                             | zip con `index.html` **in radice**                                            |
+| Peso                                  | **16,2 MB** scaricati, tetto 20 `[M]`                                         |
+
+### Come esce una versione
+
+Un commit su `main`, e basta. Il resto è automatico, e **client e server escono
+dallo stesso commit o non escono**: una pubblicazione fatta a mano è una
+pubblicazione in cui prima o poi qualcuno salta un passo, e il passo saltato è
+sempre lo stesso — il client nuovo contro il server vecchio.
+
+```
+push su main
+  ├─ import risorse · 19 verifiche · export web · export server
+  ├─ controllo peso e sette condizioni  →  si ferma qui se qualcosa non torna
+  ├─ Cloudflare Pages   ← il gioco
+  └─ Fly.io             ← il server
+```
+
+Lo zip per itch.io esce dallo stesso giro (`godot-build/ragequit-itch.zip`) e si
+carica a mano: itch non ha un modo gratuito di farlo da una macchina che non è
+la tua, ed è l'unico passo che resta manuale in tutta la catena.
+
+### Quanto regge
+
+|                   | Numero          | Da dove viene                                         |
+| ----------------- | --------------- | ----------------------------------------------------- |
+| Banda del gioco   | illimitata      | Cloudflare Pages non ha tetto sul traffico statico    |
+| Giocatori insieme | 200 connessioni | limite dichiarato nella configurazione, non una stima |
+| Peso scaricato    | 16,2 MB         | misurato in brotli `[M]`                              |
+| Costo a regime    | **0**           | la macchina è accesa solo mentre qualcuno gioca       |
+
+Se un giorno duecento connessioni non bastassero, il pezzo che si tocca è uno
+solo: la dimensione della macchina. Tutto il resto resta com'è.
 
 ---
 

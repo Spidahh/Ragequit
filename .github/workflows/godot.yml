@@ -1,0 +1,125 @@
+# Costruisce e pubblica RAGEQUIT.
+#
+# PERCHE' TUTTO QUI E NIENTE A MANO. Una pubblicazione fatta a mano e' una
+# pubblicazione che a un certo punto qualcuno fa saltando un passo — e i passi
+# che si saltano sono sempre gli stessi: il client aggiornato contro il server
+# vecchio, o il server aggiornato contro un client che non lo sa. Qui i due
+# escono dallo stesso commit o non escono.
+#
+# COSA COSTA: zero. GitHub Actions e' gratis sui repository pubblici, Fly.io
+# tiene la macchina spenta quando non c'e' nessuno, Cloudflare Pages e itch.io
+# sono gratis per il traffico statico. Non c'e' un pezzo a consumo in tutta la
+# catena, ed e' una scelta: un gioco gratis che ha una bolletta e' un gioco che
+# a un certo punto sparisce.
+name: godot
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  GODOT_VERSION: 4.7.1
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # I template di export sono 800 MB scaricati ogni volta senza cache, ed e'
+      # il pezzo lento di tutta la pipeline.
+      - name: Cache dei template di export
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/godot/export_templates
+          key: godot-templates-${{ env.GODOT_VERSION }}
+
+      - name: Godot ${{ env.GODOT_VERSION }}
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          curl -fsSL -o godot.zip "$BASE/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+          chmod +x /usr/local/bin/godot
+
+          DEST="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          if [ ! -d "$DEST" ]; then
+            curl -fsSL -o tpl.tpz "$BASE/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+            unzip -q tpl.tpz
+            mkdir -p "$DEST"
+            mv templates/* "$DEST/"
+          fi
+
+      # L'import PRIMA dell'export, e in un passo suo: al primo giro Godot deve
+      # importare 13 MB di modelli e 24 suoni, e un export su un progetto non
+      # importato riesce lasciando fuori meta' delle risorse — senza errori.
+      - name: Import delle risorse
+        run: godot --headless --path godot --import || true
+
+      - name: Verifiche
+        run: |
+          cd godot
+          GODOT=/usr/local/bin/godot node run_tests.mjs
+
+      - name: Export web
+        run: |
+          mkdir -p godot-build
+          godot --headless --path godot --export-release "Web" ../godot-build/index.html
+
+      - name: Export server
+        run: |
+          mkdir -p godot-build/server
+          godot --headless --path godot --export-release "Linux Server" ../godot-build/server/ragequit-server
+
+      # Il peso e le sette condizioni di pubblicazione si controllano QUI, non
+      # dopo aver caricato: un pacchetto da 30 MB su itch si scopre quando
+      # qualcuno lo scarica.
+      - name: Peso e condizioni di pubblicazione
+        run: node godot/tools/package_itch.mjs
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ragequit-web
+          path: godot-build/*
+          if-no-files-found: error
+
+  deploy-client:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ragequit-web
+          path: godot-build
+
+      # Il server non va nella cartella pubblica: e' un eseguibile da 70 MB che
+      # nessun browser scarichera' mai, e su un host statico e' solo peso.
+      - name: Via il server dal pacchetto pubblico
+        run: rm -rf godot-build/server
+
+      - name: Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy godot-build --project-name=ragequit --branch=main
+
+  deploy-server:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ragequit-web
+          path: godot-build
+      - run: chmod +x godot-build/server/ragequit-server
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --config fly.godot.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

@@ -1,0 +1,51 @@
+# RAGEQUIT — il server dedicato su Fly.io.
+#
+# COSA COSTA: zero, e non per fortuna. La macchina è la più piccola che esista
+# (shared-cpu-1x, 256 MB) e si SPEGNE DA SOLA quando non c'è nessuno
+# (`min_machines_running = 0`): sotto la soglia gratuita non ci si arriva
+# nemmeno, perché per gran parte delle ore la macchina non è accesa.
+#
+# Si riaccende da sola alla prima connessione. Il prezzo è che il primo
+# giocatore della giornata aspetta qualche secondo in più — ed è per questo che
+# i bot riempiono la lobby all'istante: mentre la macchina si sveglia, chi ha
+# premuto PLAY sta già combattendo.
+#
+# IL CONTROLLO DI SALUTE È TCP E NON HTTP, e non è un dettaglio: il server
+# parla WebSocket, e una GET /health su una porta che aspetta un handshake di
+# upgrade viene rifiutata. Un controllo HTTP qui dichiarerebbe morta una
+# macchina viva, e Fly la riavvierebbe in tondo per sempre.
+app = "ragequit-server"
+primary_region = "ams" # Amsterdam: la regione gratuita più vicina all'Italia
+
+[build]
+dockerfile = "Dockerfile.godot"
+
+[env]
+PORT = "8080"
+
+[http_service]
+internal_port = 8080
+# Fly termina il TLS e inoltra in chiaro qui dentro: il client si connette in
+# `wss://` e il server non deve gestire nessun certificato né rinnovarlo.
+force_https = true
+auto_stop_machines = "stop"
+auto_start_machines = true
+min_machines_running = 0
+
+[http_service.concurrency]
+type = "connections"
+hard_limit = 200
+soft_limit = 160
+
+[[vm]]
+size = "shared-cpu-1x"
+memory = "256mb"
+
+[[services]]
+protocol = "tcp"
+internal_port = 8080
+
+[[services.tcp_checks]]
+interval = "30s"
+timeout = "5s"
+grace_period = "15s"
