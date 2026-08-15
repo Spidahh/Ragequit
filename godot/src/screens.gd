@@ -59,6 +59,10 @@ var mode: int = MatchRules.Mode.SOLO
 var _screen: int = Screen.MENU
 var _body: Control = null
 var _editing_slot := -1
+## Quale azione sta aspettando un tasto. Vuoto = nessuna cattura in corso.
+var _capture_for := ""
+var _key_buttons: Dictionary = {}
+var _conflict_label: Label = null
 
 signal play_requested(mode: int, class_id: String, sub_id: String, kit_ids: Array)
 signal range_requested
@@ -69,6 +73,7 @@ func _ready() -> void:
 	layer = 20
 	settings.apply_bindings()
 	_apply_audio_settings()
+	apply_ui_scale()
 	show_screen(Screen.MENU)
 
 
@@ -637,6 +642,17 @@ func _build_settings() -> void:
 	cb.item_selected.connect(func(i): settings.set_value("colorblind", String(profiles[i])))
 	v.add_child(_labeled("Colourblind profile", cb))
 
+	var scale := OptionButton.new()
+	var scales := [1.0, 1.25, 1.5]
+	for i in scales.size():
+		scale.add_item("%d %%" % int(scales[i] * 100.0), i)
+		if is_equal_approx(float(settings.get_value("ui_scale")), float(scales[i])):
+			scale.select(i)
+	scale.item_selected.connect(func(i):
+		settings.set_value("ui_scale", float(scales[i]))
+		apply_ui_scale())
+	v.add_child(_labeled("Interface size", scale))
+
 	# Tre interruttori che TOLGONO roba. Non sono accessibilita' di facciata:
 	# servono a chi quelle cose le trova nauseanti.
 	for spec2 in [
@@ -665,6 +681,10 @@ func _build_settings() -> void:
 	v.add_child(UI.spacer(6))
 	v.add_child(UI.eyebrow("controls"))
 	v.add_child(UI.label("Every key can be remapped, including the ones you never think about.", 12, UI.TEXT_DIM))
+	# La lista tasto per tasto. "Tutti i tasti si possono rimappare" non è vero
+	# se l'unica cosa che si può fare è scegliere fra due preset.
+	v.add_child(_keybind_list())
+
 	var kb := HBoxContainer.new()
 	kb.add_theme_constant_override("separation", 8)
 	v.add_child(kb)
@@ -685,10 +705,109 @@ func _build_settings() -> void:
 	col.add_child(back)
 
 
+## L'elenco dei tasti, uno per riga.
+##
+## Si preme il bottone e si preme il tasto nuovo: nessuna finestra modale, che
+## in una lista di quattordici righe vorrebbe dire aprirla e chiuderla
+## quattordici volte. E il conflitto SI DICE PRIMA di assegnare — scoprire in
+## partita che due cose stanno sullo stesso tasto è il modo peggiore di
+## scoprirlo.
+func _keybind_list() -> Control:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 3)
+	for action in Settings.BINDINGS:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		var label := UI.label(_action_label(String(action)), 13, UI.TEXT_DIM)
+		label.custom_minimum_size = Vector2(200, 0)
+		row.add_child(label)
+
+		var key := int(settings.bindings.get(action, 0))
+		var mouse := settings.mouse_hint(String(action))
+		var shown := OS.get_keycode_string(key)
+		if not mouse.is_empty():
+			shown += "  /  " + mouse
+		var b := UI.button(shown, false, 178)
+		var act := String(action)
+		b.pressed.connect(func():
+			_capture_for = act
+			b.text = "PRESS A KEY"
+			Sfx.play("ui_click", Sfx.UI))
+		row.add_child(b)
+		_key_buttons[act] = b
+		box.add_child(row)
+
+	_conflict_label = UI.label("", 12, UI.DANGER)
+	box.add_child(_conflict_label)
+	return box
+
+
+## Il nome leggibile di un'azione. "ability_5" non dice niente a nessuno;
+## "Ability 5  (Q)" dice quale slot e dove sta adesso.
+func _action_label(action: String) -> String:
+	match action:
+		"move_forward": return "Move forward"
+		"move_back": return "Move back"
+		"move_left": return "Strafe left"
+		"move_right": return "Strafe right"
+		"jump": return "Jump"
+		"parry": return "Parry"
+		"break_free": return "Break free"
+		_:
+			if action.begins_with("ability_"):
+				return "Ability %s" % action.substr(8)
+			return action.capitalize()
+
+
+## Cattura il tasto premuto e lo assegna. Sta in `_input` e non in
+## `_unhandled_input` perché un bottone appena premuto si tiene il focus e
+## mangerebbe la pressione successiva.
+func _input(event: InputEvent) -> void:
+	if _capture_for.is_empty() or _screen != Screen.SETTINGS:
+		return
+	if not (event is InputEventKey and event.pressed and not event.echo):
+		return
+	var key: int = (event as InputEventKey).physical_keycode
+	var clash := settings.conflict(_capture_for, key)
+	if not clash.is_empty():
+		# Non si assegna e si dice perché: sovrascrivere in silenzio lascia il
+		# giocatore con un'azione che ha smesso di funzionare e nessun indizio.
+		if _conflict_label:
+			_conflict_label.text = "%s is already %s." % [
+				OS.get_keycode_string(key), _action_label(clash)
+			]
+		Sfx.play("unavailable", Sfx.UI)
+		_reset_capture()
+		return
+	settings.bind(_capture_for, key)
+	if _conflict_label:
+		_conflict_label.text = ""
+	Sfx.play("ui_confirm", Sfx.UI)
+	_reset_capture()
+	get_viewport().set_input_as_handled()
+
+
+func _reset_capture() -> void:
+	var b = _key_buttons.get(_capture_for)
+	if b and is_instance_valid(b):
+		b.text = OS.get_keycode_string(int(settings.bindings.get(_capture_for, 0)))
+	_capture_for = ""
+
+
 func _refresh_sens_hint(parent: Node) -> void:
 	var l = parent.get_node_or_null("SensHint")
 	if l:
 		l.text = "≈ %.2f in most FPS at 800 DPI" % settings.sensitivity_in_common_scale()
+
+
+## La scala dell'interfaccia. Su uno schermo grande o per chi legge male, un
+## testo da 12 pixel non è una scelta di design: è un muro. Ingrandisce TUTTO
+## insieme, perché ingrandire solo il testo lo fa uscire dai riquadri.
+func apply_ui_scale() -> void:
+	var k := float(settings.get_value("ui_scale"))
+	var tree := get_tree()
+	if tree:
+		tree.root.content_scale_factor = k
 
 
 func _apply_audio_settings() -> void:

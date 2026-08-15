@@ -90,6 +90,9 @@ const BINDINGS := {
 	# Il break e la parata SI RIMAPPANO come tutto il resto: "tutti i tasti"
 	# significa tutti, compresi quelli che nessuno pensa di voler cambiare.
 	"break_free": KEY_SHIFT,
+	# La parata sta sul tasto destro del mouse, ma nella mappa c'e' lo stesso:
+	# "tutti i tasti" comprende quelli che non sono tasti.
+	"parry": KEY_C,
 }
 
 const LEFT_HANDED := {
@@ -139,17 +142,44 @@ func reset_bindings() -> void:
 	save()
 
 
-## Riscrive la mappa dei tasti del motore. Cancella e riscrive invece di
-## aggiungere: aggiungere lascia il vecchio tasto attivo, e chi rimappa si
-## ritrova due tasti che fanno la stessa cosa senza capire perché.
+## Riscrive la mappa del motore.
+##
+## Cancella e riscrive invece di aggiungere: aggiungere lascia il vecchio tasto
+## attivo, e chi rimappa si ritrova due tasti che fanno la stessa cosa senza
+## capire perché.
+##
+## Ma cancella SOLO I TASTI, non i pulsanti del mouse. La parata sta sul tasto
+## destro e ha anche un tasto di tastiera: cancellando tutto, rimappare la
+## tastiera toglierebbe in silenzio il tasto destro — cioè romperebbe la
+## meccanica proprio mentre il giocatore la sta personalizzando.
 func apply_bindings() -> void:
 	for action in bindings:
 		if not InputMap.has_action(action):
 			InputMap.add_action(action, 0.2)
-		InputMap.action_erase_events(action)
+		for ev_old in InputMap.action_get_events(action):
+			if ev_old is InputEventKey:
+				InputMap.action_erase_event(action, ev_old)
 		var ev := InputEventKey.new()
 		ev.physical_keycode = int(bindings[action])
 		InputMap.action_add_event(action, ev)
+
+
+## I pulsanti del mouse gia' assegnati a un'azione, in chiaro. Servono alla
+## schermata: una riga "Parry — C" che non dice anche "o tasto destro" e'
+## una riga che mente.
+func mouse_hint(action: String) -> String:
+	if not InputMap.has_action(action):
+		return ""
+	for ev in InputMap.action_get_events(action):
+		if ev is InputEventMouseButton:
+			match (ev as InputEventMouseButton).button_index:
+				MOUSE_BUTTON_LEFT:
+					return "LMB"
+				MOUSE_BUTTON_RIGHT:
+					return "RMB"
+				MOUSE_BUTTON_MIDDLE:
+					return "MMB"
+	return ""
 
 
 ## Il tasto già occupato da un'altra azione, o stringa vuota. Serve a dirlo

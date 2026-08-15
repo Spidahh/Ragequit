@@ -12,6 +12,7 @@ const Settings = preload("res://src/settings.gd")
 const Drills = preload("res://src/range_drills.gd")
 const Spectator = preload("res://src/spectator.gd")
 const NetScript = preload("res://src/net.gd")
+const Wheel = preload("res://src/signals_wheel.gd")
 
 var failures := 0
 var _arena: Node3D
@@ -58,6 +59,8 @@ func _process(_d: float) -> bool:
 			_il_poligono_non_fa_aspettare()
 			_chi_perde_resta_a_guardare()
 			_chi_cade_ha_trenta_secondi()
+			_quattro_segnali_e_nessuna_chat()
+			_tutti_i_tasti_uno_per_uno()
 			print("")
 			if failures == 0:
 				print("Tutto verde.\n")
@@ -396,6 +399,75 @@ La riconnessione")
 	_check("e a finestra scaduta si libera", not n.reconnecting.has(8), "posto libero")
 	_check("e chi torna tardi entra da zero", not n.claim_reconnect(8), "come uno nuovo")
 	n.queue_free()
+
+
+func _quattro_segnali_e_nessuna_chat() -> void:
+	print("
+I segnali rapidi")
+	_check("sono quattro", Wheel.LABELS.size() == 4, str(Wheel.LABELS.values()))
+
+	# Le posizioni sono FISSE e distinte: la memoria muscolare vale più di
+	# qualunque etichetta, e due segnali sullo stesso settore la distruggono.
+	var seen := {}
+	for k in Wheel.ANGLES:
+		seen[float(Wheel.ANGLES[k])] = true
+	_check("e stanno in quattro posti diversi", seen.size() == 4, str(seen.keys()))
+
+	# Su, giù, destra, sinistra: si punta senza guardare.
+	_check("in alto c'è ATTACKING", Wheel.pick(Vector2(0, -1)) == Wheel.Signal_.ATTACKING, "su")
+	_check("in basso FALLING BACK", Wheel.pick(Vector2(0, 1)) == Wheel.Signal_.FALLING_BACK, "giù")
+	_check("a destra NICE", Wheel.pick(Vector2(1, 0)) == Wheel.Signal_.NICE, "destra")
+	_check("a sinistra SORRY", Wheel.pick(Vector2(-1, 0)) == Wheel.Signal_.SORRY, "sinistra")
+
+	# La via d'uscita: aprire la rotella e non mandare niente deve essere
+	# possibile, o il tasto diventa una trappola.
+	_check("e al centro non si manda niente", Wheel.pick(Vector2(0.05, 0.05)) == -1, "zona morta")
+
+	# E c'è una pausa fra un segnale e l'altro: quattro segnali innocui ripetuti
+	# venti volte al minuto sono quattro modi di fare rumore addosso a qualcuno.
+	var w := Wheel.new()
+	var sent: String = w.send(Wheel.Signal_.NICE, 100.0)
+	_check("il primo parte", sent == "NICE", sent)
+	_check("il secondo subito no", w.send(Wheel.Signal_.NICE, 100.1) == "", "in attesa")
+	_check(
+		"e dopo la pausa sì",
+		w.send(Wheel.Signal_.NICE, 100.0 + Wheel.COOLDOWN_SEC + 0.1) == "NICE",
+		"%.0f s di pausa" % Wheel.COOLDOWN_SEC
+	)
+	# E il messaggio dice CHI: un "NICE" senza nome, in una partita a otto, non
+	# dice a chi.
+	_check(
+		"e si sa chi lo ha mandato",
+		Wheel.message("ASH", Wheel.Signal_.NICE).contains("ASH"),
+		Wheel.message("ASH", Wheel.Signal_.NICE)
+	)
+
+
+func _tutti_i_tasti_uno_per_uno() -> void:
+	print("
+La rimappatura, tasto per tasto")
+	var st := Settings.new()
+	st.reset_bindings()
+	# Movimento, salto, otto abilità, break, parata: se "tutti i tasti" è vero,
+	# ci devono essere tutti in elenco.
+	for action in ["move_forward", "jump", "ability_8", "break_free", "parry"]:
+		_check("  %s è in elenco" % action, st.bindings.has(action), OS.get_keycode_string(int(st.bindings.get(action, 0))))
+
+	# La parata ha un tasto E il pulsante del mouse: rimappare la tastiera non
+	# deve toglierle il tasto destro in silenzio.
+	st.apply_bindings()
+	_check(
+		"la parata tiene anche il tasto destro",
+		st.mouse_hint("parry") == "RMB",
+		st.mouse_hint("parry")
+	)
+	st.bind("parry", KEY_V)
+	_check(
+		"e lo tiene anche dopo averla rimappata",
+		st.mouse_hint("parry") == "RMB",
+		"tastiera su V, mouse ancora RMB"
+	)
+	st.reset_bindings()
 
 
 ## Tutto il testo visibile in un sottoalbero, in una stringa sola.
