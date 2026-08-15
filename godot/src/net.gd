@@ -77,14 +77,66 @@ func peers() -> Array:
 
 
 func _on_peer_connected(id: int) -> void:
+	if claim_reconnect(id):
+		net_status.emit("peer %d rientrato" % id)
+		return
 	net_status.emit("peer %d entrato" % id)
 	player_joined.emit(id)
 
 
+## LA FINESTRA DI RIENTRO.
+##
+## Se la connessione cade, il posto resta. Trenta secondi: ricarichi la pagina e
+## sei di nuovo dentro, con il tuo punteggio, la tua build e la tua vita.
+##
+## PERCHE' TRENTA E NON CINQUE. Cinque bastano per un pacchetto perso, non per
+## una pagina che si ricarica: fra il crollo, il ricaricamento del wasm e il
+## nuovo handshake passano dieci-quindici secondi buoni. E non trecento, perche'
+## un posto tenuto per cinque minuti e' un posto in meno in una lobby da otto.
+##
+## Chi non torna lascia il posto a un bot, e la partita non si rompe per gli
+## altri: il caso peggiore per chi resta e' un avversario in meno per un attimo,
+## non una partita a tre in una modalita' da otto.
+const RECONNECT_SEC := 30.0
+
+## peer id → { until, score } di chi puo' ancora rientrare.
+var reconnecting: Dictionary = {}
+
+signal peer_reconnected(id: int)
+signal reconnect_expired(id: int)
+
+
 func _on_peer_disconnected(id: int) -> void:
 	inputs.erase(id)
-	net_status.emit("peer %d uscito" % id)
+	reconnecting[id] = {"until": _now() + RECONNECT_SEC}
+	net_status.emit("peer %d caduto — posto tenuto %ds" % [id, int(RECONNECT_SEC)])
 	player_left.emit(id)
+
+
+func _now() -> float:
+	return float(Time.get_ticks_msec()) / 1000.0
+
+
+## Qualcuno che era caduto e' tornato dentro la finestra?
+func claim_reconnect(id: int) -> bool:
+	if not reconnecting.has(id):
+		return false
+	if _now() > float(reconnecting[id]["until"]):
+		reconnecting.erase(id)
+		return false
+	reconnecting.erase(id)
+	peer_reconnected.emit(id)
+	return true
+
+
+## Fa scadere i posti tenuti. Chiamato dal tick del server: senza, un posto
+## tenuto resta tenuto per sempre e la lobby si svuota da sola.
+func expire_reconnects() -> void:
+	var now := _now()
+	for id in reconnecting.keys():
+		if now > float(reconnecting[id]["until"]):
+			reconnecting.erase(id)
+			reconnect_expired.emit(id)
 
 
 # --- Input: client → server ------------------------------------------------

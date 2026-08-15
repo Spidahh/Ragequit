@@ -120,6 +120,8 @@ signal damaged(amount: float, remaining: float)
 ## costare attese, e una prova che ti uccide non e' una prova.
 var practice := false
 var last_hit_point := Vector3.ZERO
+## Il danno dell'ultimo lancio andato a segno.
+var last_cast_damage := 0.0
 var _sensitivity := MOUSE_SENSITIVITY
 var _shake_enabled := true
 var _sim: Dictionary
@@ -289,7 +291,10 @@ func cast_slot(idx: int) -> int:
 	# decide `effects.gd`, in un posto solo. Sono due domande diverse, e tenerle
 	# separate è ciò che permette a un'abilità di fare danno, sbalzare, avvelenare
 	# e rubare vita nello stesso colpo senza che la risoluzione lo sappia.
-	Effects.apply(ability, self, result.hits, stats)
+	# Quanto ha fatto DAVVERO questo lancio: è il numero che serve a dire quale
+	# abilità hai usato meglio, e chiederlo dopo a un sistema che non l'ha visto
+	# significa inventarlo.
+	last_cast_damage = Effects.apply(ability, self, result.hits, stats)
 	var n := result.hits.size()
 
 	# Il VFX usa la geometria che il colpo ha DAVVERO occupato — result.end_point

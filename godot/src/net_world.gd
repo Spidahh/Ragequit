@@ -106,6 +106,12 @@ func _occupied_positions() -> Array:
 func _despawn_body(peer_id: int) -> void:
 	if not bodies.has(peer_id):
 		return
+	# Chi e' appena caduto NON perde il corpo: ha trenta secondi per tornare, e
+	# togliergli il punteggio nel frattempo vorrebbe dire che la finestra di
+	# rientro non serve a niente.
+	if net and net.reconnecting.has(peer_id):
+		net.reconnecting[peer_id]["hp"] = bodies[peer_id]["hp"]
+		return
 	var b = bodies[peer_id]["node"]
 	if is_instance_valid(b):
 		b.queue_free()
@@ -154,6 +160,7 @@ func server_tick(delta: float) -> void:
 		entry["sim"] = sim
 
 	_clock += delta
+	net.expire_reconnects()
 	lag.record(bodies, _clock)
 	_match_tick(delta)
 	_broadcast_state()

@@ -53,6 +53,8 @@ var _taken: Dictionary = {}
 var _dealt := 0.0
 ## Da che parte è arrivato l'ultimo colpo, per il lampo direzionale.
 var _hurt_from := Vector3.ZERO
+## Danno per abilità, per la riga "BEST" della schermata dei risultati.
+var _by_ability: Dictionary = {}
 
 signal match_finished(rows: Array, won: bool, stats: Dictionary)
 
@@ -67,10 +69,16 @@ func _ready() -> void:
 	if _hud and _hud.has_method("setup"):
 		_hud.setup(_player)
 	if _player.has_signal("cast_resolved"):
-		_player.cast_resolved.connect(func(_n, hits):
+		_player.cast_resolved.connect(func(n, hits):
 			_shots += 1
 			if hits > 0:
-				_hits += 1)
+				_hits += 1
+				# Con cosa stai vincendo: si somma il danno per abilità, non i
+				# colpi. Un'abilità che entra spesso e fa poco non è quella che
+				# ha deciso la partita.
+				var dmg: float = float(_player.get("last_cast_damage"))
+				_by_ability[n] = float(_by_ability.get(n, 0.0)) + dmg
+				_dealt += dmg)
 	_scoreboard_open = false
 
 	if practice:
@@ -365,7 +373,7 @@ func scoreboard() -> Array:
 			"score": int(_match["score"].get(peer, 0)),
 			"deaths": int(_match["deaths"].get(peer, 0)),
 			"mine": int(peer) == PLAYER_ID,
-			"best": "—",
+			"best": _best_ability(int(peer)),
 			"ping": 0,
 			"hit_you_with": _hit_you_with(int(peer)),
 		})
@@ -382,6 +390,22 @@ func _hit_you_with(peer_id: int) -> String:
 		if String(k).begins_with(prefix):
 			out.append("%s (%d)" % [String(k).replace(prefix + " ", ""), int(_taken[k])])
 	return " · ".join(out)
+
+
+## L'abilità con cui quel giocatore ha fatto più danno.
+##
+## Per te si sa perché si conta; per un bot è la sua arma, che è l'unica cosa
+## che ha. Meglio una riga vera e povera che una riga inventata.
+func _best_ability(peer_id: int) -> String:
+	if peer_id != PLAYER_ID:
+		return "%s's shot" % _bot_name(peer_id)
+	var best := "—"
+	var best_dmg := 0.0
+	for k in _by_ability:
+		if float(_by_ability[k]) > best_dmg:
+			best_dmg = float(_by_ability[k])
+			best = String(k)
+	return best
 
 
 func match_stats() -> Dictionary:

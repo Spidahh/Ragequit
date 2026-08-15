@@ -10,6 +10,8 @@ extends SceneTree
 
 const Settings = preload("res://src/settings.gd")
 const Drills = preload("res://src/range_drills.gd")
+const Spectator = preload("res://src/spectator.gd")
+const NetScript = preload("res://src/net.gd")
 
 var failures := 0
 var _arena: Node3D
@@ -54,6 +56,8 @@ func _process(_d: float) -> bool:
 			_il_poligono_insegna_tre_cose()
 			_la_musica_sta_dove_deve()
 			_il_poligono_non_fa_aspettare()
+			_chi_perde_resta_a_guardare()
+			_chi_cade_ha_trenta_secondi()
 			print("")
 			if failures == 0:
 				print("Tutto verde.\n")
@@ -327,6 +331,71 @@ Il poligono non fa aspettare e non uccide")
 	_player.take_damage(9999.0)
 	_check("e non si muore", not _player.dead and _player.hp > 0.0, "vita %.0f" % _player.hp)
 	_player.practice = false
+
+
+func _chi_perde_resta_a_guardare() -> void:
+	print("
+Lo spettatore")
+	var s := Spectator.new()
+	root.add_child(s)
+	var a := Node3D.new()
+	a.name = "ASH"
+	var b := Node3D.new()
+	b.name = "VULTURE"
+	root.add_child(a)
+	root.add_child(b)
+
+	s.set_targets([a, b])
+	_check("si guarda qualcuno", s.target == a, String(s.target.name))
+	s.next_target()
+	_check("e si cambia", s.target == b, String(s.target.name))
+	# In tondo: dall'ultimo si torna al primo, o guardare l'ultimo della lista
+	# è un vicolo cieco.
+	s.next_target()
+	_check("in tondo", s.target == a, String(s.target.name))
+
+	var was: int = s.mode
+	s.cycle_mode()
+	_check("e si cambia modo", s.mode != was, "occhi / spalle / libera")
+	s.cycle_mode()
+	s.cycle_mode()
+	_check("e si torna al primo", s.mode == was, "tre modi, in giro")
+
+	# Se chi guardavi sparisce, non si resta appesi al vuoto.
+	b.queue_free()
+	s.set_targets([a])
+	_check("chi sparisce esce dalla lista", s.target == a, "resta chi c'è")
+	_check("e c'è scritto chi stai guardando", s.status_line().contains("ASH"), s.status_line())
+
+	s.queue_free()
+	a.queue_free()
+
+
+func _chi_cade_ha_trenta_secondi() -> void:
+	print("
+La riconnessione")
+	var n := NetScript.new()
+	root.add_child(n)
+
+	_check(
+		"la finestra è lunga abbastanza",
+		n.RECONNECT_SEC >= 20.0,
+		"%.0f s: una pagina che si ricarica ci mette 10-15 s" % n.RECONNECT_SEC
+	)
+
+	n._on_peer_disconnected(7)
+	_check("il posto resta tenuto", n.reconnecting.has(7), "peer 7 in attesa")
+	_check("e chi torna lo riprende", n.claim_reconnect(7), "rientrato")
+	_check("una volta sola", not n.claim_reconnect(7), "il posto non si riprende due volte")
+
+	# Scaduta la finestra il posto si libera: tenerlo per sempre svuota la lobby
+	# da sola, un posto alla volta.
+	n._on_peer_disconnected(8)
+	n.reconnecting[8]["until"] = 0.0
+	n.expire_reconnects()
+	_check("e a finestra scaduta si libera", not n.reconnecting.has(8), "posto libero")
+	_check("e chi torna tardi entra da zero", not n.claim_reconnect(8), "come uno nuovo")
+	n.queue_free()
 
 
 ## Tutto il testo visibile in un sottoalbero, in una stringa sola.
